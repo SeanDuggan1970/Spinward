@@ -73,6 +73,18 @@ static func glow(colour: Color, energy: float = 2.0) -> StandardMaterial3D:
 	return m
 
 
+## Window glass: dark and glossy outside, a little warm light from within.
+static func glass(warmth: float = 0.25) -> StandardMaterial3D:
+	var m := StandardMaterial3D.new()
+	m.albedo_color = Color("0c1218")
+	m.metallic = 0.4
+	m.roughness = 0.06
+	m.emission_enabled = true
+	m.emission = Color("ffcf8a")
+	m.emission_energy_multiplier = warmth
+	return m
+
+
 static func box(size: Vector3, material: Material, at: Vector3 = Vector3.ZERO) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	var mesh := BoxMesh.new()
@@ -98,8 +110,9 @@ static func cylinder(radius: float, length: float, material: Material, at: Vecto
 	return mi
 
 
-static func cone(r_top: float, r_bottom: float, length: float, material: Material, at: Vector3) -> MeshInstance3D:
-	var mi := cylinder(r_top, length, material, at)
+## Cone or frustum along Z: r_top at +Z, r_bottom at -Z.
+static func cone(r_top: float, r_bottom: float, length: float, material: Material, at: Vector3, sides: int = 20) -> MeshInstance3D:
+	var mi := cylinder(r_top, length, material, at, sides)
 	(mi.mesh as CylinderMesh).bottom_radius = r_bottom
 	return mi
 
@@ -180,3 +193,50 @@ static func update_blinkers(blinkers: Array, t: float) -> void:
 	for b in blinkers:
 		if is_instance_valid(b):
 			b.visible = fposmod(t / float(b.get_meta("blink_period")) + float(b.get_meta("blink_phase")), 1.0) < 0.18
+
+
+## Merge a model's static meshes that share a material into one mesh each, so a ship
+## of hundreds of parts costs a handful of draw calls. Leaves alone anything that
+## blinks, is hidden, has children, sits under a node named DrivePlume, or wraps its
+## panels round its own axis (wrapped finishes rely on the part's own local space).
+static func merge_static(root: Node3D) -> void:
+	var groups := {}
+	for node in root.find_children("*", "MeshInstance3D", true, false):
+		var mi := node as MeshInstance3D
+		if mi.get_child_count() > 0 or mi.has_meta("blink_period") or not mi.visible or mi.mesh == null:
+			continue
+		var mat := mi.material_override
+		if mat == null:
+			continue
+		if mat is ShaderMaterial:
+			var mapping = (mat as ShaderMaterial).get_shader_parameter("mapping")
+			if mapping != null and int(mapping) != 0:
+				continue
+		var xform := Transform3D.IDENTITY
+		var n: Node = mi
+		var skip := false
+		while n != root and n != null:
+			if n.name == "DrivePlume":
+				skip = true
+				break
+			xform = (n as Node3D).transform * xform
+			n = n.get_parent()
+		if skip:
+			continue
+		if not groups.has(mat):
+			groups[mat] = []
+		groups[mat].append([mi, xform])
+	for mat in groups:
+		var list: Array = groups[mat]
+		if list.size() < 2:
+			continue
+		var st := SurfaceTool.new()
+		for entry in list:
+			st.append_from(entry[0].mesh, 0, entry[1])
+		var merged := MeshInstance3D.new()
+		merged.mesh = st.commit()
+		merged.material_override = mat
+		root.add_child(merged)
+		for entry in list:
+			entry[0].get_parent().remove_child(entry[0])
+			entry[0].free()

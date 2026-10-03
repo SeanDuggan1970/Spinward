@@ -240,7 +240,7 @@
 		},
 		"array_tenders": {
 			"operator": "The Commons",
-			"hull": "drone_freighter",
+			"hull": "array_tender",
 			"behaviour": "route",
 			"count": 2,
 			"names": [
@@ -302,6 +302,37 @@
 			"dwell_hours": [
 				10,
 				20
+			]
+		},
+		"compact_heavies": {
+			"operator": "Terran Compact",
+			"hull": "heavy_freighter",
+			"behaviour": "route",
+			"count": 2,
+			"names": [
+				"Ironside Haul",
+				"Long Reach"
+			],
+			"route": [
+				{
+					"at": "shackleton_port",
+					"buy": [
+						"water_ice"
+					],
+					"to": "kibo_ring"
+				},
+				{
+					"at": "kibo_ring",
+					"buy": [
+						"machine_parts"
+					],
+					"to": "shackleton_port"
+				}
+			],
+			"fill": 0.3,
+			"dwell_hours": [
+				18,
+				40
 			]
 		}
 	},

@@ -1,5 +1,5 @@
 {
-	"_note": "Ships are a spine plus bolt-on modules. mass_t is dry mass. Drives: thrust_n and isp_s set acceleration and propellant use; heat_mw must be rejected by radiators or thrust is throttled. 'look' feeds the placeholder kit-bash renderer.",
+	"_note": "Ships are a spine plus bolt-on modules. mass_t is dry mass. Drives: thrust_n and isp_s set acceleration and propellant use; heat_mw must be rejected by radiators or thrust is throttled. 'look' feeds the kit-bash renderer (view/flight/ship_builder.gd): command shape 'cockpit' or 'drone'; cargo shape 'cage' (open frame of half-length containers), 'container' (standard 2.4 x 2.6 x 6 m boxes, containers = [across, high, long]), 'bulk' (hopper), 'cradle' (open flatbed for outsize loads) or 'hab' (passenger can, mounted behind the crew); spine truss_m is the keel's width; drive coils is the number of field coils on the nozzle.",
 	"mule_spine": {
 		"name": "Mule truss spine",
 		"kind": "spine",
@@ -14,7 +14,26 @@
 			"avionics": 1
 		},
 		"look": {
-			"length_m": 26
+			"length_m": 26,
+			"truss_m": 1.4
+		}
+	},
+	"heavy_spine": {
+		"name": "Heavy keel spine",
+		"kind": "spine",
+		"mass_t": 14.0,
+		"price": 0,
+		"slots": {
+			"command": 1,
+			"cargo": 6,
+			"tank": 2,
+			"drive": 2,
+			"radiator": 4,
+			"avionics": 1
+		},
+		"look": {
+			"length_m": 60,
+			"truss_m": 2.4
 		}
 	},
 	"cmd_pod_basic": {
@@ -23,7 +42,7 @@
 		"mass_t": 4.0,
 		"price": 0,
 		"look": {
-			"shape": "box",
+			"shape": "cockpit",
 			"size_m": [
 				4.5,
 				3.6,
@@ -38,7 +57,7 @@
 		"mass_t": 1.5,
 		"price": 0,
 		"look": {
-			"shape": "box",
+			"shape": "drone",
 			"size_m": [
 				2.4,
 				2.4,
@@ -54,7 +73,7 @@
 		"price": 0,
 		"cargo_t": 0,
 		"look": {
-			"shape": "box",
+			"shape": "hab",
 			"size_m": [
 				4.4,
 				4.4,
@@ -71,10 +90,15 @@
 		"cargo_t": 10,
 		"look": {
 			"shape": "cage",
+			"containers": [
+				1,
+				1,
+				2
+			],
 			"size_m": [
-				3.6,
-				3.6,
-				4.5
+				2.9,
+				3.1,
+				6.4
 			],
 			"colour": "yellow"
 		}
@@ -86,10 +110,15 @@
 		"price": 30000,
 		"cargo_t": 20,
 		"look": {
-			"shape": "box",
+			"shape": "container",
+			"containers": [
+				1,
+				1,
+				1
+			],
 			"size_m": [
-				4.2,
-				4.2,
+				2.4,
+				2.6,
 				6.0
 			],
 			"colour": "grey"
@@ -102,13 +131,29 @@
 		"price": 90000,
 		"cargo_t": 35,
 		"look": {
-			"shape": "box",
+			"shape": "bulk",
 			"size_m": [
 				5.0,
 				5.0,
 				8.0
 			],
 			"colour": "rust"
+		}
+	},
+	"cargo_cradle": {
+		"name": "40 t outsize cradle",
+		"kind": "cargo",
+		"mass_t": 5.0,
+		"price": 60000,
+		"cargo_t": 40,
+		"look": {
+			"shape": "cradle",
+			"size_m": [
+				5.5,
+				4.5,
+				12.0
+			],
+			"colour": "yellow"
 		}
 	},
 	"tank_s": {
@@ -158,7 +203,8 @@
 				3.0,
 				5.0
 			],
-			"colour": "grey"
+			"colour": "grey",
+			"coils": 2
 		}
 	},
 	"pathfinder_mk2": {
@@ -176,7 +222,8 @@
 				3.4,
 				5.6
 			],
-			"colour": "grey"
+			"colour": "grey",
+			"coils": 3
 		}
 	},
 	"radiator_panel": {

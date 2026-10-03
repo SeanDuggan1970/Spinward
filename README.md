@@ -20,7 +20,7 @@ Inspired by Elite, but not a remake. See [docs/DESIGN.md](docs/DESIGN.md) for th
 
 Three megaprojects are under way: Island One, the second Luna Line ribbon and Kalpana Two. Haul what they need, watch them grow in the sky, and see your share on the Projects tab.
 
-Twenty-seven NPC ships share the system: Cooperative ice tankers, Commons drone freighters, independent haulers, Compact couriers and Kernel shuttles. They trade from the same markets you do, chatter on comms, and come and go around the stations.
+Twenty-nine NPC ships share the system: Cooperative ice tankers, Commons drone freighters and an outsize tender hauling mirror segments, independent haulers, Compact couriers and heavy container ships, and Kernel shuttles. Every ship is built the same way: a crew section up front, standard containers amidships, and a barnacled drive section aft. They trade from the same markets you do, chatter on comms, and come and go around the stations.
 
 The Moon is cratered from orbit to a 30 km pass. Earth has weather, ice and city lights, and every ship wears its operator's livery and its own wear and tear. All of it is procedural, with no texture files. The 3D models are still placeholder kitbash. See [docs/balance/NOTES.md](docs/balance/NOTES.md) for balance status.
 

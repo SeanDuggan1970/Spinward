@@ -100,10 +100,19 @@ func _ships() -> void:
 		var model := Models.ship(ship, data, Livery.for_ship(data, entry[2], entry[3], entry[4]))
 		var node: Node3D = model["node"]
 		add_child(node)
-		var r: float = float(model["length"]) * 1.05
-		_camera.look_at_from_position(Vector3(r * 0.8, r * 0.3, -r * 0.45), Vector3(0, 0, -float(model["length"]) * 0.15), Vector3.UP)
-		for _i in 6:
-			await get_tree().process_frame
-		get_viewport().get_texture().get_image().save_png("%s/ship-%s.png" % [dir, entry[0]])
-		print("SHOT ship ", entry[0])
+		var plume := node.find_child("DrivePlume", true, false)
+		if plume:
+			plume.visible = false
+		var half: float = float(model["length"]) * 0.5
+		var views := {
+			"": [Vector3(half * 1.7, half * 0.6, -half * 0.5), Vector3(0, 0, -half * 0.05)],
+			"-nose": [Vector3(10.0, 4.0, -half - 9.0), Vector3(0, 0, -half + 5.0)],
+			"-drive": [Vector3(-11.0, 5.0, half + 6.0), Vector3(0, 0, half - 6.0)],
+		}
+		for v in views:
+			_camera.look_at_from_position(views[v][0], views[v][1], Vector3.UP)
+			for _i in 4:
+				await get_tree().process_frame
+			get_viewport().get_texture().get_image().save_png("%s/ship-%s%s.png" % [dir, entry[0], v])
+		print("SHOT ship %s  %.0f m long, %.0f m radius" % [entry[0], model["length"], model["radius"]])
 		node.queue_free()

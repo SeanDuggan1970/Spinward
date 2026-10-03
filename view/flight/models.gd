@@ -5,145 +5,16 @@ extends RefCounted
 
 const Kit := preload("res://view/flight/kit.gd")
 const Livery := preload("res://view/flight/livery.gd")
+const ShipBuilder := preload("res://view/flight/ship_builder.gd")
 
 
-## Returns {node, nose_z, radius}. nose_z is the docking collar's local Z (negative = forward).
-## livery: a scheme from view/flight/livery.gd; the ship's own name and colours.
+## Returns {node, nose_z, radius, length}. nose_z is the docking collar's local Z
+## (negative = forward). livery: a scheme from view/flight/livery.gd. The layout is in
+## view/flight/ship_builder.gd: crew forward, cargo amidships, drives aft.
 static func ship(ship_state: Dictionary, data, livery: Dictionary = {}) -> Dictionary:
 	if livery.is_empty():
 		livery = Livery.for_ship(data, "", ship_state.get("name", ship_state["hull"]))
-	var mats: Dictionary = livery["mats"]
-	var root := Node3D.new()
-	var spine: Dictionary = data.modules[data.ships[ship_state["hull"]]["spine"]]
-	var length := float(spine["look"]["length_m"])
-	var width := 1.4
-	root.add_child(Kit.truss(length, width, mats["steel"]))
-	var mods: Dictionary = ship_state["modules"]
-	# Fixed stations along the spine, front to back.
-	var z := -length * 0.5
-	var nose_z := z
-	var radius := 4.0
-	for kind in ["command", "cargo", "tank", "drive"]:
-		var slots := []
-		for slot in mods:
-			if slot.begins_with(kind + "."):
-				slots.append(slot)
-		slots.sort()
-		for slot in slots:
-			var m: Dictionary = data.modules[mods[slot]]
-			var size: Vector3 = Vector3(m["look"]["size_m"][0], m["look"]["size_m"][1], m["look"]["size_m"][2])
-			var part := _module_part(m, size, livery, slot)
-			if kind == "command":
-				part.position.z = z - size.z * 0.5 + 1.0
-				nose_z = part.position.z - size.z * 0.5
-				# Docking collar and a pair of floodlights on the nose.
-				root.add_child(Kit.torus(0.9, 0.18, mats["trim"], Vector3(0, 0, nose_z - 0.1), 20))
-				root.add_child(Kit.beacon(Color("fff4d6"), Vector3(1.6, 1.4, nose_z + 0.3), 0.18))
-				root.add_child(Kit.beacon(Color("fff4d6"), Vector3(-1.6, 1.4, nose_z + 0.3), 0.18))
-				z = part.position.z + size.z * 0.5 + 0.6
-			elif kind == "drive":
-				part.position.z = length * 0.5 + size.z * 0.5 - 1.0
-			else:
-				part.position.z = z + size.z * 0.5
-				z += size.z + 0.5
-			radius = maxf(radius, maxf(size.x, size.y) * 0.6)
-			root.add_child(part)
-	# Radiators hang off the sides of the spine's rear half.
-	var r_index := 0
-	var r_slots := []
-	for slot in mods:
-		if slot.begins_with("radiator."):
-			r_slots.append(slot)
-	r_slots.sort()
-	for slot in r_slots:
-		var m: Dictionary = data.modules[mods[slot]]
-		var size := Vector3(m["look"]["size_m"][0], m["look"]["size_m"][1], m["look"]["size_m"][2])
-		var side := 1.0 if r_index % 2 == 0 else -1.0
-		var panel := Kit.box(Vector3(size.y, size.x, size.z), mats["dark"], Vector3(side * (width * 0.5 + size.y * 0.5 + 0.3), 0, length * 0.15))
-		root.add_child(panel)
-		root.add_child(Kit.box(Vector3(0.6, 0.15, 0.15), mats["steel"], Vector3(side * (width * 0.5 + 0.3), 0, length * 0.15)))
-		radius = maxf(radius, width * 0.5 + size.y + 0.3)
-		r_index += 1
-	# Navigation lights: red port, green starboard, white strobe aft.
-	root.add_child(Kit.beacon(Color("ff3a2a"), Vector3(-width, 0, 0), 0.2, 1.4, 0.0))
-	root.add_child(Kit.beacon(Color("3aff5a"), Vector3(width, 0, 0), 0.2, 1.4, 0.0))
-	root.add_child(Kit.beacon(Color.WHITE, Vector3(0, width, length * 0.5), 0.2, 1.0, 0.5))
-	return {"node": root, "nose_z": nose_z, "radius": radius, "length": length}
-
-
-static func _module_part(m: Dictionary, size: Vector3, livery: Dictionary, slot: String) -> Node3D:
-	var look: Dictionary = m["look"]
-	var mats: Dictionary = livery["mats"]
-	var colour: String = look.get("colour", "grey")
-	match look["shape"]:
-		"cage":
-			# An open frame in the trim colour holding a pair of mismatched containers.
-			var n := Kit.truss(size.z, size.x, mats["trim"])
-			for i in 2:
-				var box_mat := Livery.paint(livery, Livery.container_colour(livery, slot + str(i)), {"finish": 3, "mismatch": 0.0})
-				n.add_child(Kit.box(Vector3(size.x * 0.8, size.y * 0.8, size.z * 0.38), box_mat, Vector3(0, 0, (float(i) - 0.5) * size.z * 0.42)))
-			return n
-		"sphere":
-			var n := Node3D.new()
-			n.add_child(Kit.sphere(size.x * 0.5, mats["foil"]))
-			n.add_child(Kit.torus(size.x * 0.5, 0.08, mats["steel"], Vector3.ZERO, 32))
-			return n
-		"cylinder":
-			var n := Node3D.new()
-			n.add_child(Kit.cylinder(size.x * 0.5, size.z, mats["foil"]))
-			n.add_child(Kit.hazard_band(size.x * 0.5 + 0.02, 0.4, Vector3(0, 0, size.z * 0.4), 12))
-			n.add_child(Kit.torus(size.x * 0.5 + 0.03, 0.12, mats["accent"], Vector3(0, 0, -size.z * 0.35), 32))
-			return n
-		"drive":
-			var n := Node3D.new()
-			n.add_child(Kit.cylinder(size.x * 0.35, size.z * 0.5, mats["steel"], Vector3(0, 0, -size.z * 0.2)))
-			# Bell heat-tinted bronze towards the throat.
-			n.add_child(Kit.cone(size.x * 0.25, size.x * 0.5, size.z * 0.5, Livery.paint(livery, Color("4a3d32"), {"finish": 1, "metallic": 0.7, "roughness": 0.45}), Vector3(0, 0, size.z * 0.3)))
-			var plume := Kit.sphere(size.x * 0.22, Kit.glow(Color("8fd0ff"), 4.0), Vector3(0, 0, size.z * 0.55))
-			plume.name = "DrivePlume"
-			n.add_child(plume)
-			return n
-		_:
-			var n := Node3D.new()
-			# Crewed pods wear the operator's hull colour; cargo pods are whatever
-			# containers turned up; drone cores stay dark.
-			var body_mat: Material = mats["hull"]
-			if colour == "dark":
-				body_mat = mats["dark"]
-			elif m["kind"] == "cargo" and colour != "offwhite":
-				body_mat = Livery.paint(livery, Livery.container_colour(livery, slot), {"finish": 3, "mismatch": 0.0})
-			n.add_child(Kit.box(size, body_mat))
-			# Stencilled edge strip and a couple of handrails: it is a working pod.
-			n.add_child(Kit.box(Vector3(size.x + 0.04, 0.3, 0.3), mats["trim"], Vector3(0, size.y * 0.5 - 0.15, -size.z * 0.5 + 0.15)))
-			n.add_child(Kit.box(Vector3(0.08, 0.08, size.z * 0.7), Kit.mat("orange"), Vector3(size.x * 0.5 + 0.12, 0, 0)))
-			n.add_child(Kit.box(Vector3(0.08, 0.08, size.z * 0.7), Kit.mat("orange"), Vector3(-size.x * 0.5 - 0.12, 0, 0)))
-			if m["kind"] == "command" or (m["kind"] == "cargo" and body_mat == mats["hull"]):
-				# The operator's band round the pod.
-				n.add_child(Kit.box(Vector3(size.x + 0.03, size.y + 0.03, 0.7), mats["accent"], Vector3(0, 0, size.z * 0.18)))
-			if m["kind"] == "command":
-				n.add_child(Kit.box(Vector3(size.x * 0.6, size.y * 0.25, 0.1), Kit.glow(Color("ffd890"), 1.2), Vector3(0, size.y * 0.15, -size.z * 0.5 - 0.02)))
-				_name_stencils(n, livery, size)
-			return n
-
-
-## The ship's name painted on both flanks of the command pod.
-static func _name_stencils(n: Node3D, livery: Dictionary, size: Vector3) -> void:
-	var text := String(livery.get("name", "")).to_upper()
-	if text == "" or size.x < 2.0:
-		return
-	var hull: Color = livery["hull"]
-	for side in [1.0, -1.0]:
-		var l := Label3D.new()
-		l.text = text
-		l.font_size = 64
-		l.outline_size = 0
-		l.shaded = true
-		l.double_sided = false
-		l.modulate = Color("1b1d20") if hull.get_luminance() > 0.45 else Color("e6dcc4")
-		l.pixel_size = minf(0.42, size.z * 0.6 / maxf(1.0, text.length() * 0.6)) / 64.0
-		l.position = Vector3(side * (size.x * 0.5 + 0.03), -size.y * 0.15, -size.z * 0.12)
-		l.rotation.y = side * PI * 0.5
-		n.add_child(l)
+	return ShipBuilder.build(ship_state, data, livery)
 
 
 ## Returns {node, rotor, port_z, port_radius, hub_radius, hub_length, ring_radius, ring_tube,

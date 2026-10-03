@@ -210,7 +210,27 @@ A character, not just a feature. It is the in-world reason the flight is playabl
 Touchstone: the Eagle Transporter from *Space: 1999*, with ships that look built by and for working people. Kindred references: Apollo's lunar module, the ISS, the Nostromo (*Alien*), *Silent Running*, *Outland*, and real hardware like trusses, tanks and radiators.
 
 - **Function is visible.** Exposed truss spines, tanks, radiator panels, cable runs, handholds, docking collars, landing legs with dampers. If a part exists in the rules, you can see it on the model.
-- **Modular by construction.** Ships are a spine plus bolt-on modules: command pod, cargo pod, tanks, drive, radiators, drones. Upgrades physically change the silhouette. One kit of parts builds many ships, so the art and the ship data share one structure (`data/modules/`).
+- **Modular by construction.** Ships are a spine plus bolt-on modules: command pod, cargo pod, tanks, drive, radiators, drones. Upgrades physically change the silhouette. One kit of parts builds many ships, so the art and the ship data share one structure (`data/modules.json`).
+- **Ship anatomy** (`view/flight/ship_builder.gd`). Three sections along a keel truss. The cargo sits between the crew and the drive, as protection against drive trouble.
+  - **Crew section (front).**
+    - Crewed ships: a faceted cockpit nose with a framed windscreen, a docking collar on the tip, and the flight deck in the operator's band and the ship's name.
+    - Behind the deck, a hab can with portholes.
+    - Deep-space kit: a high-gain dish on a mast, a nav radar, whip aerials, star trackers, floodlights and RCS quads.
+    - Drones get a windowless octagonal bus with a sensor turret and lit "eyes".
+    - Passenger cans mount right behind the crew.
+  - **Cargo section (middle).** Mostly standard boxes, like shipping on Earth: 2.4 × 2.6 × 6 m, corrugated, with door frames and code panels.
+    - Containers: one box or a stack (`containers` = across, high, long).
+    - Cages: open frames of half-length boxes.
+    - Bulk hoppers.
+    - Outsize cradles, an open bed on legs above the keel. The load is a mirror segment, a habitat hull section or netted crates.
+    - The hull's `cargo_layout` sets how they sit: in a line, two abreast, or four round the keel, with latch arms out to the keel.
+  - **Propulsion section (rear).**
+    - Propellant tanks clustered round the keel, with radiators on booms.
+    - A hazard-ringed shadow shield.
+    - Then the drives: one, a pair, a triangle or a square, each on its own thrust-frame strut.
+    - Each drive is a reactor drum in a cage of longerons, with field coils and a heat-tinted bell.
+  - **Barnacles.** Pumps, gas bottles, pipe runs over the shield to the tanks, and cable trays. They are seeded by the ship's name, as are its dishes and aerials, so sister ships differ in the details.
+  - **Draw calls.** Static parts are merged per material after building (`Kit.merge_static`), so a ship of several hundred parts costs a few dozen draw calls.
 - **Materials:** off-white and grey panels, bare metal, gold foil insulation, rubberised seals. Restrained colour with practical markings: hazard stripes, hull numbers, operator logos, stencilled warnings, rescue-orange handles.
 - **Wear and history:** scuffs, sun-bleaching, replaced mismatched panels, patch repairs. Older ships look older, and a second-hand starter ship looks second-hand.
 - **Lighting:** hard, single-source sunlight with deep shadows. Working lights, floodlights and blinking navigation beacons. Interiors are cramped and lit by instruments.
