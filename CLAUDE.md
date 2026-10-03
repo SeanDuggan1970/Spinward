@@ -19,6 +19,10 @@ Read `docs/DESIGN.md` first. It is the source of truth for scope, pillars and ar
 - Real-world data (JPL) is baked into `data/` by tools. The game never needs the internet.
 - Third-party assets need a recorded licence and a credits line.
 
+## Exception: local flight
+
+`view/flight/` integrates close-range flight and docking itself. Its only effect on the sim is the `dock` command it sends. Keep it that way, or move flight into a sim system if it needs to affect state (see `docs/DESIGN.md`).
+
 ## Checks
 
-Run `./tools/validate.ps1` (PowerShell) before committing. Add tests in `tests/run_tests.gd` for new sim rules.
+Run `./tools/validate.ps1` (PowerShell) before committing. Add tests in `tests/run_tests.gd` for new sim rules. After changing `data/`, re-run the balance bot (`tools/balance_bot.gd`, command in README) and note findings in `docs/balance/NOTES.md`. Use `-- --tour=<dir>` to screenshot every screen and look at them after view changes.

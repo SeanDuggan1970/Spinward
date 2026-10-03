@@ -124,6 +124,10 @@ view/   Godot scenes: cockpit, map, station UI, effects. Reads state, sends comm
 - **Replays and bug reports:** a seed plus a command log.
 - **A co-op path:** later, a host runs the sim and clients send commands over Godot's high-level multiplayer. The shared clock (time compression) is the real design problem; options are crewing one ship or voted time compression. Not built now, but nothing blocks it.
 
+### The local flight bubble
+
+The approach-and-dock flight is integrated in `view/flight/`, not in the sim. It is a skill moment whose only effect on game state is the `dock` command it sends. This is a deliberate, contained exception to "all rules live in the sim". If close flight ever needs to matter to the sim (co-op, combat, hazards in the bubble), move its integration into a sim system and keep the view as a renderer.
+
 ### Precision
 
 The simulation uses 64-bit floats in metres and seconds, in a heliocentric frame. Rendering uses a floating origin centred on the player, plus a scaled "far layer" for planets and the Sun. The stock Godot build is used, with no custom double-precision compile.
@@ -153,8 +157,8 @@ Spinward/
 
 ## Milestones
 
-- **M0 – Foundation:** repo, docs, project boots, sim/data/view skeleton, test runner, save/load of an empty state.
-- **M1 – Cislunar slice:** Earth, Moon, L1/L2/L4/L5 and real orbits for the Moon. 5–6 places, about 10 goods, recipes and prices. One Tier-1 ship. Plot course + time compression. Local flight and docking at one rotating station. Saves. Balance bot report. *Gate: is trading fun?*
+- **M0 – Foundation:** done.
+- **M1 – Cislunar slice:** built (Oct 2026). Six places, at Earth orbits and Earth–Moon L1, L4 and L5. Eleven goods with recipes. A modular Mule hauler and shipyard. Co-pilot routes with time compression. Hand-flown docking at every station's spinning port, or a tug. Quick saves. Balance bot. *Gate: is trading fun? Awaiting Sean's playtest.* Known gap: empty return legs (see `balance/NOTES.md`).
 - **M2 – Hazards & conflict v1:** solar storms, heat, the first disputes and the conflict ladder.
 - **M3 – Tier 2:** near-Earth asteroids and Mars, surveying, factions.
 - **M4 – Tier 3 & base stages 1–3.**
