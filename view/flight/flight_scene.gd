@@ -10,6 +10,7 @@ const Kit := preload("res://view/flight/kit.gd")
 const Models := preload("res://view/flight/models.gd")
 const UI := preload("res://view/ui/ui_kit.gd")
 const V := preload("res://sim/v3.gd")
+const SystemMap := preload("res://view/system_map.gd")
 
 const ASSIST_MODES := ["full", "assisted", "manual"]
 const SKY_DISTANCE := 60000.0
@@ -32,7 +33,9 @@ var velocity := Vector3.ZERO
 var ang_vel := Vector3.ZERO  # local, rad/s
 var assist := "assisted"
 var spin_match := true
-var nose_cam := false
+## "cockpit" (first person, the default) or "chase".
+var view_mode := "cockpit"
+var _scanner_index := 1
 var nose_z := -15.0
 var ship_radius := 5.0
 var spin_rate := 0.0
@@ -61,6 +64,8 @@ func _init(owner_sim) -> void:
 	tune_flight = sim.data.balance["flight"]
 	tune_dock = sim.data.balance["docking"]
 	assist = tune_flight["assist_default"]
+	view_mode = tune_flight.get("default_view", "cockpit")
+	_scanner_index = int(tune_flight.get("scanner_default_index", 1))
 
 
 func _ready() -> void:
@@ -192,7 +197,12 @@ func _unhandled_input(event: InputEvent) -> void:
 			spin_match = not spin_match
 			flash("Spin match %s" % ("ON" if spin_match else "OFF"), UI.AMBER)
 		KEY_C:
-			nose_cam = not nose_cam
+			view_mode = "chase" if view_mode == "cockpit" else "cockpit"
+		KEY_G:
+			_scanner_index = (_scanner_index + 1) % tune_flight["scanner_ranges_m"].size()
+			flash("Scanner range %s" % UI.km(scanner_range()) if scanner_range() >= 1000.0 else "Scanner range %d m" % int(scanner_range()), UI.AMBER, 1.5)
+		KEY_H:
+			hud.show_keys = not hud.show_keys
 		KEY_T:
 			_request_tug()
 
@@ -356,11 +366,31 @@ func _check_docking() -> void:
 	_bounce(Vector3(0, 0, 1), 0.5)
 
 
+func scanner_range() -> float:
+	return float(tune_flight["scanner_ranges_m"][_scanner_index])
+
+
+## Everything the scanner can see: {pos (world), colour, kind}.
+func contacts() -> Array:
+	var out := [{"pos": Vector3.ZERO, "colour": UI.GOOD, "kind": "station"}]
+	for id in _traffic:
+		var entry: Dictionary = _traffic[id]
+		if is_instance_valid(entry["ship"]):
+			out.append({"pos": entry["ship"].global_position, "colour": SystemMap.fleet_colour(sim, entry["npc"]), "kind": "ship"})
+	for w in _work_craft:
+		out.append({"pos": w["node"].global_position, "colour": UI.HAZARD, "kind": "pod"})
+	return out
+
+
 func _update_camera(dt: float) -> void:
 	var t := ship_node.global_transform
-	if nose_cam:
-		camera.global_transform = Transform3D(t.basis, t * Vector3(0, 1.0, nose_z - 0.5))
+	ship_node.visible = view_mode == "chase"
+	if view_mode == "cockpit":
+		# Pilot's eye just behind the command pod's front window.
+		camera.fov = 72.0
+		camera.global_transform = Transform3D(t.basis, t * Vector3(0, 0.4, nose_z + 1.2))
 		return
+	camera.fov = 65.0
 	var want := t * Vector3(0, 8.0, 40.0)
 	camera.global_position = camera.global_position.lerp(want, clampf(dt * 4.0, 0.0, 1.0)) if dt < 1.0 else want
 	camera.look_at(t * Vector3(0, 2.0, -30.0), t.basis.y)

@@ -43,6 +43,9 @@
 		"turn_rate_dps": 35.0,
 		"turn_accel_dps2": 70.0,
 		"assist_default": "assisted",
+		"default_view": "cockpit",
+		"scanner_ranges_m": [500, 2000, 8000, 30000],
+		"scanner_default_index": 1,
 		"bump_restitution": 0.3
 	},
 	"shipyard": {

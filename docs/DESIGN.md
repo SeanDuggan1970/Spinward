@@ -126,6 +126,7 @@ Touchstone: the Eagle Transporter from *Space: 1999*, with ships that look built
 - **Wear and history:** scuffs, sun-bleaching, replaced mismatched panels, patch repairs. Older ships look older, and a second-hand starter ship looks second-hand.
 - **Lighting:** hard, single-source sunlight with deep shadows. Working lights, floodlights and blinking navigation beacons. Interiors are cramped and lit by instruments.
 - **Stations and habitats** follow the same logic: assembled from modules, under construction at the edges, with scaffolding and cranes. Your own base visibly grows through its stages.
+- **Cockpit:** first-person by default, in the spirit of the original Elite. The canopy frame and hazard-striped dashboard carry the classic elliptical 3D scanner (stalks for height, square-root range scale so close traffic separates), a port compass, and lamp gauges that light green inside docking tolerances. A chase camera is optional.
 - **UI:** instrument-panel style. Clear labels, monospace readouts, physical-looking switches. Functional, not holographic glamour.
 - **Build approach:** low-to-mid poly kitbash parts with simple shared materials and decals, so a small team (or one person) can make many variations. A good fit for the Compatibility renderer and the GTX 960M baseline.
 

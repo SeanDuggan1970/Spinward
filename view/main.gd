@@ -264,10 +264,10 @@ func _tour(dir: String) -> void:
 	for _i in 30:
 		await get_tree().process_frame
 	_shot(dir + "/5-flight-close.png")
-	flight.nose_cam = true
+	flight.view_mode = "chase"
 	for _i in 10:
 		await get_tree().process_frame
-	_shot(dir + "/6-flight-nose.png")
+	_shot(dir + "/6-flight-chase.png")
 	get_tree().quit()
 
 

@@ -37,8 +37,12 @@ You start docked at Kibo Ring in low Earth orbit with 5,000 credits and a second
 | Shift, X | Boost, brake |
 | Z | Assist: full (auto-brake) → assisted (damped turning) → manual |
 | V | Spin match: co-pilot rolls you with the station's port |
-| C | Chase / nose camera |
+| C | Cockpit (default) / chase camera |
+| G | Scanner range: 500 m, 2 km, 8 km, 30 km |
+| H | Show / hide key help |
 | T | Call the tug |
+
+You fly from the cockpit. The dashboard has the classic Elite 3D scanner: an ellipse for your horizontal plane, with forward up the screen. Each contact sits at its bearing on the ellipse, with a stalk up or down for height: green for the station, fleet colours for ships, yellow for work pods. The compass dot shows the port, solid when it's ahead and hollow when it's behind.
 
 To dock, bring the ship's nose to the port slowly (under 1.2 m/s). Keep the nose on the axis (within 12°) and key the slot (roll within 15°). The port lights turn green when all three are right.
 
