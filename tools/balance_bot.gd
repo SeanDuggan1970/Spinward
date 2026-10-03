@@ -119,7 +119,7 @@ func best_trade(here: String, allow_reposition: bool) -> Dictionary:
 	for to in d.places:
 		if to == here:
 			continue
-		var plan := Navigation.plan(s, d, sim.ephemeris, here, to, s.time_s)
+		var plan := Navigation.plan(s.ship, d, sim.ephemeris, here, to, s.time_s)
 		if not plan["ok"] or plan["strand_risk"]:
 			continue
 		var days: float = plan["duration_s"] / DAY
@@ -135,10 +135,7 @@ func best_trade(here: String, allow_reposition: bool) -> Dictionary:
 			# Re-plan with the cargo mass aboard: heavier ships are slower and thirstier.
 			var loaded: Dictionary = s.ship.duplicate(true)
 			loaded["cargo"][good] = float(loaded["cargo"].get(good, 0.0)) + tonnes
-			var real_ship: Dictionary = s.ship
-			s.ship = loaded
-			var lplan := Navigation.plan(s, d, sim.ephemeris, here, to, s.time_s)
-			s.ship = real_ship
+			var lplan := Navigation.plan(loaded, d, sim.ephemeris, here, to, s.time_s)
 			if not lplan["ok"] or lplan["strand_risk"]:
 				continue
 			var ldays: float = lplan["duration_s"] / DAY
@@ -154,7 +151,7 @@ func best_trade(here: String, allow_reposition: bool) -> Dictionary:
 		for to in d.places:
 			if to == here:
 				continue
-			var plan := Navigation.plan(s, d, sim.ephemeris, here, to, s.time_s)
+			var plan := Navigation.plan(s.ship, d, sim.ephemeris, here, to, s.time_s)
 			if not plan["ok"] or plan["strand_risk"]:
 				continue
 			var saved: Dictionary = s.location

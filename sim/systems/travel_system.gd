@@ -32,7 +32,7 @@ func _depart(command: Dictionary) -> String:
 	if not sim().data.places.has(to):
 		return "unknown destination"
 	var here: String = s.location["place"]
-	var route := Navigation.plan(s, sim().data, sim().ephemeris, here, to, s.time_s)
+	var route := Navigation.plan(s.ship, sim().data, sim().ephemeris, here, to, s.time_s)
 	if not route["ok"]:
 		return route["reason"]
 	s.ship["fuel_t"] = maxf(0.0, float(s.ship["fuel_t"]) - float(route["fuel_t"]))

@@ -10,6 +10,7 @@ var places: Dictionary = {}
 var goods: Dictionary = {}
 var modules: Dictionary = {}
 var ships: Dictionary = {}
+var npcs: Dictionary = {}
 
 
 static func load_default():
@@ -25,6 +26,7 @@ func load_from(root: String) -> void:
 	goods = read_json(root + "/goods.json")
 	modules = read_json(root + "/modules.json")
 	ships = read_json(root + "/ships.json")
+	npcs = read_json(root + "/npcs.json")
 
 
 func read_json(path: String) -> Dictionary:
@@ -87,6 +89,30 @@ func validate() -> Array[String]:
 				problems.append("ship %s: slot %s holds %s of the wrong kind" % [id, slot, ship["modules"][slot]])
 			if index >= int(spine["slots"].get(kind, 0)):
 				problems.append("ship %s: slot %s does not exist on the spine" % [id, slot])
+	for fleet_id in npcs.get("fleets", {}):
+		var fleet: Dictionary = npcs["fleets"][fleet_id]
+		if not ships.has(fleet.get("hull", "")):
+			problems.append("fleet %s: unknown hull %s" % [fleet_id, fleet.get("hull")])
+		if not fleet.get("behaviour") in ["trader", "route", "shuttle"]:
+			problems.append("fleet %s: unknown behaviour %s" % [fleet_id, fleet.get("behaviour")])
+		for home in fleet.get("homes", []):
+			if not places.has(home):
+				problems.append("fleet %s: unknown home %s" % [fleet_id, home])
+		if fleet.get("behaviour") == "trader" and fleet.get("homes", []).is_empty():
+			problems.append("fleet %s: traders need homes" % fleet_id)
+		var route: Array = fleet.get("route", [])
+		if fleet.get("behaviour") != "trader" and route.is_empty():
+			problems.append("fleet %s: needs a route" % fleet_id)
+		for i in route.size():
+			var leg: Dictionary = route[i]
+			if not places.has(leg.get("at", "")) or not places.has(leg.get("to", "")):
+				problems.append("fleet %s leg %d: unknown place" % [fleet_id, i])
+				continue
+			if route[(i + 1) % route.size()]["at"] != leg["to"]:
+				problems.append("fleet %s leg %d: next leg does not start where this one ends" % [fleet_id, i])
+			for good in leg.get("buy", []):
+				if not (places[leg["at"]]["market"].has(good) and places[leg["to"]]["market"].has(good)):
+					problems.append("fleet %s leg %d: %s must be traded at both ends" % [fleet_id, i, good])
 	var start: Dictionary = balance.get("start", {})
 	if not places.has(start.get("place", "")):
 		problems.append("balance.start.place is not a place")

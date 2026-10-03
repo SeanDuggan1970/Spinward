@@ -28,13 +28,14 @@ static func frame_body(data, a: String, b: String) -> String:
 
 
 ## Returns {ok, reason, distance_m, duration_s, burn_s, fuel_t, arrive_t, from_pos, to_pos, frame}.
-static func plan(state, data, eph, from_place: String, to_place: String, t: float) -> Dictionary:
+## Works for any ship dict (player or NPC): {hull, modules, cargo, fuel_t}.
+static func plan(ship: Dictionary, data, eph, from_place: String, to_place: String, t: float) -> Dictionary:
 	var result := {"ok": false, "reason": ""}
 	if from_place == to_place:
 		result["reason"] = "already here"
 		return result
-	var accel := ShipStats.accel_mps2(state.ship, data)
-	var ve := ShipStats.exhaust_velocity(state.ship, data)
+	var accel := ShipStats.accel_mps2(ship, data)
+	var ve := ShipStats.exhaust_velocity(ship, data)
 	if accel <= 0.0 or ve <= 0.0:
 		result["reason"] = "no working drive"
 		return result
@@ -50,8 +51,8 @@ static func plan(state, data, eph, from_place: String, to_place: String, t: floa
 		to_pos = eph.relative(to_place, frame, t + burn + overhead)
 		distance = V.distance(from_pos, to_pos)
 	burn = 2.0 * sqrt(distance / accel)
-	var fuel_t := ShipStats.thrust_n(state.ship, data) / ve * burn / 1000.0
-	var fuel_after := float(state.ship.get("fuel_t", 0.0)) - fuel_t
+	var fuel_t := ShipStats.thrust_n(ship, data) / ve * burn / 1000.0
+	var fuel_after := float(ship.get("fuel_t", 0.0)) - fuel_t
 	var dest_refuels: bool = "refuel" in data.places[to_place].get("services", [])
 	result.merge({
 		"distance_m": distance, "burn_s": burn, "duration_s": burn + overhead, "fuel_t": fuel_t,
@@ -60,8 +61,8 @@ static func plan(state, data, eph, from_place: String, to_place: String, t: floa
 		# No fuel at the destination and not enough left to come back the same way.
 		"strand_risk": not dest_refuels and fuel_after < fuel_t,
 	}, true)
-	if fuel_t > float(state.ship.get("fuel_t", 0.0)) + 1e-9:
-		result["reason"] = "not enough propellant: need %.2f t, have %.2f t" % [fuel_t, state.ship["fuel_t"]]
+	if fuel_t > float(ship.get("fuel_t", 0.0)) + 1e-9:
+		result["reason"] = "not enough propellant: need %.2f t, have %.2f t" % [fuel_t, ship["fuel_t"]]
 		return result
 	result["ok"] = true
 	return result

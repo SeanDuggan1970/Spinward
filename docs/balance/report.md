@@ -9,10 +9,10 @@ Run: 180 game days, upgrades on, greedy single-good trader, always auto-docks (p
 | Measure | Value |
 |---|---|
 | Start credits | 5000 |
-| End credits | 70283 |
-| Net worth gain per game day | 362 |
-| Trips | 76 |
-| Average trip | 2.37 game days |
+| End credits | 78668 |
+| Net worth gain per game day | 409 |
+| Trips | 67 |
+| Average trip | 2.69 game days |
 | Cargo capacity at end | 40 t |
 
 ## Credits over time
@@ -20,53 +20,69 @@ Run: 180 game days, upgrades on, greedy single-good trader, always auto-docks (p
 | Day | Credits |
 |---|---|
 | 0 | 5000 |
-| 10 | 19368 |
-| 23 | 39049 |
-| 32 | 45147 |
-| 42 | 26749 |
-| 51 | 38601 |
-| 60 | 46294 |
-| 70 | 28661 |
-| 80 | 38224 |
-| 92 | 34236 |
-| 101 | 35073 |
-| 110 | 39479 |
-| 121 | 37932 |
-| 132 | 50146 |
-| 143 | 52557 |
-| 152 | 56217 |
-| 163 | 63905 |
-| 170 | 65008 |
-| 183 | 70283 |
+| 10 | 50049 |
+| 20 | 31578 |
+| 31 | 48086 |
+| 41 | 32632 |
+| 52 | 42385 |
+| 62 | 29626 |
+| 70 | 21852 |
+| 80 | 33029 |
+| 92 | 41395 |
+| 101 | 44810 |
+| 111 | 51103 |
+| 121 | 49262 |
+| 132 | 57425 |
+| 141 | 63838 |
+| 151 | 73281 |
+| 160 | 75192 |
+| 171 | 76950 |
+| 181 | 78668 |
 
 ## Milestones
 
-- Day 39.1: fitted 20 t cargo container at Trojan Yards (credits 19812)
-- Day 60.1: fitted 20 t cargo container at Kibo Ring (credits 20294)
-- Day 83.4: fitted 6 t propellant tank at Kibo Ring (credits 22664)
-- Day 93.0: fitted 3 MW radiator wing at Trojan Yards (credits 24236)
-- Day 114.2: fitted 3 MW radiator wing at Trojan Yards (credits 29419)
+- Day 11.5: fitted 20 t cargo container at Kibo Ring (credits 23908)
+- Day 37.1: fitted 20 t cargo container at Kibo Ring (credits 23411)
+- Day 52.1: fitted 6 t propellant tank at Kibo Ring (credits 26885)
+- Day 68.4: fitted 3 MW radiator wing at Trojan Yards (credits 32170)
+- Day 68.4: fitted 3 MW radiator wing at Trojan Yards (credits 22170)
 
 ## Routes the bot used
 
 | Route (good) | Legs | Total profit | Profit per leg | Profit per game day |
 |---|---|---|---|---|
-| Trojan Yards → The Kernel (Habitat modules) | 8 | 61076 | 7634 | 2006 |
-| Kibo Ring → Clarke Exchange (Electronics) | 7 | 29214 | 4173 | 3548 |
-| Kibo Ring → Clarke Exchange (Food) | 8 | 25201 | 3150 | 2085 |
-| Kibo Ring → Clarke Exchange (Machine parts) | 7 | 23407 | 3343 | 2569 |
-| Kibo Ring → Shackleton Port (Food) | 2 | 6442 | 3221 | 719 |
-| Kibo Ring → The Kernel (Food) | 2 | 4880 | 2440 | 531 |
-| Shackleton Port → The Kernel (Water ice) | 4 | 4525 | 1131 | 352 |
-| Halo Depot → Kibo Ring (Propellant) | 2 | 3223 | 1611 | 372 |
-| Clarke Exchange → Shackleton Port (Machine parts) | 3 | 1892 | 630 | 176 |
-| Shackleton Port → Kibo Ring (Helium-3) | 1 | 1118 | 1118 | 400 |
-| The Kernel → Halo Depot (empty) | 1 | -60 | -60 | -16 |
-| Clarke Exchange → Halo Depot (empty) | 1 | -60 | -60 | -22 |
-| The Kernel → Trojan Yards (empty) | 3 | -180 | -60 | -15 |
-| Clarke Exchange → Trojan Yards (empty) | 5 | -300 | -60 | -20 |
-| The Kernel → Kibo Ring (empty) | 9 | -540 | -60 | -21 |
-| Clarke Exchange → Kibo Ring (empty) | 13 | -780 | -60 | -59 |
+| Kibo Ring → Clarke Exchange (Electronics) | 9 | 53071 | 5896 | 4713 |
+| Kibo Ring → Clarke Exchange (Food) | 3 | 31153 | 10384 | 7225 |
+| Clarke Exchange → Trojan Yards (Electronics) | 3 | 15424 | 5141 | 1505 |
+| Kibo Ring → The Kernel (Medical supplies) | 2 | 14272 | 7136 | 2239 |
+| Halo Depot → Kibo Ring (Propellant) | 5 | 13446 | 2689 | 639 |
+| Trojan Yards → Clarke Exchange (Electronics) | 2 | 11740 | 5870 | 1617 |
+| Shackleton Port → The Kernel (Medical supplies) | 3 | 9963 | 3321 | 1490 |
+| Kibo Ring → Shackleton Port (Machine parts) | 1 | 7531 | 7531 | 1854 |
+| Kibo Ring → Trojan Yards (Electronics) | 2 | 6967 | 3483 | 947 |
+| Trojan Yards → Shackleton Port (Food) | 1 | 4451 | 4451 | 1561 |
+| Halo Depot → Kibo Ring (Oxygen) | 1 | 3219 | 3219 | 763 |
+| Kibo Ring → Clarke Exchange (Machine parts) | 2 | 3065 | 1532 | 1107 |
+| Clarke Exchange → Kibo Ring (Propellant) | 1 | 1764 | 1764 | 1150 |
+| Shackleton Port → The Kernel (Water ice) | 1 | 1684 | 1684 | 593 |
+| Shackleton Port → Kibo Ring (Water ice) | 1 | 1286 | 1286 | 274 |
+| Halo Depot → Clarke Exchange (Propellant) | 1 | 1131 | 1131 | 285 |
+| The Kernel → Kibo Ring (Water ice) | 1 | 1120 | 1120 | 249 |
+| Clarke Exchange → Kibo Ring (Machine parts) | 1 | 620 | 620 | 364 |
+| The Kernel → Kibo Ring (Oxygen) | 1 | 472 | 472 | 126 |
+| Kibo Ring → Halo Depot (empty) | 1 | -60 | -60 | -21 |
+| The Kernel → Shackleton Port (empty) | 1 | -60 | -60 | -15 |
+| Trojan Yards → Halo Depot (empty) | 1 | -60 | -60 | -26 |
+| Shackleton Port → Kibo Ring (Medical supplies) | 1 | -98 | -98 | -31 |
+| The Kernel → Halo Depot (empty) | 2 | -120 | -60 | -16 |
+| The Kernel → Kibo Ring (empty) | 2 | -120 | -60 | -22 |
+| Trojan Yards → Kibo Ring (empty) | 2 | -120 | -60 | -21 |
+| Clarke Exchange → Shackleton Port (empty) | 3 | -180 | -60 | -19 |
+| Clarke Exchange → Halo Depot (empty) | 3 | -180 | -60 | -22 |
+| Clarke Exchange → Kibo Ring (empty) | 6 | -360 | -60 | -59 |
+| Kibo Ring → The Kernel (Water ice) | 2 | -912 | -456 | -99 |
+| Kibo Ring → Trojan Yards (Food) | 1 | -5185 | -5185 | -1269 |
+| The Kernel → Shackleton Port (Medical supplies) | 1 | -5649 | -5649 | -1427 |
 
 ## Best margin per route at start (prices at target stock)
 
@@ -74,18 +90,18 @@ Top 12 by margin as a fraction of base price.
 
 | From | To | Good | Margin (cr/t) | Margin / base |
 |---|---|---|---|---|
-| Shackleton Port | The Kernel | Water ice | 56 | 141% |
-| Shackleton Port | Halo Depot | Water ice | 24 | 62% |
-| Trojan Yards | The Kernel | Habitat modules | 1325 | 60% |
-| Shackleton Port | Trojan Yards | Propellant | 72 | 60% |
-| Kibo Ring | The Kernel | Medical supplies | 3012 | 60% |
-| Kibo Ring | Halo Depot | Food | 361 | 60% |
-| Shackleton Port | Clarke Exchange | Propellant | 72 | 60% |
-| Kibo Ring | Trojan Yards | Electronics | 1807 | 60% |
-| Halo Depot | The Kernel | Oxygen | 54 | 60% |
-| Kibo Ring | Shackleton Port | Medical supplies | 3012 | 60% |
-| Halo Depot | Trojan Yards | Propellant | 70 | 59% |
-| Halo Depot | Kibo Ring | Propellant | 70 | 59% |
+| Shackleton Port | Halo Depot | Water ice | 90 | 225% |
+| Shackleton Port | The Kernel | Water ice | 90 | 225% |
+| Kibo Ring | Trojan Yards | Electronics | 6689 | 223% |
+| Halo Depot | The Kernel | Oxygen | 200 | 223% |
+| Trojan Yards | The Kernel | Habitat modules | 4905 | 223% |
+| Kibo Ring | Halo Depot | Food | 1337 | 223% |
+| Shackleton Port | Clarke Exchange | Propellant | 267 | 223% |
+| Shackleton Port | Trojan Yards | Propellant | 267 | 223% |
+| Kibo Ring | Shackleton Port | Medical supplies | 11148 | 223% |
+| Kibo Ring | The Kernel | Medical supplies | 11148 | 223% |
+| Halo Depot | Kibo Ring | Propellant | 265 | 222% |
+| Halo Depot | Clarke Exchange | Propellant | 265 | 222% |
 
 ## Best margin per route at the end
 
@@ -93,15 +109,15 @@ Top 12 by margin as a fraction of base price.
 
 | From | To | Good | Margin (cr/t) | Margin / base |
 |---|---|---|---|---|
-| Shackleton Port | The Kernel | Water ice | 48 | 120% |
-| Shackleton Port | Halo Depot | Water ice | 24 | 62% |
-| Shackleton Port | Clarke Exchange | Propellant | 72 | 60% |
-| Halo Depot | Kibo Ring | Oxygen | 54 | 60% |
-| Kibo Ring | The Kernel | Medical supplies | 3015 | 60% |
-| Halo Depot | The Kernel | Oxygen | 54 | 60% |
-| Kibo Ring | Shackleton Port | Medical supplies | 3015 | 60% |
-| Kibo Ring | Trojan Yards | Electronics | 1809 | 60% |
-| Shackleton Port | Trojan Yards | Propellant | 72 | 60% |
-| Shackleton Port | Kibo Ring | Helium-3 | 14204 | 57% |
-| Trojan Yards | The Kernel | Habitat modules | 1240 | 56% |
-| Halo Depot | Clarke Exchange | Propellant | 66 | 55% |
+| Halo Depot | Trojan Yards | Oxygen | 167 | 186% |
+| Kibo Ring | Trojan Yards | Electronics | 5165 | 172% |
+| Halo Depot | Clarke Exchange | Oxygen | 143 | 159% |
+| Kibo Ring | Halo Depot | Food | 952 | 159% |
+| Shackleton Port | Halo Depot | Food | 928 | 155% |
+| Shackleton Port | Trojan Yards | Electronics | 4412 | 147% |
+| Clarke Exchange | Trojan Yards | Electronics | 4408 | 147% |
+| Kibo Ring | The Kernel | Medical supplies | 6421 | 128% |
+| The Kernel | Halo Depot | Food | 764 | 127% |
+| The Kernel | Clarke Exchange | Oxygen | 112 | 126% |
+| Clarke Exchange | Halo Depot | Food | 705 | 118% |
+| Shackleton Port | The Kernel | Medical supplies | 5252 | 105% |

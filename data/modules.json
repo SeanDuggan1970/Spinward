@@ -2,6 +2,8 @@
 	"_note": "Ships are a spine plus bolt-on modules. mass_t is dry mass. Drives: thrust_n and isp_s set acceleration and propellant use; heat_mw must be rejected by radiators or thrust is throttled. 'look' feeds the placeholder kit-bash renderer.",
 	"mule_spine": {"name": "Mule truss spine", "kind": "spine", "mass_t": 6.0, "price": 0, "slots": {"command": 1, "cargo": 2, "tank": 1, "drive": 1, "radiator": 2}, "look": {"length_m": 26}},
 	"cmd_pod_basic": {"name": "Two-seat command pod", "kind": "command", "mass_t": 4.0, "price": 0, "look": {"shape": "box", "size_m": [4.5, 3.6, 5.0], "colour": "offwhite"}},
+	"drone_core": {"name": "Commons drone core", "kind": "command", "mass_t": 1.5, "price": 0, "look": {"shape": "box", "size_m": [2.4, 2.4, 2.8], "colour": "dark"}},
+	"passenger_pod": {"name": "24-seat passenger can", "kind": "cargo", "mass_t": 3.0, "price": 0, "cargo_t": 0, "look": {"shape": "box", "size_m": [4.4, 4.4, 7.0], "colour": "offwhite"}},
 	"cargo_pod_s": {"name": "10 t cargo cage", "kind": "cargo", "mass_t": 1.5, "price": 8000, "cargo_t": 10, "look": {"shape": "cage", "size_m": [3.6, 3.6, 4.5], "colour": "yellow"}},
 	"cargo_pod_m": {"name": "20 t cargo container", "kind": "cargo", "mass_t": 2.5, "price": 30000, "cargo_t": 20, "look": {"shape": "box", "size_m": [4.2, 4.2, 6.0], "colour": "grey"}},
 	"cargo_pod_l": {"name": "35 t bulk container", "kind": "cargo", "mass_t": 4.0, "price": 90000, "cargo_t": 35, "look": {"shape": "box", "size_m": [5.0, 5.0, 8.0], "colour": "rust"}},

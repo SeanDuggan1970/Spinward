@@ -12,5 +12,29 @@
 			"radiator.0": "radiator_panel",
 			"radiator.1": "radiator_panel"
 		}
+	},
+	"lunar_tanker": {
+		"name": "Cooperative bulk tanker",
+		"description": "Luna Cooperative workhorse: two bulk containers on a Mule truss, run by a crew of three and a very patient AI.",
+		"spine": "mule_spine",
+		"modules": {"command.0": "cmd_pod_basic", "cargo.0": "cargo_pod_l", "cargo.1": "cargo_pod_l", "tank.0": "tank_m", "drive.0": "pathfinder_mk1", "radiator.0": "radiator_panel", "radiator.1": "radiator_panel"}
+	},
+	"drone_freighter": {
+		"name": "Commons drone freighter",
+		"description": "Uncrewed and unhurried. Each one is a mind of The Commons that has chosen, for now, to haul freight.",
+		"spine": "mule_spine",
+		"modules": {"command.0": "drone_core", "cargo.0": "cargo_pod_m", "cargo.1": "cargo_pod_m", "tank.0": "tank_s", "drive.0": "pathfinder_mk1", "radiator.0": "radiator_panel", "radiator.1": "radiator_panel"}
+	},
+	"courier": {
+		"name": "Compact fast courier",
+		"description": "Small cargo cage, big drive, bigger radiators. Medicine and parts that cannot wait.",
+		"spine": "mule_spine",
+		"modules": {"command.0": "cmd_pod_basic", "cargo.0": "cargo_pod_s", "tank.0": "tank_m", "drive.0": "pathfinder_mk2", "radiator.0": "radiator_panel_l", "radiator.1": "radiator_panel_l"}
+	},
+	"shuttle": {
+		"name": "Kernel passenger shuttle",
+		"description": "Settlers, visiting engineers and the occasional tourist, two dozen at a time.",
+		"spine": "mule_spine",
+		"modules": {"command.0": "cmd_pod_basic", "cargo.0": "passenger_pod", "tank.0": "tank_m", "drive.0": "pathfinder_mk2", "radiator.0": "radiator_panel_l", "radiator.1": "radiator_panel_l"}
 	}
 }

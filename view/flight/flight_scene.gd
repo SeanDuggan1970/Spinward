@@ -13,6 +13,10 @@ const V := preload("res://sim/v3.gd")
 
 const ASSIST_MODES := ["full", "assisted", "manual"]
 const SKY_DISTANCE := 60000.0
+## NPC traffic is shown on the lanes for this long either side of docking (game seconds).
+const LANE_WINDOW := 3.0 * 3600.0
+const LANE_LENGTH := 15000.0
+const BERTH_ANGLES := [PI * 0.5, -PI * 0.5, PI * 0.25, PI * 0.75, -PI * 0.25, -PI * 0.75]
 
 var sim
 var place_id: String
@@ -40,6 +44,12 @@ var message_until := 0.0
 var clock := 0.0
 var docked := false
 var _drive_plume: Node3D
+var _blinkers: Array = []
+## NPC id -> {node, mode: "berth"|"inbound"|"outbound"}
+var _traffic: Dictionary = {}
+var _traffic_check := 0.0
+## Cosmetic station work craft: [{node, radius, z, period, phase, tilt}]
+var _work_craft: Array = []
 
 ## Live readouts for the HUD.
 var readout := {}
@@ -79,6 +89,8 @@ func _ready() -> void:
 	add_child(camera)
 	camera.make_current()
 	_update_camera(1.0)
+	_spawn_work_craft()
+	_sync_traffic()
 	hud = load("res://view/flight/flight_hud.gd").new(self)
 	hud.theme = UI.make_theme()
 	add_child(hud)
@@ -199,7 +211,13 @@ func _physics_process(dt: float) -> void:
 	clock += dt
 	spin_angle = fposmod(spin_angle + spin_rate * dt, TAU)
 	station["rotor"].rotation.z = spin_angle
-	Kit.update_blinkers(self, clock)
+	Kit.update_blinkers(_blinkers, clock)
+	_traffic_check -= dt
+	if _traffic_check <= 0.0:
+		_traffic_check = 1.0
+		_sync_traffic()
+	_move_traffic()
+	_move_work_craft()
 	_fly(dt)
 	_collide()
 	_check_docking()
@@ -346,3 +364,117 @@ func _update_camera(dt: float) -> void:
 	var want := t * Vector3(0, 8.0, 40.0)
 	camera.global_position = camera.global_position.lerp(want, clampf(dt * 4.0, 0.0, 1.0)) if dt < 1.0 else want
 	camera.look_at(t * Vector3(0, 2.0, -30.0), t.basis.y)
+
+
+## Other ships here: moored at berths on the hub, or flying the lanes in and out.
+func _sync_traffic() -> void:
+	var t: float = sim.state.time_s
+	var wanted := {}
+	var berth := 0
+	for npc in sim.state.npcs:
+		var loc: Dictionary = npc["location"]
+		var mode := ""
+		if loc["status"] == "docked" and loc["place"] == place_id and berth < BERTH_ANGLES.size():
+			mode = "berth"
+		elif loc["status"] == "transit" and loc["to"] == place_id and float(loc["arrive_t"]) - t < LANE_WINDOW:
+			mode = "inbound"
+		elif loc["status"] == "transit" and loc["from"] == place_id and t - float(loc["depart_t"]) < LANE_WINDOW:
+			mode = "outbound"
+		if mode != "":
+			wanted[npc["id"]] = {"npc": npc, "mode": mode, "berth": berth if mode == "berth" else -1}
+			if mode == "berth":
+				berth += 1
+	var changed := false
+	for id in _traffic.keys():
+		if not wanted.has(id) or wanted[id]["mode"] != _traffic[id]["mode"]:
+			_traffic[id]["node"].queue_free()
+			_traffic.erase(id)
+			changed = true
+	for id in wanted:
+		if _traffic.has(id):
+			continue
+		var w: Dictionary = wanted[id]
+		var model := Models.ship(w["npc"]["ship"], sim.data)
+		var node: Node3D = model["node"]
+		if w["mode"] == "berth":
+			# Moored alongside the hub's forward half on a short arm, spinning with the station.
+			var a: float = BERTH_ANGLES[w["berth"]]
+			var r: float = station["hub_radius"] + model["radius"] + 6.0
+			var holder := Node3D.new()
+			holder.rotation.z = a
+			node.position = Vector3(r, 0, station["hub_length"] * 0.5 - model["length"] * 0.5 - 2.0)
+			node.rotation = Vector3(0, PI, PI * 0.5)
+			holder.add_child(node)
+			holder.add_child(Kit.box(Vector3(model["radius"] + 6.0, 0.6, 0.6), Kit.mat("steel"), Vector3(station["hub_radius"] + (model["radius"] + 6.0) * 0.5, 0, node.position.z)))
+			station["rotor"].add_child(holder)
+			_traffic[id] = {"node": holder, "ship": node, "mode": "berth", "npc": w["npc"]}
+		else:
+			# A bright running light so distant traffic reads as a moving star.
+			node.add_child(Kit.sphere(2.5, Kit.glow(Color("ffe0a0"), 4.0), Vector3(0, 3.0, 0)))
+			add_child(node)
+			_traffic[id] = {"node": node, "ship": node, "mode": w["mode"], "npc": w["npc"]}
+		changed = true
+	if changed or _blinkers.is_empty():
+		_blinkers = Kit.collect_blinkers(self)
+	_move_traffic()
+
+
+func _move_traffic() -> void:
+	var t: float = sim.state.time_s
+	for id in _traffic:
+		var entry: Dictionary = _traffic[id]
+		if entry["mode"] == "berth":
+			continue
+		var loc: Dictionary = entry["npc"]["location"]
+		if loc["status"] != "transit":
+			continue
+		# Lanes run outside the ring, from far out to the back of the station where the
+		# freight berths are, well clear of the player's approach axis.
+		var lane := absi(hash(id)) % 4
+		var lane_r: float = station["ring_radius"] + station["ring_tube"] + 60.0
+		var a := PI * 0.25 + PI * 0.5 * lane
+		var offset := Vector3(cos(a) * lane_r, sin(a) * lane_r, 0.0)
+		var z0: float = -station["hub_length"] * 0.5
+		var span: float = float(station["port_z"]) + LANE_LENGTH - z0
+		var f: float
+		var node: Node3D = entry["ship"]
+		if entry["mode"] == "inbound":
+			f = clampf((float(loc["arrive_t"]) - t) / LANE_WINDOW, 0.0, 1.0)
+			node.rotation = Vector3.ZERO
+		else:
+			f = clampf((t - float(loc["depart_t"])) / LANE_WINDOW, 0.0, 1.0)
+			node.rotation = Vector3(0, PI, 0)
+		node.position = offset + Vector3(0, 0, z0 + span * f)
+
+
+## View-only station life: work pods circling the hub and a tug standing off the port.
+## Deterministic per station, and never touches the sim.
+func _spawn_work_craft() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(place_id + "work")
+	var rh: float = station["hub_radius"]
+	var lh: float = station["hub_length"]
+	var rr: float = station["ring_radius"]
+	for i in rng.randi_range(3, 5):
+		var tug := i == 0
+		var node := Models.work_pod(tug)
+		add_child(node)
+		_work_craft.append({
+			"node": node,
+			"radius": (rh + 40.0) if tug else rng.randf_range(rh + 15.0, rr * 0.75),
+			"z": (float(station["port_z"]) + 25.0) if tug else rng.randf_range(-lh * 0.5, lh * 0.5),
+			"period": 240.0 if tug else rng.randf_range(150.0, 420.0),
+			"phase": rng.randf() * TAU,
+			"bob": rng.randf_range(2.0, 8.0),
+		})
+	_blinkers = Kit.collect_blinkers(self)
+
+
+func _move_work_craft() -> void:
+	for w in _work_craft:
+		var a: float = w["phase"] + TAU * clock / float(w["period"])
+		var node: Node3D = w["node"]
+		var pos := Vector3(cos(a) * w["radius"], sin(a) * w["radius"], w["z"] + sin(a * 2.0) * w["bob"])
+		var ahead := Vector3(cos(a + 0.05) * w["radius"], sin(a + 0.05) * w["radius"], pos.z)
+		node.position = pos
+		node.look_at(ahead, Vector3(0, 0, 1))

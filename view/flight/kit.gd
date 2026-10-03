@@ -136,8 +136,12 @@ static func beacon(colour: Color, at: Vector3, radius: float = 0.35, period: flo
 	return b
 
 
-static func update_blinkers(root: Node, t: float) -> void:
-	for b in root.find_children("*", "MeshInstance3D", true, false):
-		if b.has_meta("blink_period"):
-			var period: float = b.get_meta("blink_period")
-			b.visible = fposmod(t / period + float(b.get_meta("blink_phase")), 1.0) < 0.18
+## Collect blinking lights once; scanning the whole scene every frame is too slow.
+static func collect_blinkers(root: Node) -> Array:
+	return root.find_children("*", "MeshInstance3D", true, false).filter(func(b): return b.has_meta("blink_period"))
+
+
+static func update_blinkers(blinkers: Array, t: float) -> void:
+	for b in blinkers:
+		if is_instance_valid(b):
+			b.visible = fposmod(t / float(b.get_meta("blink_period")) + float(b.get_meta("blink_phase")), 1.0) < 0.18

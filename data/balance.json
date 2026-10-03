@@ -16,7 +16,7 @@
 		"price_min_mult": 0.4,
 		"price_max_mult": 3.0,
 		"spread": 0.06,
-		"relaxation_per_day": 0.12,
+		"relaxation_per_day": 0.06,
 		"max_stock_mult": 4.0,
 		"step_hours": 1.0,
 		"emergency_fuel_price_mult": 6.0,

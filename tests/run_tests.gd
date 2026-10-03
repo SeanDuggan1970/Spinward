@@ -38,6 +38,7 @@ func _initialize() -> void:
 	test_economy()
 	test_travel()
 	test_shipyard()
+	test_npcs()
 	test_saves_and_determinism()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
@@ -124,6 +125,7 @@ func test_orbits() -> void:
 func test_economy() -> void:
 	var sim := fresh()
 	var s := sim.state
+	s.npcs = []  # Market flows on their own; NPC traffic is tested separately.
 	var d := sim.data
 	check(s.markets["kibo_ring"]["food"] > 160.0 and s.markets["shackleton_port"]["food"] < 60.0, "Warm-up leaves surpluses and shortages on day one")
 	var mid := Market.mid_price_at(d, "kibo_ring", "food", 160.0)
@@ -178,21 +180,21 @@ func test_travel() -> void:
 	check(Navigation.frame_body(d, "kibo_ring", "shackleton_port") == "earth", "Cislunar trips use the Earth frame")
 	var accel_empty := ShipStats.accel_mps2(s.ship, d)
 	check(accel_empty / 9.80665 > 0.002 and accel_empty / 9.80665 < 0.005, "Starter ship accelerates at a few milli-g")
-	var plan := Navigation.plan(s, d, sim.ephemeris, "kibo_ring", "halo_depot", s.time_s)
+	var plan := Navigation.plan(s.ship, d, sim.ephemeris, "kibo_ring", "halo_depot", s.time_s)
 	check(plan["ok"] and plan["distance_m"] > 3.0e8 and plan["distance_m"] < 3.4e8, "Route to L1 is about 320,000 km")
 	var days: float = plan["duration_s"] / DAY
 	check(days > 1.5 and days < 3.5, "Empty trip to L1 takes a couple of days (%.2f d)" % days)
 	check(plan["fuel_t"] > 0.1 and plan["fuel_t"] < 1.0, "Trip burns a fraction of the tank (%.2f t)" % plan["fuel_t"])
 	check(not plan["strand_risk"], "No strand risk going to a fuel depot")
-	var full_tank := Navigation.plan(s, d, sim.ephemeris, "kibo_ring", "kernel_l5", s.time_s)
+	var full_tank := Navigation.plan(s.ship, d, sim.ephemeris, "kibo_ring", "kernel_l5", s.time_s)
 	check(full_tank["ok"] and not full_tank["strand_risk"], "A full tank reaches The Kernel and back")
 	s.ship["fuel_t"] = float(full_tank["fuel_t"]) * 1.5
-	var to_kernel := Navigation.plan(s, d, sim.ephemeris, "kibo_ring", "kernel_l5", s.time_s)
+	var to_kernel := Navigation.plan(s.ship, d, sim.ephemeris, "kibo_ring", "kernel_l5", s.time_s)
 	check(to_kernel["ok"] and to_kernel["strand_risk"], "Warn when heading somewhere without fuel on a thin tank")
 	s.ship["fuel_t"] = 3.0
 
 	sim.apply({"type": "buy", "good": "water_ice", "tonnes": 20})
-	var loaded := Navigation.plan(s, d, sim.ephemeris, "kibo_ring", "halo_depot", s.time_s)
+	var loaded := Navigation.plan(s.ship, d, sim.ephemeris, "kibo_ring", "halo_depot", s.time_s)
 	check(loaded["duration_s"] > plan["duration_s"], "Cargo mass slows the trip")
 
 	s.ship["fuel_t"] = 0.01
@@ -237,6 +239,48 @@ func test_shipyard() -> void:
 	var hot: Dictionary = s.ship.duplicate(true)
 	hot["modules"]["drive.0"] = "pathfinder_mk2"
 	check(is_equal_approx(ShipStats.thrust_n(hot, d), 1200.0 * 3.0 / 4.0), "Radiators limit thrust")
+
+
+func test_npcs() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var expected := 0
+	for f in d.npcs["fleets"]:
+		expected += int(d.npcs["fleets"][f]["count"])
+	check(s.npcs.size() == expected and expected >= 10, "NPC fleets spawn (%d ships)" % s.npcs.size())
+	var with_npcs := fresh()
+	var without := fresh()
+	without.state.npcs = []
+	with_npcs.advance_game_time(30 * DAY)
+	without.advance_game_time(30 * DAY)
+	var everyone_moved := true
+	var min_stock := INF
+	for npc in with_npcs.state.npcs:
+		everyone_moved = everyone_moved and int(npc["trips"]) >= 1
+	for place in with_npcs.state.markets:
+		for good in with_npcs.state.markets[place]:
+			min_stock = minf(min_stock, with_npcs.state.markets[place][good])
+	check(everyone_moved, "Every NPC completes at least one trip in 30 days")
+	check(min_stock >= 0.0, "NPC trading never drives stock negative")
+	var ice_with: float = with_npcs.state.markets["halo_depot"]["water_ice"]
+	var ice_without: float = without.state.markets["halo_depot"]["water_ice"]
+	check(ice_with > ice_without, "Coop tankers deliver ice to Halo Depot (%.0f vs %.0f t)" % [ice_with, ice_without])
+	var in_transit := 0
+	for npc in with_npcs.state.npcs:
+		if npc["location"]["status"] == "transit":
+			in_transit += 1
+			check(float(npc["next_t"]) == float(npc["location"]["arrive_t"]), "Transit NPC wakes on arrival")
+	check(in_transit > 0, "Some NPCs are in flight at any moment (%d)" % in_transit)
+	# NPC randomness replays identically from a save, even with different tick sizes ahead.
+	var saved := SaveIO.from_text(SaveIO.to_text(with_npcs.state))
+	var resumed := Sim.new()
+	resumed.load_state(saved)
+	resumed.advance_game_time(5 * DAY)
+	with_npcs.advance_game_time(5 * DAY)
+	check(resumed.state.to_dict() == with_npcs.state.to_dict(), "NPC traffic continues identically after load")
+	var events := with_npcs.take_events().filter(func(e): return e["type"] in ["npc_departed", "npc_arrived"])
+	check(events.size() > 0, "NPC movements emit events for the comms feed")
 
 
 func test_saves_and_determinism() -> void:

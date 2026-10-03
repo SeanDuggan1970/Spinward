@@ -153,3 +153,22 @@ static func station(geom: Dictionary) -> Dictionary:
 		root.add_child(Kit.beacon(Color("f0a030"), Vector3(0, -rh * 0.9, port_z + 60.0 * float(i + 1)), 0.6, 2.0, 1.0 - float(i) / 10.0))
 		root.add_child(Kit.beacon(Color("f0a030"), Vector3(0, rh * 0.9, port_z + 60.0 * float(i + 1)), 0.6, 2.0, 1.0 - float(i) / 10.0))
 	return {"node": root, "rotor": rotor, "port_z": port_z, "hub_radius": rh, "hub_length": lh, "ring_radius": rr, "ring_tube": rt, "lights": lights}
+
+
+## A station work pod: a one-person cab with a manipulator arm and floodlight,
+## the space equivalent of a forklift. Tugs are the same thing with a push frame.
+static func work_pod(tug: bool) -> Node3D:
+	var root := Node3D.new()
+	var body := Vector3(3.2, 2.6, 4.0) if tug else Vector3(2.2, 2.0, 2.6)
+	root.add_child(Kit.box(body, Kit.mat("orange" if tug else "yellow")))
+	root.add_child(Kit.box(Vector3(body.x * 0.7, body.y * 0.35, 0.1), Kit.glow(Color("ffd890"), 1.2), Vector3(0, body.y * 0.15, -body.z * 0.5 - 0.02)))
+	if tug:
+		root.add_child(Kit.box(Vector3(body.x + 1.6, 0.3, 0.3), Kit.mat("black"), Vector3(0, -body.y * 0.3, -body.z * 0.5 - 0.6)))
+		root.add_child(Kit.box(Vector3(body.x + 1.6, 0.3, 0.3), Kit.mat("yellow"), Vector3(0, body.y * 0.3, -body.z * 0.5 - 0.6)))
+	else:
+		root.add_child(Kit.box(Vector3(0.25, 0.25, 2.4), Kit.mat("steel"), Vector3(0.7, -0.6, -2.2)))
+		root.add_child(Kit.box(Vector3(0.6, 0.6, 0.4), Kit.mat("black"), Vector3(0.7, -0.6, -3.4)))
+	root.add_child(Kit.beacon(Color("f0a030"), Vector3(0, body.y * 0.5 + 0.2, 0), 0.22, 1.2, randf()))
+	root.add_child(Kit.beacon(Color("ff3a2a"), Vector3(-body.x * 0.5, 0, 0), 0.15, 1.6, 0.0))
+	root.add_child(Kit.beacon(Color("3aff5a"), Vector3(body.x * 0.5, 0, 0), 0.15, 1.6, 0.0))
+	return root

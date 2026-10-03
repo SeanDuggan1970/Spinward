@@ -11,6 +11,7 @@ Read `docs/DESIGN.md` first. It is the source of truth for scope, pillars and ar
 - New state fields go in `GameState.to_dict` / `load_dict`. Changing the meaning of saved data requires bumping `SCHEMA_VERSION` and adding a migration in `sim/save_io.gd`.
 - Positions in the sim are 64-bit metres and seconds in a heliocentric frame. Rendering uses a floating origin. Use the stock Godot build, not a custom double-precision build.
 - Scripts are linked with `preload`, not `class_name`, so headless `--script` tests resolve them.
+- Sim randomness comes only from the generator whose state is `GameState.rng_state` (seed it, then restore the state, as `npc_system.gd` does). The view never draws from it. Cosmetic variety uses `hash()` or its own seeded generator.
 
 ## Design guardrails
 

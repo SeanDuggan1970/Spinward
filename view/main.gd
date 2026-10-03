@@ -13,6 +13,8 @@ const UI := preload("res://view/ui/ui_kit.gd")
 const StationScreen := preload("res://view/station_screen.gd")
 const MapScreen := preload("res://view/map_screen.gd")
 const FlightScene := preload("res://view/flight/flight_scene.gd")
+const Comms := preload("res://view/comms.gd")
+const COMMS_KEEP := 40
 
 const QUICKSAVE := "user://quicksave.json"
 
@@ -22,6 +24,9 @@ var _screen: Node
 var _top: Label
 var _notices: VBoxContainer
 var _layer: Control
+var _ticker: Label
+## Rolling comms log (view-only), shared with the station's Traffic tab.
+var comms: Array = []
 
 
 func _ready() -> void:
@@ -37,6 +42,14 @@ func _ready() -> void:
 	add_child(bar)
 	_top = UI.label("")
 	bar.add_child(_top)
+	_ticker = UI.label("", UI.DIM, 12)
+	_ticker.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
+	_ticker.position = Vector2(16, -62)
+	_ticker.size = Vector2(760, 54)
+	_ticker.clip_text = true
+	_ticker.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	_ticker.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_ticker)
 	_notices = VBoxContainer.new()
 	_notices.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
 	_notices.position = Vector2(-460, -200)
@@ -78,6 +91,15 @@ func _handle_events() -> void:
 	for e in sim.take_events():
 		var d: Dictionary = e["data"]
 		match e["type"]:
+			"npc_departed", "npc_arrived":
+				var text := Comms.line(sim, e)
+				if text != "":
+					comms.append("%s  %s" % [_clock(e["time_s"]), text])
+					if comms.size() > COMMS_KEEP:
+						comms.pop_front()
+					_ticker.text = "\n".join(comms.slice(maxi(0, comms.size() - 3)))
+				var here: String = sim.state.location.get("place", "")
+				refresh = refresh or here in [d.get("place"), d.get("from"), d.get("to")]
 			"rejected":
 				notice(d["reason"].capitalize(), UI.WARN)
 			"traded":
@@ -103,6 +125,10 @@ func _handle_events() -> void:
 		_screen.refresh()
 
 
+func _clock(t: float) -> String:
+	return Time.get_datetime_string_from_unix_time(int(t + 946728000.0)).substr(11, 5)
+
+
 func notice(text: String, colour: Color = UI.TEXT) -> void:
 	var l := UI.label(text, colour, 14)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD
@@ -122,7 +148,7 @@ func _sync_mode() -> void:
 		_screen.queue_free()
 	match mode:
 		"docked":
-			_screen = StationScreen.new(sim)
+			_screen = StationScreen.new(sim, comms)
 			_layer.add_child(_screen)
 		"transit":
 			_screen = MapScreen.new(sim)
@@ -210,7 +236,16 @@ func _tour(dir: String) -> void:
 	for _i in 5:
 		await get_tree().process_frame
 	_shot(dir + "/2-departures.png")
-	sim.apply({"type": "depart", "to": "kernel_l5"})
+	# Let a few hours pass in port so the comms channel and traffic board fill up.
+	sim.advance_game_time(18.0 * 3600.0)
+	_handle_events()
+	if _screen is StationScreen:
+		_screen._tab_index = 2
+		_screen.refresh()
+	for _i in 5:
+		await get_tree().process_frame
+	_shot(dir + "/2b-traffic.png")
+	sim.apply({"type": "depart", "to": "shackleton_port"})
 	sim.apply({"type": "set_time_scale", "scale": 1000})
 	_sync_mode()
 	sim.advance_game_time((float(sim.state.location["arrive_t"]) - sim.state.time_s) * 0.4)
@@ -223,6 +258,7 @@ func _tour(dir: String) -> void:
 		await get_tree().process_frame
 	_shot(dir + "/4-flight.png")
 	var flight: FlightScene = _screen
+	print("TRAFFIC shown: ", flight._traffic.size(), " work craft: ", flight._work_craft.size())
 	flight.ship_node.position = Vector3(3, 2, flight.station["port_z"] + 70.0 - flight.nose_z)
 	flight.ship_node.rotation = Vector3.ZERO
 	for _i in 30:

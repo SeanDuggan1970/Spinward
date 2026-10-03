@@ -1,0 +1,104 @@
+{
+	"_note": "NPC fleets. behaviour: 'trader' (chooses among the best few trades it can see), 'route' (fixed legs, buys listed goods), 'shuttle' (fixed legs, no freight). NPCs trade from the same markets as the player but never draw a stock below reserve_fraction of target. dwell_hours is a [min, max] range for time spent docked.",
+	"reserve_fraction": 0.25,
+	"trader_choice_pool": 3,
+	"trader_min_margin": 0.05,
+	"fleets": {
+		"coop_tankers": {
+			"operator": "Luna Cooperative",
+			"hull": "lunar_tanker",
+			"behaviour": "route",
+			"count": 4,
+			"names": ["Mare Frigoris", "Lacus Somniorum", "Sinus Iridum", "Palus Epidemiarum"],
+			"route": [
+				{"at": "shackleton_port", "buy": ["water_ice"], "to": "halo_depot"},
+				{"at": "halo_depot", "buy": ["food"], "to": "shackleton_port"}
+			],
+			"fill": 0.8,
+			"dwell_hours": [10, 24]
+		},
+		"commons_ore": {
+			"operator": "The Commons",
+			"hull": "drone_freighter",
+			"behaviour": "route",
+			"count": 3,
+			"names": ["Patient Arithmetic", "Ninth Attempt", "Reasonable Doubt"],
+			"route": [
+				{"at": "shackleton_port", "buy": ["regolith"], "to": "trojan_yards"},
+				{"at": "trojan_yards", "buy": ["habitat_modules"], "to": "kernel_l5"},
+				{"at": "kernel_l5", "buy": [], "to": "shackleton_port"}
+			],
+			"fill": 0.9,
+			"dwell_hours": [8, 18]
+		},
+		"commons_freighters": {
+			"operator": "The Commons",
+			"hull": "drone_freighter",
+			"behaviour": "trader",
+			"count": 4,
+			"names": ["Gentle Insistence", "Fair Weather Theorem", "Small Hours", "Quiet Ledger"],
+			"homes": ["trojan_yards", "halo_depot", "kibo_ring"],
+			"dwell_hours": [8, 20]
+		},
+		"independents": {
+			"operator": "Independent",
+			"hull": "mule",
+			"behaviour": "trader",
+			"count": 6,
+			"names": ["Mabel's Pride", "Late Bloomer", "Tea Break", "Long Shot", "Good Enough", "Mind the Gap"],
+			"homes": ["kibo_ring", "shackleton_port", "clarke_exchange", "trojan_yards"],
+			"dwell_hours": [12, 36]
+		},
+		"compact_couriers": {
+			"operator": "Terran Compact",
+			"hull": "courier",
+			"behaviour": "route",
+			"count": 2,
+			"names": ["Courier 114", "Courier 207"],
+			"route": [
+				{"at": "kibo_ring", "buy": ["medical", "electronics"], "to": "shackleton_port"},
+				{"at": "shackleton_port", "buy": ["helium3"], "to": "kibo_ring"}
+			],
+			"fill": 0.5,
+			"dwell_hours": [4, 10]
+		},
+		"kernel_shuttles": {
+			"operator": "Kernel Settlers",
+			"hull": "shuttle",
+			"behaviour": "shuttle",
+			"count": 3,
+			"names": ["Homeward", "Bright Morning", "Open Door"],
+			"route": [
+				{"at": "kibo_ring", "to": "kernel_l5"},
+				{"at": "kernel_l5", "to": "kibo_ring"}
+			],
+			"dwell_hours": [12, 30]
+		}
+	},
+	"chatter": {
+		"_note": "Comms lines. {ship} {operator} {from} {to} {cargo}. Picked per event by the view; text only, no effect on the sim.",
+		"route_depart": [
+			"{ship} ({operator}) clearing {from} for {to} with {cargo}.",
+			"{from} traffic: {ship} undocked, {cargo} aboard, bound for {to}.",
+			"{ship}: \"Same run as ever. {to}, {cargo}, see you on the far side.\""
+		],
+		"trader_depart": [
+			"{ship} ({operator}) heading for {to} with {cargo}. Somebody thinks prices are good there.",
+			"{from} traffic: independent {ship} away, {cargo} for {to}.",
+			"{ship}: \"Taking a punt on {to}. {cargo}. Wish us luck.\""
+		],
+		"shuttle_depart": [
+			"Shuttle {ship} away from {from}, two dozen souls for {to}.",
+			"{ship}: \"Next stop {to}. Please keep your hands inside the pressure hull.\""
+		],
+		"empty_depart": [
+			"{ship} ({operator}) repositioning empty to {to}.",
+			"{ship} away from {from} running light, bound for {to}."
+		],
+		"arrive": [
+			"{ship} docked at {to}.",
+			"{to} traffic: {ship} ({operator}) secured at the hub.",
+			"{ship}: \"Capture confirmed, {to}. Lovely bit of flying, if I say so myself.\""
+		]
+	}
+}

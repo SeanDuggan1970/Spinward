@@ -25,6 +25,10 @@ var markets: Dictionary = {}
 ## Game time up to which the economy has been integrated.
 var economy_t: float = 0.0
 var stats: Dictionary = {"trips": 0, "manual_docks": 0, "auto_docks": 0, "trade_profit": 0.0}
+## NPC ships: [{id, fleet, name, ship, location, next_t, leg, trips}]. See npc_system.gd.
+var npcs: Array = []
+## Shared random generator state (sim randomness only; the view never draws from it).
+var rng_state: int = 0
 
 
 static func from_unix(unix_seconds: float) -> float:
@@ -49,6 +53,8 @@ func to_dict() -> Dictionary:
 		"markets": markets.duplicate(true),
 		"economy_t": economy_t,
 		"stats": stats.duplicate(true),
+		"npcs": npcs.duplicate(true),
+		"rng_state": rng_state,
 	}
 
 
@@ -64,3 +70,5 @@ func load_dict(d: Dictionary) -> void:
 	markets = d.get("markets", {}).duplicate(true)
 	economy_t = float(d.get("economy_t", time_s))
 	stats = d.get("stats", stats).duplicate(true)
+	npcs = d.get("npcs", []).duplicate(true)
+	rng_state = int(d.get("rng_state", 0))

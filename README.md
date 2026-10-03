@@ -12,6 +12,8 @@ Inspired by Elite, but not a remake. See [docs/DESIGN.md](docs/DESIGN.md) for th
 - **Docking:** hand-flown at spinning stations, or call a tug for a fee.
 - **Saves:** quick save and quick load.
 
+Twenty-two NPC ships share the system: Cooperative ice tankers, Commons drone freighters, independent haulers, Compact couriers and Kernel shuttles. They trade from the same markets you do, chatter on comms, and come and go around the stations.
+
 Placeholder art throughout. See [docs/balance/NOTES.md](docs/balance/NOTES.md) for balance status.
 
 ## Play
@@ -24,7 +26,8 @@ You start docked at Kibo Ring in low Earth orbit with 5,000 credits and a second
 2. **Departures:** pick a destination. The co-pilot shows distance, time, propellant and the best cargo for that route.
 3. **Transit:** watch the map. `[` / `]` change time compression, and it drops to ×1 on arrival.
 4. **Approach:** fly in and dock, or press **T** for the tug (60 cr).
-5. **Shipyard** (Kibo Ring, Trojan Yards): bolt on bigger cargo pods, tanks, radiators and drives.
+5. **Traffic tab:** see who's in port, who's inbound and what's on comms. Use time compression while docked to wait for prices to move.
+6. **Shipyard** (Kibo Ring, Trojan Yards): bolt on bigger cargo pods, tanks, radiators and drives.
 
 | Keys | Flight |
 |---|---|

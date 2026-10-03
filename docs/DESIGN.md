@@ -45,6 +45,33 @@ Other upgrade tracks: cargo, tanks, radiators (heat), shielding (radiation), sen
 - **Events** shift supply and demand: a solar storm grounds traffic, a new habitat opens, a comet arrives.
 - **Post-scarcity flavour:** basic goods get cheaper over the campaign as automation spreads. Profit moves to rare, distant, time-critical or skilled work. This keeps the frontier attractive and stops early routes from staying optimal.
 
+## Other ships (NPC traffic)
+
+The system is shared. NPC fleets live in the sim (`data/npcs.json`, `sim/systems/npc_system.gd`) and buy and sell from the same markets as the player:
+
+| Fleet | Operator | Behaviour |
+|---|---|---|
+| Ice tankers | Luna Cooperative | Route: Shackleton ice → Halo Depot, food back |
+| Ore drones | The Commons | Route: regolith → Trojan Yards, habitat modules → The Kernel |
+| Drone freighters | The Commons | Trader: one of the few best trades they can see |
+| Independents | Independent haulers | Trader, like the player |
+| Couriers | Terran Compact | Route: medical and electronics to the Moon, helium-3 back |
+| Shuttles | Kernel Settlers | Passenger shuttle, no freight |
+
+Rules that keep them good neighbours:
+- Route fleets deliver only up to what the destination is short of, so they act as supply contracts rather than dumping gluts.
+- Traders need a minimum margin.
+- Nobody draws a market below its reserve.
+- NPCs never strand: their operators refuel them.
+
+They appear in four places:
+- on the system map
+- on each station's **Traffic** tab (in port, inbound, comms)
+- in the comms ticker
+- in the approach scene, moored at hub berths or flying the lanes outside the ring
+
+Stations also have view-only work pods and a tug, so a port always looks busy. Later NPC roles: passengers and contracts, rescue calls (hazards), disputes (conflict ladder) and faction reputation.
+
 ## Exploration and claims
 
 Scan bodies to reveal their composition, value and hazards. Sell survey data or keep it. To claim a body, file with the relevant authority: costs, rules and politics vary by region. Real named bodies are handmade. The many unnamed small bodies are generated from real orbit-population statistics, so new discoveries are possible.

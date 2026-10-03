@@ -13,6 +13,10 @@ const CalendarSystem := preload("res://sim/systems/calendar_system.gd")
 const EconomySystem := preload("res://sim/systems/economy_system.gd")
 const ShipyardSystem := preload("res://sim/systems/shipyard_system.gd")
 const TravelSystem := preload("res://sim/systems/travel_system.gd")
+const NpcSystem := preload("res://sim/systems/npc_system.gd")
+
+## Undrained events are capped so headless runs (bots, tests) cannot grow without bound.
+const MAX_PENDING_EVENTS := 2000
 
 var state: GameState
 var data: DataCatalog
@@ -27,7 +31,7 @@ func _init(catalog: DataCatalog = null) -> void:
 	ephemeris = Ephemeris.new(data.bodies, data.places)
 	state = GameState.new()
 	# Order matters within a tick: the clock moves first, then everything catches up to it.
-	systems = [CalendarSystem.new(), EconomySystem.new(), ShipyardSystem.new(), TravelSystem.new()]
+	systems = [CalendarSystem.new(), EconomySystem.new(), ShipyardSystem.new(), TravelSystem.new(), NpcSystem.new()]
 	for system in systems:
 		system.setup(self)
 
@@ -77,8 +81,11 @@ func advance_game_time(game_seconds: float) -> void:
 		system.tick(game_seconds)
 
 
-func emit(event_type: String, payload: Dictionary = {}) -> void:
-	_events.append({"type": event_type, "time_s": state.time_s, "data": payload})
+## at_time: when it happened, if not now (systems that process scheduled events in a long tick).
+func emit(event_type: String, payload: Dictionary = {}, at_time: float = NAN) -> void:
+	_events.append({"type": event_type, "time_s": state.time_s if is_nan(at_time) else at_time, "data": payload})
+	if _events.size() > MAX_PENDING_EVENTS:
+		_events = _events.slice(_events.size() - MAX_PENDING_EVENTS)
 
 
 ## The view drains events once per frame.

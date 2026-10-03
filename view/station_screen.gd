@@ -7,24 +7,31 @@ const Market := preload("res://sim/market.gd")
 const Navigation := preload("res://sim/navigation.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
 const ShipyardSystem := preload("res://sim/systems/shipyard_system.gd")
+const SystemMap := preload("res://view/system_map.gd")
+const Comms := preload("res://view/comms.gd")
+const DAY := 86400.0
 
 var sim
+## Recent comms lines, owned by the game shell and shared with this screen.
+var comms: Array
 var _tabs: TabContainer
 var _side: VBoxContainer
 var _header: VBoxContainer
 var _tab_index := 0
 
 
-func _init(owner_sim) -> void:
+func _init(owner_sim, comms_log: Array = []) -> void:
 	sim = owner_sim
+	comms = comms_log
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 
 func _ready() -> void:
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	for side in ["left", "right", "bottom"]:
+	for side in ["left", "right"]:
 		margin.add_theme_constant_override("margin_" + side, 16)
+	margin.add_theme_constant_override("margin_bottom", 70)
 	margin.add_theme_constant_override("margin_top", 52)
 	add_child(margin)
 	var root := VBoxContainer.new()
@@ -58,6 +65,7 @@ func refresh() -> void:
 		return
 	var place_id: String = sim.state.location["place"]
 	var place: Dictionary = sim.data.places[place_id]
+	var keep_tab := _tab_index
 	for c in _header.get_children():
 		c.queue_free()
 	_header.add_child(UI.label(place["name"].to_upper(), UI.AMBER, 26))
@@ -67,9 +75,11 @@ func refresh() -> void:
 		c.queue_free()
 	_tabs.add_child(_market_tab(place_id))
 	_tabs.add_child(_departures_tab(place_id))
+	_tabs.add_child(_traffic_tab(place_id))
 	if "shipyard" in place.get("services", []):
 		_tabs.add_child(_shipyard_tab())
-	_tabs.current_tab = mini(_tab_index, _tabs.get_tab_count() - 1)
+	_tab_index = mini(keep_tab, _tabs.get_tab_count() - 1)
+	_tabs.current_tab = _tab_index
 	for c in _side.get_children():
 		c.queue_free()
 	_side.add_child(_ship_panel(place_id))
@@ -147,7 +157,7 @@ func _departures_tab(place_id: String) -> Control:
 	for to in d.places:
 		if to == place_id:
 			continue
-		var plan: Dictionary = Navigation.plan(s, d, sim.ephemeris, place_id, to, s.time_s)
+		var plan: Dictionary = Navigation.plan(s.ship, d, sim.ephemeris, place_id, to, s.time_s)
 		var p := UI.panel("")
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 16)
@@ -271,3 +281,53 @@ func _ship_panel(place_id: String) -> Control:
 		var price := float(d.goods["propellant"]["base_price"]) * float(d.balance["economy"]["emergency_fuel_price_mult"])
 		v.add_child(UI.button("Emergency tanker  (%s/t)" % UI.money(price), send.bind({"type": "emergency_refuel"}), float(s.ship["fuel_t"]) < fuel_cap))
 	return p[0]
+
+
+## Who else is about: ships in port, ships inbound, and the comms channel.
+func _traffic_tab(place_id: String) -> Control:
+	var s = sim.state
+	var d = sim.data
+	var row := HBoxContainer.new()
+	row.name = "Traffic"
+	row.add_theme_constant_override("separation", 12)
+	var map := SystemMap.new(sim)
+	map.custom_minimum_size = Vector2(360, 360)
+	map.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	map.size_flags_stretch_ratio = 1.1
+	map.show_npc_labels = false
+	row.add_child(map)
+	var parts := _scroll("TrafficLists")
+	parts[0].size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(parts[0])
+	var lists: VBoxContainer = parts[1]
+	var in_port := []
+	var inbound := []
+	for npc in s.npcs:
+		var loc: Dictionary = npc["location"]
+		if loc["status"] == "docked" and loc["place"] == place_id:
+			in_port.append(npc)
+		elif loc["status"] == "transit" and loc["to"] == place_id:
+			inbound.append(npc)
+	inbound.sort_custom(func(a, b): return a["location"]["arrive_t"] < b["location"]["arrive_t"])
+	lists.add_child(UI.label("IN PORT", UI.AMBER, 13))
+	if in_port.is_empty():
+		lists.add_child(UI.label("Nobody else docked.", UI.DIM, 13))
+	for npc in in_port:
+		var fleet: Dictionary = d.npcs["fleets"][npc["fleet"]]
+		lists.add_child(UI.label("%s  ·  %s" % [npc["name"], fleet["operator"]], SystemMap.fleet_colour(sim, npc), 14))
+		lists.add_child(UI.label("   %s, leaving in about %s" % [d.ships[npc["ship"]["hull"]]["name"], UI.duration(maxf(0.0, float(npc["next_t"]) - s.time_s))], UI.DIM, 12))
+	lists.add_child(UI.label("INBOUND", UI.AMBER, 13))
+	if inbound.is_empty():
+		lists.add_child(UI.label("Nothing on the board.", UI.DIM, 13))
+	for npc in inbound:
+		var cargo := Comms.cargo_text(sim, npc["ship"]["cargo"])
+		lists.add_child(UI.label("%s  ·  in %s" % [npc["name"], UI.duration(float(npc["location"]["arrive_t"]) - s.time_s)], SystemMap.fleet_colour(sim, npc), 14))
+		lists.add_child(UI.label("   from %s%s" % [d.places[npc["location"]["from"]]["name"], ", carrying " + cargo if cargo != "" else ", empty"], UI.DIM, 12))
+	lists.add_child(UI.label("COMMS", UI.AMBER, 13))
+	if comms.is_empty():
+		lists.add_child(UI.label("Quiet on the channel. Time compression ([ ]) passes the time while docked.", UI.DIM, 13))
+	for i in range(comms.size() - 1, maxi(-1, comms.size() - 13), -1):
+		var l := UI.label(comms[i], UI.TEXT, 12)
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD
+		lists.add_child(l)
+	return row

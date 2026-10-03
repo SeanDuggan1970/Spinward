@@ -26,10 +26,8 @@ func _ready() -> void:
 	_readouts = Label.new()
 	_readouts.add_theme_font_size_override("font_size", 14)
 	p[1].add_child(_readouts)
-	_keys = UI.label("W/S thrust  A/D strafe  R/F up/down  Shift boost\nArrows pitch/yaw  Q/E roll  X brake\nZ assist  V spin match  C camera\nT call the tug (%d cr)  P pause" % int(flight.tune_dock["auto_dock_fee"]), UI.DIM, 12)
-	_keys.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
-	_keys.position = Vector2(16, -96)
-	add_child(_keys)
+	_keys = UI.label("W/S thrust  A/D strafe  R/F up/down\nShift boost  X brake\nArrows pitch/yaw  Q/E roll\nZ assist  V spin match  C camera\nT call the tug (%d cr)  P pause" % int(flight.tune_dock["auto_dock_fee"]), UI.DIM, 12)
+	p[1].add_child(_keys)
 	_message = UI.label("", UI.AMBER, 20)
 	_message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_message.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
