@@ -1,0 +1,39 @@
+{
+	"_source": "Earth: JPL 'Approximate Positions of the Planets', Table 1 (Earth-Moon barycentre, J2000, valid 1800-2050). Moon: mean elements after Meeus, Astronomical Algorithms ch. 47, including node regression and apsidal precession; period is the anomalistic month. GM values: JPL/IAU. Approximate; to be replaced by a Horizons bake (tools/bake_bodies.py) when more bodies are added.",
+	"sun": {
+		"name": "Sun",
+		"gm": 1.32712440018e20,
+		"radius_m": 6.957e8
+	},
+	"earth": {
+		"name": "Earth",
+		"parent": "sun",
+		"gm": 3.986004418e14,
+		"radius_m": 6.371e6,
+		"elements": {
+			"a_m": 1.4959826e11,
+			"e": 0.01671123,
+			"i_deg": -0.00001531,
+			"node_deg": 0.0,
+			"peri_deg": 102.93768193,
+			"m0_deg": -2.47311027
+		}
+	},
+	"moon": {
+		"name": "Moon",
+		"parent": "earth",
+		"gm": 4.9048695e12,
+		"radius_m": 1.7374e6,
+		"elements": {
+			"a_m": 3.84399e8,
+			"e": 0.0549,
+			"i_deg": 5.145,
+			"node_deg": 125.04452,
+			"node_rate_deg_per_day": -0.0529539,
+			"peri_deg": 318.30873,
+			"peri_rate_deg_per_day": 0.1643580,
+			"m0_deg": 134.96340,
+			"period_days": 27.554550
+		}
+	}
+}

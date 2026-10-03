@@ -1,9 +1,49 @@
 {
 	"start": {
 		"date_utc": "2061-03-01T00:00:00",
-		"credits": 5000
+		"credits": 5000,
+		"place": "kibo_ring",
+		"ship": "mule",
+		"ship_name": "Second Wind"
 	},
 	"time": {
-		"scales": [1, 10, 100, 1000, 10000]
+		"scales": [1, 10, 100, 1000, 10000],
+		"arrival_scale": 1
+	},
+	"economy": {
+		"_note": "price = base * clamp((target / stock) ^ elasticity, min, max). Stock relaxes toward target at relaxation_per_day, standing in for background traffic.",
+		"price_elasticity": 0.7,
+		"price_min_mult": 0.4,
+		"price_max_mult": 3.0,
+		"spread": 0.06,
+		"relaxation_per_day": 0.12,
+		"max_stock_mult": 4.0,
+		"step_hours": 1.0
+	},
+	"travel": {
+		"_note": "Brachistochrone at current mass and thrust, plus fixed overheads for undock/capture. Gravity wells and orbital velocity are deliberately ignored: the co-pilot 'handles it'.",
+		"overhead_hours": 3.0,
+		"intercept_iterations": 6,
+		"g0": 9.80665
+	},
+	"docking": {
+		"auto_dock_fee": 60,
+		"capture_distance_m": 4.0,
+		"max_speed_mps": 1.2,
+		"max_angle_deg": 12.0,
+		"max_roll_error_deg": 15.0,
+		"spawn_distance_m": 600.0,
+		"spawn_offset_m": 60.0
+	},
+	"flight": {
+		"rcs_accel_mps2": 2.0,
+		"boost_mult": 3.0,
+		"turn_rate_dps": 35.0,
+		"turn_accel_dps2": 70.0,
+		"assist_default": "assisted",
+		"bump_restitution": 0.3
+	},
+	"shipyard": {
+		"resale_fraction": 0.5
 	}
 }

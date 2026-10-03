@@ -1,0 +1,16 @@
+{
+	"mule": {
+		"name": "Mule-class utility hauler",
+		"description": "Thirty years old, three previous owners, two refits. The truss is sound and the drive still lights. Everything else is negotiable.",
+		"spine": "mule_spine",
+		"modules": {
+			"command.0": "cmd_pod_basic",
+			"cargo.0": "cargo_pod_s",
+			"cargo.1": "cargo_pod_s",
+			"tank.0": "tank_s",
+			"drive.0": "pathfinder_mk1",
+			"radiator.0": "radiator_panel",
+			"radiator.1": "radiator_panel"
+		}
+	}
+}

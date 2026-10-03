@@ -1,0 +1,14 @@
+{
+	"_note": "Units are tonnes. base_price is credits per tonne at target stock. Tune freely.",
+	"water_ice": {"name": "Water ice", "base_price": 40, "description": "Lunar polar ice. Drinking water, air, propellant and radiation shielding all start here."},
+	"oxygen": {"name": "Oxygen", "base_price": 90, "description": "Split from water. Every habitat breathes it."},
+	"propellant": {"name": "Propellant", "base_price": 120, "description": "Hydrogen reaction mass for fusion drives. Ships refuel from the local stock."},
+	"regolith": {"name": "Regolith", "base_price": 8, "description": "Lunar soil. Bulk feedstock for smelters and radiation berms."},
+	"refined_metals": {"name": "Refined metals", "base_price": 350, "description": "Iron, aluminium and titanium smelted from regolith."},
+	"helium3": {"name": "Helium-3", "base_price": 25000, "description": "Fusion fuel skimmed from lunar soil. Light, rare and very valuable on Earth."},
+	"electronics": {"name": "Electronics", "base_price": 3000, "description": "Chips and control boards. Still mostly made on Earth."},
+	"food": {"name": "Food", "base_price": 600, "description": "Shelf-stable rations and fresh produce."},
+	"medical": {"name": "Medical supplies", "base_price": 5000, "description": "Drugs, diagnostics and spare organs-on-chips."},
+	"machine_parts": {"name": "Machine parts", "base_price": 1200, "description": "Pumps, bearings, actuators. Everything out here breaks eventually."},
+	"habitat_modules": {"name": "Habitat modules", "base_price": 2200, "description": "Pressure-hull sections ready to bolt together."}
+}

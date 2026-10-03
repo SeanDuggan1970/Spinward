@@ -4,6 +4,15 @@ extends SceneTree
 const Sim := preload("res://sim/sim.gd")
 const SaveIO := preload("res://sim/save_io.gd")
 const GameState := preload("res://sim/game_state.gd")
+const DataCatalog := preload("res://sim/data_catalog.gd")
+const Ephemeris := preload("res://sim/ephemeris.gd")
+const Market := preload("res://sim/market.gd")
+const Navigation := preload("res://sim/navigation.gd")
+const ShipStats := preload("res://sim/ship_stats.gd")
+const V := preload("res://sim/v3.gd")
+
+const AU := 1.495978707e11
+const DAY := 86400.0
 
 var checks := 0
 var failures := 0
@@ -16,48 +25,229 @@ func check(condition: bool, message: String) -> void:
 		push_error("FAIL: " + message)
 
 
-func run_schedule(commands: Array) -> Dictionary:
+func fresh() -> Sim:
 	var sim := Sim.new()
 	sim.new_game(42)
-	for step in commands:
-		if step is Dictionary:
-			sim.apply(step)
-		else:
-			sim.tick(float(step))
-	return sim.state.to_dict()
+	return sim
 
 
 func _initialize() -> void:
-	var sim := Sim.new()
-	sim.new_game(7)
+	test_data()
+	test_clock_and_commands()
+	test_orbits()
+	test_economy()
+	test_travel()
+	test_shipyard()
+	test_saves_and_determinism()
+	print("%d checks, %d failures" % [checks, failures])
+	quit(1 if failures > 0 else 0)
+
+
+func test_data() -> void:
+	var problems: Array = DataCatalog.load_default().validate()
+	for p in problems:
+		push_error("DATA: " + p)
+	check(problems.is_empty(), "Data files cross-reference cleanly")
+
+
+func test_clock_and_commands() -> void:
+	var sim := fresh()
 	check(sim.state.date_string() == "2061-03-01T00:00:00", "Start date from balance.json")
 	check(sim.state.credits == 5000.0, "Start credits from balance.json")
-
+	sim.take_events()
 	check(sim.apply({"type": "nonsense"}) != "", "Unknown command rejected")
 	check(sim.apply({"type": "set_time_scale", "scale": 7}) != "", "Disallowed time scale rejected")
 	check(sim.apply({"type": "set_time_scale", "scale": 1000}) == "", "Allowed time scale accepted")
 	var before := sim.state.time_s
 	sim.tick(2.0)
 	check(is_equal_approx(sim.state.time_s - before, 2000.0), "Time compression scales the clock")
-
 	sim.apply({"type": "set_paused", "paused": true})
 	before = sim.state.time_s
 	sim.tick(5.0)
 	check(sim.state.time_s == before, "Paused clock does not move")
 	check(sim.state.command_count == 2, "Only accepted commands are counted")
-	var events := sim.take_events()
-	check(events.size() == 3 and events[-1]["type"] == "paused_changed", "Events emitted for the view")
+	var types := sim.take_events().map(func(e): return e["type"])
+	check(types == ["rejected", "rejected", "time_scale_changed", "paused_changed"], "Events emitted for the view")
 	check(sim.take_events().is_empty(), "Events drain once")
 
+
+func test_orbits() -> void:
+	var data = DataCatalog.load_default()
+	var eph := Ephemeris.new(data.bodies, data.places)
+	# Earth-Sun distance stays within perihelion/aphelion over a year.
+	var lo := INF
+	var hi := 0.0
+	for d in range(0, 366, 5):
+		var r := V.length(eph.position("earth", d * DAY))
+		lo = minf(lo, r)
+		hi = maxf(hi, r)
+	check(lo > 0.982 * AU and lo < 0.985 * AU and hi > 1.015 * AU and hi < 1.018 * AU, "Earth orbit spans 0.983-1.017 AU")
+	# Perihelion falls in early January (J2000 epoch is 1 Jan 2000).
+	var best_day := 0
+	var best := INF
+	for d in range(0, 30):
+		var r := V.length(eph.position("earth", d * DAY))
+		if r < best:
+			best = r
+			best_day = d
+	check(best_day >= 1 and best_day <= 6, "Earth perihelion in early January (day %d)" % best_day)
+	# Moon distance stays within its real range.
+	lo = INF
+	hi = 0.0
+	for h in range(0, 24 * 60, 6):
+		var r := V.length(eph.relative("moon", "earth", h * 3600.0))
+		lo = minf(lo, r)
+		hi = maxf(hi, r)
+	check(lo > 3.55e8 and lo < 3.65e8 and hi > 4.03e8 and hi < 4.08e8, "Moon distance spans ~362,000-405,000 km")
+	# Lagrange points: L1 about 326,000 km from Earth on the Moon side; L4 equilateral.
+	var t := 7.0 * DAY
+	var moon := eph.relative("moon", "earth", t)
+	var l1 := eph.relative("halo_depot", "earth", t)
+	var l1_ratio := V.length(l1) / V.length(moon)
+	check(l1_ratio > 0.845 and l1_ratio < 0.853 and V.dot(l1, moon) > 0.0, "L1 at ~0.849 of the Earth-Moon distance")
+	var l4 := eph.relative("trojan_yards", "earth", t)
+	check(absf(V.length(l4) - V.length(moon)) < 1.0 and absf(V.distance(l4, moon) - V.length(moon)) < 1.0, "L4 is equilateral")
+	var l5 := eph.relative("kernel_l5", "earth", t)
+	check(V.distance(l4, l5) > 1.7 * V.length(moon), "L4 and L5 are on opposite sides of the Moon")
+	# Low Earth orbit station: 420 km altitude, ~92 minute period.
+	var leo := V.length(eph.relative("kibo_ring", "earth", t))
+	check(absf(leo - 6.791e6) < 5000.0, "Kibo Ring orbit radius")
+	var p0 := eph.relative("kibo_ring", "earth", 0.0)
+	var period := TAU * sqrt(pow(6.791e6, 3) / 3.986004418e14)
+	check(V.distance(p0, eph.relative("kibo_ring", "earth", period)) < 1.0, "Kibo Ring returns after one period")
+	# Geostationary: equatorial orbit is inclined 23.44 degrees to the ecliptic.
+	var geo := eph.relative("clarke_exchange", "earth", 3600.0)
+	var normal := V.normalized(V.cross(eph.relative("clarke_exchange", "earth", 0.0), geo))
+	check(absf(rad_to_deg(acos(absf(normal[2]))) - 23.44) < 0.05, "GEO lies in Earth's equatorial plane")
+
+
+func test_economy() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	check(s.markets["kibo_ring"]["food"] == 160.0, "Markets start at target stock")
+	var mid := Market.mid_price_at(d, "kibo_ring", "food", 160.0)
+	check(is_equal_approx(mid, 600.0), "Price equals base at target")
+	check(Market.mid_price_at(d, "kibo_ring", "food", 40.0) > mid, "Scarcity raises price")
+	check(Market.mid_price_at(d, "kibo_ring", "food", 1e6) == 600.0 * float(d.balance["economy"]["price_min_mult"]), "Glut price is floored")
+	check(Market.buy_price(s, d, "kibo_ring", "food") > Market.sell_price(s, d, "kibo_ring", "food"), "Buy above sell (spread)")
+
+	var credits := s.credits
+	check(sim.apply({"type": "buy", "good": "food", "tonnes": 5}) == "", "Buy food")
+	check(s.ship["cargo"]["food"] == 5.0 and s.credits < credits and s.markets["kibo_ring"]["food"] == 155.0, "Buying moves credits, cargo and stock")
+	check(sim.apply({"type": "buy", "good": "regolith", "tonnes": 1}) != "", "Cannot buy a good not traded here")
+	check(sim.apply({"type": "buy", "good": "food", "tonnes": 50}) != "", "Cargo capacity enforced")
+	s.credits = 10.0
+	check(sim.apply({"type": "buy", "good": "medical", "tonnes": 1}) != "", "Credits enforced")
+	check(sim.apply({"type": "sell", "good": "food", "tonnes": 6}) != "", "Cannot sell more than aboard")
+	check(sim.apply({"type": "sell", "good": "food", "tonnes": 5}) == "" and not s.ship["cargo"].has("food"), "Sell all food")
+	check(s.stats["trade_profit"] < 0.0, "Round trip at one market loses the spread")
+
+	# Producers fill up, consumers drain, and recipes convert, all within bounds.
+	sim.advance_game_time(30 * DAY)
+	var shack: Dictionary = s.markets["shackleton_port"]
+	check(shack["water_ice"] > 400.0 and shack["food"] < 60.0, "Producer gluts, consumer runs short")
+	var yards: Dictionary = s.markets["trojan_yards"]
+	check(yards["refined_metals"] > 0.0 and yards["habitat_modules"] > 0.0, "Recipes keep producing")
+	var bounded := true
+	for place in s.markets:
+		for good in s.markets[place]:
+			var v: float = s.markets[place][good]
+			bounded = bounded and v >= 0.0 and v <= Market.target(d, place, good) * float(d.balance["economy"]["max_stock_mult"])
+	check(bounded, "All stocks stay within [0, max]")
+	check(Market.sell_price(s, d, "kibo_ring", "helium3") > Market.buy_price(s, d, "shackleton_port", "helium3"), "Helium-3 run is profitable at equilibrium")
+
+	s.credits = 5000.0
+	s.ship["fuel_t"] = 1.0
+	check(sim.apply({"type": "refuel", "fill": true}) == "" and is_equal_approx(s.ship["fuel_t"], 3.0), "Refuel fills the tank")
+	check(sim.apply({"type": "refuel", "fill": true}) != "", "Full tank refuel rejected")
+
+
+func test_travel() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	check(Navigation.frame_body(d, "kibo_ring", "shackleton_port") == "earth", "Cislunar trips use the Earth frame")
+	var accel_empty := ShipStats.accel_mps2(s.ship, d)
+	check(accel_empty / 9.80665 > 0.002 and accel_empty / 9.80665 < 0.005, "Starter ship accelerates at a few milli-g")
+	var plan := Navigation.plan(s, d, sim.ephemeris, "kibo_ring", "halo_depot", s.time_s)
+	check(plan["ok"] and plan["distance_m"] > 3.0e8 and plan["distance_m"] < 3.4e8, "Route to L1 is about 320,000 km")
+	var days: float = plan["duration_s"] / DAY
+	check(days > 1.5 and days < 3.5, "Empty trip to L1 takes a couple of days (%.2f d)" % days)
+	check(plan["fuel_t"] > 0.1 and plan["fuel_t"] < 1.0, "Trip burns a fraction of the tank (%.2f t)" % plan["fuel_t"])
+
+	sim.apply({"type": "buy", "good": "water_ice", "tonnes": 20})
+	var loaded := Navigation.plan(s, d, sim.ephemeris, "kibo_ring", "halo_depot", s.time_s)
+	check(loaded["duration_s"] > plan["duration_s"], "Cargo mass slows the trip")
+
+	s.ship["fuel_t"] = 0.01
+	check(sim.apply({"type": "depart", "to": "halo_depot"}) != "", "Cannot depart without enough propellant")
+	s.ship["fuel_t"] = 3.0
+	check(sim.apply({"type": "depart", "to": "kibo_ring"}) != "", "Cannot depart to where you are")
+	check(sim.apply({"type": "depart", "to": "halo_depot"}) == "", "Depart for Halo Depot")
+	check(s.location["status"] == "transit" and s.ship["fuel_t"] < 3.0, "In transit, fuel spent")
+	check(sim.apply({"type": "buy", "good": "food", "tonnes": 1}) != "", "No trading in transit")
+	var start_pos: Array = Navigation.transit_position(s.location, s.time_s)
+	check(V.distance(start_pos, s.location["from_pos"]) < 1.0, "Transit starts at the origin")
+	sim.apply({"type": "set_time_scale", "scale": 10000})
+	sim.advance_game_time(float(s.location["arrive_t"]) - s.time_s - 60.0)
+	check(s.location["status"] == "transit", "Still travelling just before arrival")
+	sim.advance_game_time(120.0)
+	check(s.location["status"] == "approach" and s.location["place"] == "halo_depot", "Arrive on approach")
+	check(s.time_scale == 1.0, "Time compression drops on arrival")
+	var credits := s.credits
+	check(sim.apply({"type": "dock"}) == "" and s.location["status"] == "docked", "Auto dock")
+	check(s.credits == credits - float(d.balance["docking"]["auto_dock_fee"]), "Auto dock charges the fee")
+	check(sim.apply({"type": "sell", "good": "water_ice", "tonnes": 20}) == "", "Sell ice at the depot")
+	check(s.stats["trips"] == 1 and s.stats["auto_docks"] == 1, "Trip stats recorded")
+
+
+func test_shipyard() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	check(ShipStats.cargo_capacity_t(s.ship, d) == 20.0 and ShipStats.fuel_capacity_t(s.ship, d) == 3.0, "Mule starts with 20 t cargo and 3 t tank")
+	check(s.ship["fuel_t"] == 3.0, "Starts fully fuelled")
+	check(sim.apply({"type": "install_module", "slot": "cargo.0", "module": "cargo_pod_m"}) != "", "Cannot afford a 20 t container yet")
+	s.credits = 200000.0
+	check(sim.apply({"type": "install_module", "slot": "tank.0", "module": "cargo_pod_m"}) != "", "Module kind must match slot")
+	check(sim.apply({"type": "install_module", "slot": "cargo.5", "module": "cargo_pod_m"}) != "", "Slot must exist")
+	check(sim.apply({"type": "install_module", "slot": "drive.0", "module": "pathfinder_mk2"}) != "", "Kibo Ring does not sell Mk2 drives")
+	check(sim.apply({"type": "install_module", "slot": "cargo.0", "module": "cargo_pod_m"}) == "", "Fit a 20 t container")
+	check(ShipStats.cargo_capacity_t(s.ship, d) == 30.0, "Capacity grows")
+	check(s.credits == 200000.0 - 30000.0 + 4000.0, "Old module resold at half price")
+	sim.apply({"type": "buy", "good": "water_ice", "tonnes": 25})
+	check(sim.apply({"type": "install_module", "slot": "cargo.0", "module": "cargo_pod_s"}) != "", "Cannot shrink below cargo aboard")
+	# Heat: a Mk2 drive (4 MW) on two 1.5 MW panels runs throttled.
+	var hot: Dictionary = s.ship.duplicate(true)
+	hot["modules"]["drive.0"] = "pathfinder_mk2"
+	check(is_equal_approx(ShipStats.thrust_n(hot, d), 1200.0 * 3.0 / 4.0), "Radiators limit thrust")
+
+
+func test_saves_and_determinism() -> void:
+	var sim := fresh()
+	sim.apply({"type": "buy", "good": "electronics", "tonnes": 1})
+	sim.apply({"type": "depart", "to": "clarke_exchange"})
+	sim.advance_game_time(3600.0 * 5)
 	var text := SaveIO.to_text(sim.state)
 	var loaded := SaveIO.from_text(text)
-	check(loaded != null and loaded.to_dict() == sim.state.to_dict(), "Save round-trip is lossless")
-	check(SaveIO.from_text("{\"schema_version\": 999}") == null, "Future save version refused")
+	check(loaded != null and loaded.to_dict() == sim.state.to_dict(), "Save round-trip is lossless mid-transit")
+	var resumed := Sim.new()
+	resumed.load_state(loaded)
+	resumed.advance_game_time(3 * DAY)
+	sim.advance_game_time(3 * DAY)
+	check(resumed.state.to_dict() == sim.state.to_dict(), "A loaded game continues identically")
+	var future := sim.state.to_dict()
+	future["schema_version"] = 999
+	check(SaveIO.from_text(JSON.stringify({"state": Marshalls.raw_to_base64(var_to_bytes(future))})) == null, "Future save version refused")
 	check(SaveIO.from_text("not json") == null, "Corrupt save refused")
 
-	var schedule := [{"type": "set_time_scale", "scale": 100}, 1.5, {"type": "set_paused", "paused": true}, 3.0,
-		{"type": "set_paused", "paused": false}, 0.25]
-	check(run_schedule(schedule) == run_schedule(schedule), "Same seed and commands give the same state")
-
-	print("%d checks, %d failures" % [checks, failures])
-	quit(1 if failures > 0 else 0)
+	var run := func() -> Dictionary:
+		var r := fresh()
+		for c in [{"type": "buy", "good": "food", "tonnes": 4}, {"type": "depart", "to": "shackleton_port"}]:
+			r.apply(c)
+		r.advance_game_time(10 * DAY)
+		r.apply({"type": "dock"})
+		r.apply({"type": "sell", "good": "food", "tonnes": 4})
+		return r.state.to_dict()
+	check(run.call() == run.call(), "Same seed and commands give the same state")

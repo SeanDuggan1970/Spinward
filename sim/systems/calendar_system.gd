@@ -8,8 +8,8 @@ func setup(owner) -> void:
 	owner.register("set_paused", _set_paused)
 
 
-func tick(real_dt: float) -> void:
-	sim().state.time_s += real_dt * sim().state.time_scale
+func tick(game_dt: float) -> void:
+	sim().state.time_s += game_dt
 
 
 func _set_time_scale(command: Dictionary) -> String:

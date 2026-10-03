@@ -1,0 +1,14 @@
+{
+	"_note": "Ships are a spine plus bolt-on modules. mass_t is dry mass. Drives: thrust_n and isp_s set acceleration and propellant use; heat_mw must be rejected by radiators or thrust is throttled. 'look' feeds the placeholder kit-bash renderer.",
+	"mule_spine": {"name": "Mule truss spine", "kind": "spine", "mass_t": 6.0, "price": 0, "slots": {"command": 1, "cargo": 2, "tank": 1, "drive": 1, "radiator": 2}, "look": {"length_m": 26}},
+	"cmd_pod_basic": {"name": "Two-seat command pod", "kind": "command", "mass_t": 4.0, "price": 0, "look": {"shape": "box", "size_m": [4.5, 3.6, 5.0], "colour": "offwhite"}},
+	"cargo_pod_s": {"name": "10 t cargo cage", "kind": "cargo", "mass_t": 1.5, "price": 8000, "cargo_t": 10, "look": {"shape": "cage", "size_m": [3.6, 3.6, 4.5], "colour": "yellow"}},
+	"cargo_pod_m": {"name": "20 t cargo container", "kind": "cargo", "mass_t": 2.5, "price": 30000, "cargo_t": 20, "look": {"shape": "box", "size_m": [4.2, 4.2, 6.0], "colour": "grey"}},
+	"cargo_pod_l": {"name": "35 t bulk container", "kind": "cargo", "mass_t": 4.0, "price": 90000, "cargo_t": 35, "look": {"shape": "box", "size_m": [5.0, 5.0, 8.0], "colour": "rust"}},
+	"tank_s": {"name": "3 t propellant tank", "kind": "tank", "mass_t": 0.8, "price": 5000, "fuel_t": 3, "look": {"shape": "sphere", "size_m": [3.2, 3.2, 3.2], "colour": "foil"}},
+	"tank_m": {"name": "6 t propellant tank", "kind": "tank", "mass_t": 1.4, "price": 18000, "fuel_t": 6, "look": {"shape": "cylinder", "size_m": [3.4, 3.4, 5.5], "colour": "foil"}},
+	"pathfinder_mk1": {"name": "Pathfinder Mk1 fusion drive", "kind": "drive", "mass_t": 4.0, "price": 0, "thrust_n": 700, "isp_s": 30000, "heat_mw": 2.0, "look": {"shape": "drive", "size_m": [3.0, 3.0, 5.0], "colour": "grey"}},
+	"pathfinder_mk2": {"name": "Pathfinder Mk2 fusion drive", "kind": "drive", "mass_t": 4.5, "price": 120000, "thrust_n": 1200, "isp_s": 32000, "heat_mw": 4.0, "look": {"shape": "drive", "size_m": [3.4, 3.4, 5.6], "colour": "grey"}},
+	"radiator_panel": {"name": "1.5 MW radiator panel", "kind": "radiator", "mass_t": 0.5, "price": 4000, "reject_mw": 1.5, "look": {"shape": "panel", "size_m": [0.2, 6.0, 3.0], "colour": "dark"}},
+	"radiator_panel_l": {"name": "3 MW radiator wing", "kind": "radiator", "mass_t": 0.9, "price": 12000, "reject_mw": 3.0, "look": {"shape": "panel", "size_m": [0.2, 9.0, 4.0], "colour": "dark"}}
+}

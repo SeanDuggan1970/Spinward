@@ -8,10 +8,15 @@ extends RefCounted
 
 const GameState := preload("res://sim/game_state.gd")
 const DataCatalog := preload("res://sim/data_catalog.gd")
+const Ephemeris := preload("res://sim/ephemeris.gd")
 const CalendarSystem := preload("res://sim/systems/calendar_system.gd")
+const EconomySystem := preload("res://sim/systems/economy_system.gd")
+const ShipyardSystem := preload("res://sim/systems/shipyard_system.gd")
+const TravelSystem := preload("res://sim/systems/travel_system.gd")
 
 var state: GameState
 var data: DataCatalog
+var ephemeris: Ephemeris
 var systems: Array = []
 var _handlers: Dictionary = {}
 var _events: Array[Dictionary] = []
@@ -19,8 +24,10 @@ var _events: Array[Dictionary] = []
 
 func _init(catalog: DataCatalog = null) -> void:
 	data = catalog if catalog else DataCatalog.load_default()
+	ephemeris = Ephemeris.new(data.bodies, data.places)
 	state = GameState.new()
-	systems = [CalendarSystem.new()]
+	# Order matters within a tick: the clock moves first, then everything catches up to it.
+	systems = [CalendarSystem.new(), EconomySystem.new(), ShipyardSystem.new(), TravelSystem.new()]
 	for system in systems:
 		system.setup(self)
 
@@ -31,7 +38,14 @@ func new_game(seed_value: int) -> void:
 	var start: Dictionary = data.balance["start"]
 	state.time_s = GameState.from_unix(Time.get_unix_time_from_datetime_string(start["date_utc"]))
 	state.credits = float(start["credits"])
+	for system in systems:
+		system.start_game()
 	emit("new_game", {"seed": seed_value})
+
+
+func load_state(loaded: GameState) -> void:
+	state = loaded
+	emit("loaded", {})
 
 
 func register(command_type: String, handler: Callable) -> void:
@@ -42,20 +56,25 @@ func register(command_type: String, handler: Callable) -> void:
 ## Returns "" on success, otherwise a reason the command was rejected.
 func apply(command: Dictionary) -> String:
 	var type: String = command.get("type", "")
-	if not _handlers.has(type):
-		return "unknown command: " + type
-	var error: String = _handlers[type].call(command)
+	var error: String = _handlers[type].call(command) if _handlers.has(type) else "unknown command: " + type
 	if error == "":
 		state.command_count += 1
+	else:
+		emit("rejected", {"command": type, "reason": error})
 	return error
 
 
-## Advance by real seconds; systems scale by time_scale themselves.
+## Advance by real seconds at the current time compression.
 func tick(real_dt: float) -> void:
-	if state.paused:
+	advance_game_time(real_dt * state.time_scale)
+
+
+## Advance game time by exactly `game_seconds` (bots and tests use this directly).
+func advance_game_time(game_seconds: float) -> void:
+	if state.paused or game_seconds <= 0.0:
 		return
 	for system in systems:
-		system.tick(real_dt)
+		system.tick(game_seconds)
 
 
 func emit(event_type: String, payload: Dictionary = {}) -> void:
