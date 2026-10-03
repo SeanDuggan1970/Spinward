@@ -89,6 +89,19 @@ A character, not just a feature. It is the in-world reason the flight is playabl
 - **Near (within about 50 km of a station or body):** a local Newtonian flight bubble with Jolt collisions. A fly-by-wire assist has tunable levels: Full (arcade-like, holds velocity), Assisted (damps rotation and drift), Manual (pure momentum).
 - Docking at rotating stations: match the spin, approach the axis, use guide lights. Tolerances are in data.
 
+## Art direction: workmanlike, not slick
+
+Touchstone: the Eagle Transporter from *Space: 1999*, with ships that look built by and for working people. Kindred references: Apollo's lunar module, the ISS, the Nostromo (*Alien*), *Silent Running*, *Outland*, and real hardware like trusses, tanks and radiators.
+
+- **Function is visible.** Exposed truss spines, tanks, radiator panels, cable runs, handholds, docking collars, landing legs with dampers. If a part exists in the rules, you can see it on the model.
+- **Modular by construction.** Ships are a spine plus bolt-on modules: command pod, cargo pod, tanks, drive, radiators, drones. Upgrades physically change the silhouette. One kit of parts builds many ships, so the art and the ship data share one structure (`data/modules/`).
+- **Materials:** off-white and grey panels, bare metal, gold foil insulation, rubberised seals. Restrained colour with practical markings: hazard stripes, hull numbers, operator logos, stencilled warnings, rescue-orange handles.
+- **Wear and history:** scuffs, sun-bleaching, replaced mismatched panels, patch repairs. Older ships look older, and a second-hand starter ship looks second-hand.
+- **Lighting:** hard, single-source sunlight with deep shadows. Working lights, floodlights and blinking navigation beacons. Interiors are cramped and lit by instruments.
+- **Stations and habitats** follow the same logic: assembled from modules, under construction at the edges, with scaffolding and cranes. Your own base visibly grows through its stages.
+- **UI:** instrument-panel style. Clear labels, monospace readouts, physical-looking switches. Functional, not holographic glamour.
+- **Build approach:** low-to-mid poly kitbash parts with simple shared materials and decals, so a small team (or one person) can make many variations. A good fit for the Compatibility renderer and the GTX 960M baseline.
+
 ## Architecture
 
 ### Layers
@@ -157,4 +170,4 @@ Drive acceleration and fuel per tier. Price band width and elasticity per good. 
 - Player identity: a custom name and portrait? A fixed backstory?
 - How much should the co-pilot speak? Writing and voice budget.
 - Should a ship be lost permanently? Leaning to "insurance + setback", not permadeath.
-- Art direction: clean NASA-punk realism, or stylised low-poly?
+- ~~Art direction~~: decided. Workmanlike modular hardware, see "Art direction".
