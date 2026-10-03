@@ -148,7 +148,7 @@
 		"kind": "drive",
 		"mass_t": 4.0,
 		"price": 0,
-		"thrust_n": 700,
+		"thrust_n": 1000,
 		"isp_s": 30000,
 		"heat_mw": 2.0,
 		"look": {
@@ -166,7 +166,7 @@
 		"kind": "drive",
 		"mass_t": 4.5,
 		"price": 120000,
-		"thrust_n": 1200,
+		"thrust_n": 1700,
 		"isp_s": 32000,
 		"heat_mw": 4.0,
 		"look": {

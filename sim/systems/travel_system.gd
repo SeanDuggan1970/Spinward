@@ -40,6 +40,8 @@ func _depart(command: Dictionary) -> String:
 		"status": "transit", "from": here, "to": to, "frame": route["frame"],
 		"depart_t": s.time_s, "arrive_t": route["arrive_t"], "burn_s": route["burn_s"],
 		"from_pos": route["from_pos"], "to_pos": route["to_pos"], "distance_m": route["distance_m"],
+		"from_vel": route["from_vel"], "to_vel": route["to_vel"],
+		"from_rot": route.get("from_rot"), "to_rot": route.get("to_rot"), "rot_axis": route.get("rot_axis"), "rot_angle": route.get("rot_angle", 0.0),
 	}
 	sim().emit("departed", {"from": here, "to": to, "arrive_t": route["arrive_t"], "fuel_t": route["fuel_t"]})
 	return ""

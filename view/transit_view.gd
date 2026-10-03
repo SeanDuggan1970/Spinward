@@ -84,18 +84,14 @@ func _update(dt: float) -> void:
 	_sun_disc.position = sun_dir * SKY_DISTANCE
 	_sun_disc.scale = Vector3.ONE * SKY_DISTANCE * 0.0047 * 3.0
 
-	# Burn attitude: nose to the destination while accelerating, tail to it while braking.
+	# Attitude: the main drive pushes along the nose, so face along the thrust vector
+	# (which swings smoothly from toward the target to braking against it). Coasting,
+	# hold the last attitude.
 	var dest: Array = eph.position(loc["to"], t)
 	var dest_dir := SkyKit.dir_between(dest, ship)
-	# The ship flies its planned track toward the intercept point, not at where the
-	# destination is right now (the Moon moves about 13 degrees a day).
-	var track_dir := SkyKit.dir_between(loc["to_pos"], loc["from_pos"])
-	var duration := float(loc["arrive_t"]) - float(loc["depart_t"])
-	var burn := float(loc["burn_s"])
-	var start := float(loc["depart_t"]) + (duration - burn) * 0.5
-	var into_burn := clampf(t - start, 0.0, burn)
-	var braking := into_burn > burn * 0.5
-	var forward := -track_dir if braking else track_dir
+	var thrust: Array = Navigation.transit_accel(loc, t)
+	var thrusting := V.length(thrust) > 1e-6
+	var forward := Vector3(thrust[0], thrust[2], -thrust[1]).normalized() if thrusting else -_basis.z
 	var want := Basis.looking_at(forward, Vector3.UP if absf(forward.y) < 0.98 else Vector3.RIGHT)
 	if not _ready_basis:
 		_basis = want
@@ -113,13 +109,13 @@ func _update(dt: float) -> void:
 	camera.transform = Transform3D(_basis * look, Vector3.ZERO)
 	camera.fov = lerpf(camera.fov, TELESCOPE_FOV if telescope else WIDE_FOV, clampf(dt * 6.0, 0.0, 1.0)) if dt > 0.0 else camera.fov
 
-	# Brachistochrone kinematics: a = 4d / burn^2; speed rises, then falls.
-	var dist := float(loc["distance_m"])
-	var accel := 4.0 * dist / (burn * burn) if burn > 0.0 else 0.0
-	var speed := accel * (into_burn if not braking else burn - into_burn)
-	var flipping := Basis.looking_at(forward, Vector3.UP if absf(forward.y) < 0.98 else Vector3.RIGHT).get_rotation_quaternion().angle_to(_basis.get_rotation_quaternion()) > 0.15
+	var v_now: Array = Navigation.transit_velocity(loc, t)
+	var speed := V.length(v_now)
+	var accel := V.length(thrust)
+	var into := V.dot(V.normalized(thrust), V.normalized(v_now)) if thrusting else 0.0
+	var flipping := want.get_rotation_quaternion().angle_to(_basis.get_rotation_quaternion()) > 0.15
 	readout = {
-		"phase": "FLIP" if flipping else ("BRAKING" if braking else ("ACCELERATING" if into_burn > 0.0 and into_burn < burn else "COASTING")),
+		"phase": "TURNING" if flipping else ("COASTING" if not thrusting else ("ACCELERATING" if into > 0.3 else ("BRAKING" if into < -0.3 else "BURNING ACROSS"))),
 		"speed": speed,
 		"accel": accel,
 		"remaining": V.distance(ship, dest),

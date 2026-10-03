@@ -378,6 +378,7 @@ func _tour(dir: String) -> void:
 	sim.apply({"type": "depart", "to": "shackleton_port"})
 	sim.apply({"type": "set_time_scale", "scale": 1000})
 	_sync_mode()
+	(_screen as MapScreen).set_view("cockpit")
 	sim.advance_game_time((float(sim.state.location["arrive_t"]) - sim.state.time_s) * 0.4)
 	for _i in 30:
 		await get_tree().process_frame
@@ -397,10 +398,14 @@ func _tour(dir: String) -> void:
 		for _i in 90:
 			await get_tree().process_frame
 		_shot(dir + "/3d-transit-telescope.png")
-	(_screen as MapScreen)._set_mode(false)
+	(_screen as MapScreen).set_view("map")
 	for _i in 10:
 		await get_tree().process_frame
 	_shot(dir + "/3c-map.png")
+	(_screen as MapScreen).set_view("orbit")
+	for _i in 120:
+		await get_tree().process_frame
+	_shot(dir + "/3e-orbit.png")
 	sim.advance_game_time(float(sim.state.location["arrive_t"]) - sim.state.time_s + 1.0)
 	_sync_mode()
 	for _i in 90:

@@ -5,6 +5,7 @@ extends Control
 
 const UI := preload("res://view/ui/ui_kit.gd")
 const Navigation := preload("res://sim/navigation.gd")
+const V := preload("res://sim/v3.gd")
 
 const DAY := 86400.0
 const FLEET_COLOURS := {
@@ -76,26 +77,58 @@ func _draw() -> void:
 		draw_rect(Rect2(at - Vector2(3, 3), Vector2(6, 6)), col)
 		draw_string(_font, at + Vector2(6, 14), sim.data.places[place]["name"], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, col)
 
-	# NPC traffic: a dot per ship in flight, with a faint line to where it is going.
+	# NPC traffic: a dot per ship in flight, with a faint trace of the path still ahead.
 	for npc in s.npcs:
 		if npc["location"]["status"] != "transit":
 			continue
 		var loc: Dictionary = npc["location"]
 		var p: Vector2 = to_screen.call(Navigation.transit_position(loc, t))
-		var dest: Vector2 = to_screen.call(loc["to_pos"])
 		var col := fleet_colour(sim, npc)
-		draw_line(p, dest, Color(col, 0.12), 1.0)
+		var trace := _path_points(loc, t, float(loc["arrive_t"]), 12, to_screen)
+		if trace.size() >= 2:
+			draw_polyline(trace, Color(col, 0.15), 1.0)
 		draw_circle(p, 2.5, col)
 		if show_npc_labels and zoom >= 1.0:
 			draw_string(_font, p + Vector2(5, -4), npc["name"], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(col, 0.75))
 
 	if s.location.get("status") == "transit":
-		var a: Vector2 = to_screen.call(s.location["from_pos"])
-		var b: Vector2 = to_screen.call(s.location["to_pos"])
-		draw_dashed_line(a, b, Color(UI.AMBER, 0.6), 1.5, 8.0)
-		var ship: Vector2 = to_screen.call(Navigation.transit_position(s.location, t))
-		var dir := (b - a).normalized()
+		var loc: Dictionary = s.location
+		# The planned path curves to match the destination's motion: dim behind, amber ahead.
+		var behind := _path_points(loc, float(loc["depart_t"]), t, 40, to_screen)
+		var ahead := _path_points(loc, t, float(loc["arrive_t"]), 60, to_screen)
+		if behind.size() >= 2:
+			draw_polyline(behind, Color(UI.DIM, 0.6), 1.5)
+		if ahead.size() >= 2:
+			draw_polyline(ahead, Color(UI.AMBER, 0.8), 1.5)
+		# Where the destination goes between now and arrival, and the meeting point.
+		var track_body := Navigation.track_id(sim.data, loc["to"], frame)
+		if track_body != "":
+			var track := PackedVector2Array()
+			for k in 25:
+				track.append(to_screen.call(eph.relative(track_body, frame, lerpf(t, float(loc["arrive_t"]), float(k) / 24.0))))
+			draw_polyline(track, Color(UI.AMBER, 0.3), 1.0)
+		var meet: Vector2 = to_screen.call(Navigation.transit_position(loc, float(loc["arrive_t"])))
+		draw_arc(meet, 7.0, 0.0, TAU, 20, UI.AMBER, 1.5)
+		draw_string(_font, meet + Vector2(9, 14), "RENDEZVOUS", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, UI.AMBER)
+		var ship: Vector2 = to_screen.call(Navigation.transit_position(loc, t))
+		# The ship points along its thrust (the drive pushes along the nose).
+		var a: Array = Navigation.transit_accel(loc, t)
+		var v: Array = Navigation.transit_velocity(loc, t)
+		var face := Vector2(a[0], -a[1]) if V.length(a) > 1e-6 else Vector2(v[0], -v[1])
+		var dir := face.normalized() if face.length() > 1e-9 else Vector2.RIGHT
 		var side := Vector2(-dir.y, dir.x)
 		draw_colored_polygon(PackedVector2Array([ship + dir * 9, ship - dir * 6 + side * 5, ship - dir * 6 - side * 5]), UI.GOOD)
-		var tau := (t - float(s.location["depart_t"])) / (float(s.location["arrive_t"]) - float(s.location["depart_t"]))
-		draw_string(_font, ship + Vector2(10, -8), "BRAKING" if tau > 0.5 else "ACCELERATING", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, UI.GOOD)
+		if V.length(a) > 1e-6:
+			draw_line(ship - dir * 6, ship - dir * 16, Color("8fd0ff"), 2.0)
+		var into := V.dot(V.normalized(a), V.normalized(v)) if V.length(a) > 1e-6 else 0.0
+		var phase := "COASTING" if V.length(a) <= 1e-6 else ("ACCELERATING" if into > 0.3 else ("BRAKING" if into < -0.3 else "BURNING ACROSS"))
+		draw_string(_font, ship + Vector2(10, -8), phase, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, UI.GOOD)
+
+
+func _path_points(loc: Dictionary, t0: float, t1: float, n: int, to_screen: Callable) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	if t1 <= t0:
+		return pts
+	for k in n + 1:
+		pts.append(to_screen.call(Navigation.transit_position(loc, lerpf(t0, t1, float(k) / float(n)))))
+	return pts

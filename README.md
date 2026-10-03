@@ -34,7 +34,7 @@ You start docked at Kibo Ring in low Earth orbit with 10,000 credits and a secon
 
 1. **Market:** buy low. Green prices are cheap, amber prices are good to sell into.
 2. **Departures:** pick a destination. The co-pilot shows distance, time, propellant and the best cargo for that route.
-3. **Transit:** you ride in the cockpit. Earth, Moon and Sun are at their true positions and sizes from wherever the ship is.
+3. **Transit:** a god's-eye camera follows your ship along its curved transfer to the rendezvous with the destination. The ship points along its thrust, with the drive lit while it burns. Press M for the cockpit, then M again for the flat map. In the cockpit, Earth, Moon and Sun are at their true positions and sizes from wherever the ship is.
    - Halfway, the ship flips and brakes tail-first.
    - Arrows look around, C re-centres, and Z is a telescope.
    - M switches to the system map.

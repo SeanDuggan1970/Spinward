@@ -1,14 +1,11 @@
 ## Shared space backdrop: the starfield, lighting environment and placeholder
-## planet materials, used by the docking scene and the transit cockpit.
+## planet materials, used by the docking scene and the transit cockpit. Nothing is
+## cached in static variables: GPU textures held past renderer shutdown leak at exit.
 extends RefCounted
 
-static var _stars: ImageTexture
-static var _bodies: Dictionary = {}
 
 
 static func starfield() -> ImageTexture:
-	if _stars:
-		return _stars
 	var img := Image.create(2048, 1024, false, Image.FORMAT_RGB8)
 	img.fill(Color("020306"))
 	var rng := RandomNumberGenerator.new()
@@ -17,8 +14,7 @@ static func starfield() -> ImageTexture:
 		var b := pow(rng.randf(), 6.0)
 		var c := Color(0.55 + b * 0.45, 0.55 + b * 0.45, 0.6 + b * 0.4) * (0.25 + b * 0.75)
 		img.set_pixel(rng.randi_range(0, 2047), rng.randi_range(0, 1023), c)
-	_stars = ImageTexture.create_from_image(img)
-	return _stars
+	return ImageTexture.create_from_image(img)
 
 
 static func environment() -> WorldEnvironment:
@@ -38,8 +34,6 @@ static func environment() -> WorldEnvironment:
 
 
 static func body_material(body: String) -> StandardMaterial3D:
-	if _bodies.has(body):
-		return _bodies[body]
 	var m := StandardMaterial3D.new()
 	var noise := FastNoiseLite.new()
 	noise.seed = 7 if body == "earth" else 3
@@ -60,7 +54,6 @@ static func body_material(body: String) -> StandardMaterial3D:
 	tex.color_ramp = ramp
 	m.albedo_texture = tex
 	m.roughness = 1.0
-	_bodies[body] = m
 	return m
 
 

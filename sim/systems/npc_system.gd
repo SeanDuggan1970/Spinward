@@ -138,6 +138,8 @@ func _depart(npc: Dictionary, t: float) -> void:
 		"status": "transit", "from": here, "to": choice["to"], "frame": plan["frame"],
 		"depart_t": t, "arrive_t": plan["arrive_t"], "burn_s": plan["burn_s"],
 		"from_pos": plan["from_pos"], "to_pos": plan["to_pos"], "distance_m": plan["distance_m"],
+		"from_vel": plan["from_vel"], "to_vel": plan["to_vel"],
+		"from_rot": plan.get("from_rot"), "to_rot": plan.get("to_rot"), "rot_axis": plan.get("rot_axis"), "rot_angle": plan.get("rot_angle", 0.0),
 	}
 	npc["next_t"] = plan["arrive_t"]
 	sim().emit("npc_departed", {"npc": npc["id"], "from": here, "to": choice["to"], "cargo": npc["ship"]["cargo"].duplicate(), "arrive_t": plan["arrive_t"]}, t)

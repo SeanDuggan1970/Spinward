@@ -44,6 +44,7 @@ func _initialize() -> void:
 	test_review_regressions()
 	test_tips()
 	test_docking_help()
+	test_trajectories()
 	test_saves_and_determinism()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
@@ -248,7 +249,7 @@ func test_shipyard() -> void:
 	# Heat: a Mk2 drive (4 MW) on two 1.5 MW panels runs throttled.
 	var hot: Dictionary = s.ship.duplicate(true)
 	hot["modules"]["drive.0"] = "pathfinder_mk2"
-	check(is_equal_approx(ShipStats.thrust_n(hot, d), 1200.0 * 3.0 / 4.0), "Radiators limit thrust")
+	check(is_equal_approx(ShipStats.thrust_n(hot, d), float(d.modules["pathfinder_mk2"]["thrust_n"]) * 3.0 / 4.0), "Radiators limit thrust")
 
 
 func test_npcs() -> void:
@@ -510,6 +511,39 @@ func test_docking_help() -> void:
 	dc.state.credits = 50000.0
 	check(dc.apply({"type": "install_module", "slot": "avionics.0", "module": "docking_computer"}) == "", "Fit a docking computer at Kibo Ring")
 	check(ShipStats.has_docking_computer(dc.state.ship, dc.data) and dc.state.credits == 35000.0, "Docking computer fitted and paid for")
+
+
+func test_trajectories() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var accel := ShipStats.accel_mps2(s.ship, d)
+	var lines := []
+	for to in ["halo_depot", "kernel_l5", "shackleton_port", "clarke_exchange"]:
+		var plan := Navigation.plan(s.ship, d, sim.ephemeris, "kibo_ring", to, s.time_s)
+		check(plan["ok"], "Plan to %s" % to)
+		var loc: Dictionary = plan.duplicate(true)
+		loc["depart_t"] = s.time_s
+		var start: float = s.time_s + (float(plan["duration_s"]) - float(plan["burn_s"])) * 0.5
+		var end: float = start + float(plan["burn_s"])
+		check(V.distance(Navigation.transit_position(loc, start), plan["from_pos"]) < 1.0, "%s path starts at the origin" % to)
+		check(V.distance(Navigation.transit_position(loc, end), plan["to_pos"]) < 1.0, "%s path ends at the intercept" % to)
+		check(V.distance(Navigation.transit_velocity(loc, end), plan["to_vel"]) < 0.01, "%s path arrives matching the destination's motion" % to)
+		var peak := 0.0
+		for k in 41:
+			peak = maxf(peak, V.length(Navigation.transit_accel(loc, lerpf(start, end, k / 40.0))))
+		check(peak <= accel * 1.001, "%s thrust never exceeds the drive (%.4f vs %.4f m/s2)" % [to, peak, accel])
+		# Curvature: how far the midpoint sits off the straight chord.
+		var mid := Navigation.transit_position(loc, (start + end) * 0.5)
+		var chord := V.sub(plan["to_pos"], plan["from_pos"])
+		var rel := V.sub(mid, plan["from_pos"])
+		var along := V.dot(rel, V.normalized(chord))
+		var off := V.length(V.sub(rel, V.scale(V.normalized(chord), along)))
+		lines.append("%s: %.2f d, %.2f t, bow %.0f km" % [to, plan["duration_s"] / DAY, plan["fuel_t"], off / 1000.0])
+		if to == "kernel_l5" or to == "shackleton_port":
+			check(off > 5.0e6, "Trips to moving targets curve (%s bows %.0f km)" % [to, off / 1000.0])
+		check(plan["throttle"] > 0.0 and plan["throttle"] <= 1.0, "%s throttle in range" % to)
+	print("TRAJECTORIES  " + "  |  ".join(lines))
 
 
 func test_saves_and_determinism() -> void:

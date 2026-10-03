@@ -181,6 +181,15 @@ A character, not just a feature. It is the in-world reason the flight is playabl
 ## Flight model
 
 - **Far:** body positions are on rails (Keplerian elements from real data). The ship follows a planned trajectory under time compression (1x–10,000x, dropping out automatically for events and arrival).
+- **Transfers** (`sim/navigation.gd`):
+  - Cislunar trips are planned in the frame that rotates with the Earth–Moon line, where stations sit still. The path is a smooth run between two fixed points, so seen from outside it sweeps round with the Moon: a leading arc of about 50,000–70,000 km.
+  - The thrust vector varies smoothly. It pushes toward the target, swings across, then brakes. It never exceeds the drive at the ship's mass, and propellant is the thrust actually used.
+  - The ship points along the thrust vector in every view.
+  - Gravity is taken to supply the co-rotation, and the departure/arrival overhead covers climbing out of gravity wells (a deliberate simplification).
+- **Transit views** (M cycles):
+  - a cinematic god's-eye view, the default, framing ship, destination and rendezvous
+  - the cockpit
+  - the flat map
 - **Near (within about 50 km of a station or body):** a local Newtonian flight bubble with Jolt collisions. A fly-by-wire assist has tunable levels: Full (arcade-like, holds velocity), Assisted (damps rotation and drift), Manual (pure momentum).
 - Docking at rotating stations: match the spin, approach the axis, use guide lights. Tolerances are in data.
 
