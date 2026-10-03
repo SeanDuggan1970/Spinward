@@ -10,6 +10,7 @@ const Market := preload("res://sim/market.gd")
 const Navigation := preload("res://sim/navigation.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
 const V := preload("res://sim/v3.gd")
+const ProjectSystem := preload("res://sim/systems/project_system.gd")
 
 const AU := 1.495978707e11
 const DAY := 86400.0
@@ -39,6 +40,8 @@ func _initialize() -> void:
 	test_travel()
 	test_shipyard()
 	test_npcs()
+	test_projects()
+	test_review_regressions()
 	test_saves_and_determinism()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
@@ -288,6 +291,125 @@ func test_npcs() -> void:
 	check(events.size() > 0, "NPC movements emit events for the comms feed")
 
 
+func test_projects() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	check(s.projects.size() == d.projects.size() and ProjectSystem.progress(s, d, "island_one") == 0.0, "Projects start at zero")
+	sim.advance_game_time(60 * DAY)
+	var p60 := ProjectSystem.progress(s, d, "island_one")
+	check(p60 > 0.0, "Island One advances on its own (%.0f%% after 60 days)" % (p60 * 100.0))
+	# The player hauls refined metals to The Kernel while stage 1 needs them.
+	var sim2 := fresh()
+	var s2 := sim2.state
+	s2.location = {"status": "docked", "place": "kernel_l5"}
+	s2.ship["cargo"] = {"refined_metals": 15.0}
+	s2.ship["cargo_paid"] = {"refined_metals": 3000.0}
+	check(sim2.apply({"type": "sell", "good": "refined_metals", "tonnes": 15.0}) == "", "Sell metals at The Kernel")
+	sim2.advance_game_time(2 * DAY)
+	check(is_equal_approx(float(s2.projects["island_one"]["player_t"]), 15.0), "Player credited for hauling project goods")
+	# Finishing a project changes the world.
+	var sim3 := fresh()
+	var s3 := sim3.state
+	var stages: Array = d.projects["luna_line_2"]["stages"]
+	s3.projects["luna_line_2"]["stage"] = stages.size() - 1
+	for good in stages[-1]["needs"]:
+		s3.markets["halo_depot"][good] = 1000.0
+	sim3.advance_game_time(60 * DAY)
+	check(s3.projects["luna_line_2"]["done"], "Luna Line 2 completes when supplied")
+	check(float(s3.place_mods.get("halo_depot", {}).get("produces_mult", 1.0)) == 2.0, "Completion doubles Halo Depot output")
+	var events := sim3.take_events().map(func(e): return e["type"])
+	check("project_stage" in events and "project_complete" in events, "Project events for news")
+	var loaded := SaveIO.from_text(SaveIO.to_text(s3))
+	check(loaded.to_dict() == s3.to_dict(), "Projects round-trip through saves")
+
+
+## Each check here pins a defect found in code review.
+func test_review_regressions() -> void:
+	# 1. Buying in one go and selling back in slices must lose money (exact integral pricing).
+	for good in ["medical", "electronics", "helium3"]:
+		var sim := fresh()
+		var s := sim.state
+		s.npcs = []
+		s.credits = 1e7
+		s.ship["modules"]["cargo.0"] = "cargo_pod_l"
+		s.ship["modules"]["cargo.1"] = "cargo_pod_l"
+		s.markets["kibo_ring"][good] = Market.target(sim.data, "kibo_ring", good)
+		var start := s.credits
+		var tonnes := minf(12.0, Market.stock(s, "kibo_ring", good) * 0.9)
+		check(sim.apply({"type": "buy", "good": good, "tonnes": tonnes}) == "", "Bulk buy %s" % good)
+		var left: float = s.ship["cargo"][good]
+		while left > 1e-9:
+			var slice := minf(0.05, left)
+			sim.apply({"type": "sell", "good": good, "tonnes": slice})
+			left = float(s.ship["cargo"].get(good, 0.0))
+		check(s.credits < start, "No money from buy-big, sell-in-slices (%s: %+.0f cr)" % [good, s.credits - start])
+	# Exact pricing: the cost of t tonnes equals the sum of buying it in small pieces.
+	var sp := fresh()
+	sp.state.npcs = []
+	var one := Market.buy_cost(sp.state, sp.data, "kibo_ring", "food", 10.0)
+	var pieces := 0.0
+	var s0: float = sp.state.markets["kibo_ring"]["food"]
+	for i in 100:
+		sp.state.markets["kibo_ring"]["food"] = s0 - 0.1 * i
+		pieces += Market.buy_cost(sp.state, sp.data, "kibo_ring", "food", 0.1)
+	check(absf(one - pieces) < 1e-6 * one, "Trade cost is path independent (exact integral)")
+	# 2. Only real slot names are accepted.
+	var sy := fresh()
+	sy.state.credits = 1e6
+	for bad in ["cargo.01", "cargo.-1", "cargo.x", "cargo.2", "cargo", "cargo.1.0"]:
+		check(sy.apply({"type": "install_module", "slot": bad, "module": "cargo_pod_s"}) != "", "Phantom slot %s refused" % bad)
+	check(ShipStats.cargo_capacity_t(sy.state.ship, sy.data) == 20.0, "No phantom cargo capacity")
+	# 3. NPC refuelling respects the market reserve.
+	var nr := fresh()
+	nr.advance_game_time(60 * DAY)
+	var lowest := INF
+	for place in nr.state.markets:
+		if nr.state.markets[place].has("propellant"):
+			lowest = minf(lowest, nr.state.markets[place]["propellant"] / Market.target(nr.data, place, "propellant"))
+	check(lowest >= float(nr.data.npcs["reserve_fraction"]) * 0.5, "Propellant never stripped far below reserve by NPCs (lowest %.0f%%)" % (lowest * 100.0))
+	# 4. Broke and stranded: the tanker still comes, on credit.
+	var br := fresh()
+	br.state.location = {"status": "docked", "place": "kernel_l5"}
+	br.state.ship["fuel_t"] = 0.0
+	br.state.credits = 3.0
+	check(br.apply({"type": "emergency_refuel"}) == "" and br.state.ship["fuel_t"] >= 1.0 and br.state.credits < 0.0, "Rescue load on credit at a no-fuel port")
+	var br2 := fresh()
+	br2.state.ship["fuel_t"] = 0.0
+	br2.state.credits = 0.0
+	check(br2.apply({"type": "emergency_refuel"}) == "", "Rescue available at a fuel port when broke")
+	var rich := fresh()
+	rich.state.ship["fuel_t"] = 0.0
+	check(rich.apply({"type": "emergency_refuel"}) != "", "No emergency tanker for those who can pay")
+	# 5. Ephemeris results do not depend on call history.
+	var data = DataCatalog.load_default()
+	var e1 := Ephemeris.new(data.bodies, data.places)
+	var e2 := Ephemeris.new(data.bodies, data.places)
+	var t := 123456.0
+	e2.position("trojan_yards", t)
+	e2.position("moon", t - 30.0)
+	check(e1.position("kernel_l5", t) == e2.position("kernel_l5", t) and e1.position("trojan_yards", t) == e2.position("trojan_yards", t), "Ephemeris independent of call history")
+	# 6. Partial refuel is priced on what is actually bought.
+	var pr := fresh()
+	pr.state.ship["fuel_t"] = 0.0
+	pr.state.credits = 150.0
+	var stock_before: float = pr.state.markets["kibo_ring"]["propellant"]
+	check(pr.apply({"type": "refuel", "fill": true}) == "", "Partial refuel")
+	var bought: float = pr.state.ship["fuel_t"]
+	pr.state.markets["kibo_ring"]["propellant"] = stock_before
+	check(absf((150.0 - pr.state.credits) - Market.buy_cost(pr.state, pr.data, "kibo_ring", "propellant", bought)) < 1e-6, "Partial refuel charged its exact cost")
+	# 8. Wash trading at a project's own market earns no credit.
+	var wt := fresh()
+	var w := wt.state
+	w.credits = 1e6
+	w.location = {"status": "docked", "place": "kernel_l5"}
+	for _i in 5:
+		wt.apply({"type": "buy", "good": "refined_metals", "tonnes": 5.0})
+		wt.apply({"type": "sell", "good": "refined_metals", "tonnes": 5.0})
+	wt.advance_game_time(DAY)
+	check(float(w.projects["island_one"]["player_t"]) == 0.0, "Wash trading earns no project credit")
+
+
 func test_saves_and_determinism() -> void:
 	var sim := fresh()
 	sim.apply({"type": "buy", "good": "electronics", "tonnes": 1})
@@ -305,6 +427,20 @@ func test_saves_and_determinism() -> void:
 	future["schema_version"] = 999
 	check(SaveIO.from_text(JSON.stringify({"state": Marshalls.raw_to_base64(var_to_bytes(future))})) == null, "Future save version refused")
 	check(SaveIO.from_text("not json") == null, "Corrupt save refused")
+
+	# Tick size must not change the outcome: one 10-day jump equals many small steps.
+	var big := fresh()
+	var small := fresh()
+	big.advance_game_time(10 * DAY)
+	for _i in 240:
+		small.advance_game_time(3600.0)
+	var same := absf(big.state.credits - small.state.credits) < 1e-6 and big.state.npcs.size() == small.state.npcs.size()
+	for place in big.state.markets:
+		for good in big.state.markets[place]:
+			same = same and absf(big.state.markets[place][good] - small.state.markets[place][good]) < 1e-6
+	for i in big.state.npcs.size():
+		same = same and big.state.npcs[i]["location"]["status"] == small.state.npcs[i]["location"]["status"]
+	check(same, "Tick size does not change the world (10 days in one jump vs 240 hourly steps)")
 
 	var run := func() -> Dictionary:
 		var r := fresh()

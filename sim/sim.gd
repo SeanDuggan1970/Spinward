@@ -14,6 +14,7 @@ const EconomySystem := preload("res://sim/systems/economy_system.gd")
 const ShipyardSystem := preload("res://sim/systems/shipyard_system.gd")
 const TravelSystem := preload("res://sim/systems/travel_system.gd")
 const NpcSystem := preload("res://sim/systems/npc_system.gd")
+const ProjectSystem := preload("res://sim/systems/project_system.gd")
 
 ## Undrained events are capped so headless runs (bots, tests) cannot grow without bound.
 const MAX_PENDING_EVENTS := 2000
@@ -31,7 +32,7 @@ func _init(catalog: DataCatalog = null) -> void:
 	ephemeris = Ephemeris.new(data.bodies, data.places)
 	state = GameState.new()
 	# Order matters within a tick: the clock moves first, then everything catches up to it.
-	systems = [CalendarSystem.new(), EconomySystem.new(), ShipyardSystem.new(), TravelSystem.new(), NpcSystem.new()]
+	systems = [CalendarSystem.new(), EconomySystem.new(), ShipyardSystem.new(), TravelSystem.new(), NpcSystem.new(), ProjectSystem.new()]
 	for system in systems:
 		system.setup(self)
 
@@ -77,8 +78,17 @@ func tick(real_dt: float) -> void:
 func advance_game_time(game_seconds: float) -> void:
 	if state.paused or game_seconds <= 0.0:
 		return
-	for system in systems:
-		system.tick(game_seconds)
+	# Long advances are cut into economy-step-sized chunks, and every system ticks
+	# each chunk in turn. Otherwise one system would run days ahead of the others
+	# (markets settling before projects or NPCs act), and the outcome would depend
+	# on tick size: a bot jumping days at a time must see the same world as play at x1.
+	var chunk := float(data.balance["economy"]["step_hours"]) * 3600.0
+	var remaining := game_seconds
+	while remaining > 0.0:
+		var dt := minf(remaining, chunk)
+		remaining -= dt
+		for system in systems:
+			system.tick(dt)
 
 
 ## at_time: when it happened, if not now (systems that process scheduled events in a long tick).

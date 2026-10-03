@@ -250,6 +250,34 @@
 				8,
 				20
 			]
+		},
+		"kernel_water_run": {
+			"operator": "Luna Cooperative",
+			"hull": "lunar_tanker",
+			"behaviour": "route",
+			"count": 1,
+			"names": [
+				"Mare Serenitatis"
+			],
+			"route": [
+				{
+					"at": "shackleton_port",
+					"buy": [
+						"water_ice"
+					],
+					"to": "kernel_l5"
+				},
+				{
+					"at": "kernel_l5",
+					"buy": [],
+					"to": "shackleton_port"
+				}
+			],
+			"fill": 0.9,
+			"dwell_hours": [
+				10,
+				20
+			]
 		}
 	},
 	"chatter": {

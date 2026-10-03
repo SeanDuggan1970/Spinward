@@ -1,0 +1,112 @@
+{
+	"_note": "Megaprojects: collective builds that draw goods from their place's market (above reserve_fraction of target) at up to draw_t_per_day per good, stage by stage. Completing the last stage applies 'effects' to place flows. Progress drives the matching set piece in the approach view.",
+	"reserve_fraction": 0.4,
+	"island_one": {
+		"name": "Island One",
+		"place": "kernel_l5",
+		"description": "A Bernal sphere 500 m across, the first habitat at L5 built for ten thousand people. The Commons designed it; everyone is building it.",
+		"draw_t_per_day": 3.0,
+		"stages": [
+			{
+				"name": "Frame closed",
+				"needs": {
+					"refined_metals": 90,
+					"machine_parts": 45
+				}
+			},
+			{
+				"name": "Hull skinned",
+				"needs": {
+					"habitat_modules": 160
+				}
+			},
+			{
+				"name": "Air, water and soil",
+				"needs": {
+					"water_ice": 220,
+					"oxygen": 90,
+					"food": 60
+				}
+			},
+			{
+				"name": "Spin-up and first residents",
+				"needs": {
+					"machine_parts": 60,
+					"medical": 8
+				}
+			}
+		],
+		"effects": {
+			"kernel_l5": {
+				"consumes_mult": 2.5,
+				"produces_mult": 2.0
+			}
+		},
+		"feature": "bernal_frame"
+	},
+	"luna_line_2": {
+		"name": "Luna Line, second ribbon",
+		"place": "halo_depot",
+		"description": "A second Zylon ribbon down to the lunar near side, doubling what the climbers can lift to L1.",
+		"draw_t_per_day": 2.0,
+		"stages": [
+			{
+				"name": "Ribbon spun",
+				"needs": {
+					"refined_metals": 60,
+					"electronics": 6
+				}
+			},
+			{
+				"name": "Climbers commissioned",
+				"needs": {
+					"machine_parts": 50,
+					"electronics": 8
+				}
+			}
+		],
+		"effects": {
+			"halo_depot": {
+				"produces_mult": 2.0
+			}
+		},
+		"feature": "elevator"
+	},
+	"kalpana_two": {
+		"name": "Kalpana Two",
+		"place": "kalpana_one",
+		"description": "A counter-rotating sister drum alongside Kalpana One; paired drums cancel each other's spin so the pair can be turned to face the Sun. Three thousand more people in Earth's magnetic shelter.",
+		"draw_t_per_day": 2.5,
+		"stages": [
+			{
+				"name": "Drum frame",
+				"needs": {
+					"machine_parts": 70,
+					"habitat_modules": 40
+				}
+			},
+			{
+				"name": "Hull and windows",
+				"needs": {
+					"habitat_modules": 90,
+					"electronics": 10
+				}
+			},
+			{
+				"name": "Move-in",
+				"needs": {
+					"food": 60,
+					"medical": 6,
+					"water_ice": 80
+				}
+			}
+		],
+		"effects": {
+			"kalpana_one": {
+				"consumes_mult": 2.0,
+				"produces_mult": 2.0
+			}
+		},
+		"feature": "kalpana_two"
+	}
+}

@@ -37,9 +37,19 @@ func position(id: String, t: float) -> Array:
 	return p
 
 
+## Central difference. The position cache holds one time at a time, so it is set
+## aside and restored here: otherwise a Lagrange point evaluated at t would be cached
+## under t - 30 s and the result of a lookup could depend on call history.
 func velocity(id: String, t: float) -> Array:
 	var h := 30.0
-	return V.scale(V.sub(position(id, t + h), position(id, t - h)), 0.5 / h)
+	var saved_t := _cache_t
+	var saved := _cache
+	_cache_t = NAN
+	_cache = {}
+	var v := V.scale(V.sub(position(id, t + h), position(id, t - h)), 0.5 / h)
+	_cache_t = saved_t
+	_cache = saved
+	return v
 
 
 ## Position of `id` relative to `parent_id`.

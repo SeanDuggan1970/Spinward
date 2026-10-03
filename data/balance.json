@@ -20,6 +20,7 @@
 		"max_stock_mult": 4.0,
 		"step_hours": 1.0,
 		"emergency_fuel_price_mult": 6.0,
+		"emergency_rescue_t": 1.0,
 		"warmup_days": 60
 	},
 	"travel": {

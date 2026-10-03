@@ -43,10 +43,13 @@ func _integrate(days: float) -> void:
 	for place in sim().data.places:
 		var p: Dictionary = sim().data.places[place]
 		var stock: Dictionary = sim().state.markets[place]
+		var mods: Dictionary = sim().state.place_mods.get(place, {})
+		var produce_mult := float(mods.get("produces_mult", 1.0))
+		var consume_mult := float(mods.get("consumes_mult", 1.0))
 		for good in p.get("produces", {}):
-			stock[good] += float(p["produces"][good]) * days
+			stock[good] += float(p["produces"][good]) * produce_mult * days
 		for good in p.get("consumes", {}):
-			stock[good] = maxf(0.0, stock[good] - float(p["consumes"][good]) * days)
+			stock[good] = maxf(0.0, stock[good] - float(p["consumes"][good]) * consume_mult * days)
 		for recipe in p.get("recipes", []):
 			var run := 1.0
 			for good in recipe["inputs"]:
@@ -84,11 +87,16 @@ func _buy(command: Dictionary) -> String:
 		return "only %.1f t in stock" % Market.stock(s, place, good)
 	if ShipStats.cargo_t(s.ship) + tonnes > ShipStats.cargo_capacity_t(s.ship, sim().data) + 1e-9:
 		return "not enough cargo space"
-	var cost := Market.buy_price(s, sim().data, place, good, tonnes) * tonnes
+	var cost := Market.buy_cost(s, sim().data, place, good, tonnes)
 	if cost > s.credits + 1e-6:
 		return "not enough credits"
 	s.credits -= cost
 	s.markets[place][good] -= tonnes
+	var bought: Dictionary = s.stats.get("player_bought", {})
+	var here_bought: Dictionary = bought.get(place, {})
+	here_bought[good] = float(here_bought.get(good, 0.0)) + tonnes
+	bought[place] = here_bought
+	s.stats["player_bought"] = bought
 	s.ship["cargo"][good] = float(s.ship["cargo"].get(good, 0.0)) + tonnes
 	s.ship["cargo_paid"][good] = float(s.ship["cargo_paid"].get(good, 0.0)) + cost
 	sim().emit("traded", {"place": place, "good": good, "tonnes": tonnes, "credits": -cost})
@@ -116,6 +124,12 @@ func _sell(command: Dictionary) -> String:
 		s.ship["cargo"].erase(good)
 		s.ship["cargo_paid"].erase(good)
 	s.stats["trade_profit"] += income - paid
+	# Cumulative tonnage the player sold per place and good (projects credit the player from this).
+	var sold: Dictionary = s.stats.get("player_sold", {})
+	var here_sold: Dictionary = sold.get(place, {})
+	here_sold[good] = float(here_sold.get(good, 0.0)) + tonnes
+	sold[place] = here_sold
+	s.stats["player_sold"] = sold
 	sim().emit("traded", {"place": place, "good": good, "tonnes": tonnes, "credits": income, "profit": income - paid})
 	return ""
 
@@ -131,32 +145,51 @@ func _refuel(command: Dictionary) -> String:
 	var space := ShipStats.fuel_capacity_t(s.ship, sim().data) - float(s.ship["fuel_t"])
 	var tonnes := space if command.get("fill", false) else minf(float(command.get("tonnes", 0.0)), space)
 	tonnes = minf(tonnes, Market.stock(s, place, "propellant"))
-	var price := Market.buy_price(s, sim().data, place, "propellant", tonnes)
-	tonnes = minf(tonnes, s.credits / price)
+	# Exact cost of what can be afforded, priced on the tonnes actually bought.
+	tonnes = Market.affordable_tonnes(s, sim().data, place, "propellant", s.credits, tonnes)
 	if tonnes <= 1e-6:
 		return "tanks full" if space <= 1e-6 else "cannot refuel"
-	s.credits -= price * tonnes
+	var cost := Market.buy_cost(s, sim().data, place, "propellant", tonnes)
+	s.credits -= cost
 	s.markets[place]["propellant"] -= tonnes
 	s.ship["fuel_t"] += tonnes
-	sim().emit("refuelled", {"place": place, "tonnes": tonnes, "credits": -price * tonnes})
+	sim().emit("refuelled", {"place": place, "tonnes": tonnes, "credits": -cost})
 	return ""
 
 
-## Stranded where nobody sells fuel: a tanker drone brings propellant at a steep premium.
-## Exists so the game can never soft-lock; priced so planning ahead is always better.
+## Stranded or broke: a tanker drone brings propellant at a steep premium. Available
+## where no fuel is sold, or where it is but you cannot afford a tonne. If you cannot
+## pay, it still brings a rescue load on credit (your balance goes negative), so the
+## game can never soft-lock; priced so planning ahead is always better.
+static func emergency_available(state, data) -> bool:
+	if state.location.get("status") != "docked":
+		return false
+	var place: String = state.location["place"]
+	if not "refuel" in data.places[place].get("services", []):
+		return true
+	return state.credits < Market.buy_price(state, data, place, "propellant", 1.0)
+
+
 func _emergency_refuel(command: Dictionary) -> String:
 	var s = sim().state
+	var data = sim().data
 	if s.location.get("status") != "docked":
 		return "not docked"
-	if "refuel" in sim().data.places[s.location["place"]].get("services", []):
+	if not emergency_available(s, data):
 		return "refuel normally here"
-	var e: Dictionary = sim().data.balance["economy"]
-	var price := float(sim().data.goods["propellant"]["base_price"]) * float(e["emergency_fuel_price_mult"])
-	var space := ShipStats.fuel_capacity_t(s.ship, sim().data) - float(s.ship["fuel_t"])
-	var tonnes := minf(minf(float(command.get("tonnes", space)), space), s.credits / price)
+	var e: Dictionary = data.balance["economy"]
+	var price := float(data.goods["propellant"]["base_price"]) * float(e["emergency_fuel_price_mult"])
+	var space := ShipStats.fuel_capacity_t(s.ship, data) - float(s.ship["fuel_t"])
+	var tonnes := minf(float(command.get("tonnes", space)), space)
 	if tonnes <= 1e-6:
-		return "cannot afford emergency propellant" if space > 1e-6 else "tanks full"
+		return "tanks full"
+	var on_credit := false
+	if price * tonnes > s.credits:
+		var affordable := maxf(0.0, s.credits) / price
+		var rescue := minf(tonnes, float(e["emergency_rescue_t"]))
+		on_credit = affordable < rescue
+		tonnes = maxf(affordable, rescue)
 	s.credits -= price * tonnes
 	s.ship["fuel_t"] += tonnes
-	sim().emit("refuelled", {"place": s.location["place"], "tonnes": tonnes, "credits": -price * tonnes, "emergency": true})
+	sim().emit("refuelled", {"place": s.location["place"], "tonnes": tonnes, "credits": -price * tonnes, "emergency": true, "on_credit": on_credit})
 	return ""

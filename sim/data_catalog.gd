@@ -11,6 +11,8 @@ var goods: Dictionary = {}
 var modules: Dictionary = {}
 var ships: Dictionary = {}
 var npcs: Dictionary = {}
+var projects: Dictionary = {}
+var projects_reserve_fraction := 0.4
 
 
 static func load_default():
@@ -27,6 +29,9 @@ func load_from(root: String) -> void:
 	modules = read_json(root + "/modules.json")
 	ships = read_json(root + "/ships.json")
 	npcs = read_json(root + "/npcs.json")
+	projects = read_json(root + "/projects.json")
+	projects_reserve_fraction = float(projects.get("reserve_fraction", 0.4))
+	projects.erase("reserve_fraction")
 
 
 func read_json(path: String) -> Dictionary:
@@ -113,6 +118,19 @@ func validate() -> Array[String]:
 			for good in leg.get("buy", []):
 				if not (places[leg["at"]]["market"].has(good) and places[leg["to"]]["market"].has(good)):
 					problems.append("fleet %s leg %d: %s must be traded at both ends" % [fleet_id, i, good])
+	for id in projects:
+		var project: Dictionary = projects[id]
+		var place: String = project.get("place", "")
+		if not places.has(place):
+			problems.append("project %s: unknown place %s" % [id, place])
+			continue
+		for stage in project.get("stages", []):
+			for good in stage.get("needs", {}):
+				if not places[place]["market"].has(good):
+					problems.append("project %s: %s is needed but not traded at %s" % [id, good, place])
+		for target in project.get("effects", {}):
+			if not places.has(target):
+				problems.append("project %s: effect on unknown place %s" % [id, target])
 	var start: Dictionary = balance.get("start", {})
 	if not places.has(start.get("place", "")):
 		problems.append("balance.start.place is not a place")

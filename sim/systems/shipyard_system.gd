@@ -33,6 +33,15 @@ static func slot_count(state, data, kind: String) -> int:
 	return int(spine["slots"].get(kind, 0))
 
 
+## The exact slot keys a hull's spine offers for a module kind, e.g. ["cargo.0", "cargo.1"].
+## Only these names are accepted, so "cargo.01" or "cargo.-1" cannot add phantom slots.
+static func slot_names(state, data, kind: String) -> Array:
+	var names := []
+	for i in slot_count(state, data, kind):
+		names.append("%s.%d" % [kind, i])
+	return names
+
+
 ## {slot: "cargo.1", module: "cargo_pod_m"}. The old module is sold back at resale value.
 func _install(command: Dictionary) -> String:
 	var s = sim().state
@@ -41,9 +50,8 @@ func _install(command: Dictionary) -> String:
 	if not module_id in yard_stock(s, data):
 		return "not sold here"
 	var slot: String = command.get("slot", "")
-	var parts := slot.split(".")
 	var module: Dictionary = data.modules[module_id]
-	if parts.size() != 2 or parts[0] != module["kind"] or int(parts[1]) >= slot_count(s, data, parts[0]):
+	if not slot in slot_names(s, data, module["kind"]):
 		return "that module does not fit that slot"
 	var old_id: String = s.ship["modules"].get(slot, "")
 	if old_id == module_id:

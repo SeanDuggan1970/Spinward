@@ -12,6 +12,7 @@ const UI := preload("res://view/ui/ui_kit.gd")
 const V := preload("res://sim/v3.gd")
 const SystemMap := preload("res://view/system_map.gd")
 const SetPieces := preload("res://view/flight/set_pieces.gd")
+const ProjectSystem := preload("res://sim/systems/project_system.gd")
 
 const ASSIST_MODES := ["full", "assisted", "manual"]
 const SKY_DISTANCE := 60000.0
@@ -52,6 +53,8 @@ var _blinkers: Array = []
 ## NPC id -> {node, mode: "berth"|"inbound"|"outbound"}
 var _traffic: Dictionary = {}
 var _traffic_check := 0.0
+## NPC id -> berth index, stable while the ship stays moored.
+var _berths: Dictionary = {}
 ## Cosmetic station work craft: [{node, radius, z, period, phase, tilt}]
 var _work_craft: Array = []
 
@@ -100,7 +103,10 @@ func _ready() -> void:
 	add_child(camera)
 	camera.make_current()
 	_update_camera(1.0)
-	_set_pieces = SetPieces.build(self, sim.data.places[place_id].get("features", []), body_dirs, station)
+	var progress := {}
+	for id in sim.data.projects:
+		progress[sim.data.projects[id].get("feature", id)] = ProjectSystem.progress(sim.state, sim.data, id)
+	_set_pieces = SetPieces.build(self, sim.data.places[place_id].get("features", []), body_dirs, station, progress)
 	_spawn_work_craft()
 	_sync_traffic()
 	hud = load("res://view/flight/flight_hud.gd").new(self)
@@ -418,20 +424,32 @@ func _update_camera(dt: float) -> void:
 func _sync_traffic() -> void:
 	var t: float = sim.state.time_s
 	var wanted := {}
-	var berth := 0
+	# Moored ships keep the berth they were given; newcomers take the first free one.
+	var docked_here := {}
+	for npc in sim.state.npcs:
+		if npc["location"]["status"] == "docked" and npc["location"]["place"] == place_id:
+			docked_here[npc["id"]] = true
+	for id in _berths.keys():
+		if not docked_here.has(id):
+			_berths.erase(id)
+	for id in docked_here:
+		if not _berths.has(id):
+			var used: Array = _berths.values()
+			for i in BERTH_ANGLES.size():
+				if not i in used:
+					_berths[id] = i
+					break
 	for npc in sim.state.npcs:
 		var loc: Dictionary = npc["location"]
 		var mode := ""
-		if loc["status"] == "docked" and loc["place"] == place_id and berth < BERTH_ANGLES.size():
+		if _berths.has(npc["id"]):
 			mode = "berth"
 		elif loc["status"] == "transit" and loc["to"] == place_id and float(loc["arrive_t"]) - t < LANE_WINDOW:
 			mode = "inbound"
 		elif loc["status"] == "transit" and loc["from"] == place_id and t - float(loc["depart_t"]) < LANE_WINDOW:
 			mode = "outbound"
 		if mode != "":
-			wanted[npc["id"]] = {"npc": npc, "mode": mode, "berth": berth if mode == "berth" else -1}
-			if mode == "berth":
-				berth += 1
+			wanted[npc["id"]] = {"npc": npc, "mode": mode, "berth": _berths.get(npc["id"], -1)}
 	var changed := false
 	for id in _traffic.keys():
 		if not wanted.has(id) or wanted[id]["mode"] != _traffic[id]["mode"]:

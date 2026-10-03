@@ -103,6 +103,21 @@ func _handle_events() -> void:
 					_ticker.text = "\n".join(comms.slice(maxi(0, comms.size() - 3)))
 				var here: String = sim.state.location.get("place", "")
 				refresh = refresh or here in [d.get("place"), d.get("from"), d.get("to")]
+			"project_stage":
+				var project: Dictionary = sim.data.projects[d["project"]]
+				var place_name: String = sim.data.places[project["place"]]["name"]
+				var share: float = d["player_share"]
+				var line := "%s: %s, %s complete." % [place_name, project["name"], String(d["name"]).to_lower()]
+				if share >= 0.05:
+					line += " You hauled %d%% of it. Thank you." % int(round(share * 100.0))
+				notice(line, UI.GOOD)
+				comms.append("%s  %s" % [_clock(e["time_s"]), line])
+				refresh = true
+			"project_complete":
+				var project: Dictionary = sim.data.projects[d["project"]]
+				notice("%s is finished. The system just got a little bigger." % project["name"], UI.AMBER)
+				comms.append("%s  NEWS  %s is complete." % [_clock(e["time_s"]), project["name"]])
+				refresh = true
 			"rejected":
 				notice(d["reason"].capitalize(), UI.WARN)
 			"traded":
@@ -113,7 +128,10 @@ func _handle_events() -> void:
 					notice("Sold %.1f t %s for %s  (profit %s)" % [d["tonnes"], good, UI.money(d["credits"]), UI.money(d["profit"])], UI.GOOD if d["profit"] >= 0.0 else UI.WARN)
 				refresh = true
 			"refuelled":
-				notice("Took on %.2f t propellant for %s" % [d["tonnes"], UI.money(-d["credits"])])
+				if d.get("on_credit", false):
+					notice("Tanker drone delivered %.2f t on credit. You owe %s." % [d["tonnes"], UI.money(-sim.state.credits)], UI.WARN)
+				else:
+					notice("Took on %.2f t propellant for %s" % [d["tonnes"], UI.money(-d["credits"])])
 				refresh = true
 			"module_installed":
 				notice("Fitted %s" % sim.data.modules[d["module"]]["name"], UI.GOOD)
@@ -248,6 +266,12 @@ func _tour(dir: String) -> void:
 	for _i in 5:
 		await get_tree().process_frame
 	_shot(dir + "/2b-traffic.png")
+	if _screen is StationScreen:
+		_screen._tab_index = 3
+		_screen.refresh()
+	for _i in 5:
+		await get_tree().process_frame
+	_shot(dir + "/2c-projects.png")
 	sim.apply({"type": "depart", "to": "shackleton_port"})
 	sim.apply({"type": "set_time_scale", "scale": 1000})
 	_sync_mode()
@@ -291,6 +315,19 @@ func _gallery(dir: String) -> void:
 		for _i in 20:
 			await get_tree().process_frame
 		_shot("%s/%s-wide.png" % [dir, place])
+	# The same approaches once every megaproject is finished.
+	for id in sim.data.projects:
+		sim.state.projects[id]["done"] = true
+		sim.state.projects[id]["stage"] = sim.data.projects[id]["stages"].size()
+	for id in sim.data.projects:
+		var place: String = sim.data.projects[id]["place"]
+		sim.state.location = {"status": "approach", "place": place}
+		_mode = ""
+		_sync_mode()
+		(_screen as FlightScene).hud.show_keys = false
+		for _i in 60:
+			await get_tree().process_frame
+		_shot("%s/%s-finished.png" % [dir, place])
 	get_tree().quit()
 
 

@@ -148,7 +148,10 @@
 			"propellant": 150,
 			"oxygen": 60,
 			"food": 20,
-			"regolith": 300
+			"regolith": 300,
+			"refined_metals": 25,
+			"electronics": 8,
+			"machine_parts": 25
 		},
 		"produces": {
 			"regolith": 15,
@@ -343,7 +346,9 @@
 			"food": 80,
 			"medical": 6,
 			"water_ice": 120,
-			"oxygen": 40
+			"oxygen": 40,
+			"refined_metals": 30,
+			"machine_parts": 30
 		},
 		"produces": {},
 		"consumes": {
@@ -421,7 +426,10 @@
 			"habitat_modules": 0.6,
 			"propellant": 2
 		},
-		"recipes": []
+		"recipes": [],
+		"features": [
+			"kalpana_two"
+		]
 	},
 	"farside_array": {
 		"name": "Farside Array",

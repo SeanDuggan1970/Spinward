@@ -100,7 +100,7 @@ func _arrive(npc: Dictionary, t: float) -> void:
 	var data = sim().data
 	if "refuel" in data.places[place].get("services", []):
 		var need := ShipStats.fuel_capacity_t(npc["ship"], data) - float(npc["ship"]["fuel_t"])
-		var take := minf(need, Market.stock(s, place, "propellant"))
+		var take := minf(need, _available(place, "propellant"))
 		s.markets[place]["propellant"] -= take
 		npc["ship"]["fuel_t"] += take
 	npc["next_t"] = t + _dwell(npc)

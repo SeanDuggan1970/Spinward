@@ -70,6 +70,25 @@ The system should feel like a place where big things are being built. Each tier 
 
 Set pieces are built at true scale (kilometres) in `view/flight/set_pieces.gd`, arranged in the sky beyond each station and oriented by the real Sun, Earth and Moon directions. They are view-only; their economic role lives in the place data.
 
+## Megaprojects: building the backyard together
+
+Collective builds (`data/projects.json`, `sim/systems/project_system.gd`) give the hopeful theme something to do. Each project draws its goods, stage by stage, from its station's market stock above a reserve. That creates real demand that traders profit from. Stages complete with news on the comms channel, and the set piece in the sky grows with each stage.
+
+| Project | Station | Stages | Effect when done |
+|---|---|---|---|
+| Island One (Bernal sphere) | The Kernel | Frame, hull, air/water/soil, spin-up | Kernel consumes ×2.5 and produces ×2. The sphere glows and spins. |
+| Luna Line, second ribbon | Halo Depot | Ribbon spun, climbers commissioned | Halo output ×2. A second ribbon carries climbers. |
+| Kalpana Two (sister drum) | Kalpana One | Frame, hull and windows, move-in | Kalpana market ×2. A counter-rotating drum appears alongside. |
+
+- **Your share:** the net tonnage of needed goods you import into that market, so wash trading earns nothing. It's shown on the Projects tab and thanked in the news.
+- **Without the player** (bot-free sim):
+  - Luna Line 2 finishes in about 100 days.
+  - Island One reaches about 73% in two years, because the Kernel's farms and residents use up the air, water and food it needs.
+  - Kalpana Two reaches about 60% in two years.
+- So the world moves on its own, and your hauling clearly speeds it up.
+
+This is also the template for **the player's own base** (M4): the same staged needs, drawn from your own depot, with the same visible growth.
+
 ## Other ships (NPC traffic)
 
 The system is shared. NPC fleets live in the sim (`data/npcs.json`, `sim/systems/npc_system.gd`) and buy and sell from the same markets as the player:

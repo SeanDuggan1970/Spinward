@@ -18,7 +18,9 @@ Inspired by Elite, but not a remake. See [docs/DESIGN.md](docs/DESIGN.md) for th
 - **Docking:** hand-flown at spinning stations, or call a tug for a fee.
 - **Saves:** quick save and quick load.
 
-Twenty-two NPC ships share the system: Cooperative ice tankers, Commons drone freighters, independent haulers, Compact couriers and Kernel shuttles. They trade from the same markets you do, chatter on comms, and come and go around the stations.
+Three megaprojects are under way: Island One, the second Luna Line ribbon and Kalpana Two. Haul what they need, watch them grow in the sky, and see your share on the Projects tab.
+
+Twenty-seven NPC ships share the system: Cooperative ice tankers, Commons drone freighters, independent haulers, Compact couriers and Kernel shuttles. They trade from the same markets you do, chatter on comms, and come and go around the stations.
 
 Placeholder art throughout. See [docs/balance/NOTES.md](docs/balance/NOTES.md) for balance status.
 

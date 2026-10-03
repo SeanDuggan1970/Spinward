@@ -16,7 +16,8 @@ const Kit := preload("res://view/flight/kit.gd")
 
 
 ## Builds the features under `parent`; returns animation entries for animate().
-static func build(parent: Node3D, features: Array, dirs: Dictionary, station: Dictionary) -> Array:
+## progress: {feature: 0..1} from megaprojects; set pieces tied to a project grow with it.
+static func build(parent: Node3D, features: Array, dirs: Dictionary, station: Dictionary, progress: Dictionary = {}) -> Array:
 	var anims := []
 	for f in features:
 		match f:
@@ -25,9 +26,11 @@ static func build(parent: Node3D, features: Array, dirs: Dictionary, station: Di
 			"power_arrays":
 				anims.append_array(_power_arrays(parent, dirs))
 			"elevator":
-				anims.append_array(_elevator(parent, dirs, station))
+				anims.append_array(_elevator(parent, dirs, station, float(progress.get("elevator", 0.0))))
 			"bernal_frame":
-				anims.append_array(_bernal(parent, dirs))
+				anims.append_array(_bernal(parent, dirs, float(progress.get("bernal_frame", 0.0))))
+			"kalpana_two":
+				anims.append_array(_kalpana_two(parent, station, float(progress.get("kalpana_two", 0.0))))
 			"telescope_array":
 				anims.append_array(_telescopes(parent, dirs))
 	return anims
@@ -42,6 +45,8 @@ static func animate(anims: Array, t: float) -> void:
 				for i in a["nodes"].size():
 					var f := fposmod(float(a["phases"][i]) + t * float(a["speeds"][i]) / float(a["length"]), 1.0)
 					a["nodes"][i].position = a["start"] + a["dir"] * float(a["length"]) * f
+			"spin_y":
+				a["node"].rotation = Vector3(0, t * float(a["rate"]), 0)
 			"flicker":
 				for n in a["nodes"]:
 					n.visible = fposmod(t * 7.3 + float(n.get_meta("seed")), 1.0) < 0.25
@@ -153,7 +158,7 @@ static func _power_arrays(parent: Node3D, dirs: Dictionary) -> Array:
 
 # --- The Luna Line lunar elevator -----------------------------------------------
 
-static func _elevator(parent: Node3D, dirs: Dictionary, station: Dictionary) -> Array:
+static func _elevator(parent: Node3D, dirs: Dictionary, station: Dictionary, second: float = 0.0) -> Array:
 	var moon: Vector3 = dirs.get("moon", Vector3(0, 0, -1))
 	var earth: Vector3 = dirs.get("earth", -moon)
 	var anchor := Vector3(-(float(station["hub_radius"]) + 450.0), 120.0, -350.0)
@@ -192,22 +197,49 @@ static func _elevator(parent: Node3D, dirs: Dictionary, station: Dictionary) -> 
 		climbers.append(c)
 		speeds.append(-120.0 if i % 2 == 0 else 160.0)
 		phases.append(float(i) / 4.0)
-	return [{"kind": "climbers", "nodes": climbers, "start": anchor, "dir": moon, "length": moonward, "speeds": speeds, "phases": phases}]
+	var anims := [{"kind": "climbers", "nodes": climbers, "start": anchor, "dir": moon, "length": moonward, "speeds": speeds, "phases": phases}]
+	# Luna Line 2: a second ribbon being let down toward the Moon, 80 m alongside.
+	if second > 0.0:
+		var offset := moon.cross(Vector3.UP).normalized() * 80.0 if absf(moon.dot(Vector3.UP)) < 0.98 else Vector3(80, 0, 0)
+		var anchor2 := anchor + offset
+		var reach := moonward * clampf(second * 2.0, 0.05, 1.0)
+		var r2 := _facing(moon, anchor2 + moon * reach * 0.5)
+		r2.add_child(Kit.box(Vector3(4.0, 0.3, reach), ribbon))
+		parent.add_child(r2)
+		# The spool tip stays lit while the ribbon is still being let down.
+		if second < 0.5:
+			parent.add_child(Kit.beacon(Color("40ff60"), anchor2 + moon * reach, 10.0, 1.2, 0.0))
+		elif second >= 1.0:
+			var climbers2 := []
+			for i in 3:
+				var c := Node3D.new()
+				c.add_child(Kit.box(Vector3(16.0, 10.0, 22.0), Kit.mat("orange")))
+				c.add_child(Kit.beacon(Color.WHITE, Vector3(0, 8, 0), 3.0, 1.0, float(i) * 0.3))
+				parent.add_child(c)
+				climbers2.append(c)
+			anims.append({"kind": "climbers", "nodes": climbers2, "start": anchor2, "dir": moon, "length": moonward, "speeds": [140.0, -110.0, 150.0], "phases": [0.1, 0.45, 0.8]})
+	return anims
 
 
 # --- Island One, a Bernal sphere under construction -------------------------------
 
-static func _bernal(parent: Node3D, dirs: Dictionary) -> Array:
+static func _bernal(parent: Node3D, dirs: Dictionary, p: float = 0.0) -> Array:
+	# Stages (project island_one): frame closed -> hull skinned -> air, water and soil ->
+	# spin-up. p runs 0..1 across all four, and what you see follows the build.
 	var centre := Vector3(1700.0, 500.0, -2600.0)
 	var radius := 250.0
 	var frame := _lit(Color("9aa0a6"), 0.3, 0.6, 0.5)
 	var root := Node3D.new()
 	root.position = centre
 	parent.add_child(root)
-	# Meridians: a full cage of girders, the skeleton of a sphere 500 m across.
-	# Kit tori lie in the XY plane (axis Z), so each one already passes through the
-	# poles on Y; turning a holder about Y fans them out into meridians.
-	for k in 8:
+	var frame_f := clampf(0.4 + p / 0.25 * 0.6, 0.4, 1.0)
+	var skin_f := clampf((p - 0.25) / 0.25, 0.0, 1.0)
+	var alive := p >= 0.5
+	var done := p >= 1.0
+	# Meridians close as the frame stage completes. Kit tori lie in the XY plane
+	# (axis Z), so each passes through the poles on Y; turning a holder about Y fans
+	# them out into meridians.
+	for k in int(ceil(8.0 * frame_f)):
 		var holder := Node3D.new()
 		holder.rotation.y = PI * float(k) / 8.0
 		holder.add_child(Kit.torus(radius, 2.2, frame, Vector3.ZERO, 64))
@@ -217,34 +249,92 @@ static func _bernal(parent: Node3D, dirs: Dictionary) -> Array:
 		var ring := Kit.torus(r, 1.8, frame, Vector3(0, lat * radius, 0), 64)
 		ring.rotation = Vector3.ZERO  # native TorusMesh axis is Y: a horizontal latitude ring
 		root.add_child(ring)
-	# The lower third is already skinned: pressure panels going on one by one.
+	# Pressure panels go on from the south pole upward as the hull stage advances.
 	var skin := _lit(Color("d9d4c7"), 0.12, 0.2, 0.8)
-	var sparks := []
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 1977
-	for i in 160:
-		var lat := rng.randf_range(-1.0, -0.35)
-		var lon := rng.randf() * TAU
-		var p := Vector3(cos(lon) * sqrt(1.0 - lat * lat), lat, sin(lon) * sqrt(1.0 - lat * lat)) * radius
-		var panel := _facing(-p, p)
-		panel.add_child(Kit.box(Vector3(46.0, 46.0, 1.2), skin))
+	var panels := []
+	for i in 420:
+		panels.append([rng.randf_range(-1.0, 1.0), rng.randf() * TAU])
+	panels.sort_custom(func(a, b): return a[0] < b[0])
+	for i in 40 + int(380.0 * skin_f):
+		var lat: float = panels[i][0]
+		var lon: float = panels[i][1]
+		var at := Vector3(cos(lon) * sqrt(1.0 - lat * lat), lat, sin(lon) * sqrt(1.0 - lat * lat)) * radius
+		var panel := _facing(-at, at)
+		panel.add_child(Kit.box(Vector3(44.0, 44.0, 1.2), skin))
 		root.add_child(panel)
-	# Welding sparks and construction drones working the open frame.
-	for i in 24:
-		var lat := rng.randf_range(-0.4, 0.6)
-		var lon := rng.randf() * TAU
-		var p := Vector3(cos(lon) * sqrt(1.0 - lat * lat), lat, sin(lon) * sqrt(1.0 - lat * lat)) * radius
-		var spark := Kit.sphere(2.5, Kit.glow(Color("cfe8ff"), 6.0), p)
-		spark.set_meta("seed", rng.randf())
-		root.add_child(spark)
-		sparks.append(spark)
+	# Once air, water and soil are going in, the interior glows through the gaps.
+	if alive:
+		root.add_child(Kit.sphere(radius * 0.93, _lit(Color("6f8f4a"), 0.9 if done else 0.4, 0.0, 1.0)))
+	# Welding sparks while anything is still being built.
+	var sparks := []
+	if not done:
+		for i in 28:
+			var lat := rng.randf_range(-0.6, 0.9)
+			var lon := rng.randf() * TAU
+			var at := Vector3(cos(lon) * sqrt(1.0 - lat * lat), lat, sin(lon) * sqrt(1.0 - lat * lat)) * radius
+			var spark := Kit.sphere(2.5, Kit.glow(Color("cfe8ff"), 6.0), at)
+			spark.set_meta("seed", rng.randf())
+			root.add_child(spark)
+			sparks.append(spark)
 	# Polar docking hubs and the zero-g industrial spindle.
 	var spindle := Kit.cylinder(30.0, 600.0, Kit.mat("grey"), Vector3.ZERO, 24)
 	spindle.rotation = Vector3.ZERO  # along Y, pole to pole
 	root.add_child(spindle)
-	for s in [1.0, -1.0]:
-		root.add_child(Kit.beacon(Color("40ff60"), Vector3(0, s * (radius + 40.0), 0), 6.0, 2.0, 0.0))
-	return [{"kind": "flicker", "nodes": sparks}]
+	for sgn in [1.0, -1.0]:
+		root.add_child(Kit.beacon(Color("40ff60"), Vector3(0, sgn * (radius + 40.0), 0), 6.0, 2.0, 0.0))
+	var anims := [{"kind": "flicker", "nodes": sparks}]
+	if done:
+		# Spun up: about 1.9 rpm gives a full gee at the equator of a 250 m sphere.
+		anims.append({"kind": "spin_y", "node": root, "rate": TAU * 1.9 / 60.0})
+	return anims
+
+
+# --- Kalpana Two, a counter-rotating sister drum ------------------------------------
+
+static func _kalpana_two(parent: Node3D, station: Dictionary, p: float) -> Array:
+	var rh: float = station["hub_radius"]
+	var lh: float = station["hub_length"]
+	# Alongside Kalpana One, joined by a truss; counter-rotating pairs cancel each other's spin.
+	var root := Node3D.new()
+	root.position = Vector3(rh * 2.0 + 260.0, 0, -lh * 0.2)
+	parent.add_child(root)
+	var join := Kit.truss(260.0, 24.0, Kit.mat("steel"), Vector3(-rh - 130.0, 0, 0))
+	join.rotation = Vector3(0, PI * 0.5, 0)
+	root.add_child(join)
+	var rotor := Node3D.new()
+	root.add_child(rotor)
+	var frame := _lit(Color("9aa0a6"), 0.3, 0.6, 0.5)
+	var rings := int(ceil(9.0 * clampf(0.2 + p / 0.33 * 0.8, 0.2, 1.0)))
+	for i in rings:
+		rotor.add_child(Kit.torus(rh, 3.0, frame, Vector3(0, 0, -lh * 0.5 + lh * float(i) / 8.0), 72))
+	var built_len := lh * float(maxi(rings - 1, 1)) / 8.0
+	for i in 12:
+		var a := TAU * float(i) / 12.0
+		rotor.add_child(Kit.box(Vector3(3.0, 3.0, built_len), frame, Vector3(cos(a) * rh, sin(a) * rh, -lh * 0.5 + built_len * 0.5)))
+	var hull_f := clampf((p - 0.33) / 0.33, 0.0, 1.0)
+	if hull_f > 0.0:
+		var hull_len := lh * hull_f
+		rotor.add_child(Kit.cylinder(rh - 1.0, hull_len, _lit(Color("d9d4c7"), 0.1, 0.2, 0.8), Vector3(0, 0, -lh * 0.5 + hull_len * 0.5), 64))
+	var anims := []
+	if p >= 1.0:
+		for i in 12:
+			var a := TAU * float(i) / 12.0
+			rotor.add_child(Kit.beacon(Color("ffdca0"), Vector3(cos(a) * (rh + 1.0), sin(a) * (rh + 1.0), 0), 1.2))
+		anims.append({"kind": "spin", "node": rotor, "rate": -TAU * 1.89 / 60.0})
+	else:
+		var sparks := []
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 2207
+		for i in 20:
+			var a := rng.randf() * TAU
+			var spark := Kit.sphere(2.0, Kit.glow(Color("cfe8ff"), 6.0), Vector3(cos(a) * rh, sin(a) * rh, rng.randf_range(-lh * 0.5, lh * 0.5)))
+			spark.set_meta("seed", rng.randf())
+			rotor.add_child(spark)
+			sparks.append(spark)
+		anims.append({"kind": "flicker", "nodes": sparks})
+	return anims
 
 
 # --- Farside megatelescope array ----------------------------------------------------
