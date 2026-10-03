@@ -11,6 +11,8 @@ const Navigation := preload("res://sim/navigation.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
 const V := preload("res://sim/v3.gd")
 const ProjectSystem := preload("res://sim/systems/project_system.gd")
+const RoutePlanner := preload("res://sim/route_planner.gd")
+const OrbitMech := preload("res://sim/orbit_mech.gd")
 
 const AU := 1.495978707e11
 const DAY := 86400.0
@@ -45,6 +47,7 @@ func _initialize() -> void:
 	test_tips()
 	test_docking_help()
 	test_trajectories()
+	test_gravity_routes()
 	test_saves_and_determinism()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
@@ -544,6 +547,81 @@ func test_trajectories() -> void:
 			check(off > 5.0e6, "Trips to moving targets curve (%s bows %.0f km)" % [to, off / 1000.0])
 		check(plan["throttle"] > 0.0 and plan["throttle"] <= 1.0, "%s throttle in range" % to)
 	print("TRAJECTORIES  " + "  |  ".join(lines))
+
+
+func test_gravity_routes() -> void:
+	# Orbital mechanics: a circular orbit returns after one period; Lambert inverts Kepler.
+	var mu := 3.986004418e14
+	var r0 := [4.2e7, 0.0, 0.0]
+	var v0 := [0.0, sqrt(mu / 4.2e7), 0.0]
+	var period := TAU * sqrt(pow(4.2e7, 3) / mu)
+	var back := OrbitMech.kepler(r0, v0, period, mu)
+	check(V.distance(back[0], r0) < 10.0, "Kepler propagation closes a circular orbit")
+	# Less than one revolution (the solver is single-revolution by design).
+	var later := OrbitMech.kepler(r0, [300.0, 2800.0, 50.0], 3.0e4, mu)
+	var sol := OrbitMech.lambert(r0, later[0], 3.0e4, mu, [0.0, 0.0, 1.0])
+	check(not sol.is_empty() and V.distance(sol[0], [300.0, 2800.0, 50.0]) < 0.5, "Lambert recovers the departure velocity")
+
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var quick := Navigation.plan(s.ship, d, sim.ephemeris, "kibo_ring", "halo_depot", s.time_s)
+	var job := RoutePlanner.prepare(s.ship, d, sim.ephemeris, "kibo_ring", "halo_depot", s.time_s)
+	var opts := RoutePlanner.options_or_quick(job, quick)
+	var ids := opts.map(func(o): return o["id"])
+	check("express" in ids and "economy" in ids, "Gravity routes offer Express and Economy (%s)" % [ids])
+	var express: Dictionary = opts[ids.find("express")]
+	var economy: Dictionary = opts[ids.find("economy")]
+	check(economy["fuel_t"] < express["fuel_t"] and economy["duration_s"] > express["duration_s"], "Economy is slower and cheaper (%.2f vs %.2f t)" % [economy["fuel_t"], express["fuel_t"]])
+	check(RoutePlanner.options_or_quick(RoutePlanner.prepare(s.ship, d, sim.ephemeris, "kibo_ring", "halo_depot", s.time_s), quick) == opts, "Route planning is deterministic")
+
+	# Fly the economy route: starts at the station, follows its samples, arrives on time.
+	sim.store_route_options(sim.route_key("halo_depot"), opts)
+	var fuel_before: float = s.ship["fuel_t"]
+	check(sim.apply({"type": "depart", "to": "halo_depot", "route": "economy", "plan_t": s.time_s}) == "", "Depart on the economy route")
+	var loc: Dictionary = s.location
+	check(loc.has("samples") and is_equal_approx(fuel_before - float(s.ship["fuel_t"]), float(economy["fuel_t"])), "Route fuel is spent")
+	check(V.distance(Navigation.transit_position(loc, s.time_s), sim.ephemeris.relative("kibo_ring", "earth", s.time_s)) < 1.0, "Gravity trip starts at the station")
+	var mid: float = (float(loc["depart_t"]) + float(loc["arrive_t"])) * 0.5
+	var jump := V.distance(Navigation.transit_position(loc, mid), Navigation.transit_position(loc, mid + 60.0))
+	check(jump < 60.0 * 5000.0, "Path is continuous between samples (%.0f m in 60 s)" % jump)
+	var saved := SaveIO.from_text(SaveIO.to_text(s))
+	check(saved.to_dict() == s.to_dict(), "Gravity trips round-trip through saves")
+	sim.advance_game_time(float(loc["arrive_t"]) - s.time_s + 1.0)
+	check(s.location["status"] == "approach" and s.location["place"] == "halo_depot", "Gravity trip arrives on approach")
+
+	# A replay without the planner's cache recomputes the same trajectory.
+	var a := fresh()
+	var b := fresh()
+	a.store_route_options(a.route_key("halo_depot"), opts)
+	a.apply({"type": "depart", "to": "halo_depot", "route": "economy", "plan_t": a.state.time_s})
+	b.apply({"type": "depart", "to": "halo_depot", "route": "economy", "plan_t": b.state.time_s})
+	check(a.state.location == b.state.location, "A replay without the cache flies the same path")
+	var stale := fresh()
+	check(stale.apply({"type": "depart", "to": "halo_depot", "route": "economy", "plan_t": stale.state.time_s - 7200.0}) != "", "Out-of-date route plans are refused")
+
+	# A flyby trip (beyond the Moon to Farside) slows time for the pass and restores it.
+	var fb := fresh()
+	var fq := Navigation.plan(fb.state.ship, fb.data, fb.ephemeris, "kibo_ring", "farside_array", fb.state.time_s)
+	var fopts := RoutePlanner.options_or_quick(RoutePlanner.prepare(fb.state.ship, fb.data, fb.ephemeris, "kibo_ring", "farside_array", fb.state.time_s), fq)
+	var flyby := {}
+	for o in fopts:
+		if o["kind"] == "flyby":
+			flyby = o
+	check(not flyby.is_empty(), "Farside routes include a lunar flyby")
+	if not flyby.is_empty():
+		check(float(flyby["peri_alt"]) > 5.0e3 and float(flyby["peri_alt"]) < 6.0e5, "Flyby periapsis near its target (%.0f km)" % (float(flyby["peri_alt"]) / 1000.0))
+		fb.store_route_options(fb.route_key("farside_array"), fopts)
+		check(fb.apply({"type": "depart", "to": "farside_array", "route": flyby["id"], "plan_t": fb.state.time_s}) == "", "Depart on a flyby")
+		fb.apply({"type": "set_time_scale", "scale": 10000})
+		var peri: float = fb.state.location["peri_t"]
+		fb.advance_game_time(peri - fb.state.time_s - 1800.0)
+		check(fb.state.time_scale <= 100.0, "Time slows for the run-in to periapsis")
+		fb.advance_game_time(1800.0 + 10.0)
+		var types := fb.take_events().map(func(e): return e["type"])
+		check("periapsis_near" in types and "periapsis" in types, "Periapsis events for the pass")
+		fb.advance_game_time(1200.0)
+		check(fb.state.time_scale == 10000.0, "Time compression restored after the pass")
 
 
 func test_saves_and_determinism() -> void:

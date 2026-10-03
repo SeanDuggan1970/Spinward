@@ -186,6 +186,18 @@ A character, not just a feature. It is the in-world reason the flight is playabl
   - The thrust vector varies smoothly. It pushes toward the target, swings across, then brakes. It never exceeds the drive at the ship's mass, and propellant is the thrust actually used.
   - The ship points along the thrust vector in every view.
   - Gravity is taken to supply the co-rotation, and the departure/arrival overhead covers climbing out of gravity wells (a deliberate simplification).
+- **Gravity-flown routes** (`sim/orbit_mech.gd`, `sim/gravity_flight.gd`, `sim/route_planner.gd`). The player's trips are flown under real Earth and Moon point gravity, integrated with RK4 at adaptive steps.
+  - **Guidance:** Lambert steering onto the free-fall orbit that reaches the target on time, then coasting, then a terminal phase that matches the destination's motion.
+  - **Flybys:** B-plane targeting. Aim at the impact parameter that becomes the chosen periapsis, trim on approach, and go hands-off for the pass.
+  - **Cost:** a trip is about 30–300 ms to fly. Plotting a destination flies about 18 trial courses on a worker thread (about 1–4 s).
+  - **Route options:**
+    - **Express:** shortest trip that arrives.
+    - **Economy:** least propellant. Usually about half of Express, because gravity does the work.
+    - **Lunar flybys:** 500, 100 and 30 km, labelled honestly with their fuel cost.
+  - **Gravity wells:** the climb-out/arrival stays inside the overhead hours, using hand-off orbits in the Moon's plane (50,000 km around Earth, 25,000 km around the Moon).
+  - **Honest finding:** with fusion drives, flybys rarely beat a well-timed direct burn in cislunar space; they cost more, apart from roughly break-even to Farside. They're there for the thrill, and the co-pilot says so.
+  - **Flyby time:** compression drops for the run-in (×100) and the pass (×10), then restores, and the co-pilot comments by altitude.
+  - **NPCs:** NPCs and the departures board keep the quick estimate. NPC captains file flybys by temperament (illustrative only: their paths are not gravity-flown) and chatter about them.
 - **Transit views** (M cycles):
   - a cinematic god's-eye view, the default, framing ship, destination and rendezvous
   - the cockpit

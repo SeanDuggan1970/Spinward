@@ -72,6 +72,9 @@ func _ready() -> void:
 		_dock_trial.call_deferred()
 		return
 	for a in args:
+		if a.begins_with("--flyby="):
+			_flyby_tour.call_deferred(a.trim_prefix("--flyby="))
+			return
 		if a.begins_with("--gallery="):
 			_gallery.call_deferred(a.trim_prefix("--gallery="))
 			return
@@ -130,7 +133,7 @@ func _handle_events() -> void:
 	for e in sim.take_events():
 		var d: Dictionary = e["data"]
 		match e["type"]:
-			"npc_departed", "npc_arrived":
+			"npc_departed", "npc_arrived", "npc_flyby_plan", "npc_flyby":
 				var text := Comms.line(sim, e)
 				if text != "":
 					comms.append("%s  %s" % [_clock(e["time_s"]), text])
@@ -182,7 +185,11 @@ func _handle_events() -> void:
 				notice("Fitted %s" % sim.data.modules[d["module"]]["name"], UI.GOOD)
 				refresh = true
 			"departed":
-				notice("Departed for %s" % sim.data.places[d["to"]]["name"], UI.AMBER)
+				notice("Departed for %s%s" % [sim.data.places[d["to"]]["name"], (" via %s" % d["route"]) if d.has("route") else ""], UI.AMBER)
+			"periapsis_near", "periapsis":
+				var line := Comms.copilot(sim, "copilot_near" if e["type"] == "periapsis_near" else "copilot_pass", float(d["alt"]), float(d.get("in_s", 0.0)))
+				notice(line, UI.AMBER)
+				comms.append("%s  %s" % [_clock(e["time_s"]), line])
 			"arrived":
 				notice("Arrived at %s. Take her in, or press T for the tug." % sim.data.places[d["place"]]["name"], UI.AMBER)
 			"docked":
@@ -345,6 +352,13 @@ func _tour(dir: String) -> void:
 	for _i in 5:
 		await get_tree().process_frame
 	_shot(dir + "/2-departures.png")
+	# Plot gravity routes for one destination and capture the choice.
+	_screen._plot("kibo_ring", "halo_depot")
+	while not (_screen as StationScreen)._plotting.is_empty():
+		await get_tree().process_frame
+	for _i in 5:
+		await get_tree().process_frame
+	_shot(dir + "/2-routes.png")
 	# Let a few hours pass in port so the comms channel and traffic board fill up.
 	sim.advance_game_time(18.0 * 3600.0)
 	_handle_events()
@@ -422,6 +436,37 @@ func _tour(dir: String) -> void:
 	for _i in 10:
 		await get_tree().process_frame
 	_shot(dir + "/6-flight-chase.png")
+	get_tree().quit()
+
+
+## Windowed: plot Kibo Ring to Farside, take the lowest lunar flyby, and capture the
+## run-in, the pass in the orbit view and from the cockpit, and the map.
+func _flyby_tour(dir: String) -> void:
+	DirAccess.make_dir_recursive_absolute(dir)
+	const TravelSys := preload("res://sim/systems/travel_system.gd")
+	var t: float = sim.state.time_s
+	var options: Array = TravelSys.plan_for(sim.state.ship, sim.data, sim.ephemeris, "kibo_ring", "farside_array", t)
+	sim.store_route_options(sim.route_key("farside_array", t), options)
+	var pick := {}
+	for o in options:
+		if o["kind"] == "flyby" and (pick.is_empty() or float(o["peri_alt"]) < float(pick["peri_alt"])):
+			pick = o
+	if pick.is_empty():
+		print("FLYBY_TOUR no flyby route")
+		get_tree().quit(1)
+		return
+	print("FLYBY_TOUR route %s, periapsis %.0f km" % [pick["label"], float(pick["peri_alt"]) / 1000.0])
+	sim.apply({"type": "depart", "to": "farside_array", "route": pick["id"], "plan_t": t})
+	sim.apply({"type": "set_time_scale", "scale": 100})
+	_sync_mode()
+	var peri: float = sim.state.location["peri_t"]
+	var shots := [[peri - 3.0 * 3600.0, "orbit", "1-run-in"], [peri - 240.0, "orbit", "2-pass-orbit"], [peri - 60.0, "cockpit", "3-pass-cockpit"], [peri + 1800.0, "map", "4-map"]]
+	for shot in shots:
+		sim.advance_game_time(float(shot[0]) - sim.state.time_s)
+		(_screen as MapScreen).set_view(shot[1])
+		for _i in 90:
+			await get_tree().process_frame
+		_shot("%s/%s.png" % [dir, shot[2]])
 	get_tree().quit()
 
 

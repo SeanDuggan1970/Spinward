@@ -26,6 +26,9 @@ var ephemeris: Ephemeris
 var systems: Array = []
 var _handlers: Dictionary = {}
 var _events: Array[Dictionary] = []
+## Route options planned for a departure (not saved: plans are a pure function of
+## their inputs, so a replay recomputes them). Key: route_key().
+var route_cache: Dictionary = {}
 
 
 func _init(catalog: DataCatalog = null) -> void:
@@ -52,6 +55,21 @@ func new_game(seed_value: int) -> void:
 func load_state(loaded: GameState) -> void:
 	state = loaded
 	emit("loaded", {})
+
+
+## The cache key for route options from where the ship is now to `to`, planned at
+## game time `plan_t` (defaults to now) for the ship's current mass.
+func route_key(to: String, plan_t: float = NAN) -> String:
+	const ShipStats := preload("res://sim/ship_stats.gd")
+	var t := state.time_s if is_nan(plan_t) else plan_t
+	return "%s>%s@%.3f#%.6f" % [state.location.get("place", ""), to, t, ShipStats.total_mass_t(state.ship, data)]
+
+
+func store_route_options(key: String, options: Array) -> void:
+	route_cache[key] = options
+	# Keep only recent plans (each holds hundreds of trajectory samples).
+	while route_cache.size() > 16:
+		route_cache.erase(route_cache.keys()[0])
 
 
 func register(command_type: String, handler: Callable) -> void:

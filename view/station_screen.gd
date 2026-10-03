@@ -4,12 +4,14 @@ extends Control
 
 const UI := preload("res://view/ui/ui_kit.gd")
 const Market := preload("res://sim/market.gd")
+const RoutePlanner := preload("res://sim/route_planner.gd")
 const Navigation := preload("res://sim/navigation.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
 const ShipyardSystem := preload("res://sim/systems/shipyard_system.gd")
 const EconomySystem := preload("res://sim/systems/economy_system.gd")
 const ProjectSystem := preload("res://sim/systems/project_system.gd")
 const TipsText := preload("res://view/tips_text.gd")
+const TravelSystem := preload("res://sim/systems/travel_system.gd")
 const SystemMap := preload("res://view/system_map.gd")
 const Comms := preload("res://view/comms.gd")
 const DAY := 86400.0
@@ -23,6 +25,12 @@ var _header: VBoxContainer
 var _tab_index := 0
 ## Buy max leaves enough for the tug at the next port and a full tank here.
 static var keep_reserve := true
+## Route plotting in progress: {to: {task, box, key, plan_t}}; box.options is filled by the worker.
+var _plotting: Dictionary = {}
+
+
+class _ResultBox:
+	var options: Array = []
 
 
 func _init(owner_sim, comms_log: Array = []) -> void:
@@ -197,7 +205,7 @@ func _departures_tab(place_id: String) -> Control:
 	var parts := _scroll("Departures")
 	var s = sim.state
 	var d = sim.data
-	parts[1].add_child(UI.label("Your co-pilot plots a constant-thrust transfer at the ship's current mass. Prices elsewhere are what you last saw there, or what you have been told: buy tips on the Tip Line.", UI.DIM, 13))
+	parts[1].add_child(UI.label("Plot routes and your co-pilot flies trial courses under real Earth and Moon gravity: Express burns hard, Economy lets gravity do the work, lunar flybys are for the view (and occasionally the fuel). Prices elsewhere are what you last saw there, or what you have been told: buy tips on the Tip Line.", UI.DIM, 13))
 	for to in d.places:
 		if to == place_id:
 			continue
@@ -211,7 +219,7 @@ func _departures_tab(place_id: String) -> Control:
 		row.add_child(info)
 		info.add_child(UI.label(d.places[to]["name"], UI.AMBER, 17))
 		if plan.has("distance_m"):
-			info.add_child(UI.label("%s   ·   %s   ·   %.2f t propellant" % [UI.km(plan["distance_m"]), UI.duration(plan["duration_s"]), plan["fuel_t"]]))
+			info.add_child(UI.label("%s   ·   quick estimate %s, %.2f t" % [UI.km(plan["distance_m"]), UI.duration(plan["duration_s"]), plan["fuel_t"]]))
 		var notes := []
 		if not plan["ok"]:
 			notes.append([plan["reason"], UI.WARN])
@@ -223,9 +231,10 @@ func _departures_tab(place_id: String) -> Control:
 			notes.append(note)
 		for n in notes:
 			info.add_child(UI.label(n[0], n[1], 13))
-		var go := UI.button("Depart", _depart.bind(to), plan["ok"])
-		go.custom_minimum_size = Vector2(110, 0)
-		row.add_child(go)
+		var side := VBoxContainer.new()
+		side.custom_minimum_size = Vector2(150, 0)
+		row.add_child(side)
+		_route_controls(place_id, to, plan, p[1], side)
 		parts[1].add_child(p[0])
 	return parts[0]
 
@@ -259,8 +268,76 @@ func _intel(from: String, to: String) -> Array:
 	return out
 
 
-func _depart(to: String) -> void:
-	if sim.apply({"type": "depart", "to": to}) == "":
+## Plot routes / choose a route for one destination card.
+func _route_controls(place_id: String, to: String, quick: Dictionary, card: VBoxContainer, side: VBoxContainer) -> void:
+	var key: String = sim.route_key(to, _plan_t(to))
+	var options: Array = sim.route_cache.get(key, [])
+	if sim.state.time_s - _plan_t(to) > TravelSystem.PLAN_VALID_S:
+		options = []  # out of date: plot again
+	if _plotting.has(to):
+		side.add_child(UI.label("Co-pilot plotting\nroutes" + ".".repeat(1 + int(Time.get_ticks_msec() / 400) % 3), UI.AMBER, 13))
+		return
+	if options.is_empty():
+		side.add_child(UI.button("Plot routes", _plot.bind(place_id, to), quick.get("ok", false)))
+		return
+	side.add_child(UI.button("Re-plot", _plot.bind(place_id, to)))
+	var economy_fuel := INF
+	for want in ["economy", "express"]:
+		for o in options:
+			if o["id"] == want and economy_fuel == INF:
+				economy_fuel = float(o["fuel_t"])
+	for o in options:
+		var line := HBoxContainer.new()
+		var text := "%s   %s   %.2f t" % [o["label"], UI.duration(float(o["duration_s"])), float(o["fuel_t"])]
+		var colour := UI.TEXT
+		if o["kind"] == "flyby":
+			var extra := float(o["fuel_t"]) - economy_fuel
+			text += "   " + ("saves %d%%" % int(round(float(o.get("saving", 0.0)) * 100.0)) if extra < 0.0 else "+%.2f t vs Economy" % extra)
+			colour = UI.AMBER
+		var l := UI.label(text, colour if o["affordable"] else UI.WARN, 13)
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		line.add_child(l)
+		line.add_child(UI.button("Depart", _depart.bind(to, o["id"]), o["affordable"]))
+		card.add_child(line)
+
+
+func _plan_t(to: String) -> float:
+	return float(_plotting.get(to, {}).get("plan_t", _last_plan_t.get(to, sim.state.time_s)))
+
+
+var _last_plan_t: Dictionary = {}
+
+
+func _plot(place_id: String, to: String) -> void:
+	var t: float = sim.state.time_s
+	var box := _ResultBox.new()
+	# Gather on the main thread (the ephemeris is not thread-safe), fly on a worker.
+	var quick: Dictionary = Navigation.plan(sim.state.ship, sim.data, sim.ephemeris, place_id, to, t)
+	var job: Dictionary = RoutePlanner.prepare(sim.state.ship, sim.data, sim.ephemeris, place_id, to, t)
+	job["hop"] = RoutePlanner.is_orbital_hop(sim.data, sim.ephemeris, place_id, to, t)
+	var task := WorkerThreadPool.add_task(func(): box.options = RoutePlanner.options_or_quick(job, quick))
+	_plotting[to] = {"task": task, "box": box, "key": sim.route_key(to, t), "plan_t": t}
+	refresh()
+
+
+func _process(_dt: float) -> void:
+	var done := []
+	for to in _plotting:
+		var p: Dictionary = _plotting[to]
+		if WorkerThreadPool.is_task_completed(p["task"]):
+			WorkerThreadPool.wait_for_task_completion(p["task"])
+			sim.store_route_options(p["key"], p["box"].options)
+			_last_plan_t[to] = p["plan_t"]
+			done.append(to)
+	for to in done:
+		_plotting.erase(to)
+	if not done.is_empty() or (not _plotting.is_empty() and Engine.get_process_frames() % 20 == 0):
+		refresh()
+
+
+func _depart(to: String, route_id: String) -> void:
+	var plan_t: float = _last_plan_t.get(to, sim.state.time_s)
+	if sim.apply({"type": "depart", "to": to, "route": route_id, "plan_t": plan_t}) == "":
 		sim.apply({"type": "set_time_scale", "scale": 1000})
 
 

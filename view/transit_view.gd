@@ -93,6 +93,18 @@ func _update(dt: float) -> void:
 	var thrusting := V.length(thrust) > 1e-6
 	var forward := Vector3(thrust[0], thrust[2], -thrust[1]).normalized() if thrusting else -_basis.z
 	var want := Basis.looking_at(forward, Vector3.UP if absf(forward.y) < 0.98 else Vector3.RIGHT)
+	# The lunar pass: look along our motion over the Moon, pitched down toward it,
+	# with the lunar horizon level, so the surface sweeps past below.
+	var peri := float(loc.get("peri_t", -1.0))
+	if peri > 0.0 and absf(t - peri) < 1800.0:
+		var moon_p: Array = eph.position("moon", t)
+		var down := SkyKit.dir_between(moon_p, ship)
+		var v_rel: Array = V.sub(Navigation.transit_velocity(loc, t), V.sub(eph.velocity("moon", t), eph.velocity(frame, t)))
+		var along := Vector3(v_rel[0], v_rel[2], -v_rel[1]).normalized()
+		along = (along - down * along.dot(down)).normalized()
+		if along.length() > 0.5:
+			forward = (along * cos(deg_to_rad(40.0)) + down * sin(deg_to_rad(40.0))).normalized()
+			want = Basis.looking_at(forward, -down)
 	if not _ready_basis:
 		_basis = want
 		_ready_basis = true

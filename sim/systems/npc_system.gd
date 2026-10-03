@@ -61,6 +61,16 @@ func tick(_game_dt: float) -> void:
 		else:
 			_depart(due, float(due["next_t"]))
 	s.rng_state = _rng.state
+	for npc in s.npcs:
+		var fb = npc.get("flyby")
+		if fb is Dictionary and not fb["done"] and npc["location"]["status"] == "transit" and s.time_s >= float(fb["t"]):
+			fb["done"] = true
+			sim().emit("npc_flyby", {"npc": npc["id"], "alt": fb["alt"]}, float(fb["t"]))
+
+
+func _moon_anchored(place: String) -> bool:
+	var loc: Dictionary = sim().data.places[place]["location"]
+	return loc["type"] == "orbit" and loc["parent"] == "moon"
 
 
 ## Seed first, then restore the saved state: a freshly loaded game must continue the
@@ -142,6 +152,14 @@ func _depart(npc: Dictionary, t: float) -> void:
 		"from_rot": plan.get("from_rot"), "to_rot": plan.get("to_rot"), "rot_axis": plan.get("rot_axis"), "rot_angle": plan.get("rot_angle", 0.0),
 	}
 	npc["next_t"] = plan["arrive_t"]
+	npc.erase("flyby")
+	var fleet := _fleet(npc)
+	if float(fleet.get("flyby_chance", 0.0)) > 0.0 and not _moon_anchored(here) and not _moon_anchored(choice["to"]):
+		if _rng.randf() < float(fleet["flyby_chance"]):
+			var alt_range: Array = fleet.get("flyby_alt_km", [100, 300])
+			npc["flyby"] = {"alt": _rng.randf_range(float(alt_range[0]), float(alt_range[1])),
+				"t": t + (float(plan["arrive_t"]) - t) * 0.45, "done": false}
+			sim().emit("npc_flyby_plan", {"npc": npc["id"], "from": here, "to": choice["to"], "alt": npc["flyby"]["alt"]}, t)
 	sim().emit("npc_departed", {"npc": npc["id"], "from": here, "to": choice["to"], "cargo": npc["ship"]["cargo"].duplicate(), "arrive_t": plan["arrive_t"]}, t)
 
 

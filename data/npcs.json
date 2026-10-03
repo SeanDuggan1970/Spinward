@@ -35,6 +35,11 @@
 			"dwell_hours": [
 				10,
 				24
+			],
+			"flyby_chance": 0.05,
+			"flyby_alt_km": [
+				300,
+				800
 			]
 		},
 		"commons_ore": {
@@ -117,6 +122,11 @@
 			"dwell_hours": [
 				12,
 				36
+			],
+			"flyby_chance": 0.35,
+			"flyby_alt_km": [
+				8,
+				120
 			]
 		},
 		"compact_couriers": {
@@ -149,6 +159,11 @@
 			"dwell_hours": [
 				4,
 				10
+			],
+			"flyby_chance": 0.2,
+			"flyby_alt_km": [
+				60,
+				250
 			]
 		},
 		"kernel_shuttles": {
@@ -174,6 +189,11 @@
 			"dwell_hours": [
 				12,
 				30
+			],
+			"flyby_chance": 0.15,
+			"flyby_alt_km": [
+				200,
+				500
 			]
 		},
 		"kalpana_ferries": {
@@ -211,6 +231,11 @@
 			"dwell_hours": [
 				6,
 				14
+			],
+			"flyby_chance": 0.1,
+			"flyby_alt_km": [
+				150,
+				400
 			]
 		},
 		"array_tenders": {
@@ -304,6 +329,41 @@
 			"{ship} docked at {to}.",
 			"{to} traffic: {ship} ({operator}) secured at the hub.",
 			"{ship}: \"Capture confirmed, {to}. Lovely bit of flying, if I say so myself.\""
-		]
+		],
+		"flyby_depart": [
+			"{ship}: \"Filing a lunar flyby, periapsis {alt} km. Saves nothing, but what a view.\"",
+			"{ship} ({operator}) taking the low road round the Moon: {alt} km. Brave or daft, the traffic board can't tell.",
+			"{from} traffic: {ship} away for {to}, routing via a {alt} km lunar pass. Godspeed, you lunatics."
+		],
+		"flyby_pass": [
+			"{ship}: \"Periapsis {alt} km! If you see a new crater in Tycho, that was our shadow.\"",
+			"{ship}: \"{alt} kilometres off the regolith and the co-pilot hasn't stopped swearing.\"",
+			"{ship}: \"Just kissed the Moon at {alt} km. Nobody tell my insurer.\"",
+			"{ship}: \"Moon pass done, {alt} km. Our AI says we're 'statistically fine'. Reassuring.\""
+		],
+		"copilot_near": {
+			"high": [
+				"Co-pilot: \"Lunar periapsis in {in}. {alt} km: comfortable. I'll wake you for the view.\""
+			],
+			"mid": [
+				"Co-pilot: \"Periapsis in {in}, {alt} km. Tidy line. Slowing the clock so you can watch.\""
+			],
+			"low": [
+				"Co-pilot: \"Periapsis in {in}. {alt} kilometres. I want it noted that this was your idea.\"",
+				"Co-pilot: \"{alt} km pass coming up in {in}. Strapping in. Metaphorically. I don't have straps.\""
+			]
+		},
+		"copilot_pass": {
+			"high": [
+				"Co-pilot: \"Periapsis {alt} km. Moon's behind us, slingshot logged.\""
+			],
+			"mid": [
+				"Co-pilot: \"{alt} km at periapsis. Mare below looked close enough to touch. Back to cruise.\""
+			],
+			"low": [
+				"Co-pilot: \"{alt} KILOMETRES. We are alive. I'll be in my subroutine.\"",
+				"Co-pilot: \"Periapsis {alt} km. That crater rim was closer than the navigation tolerance. Lovely.\""
+			]
+		}
 	}
 }

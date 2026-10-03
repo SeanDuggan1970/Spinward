@@ -30,9 +30,11 @@ func _draw() -> void:
 		return
 	var x := 24.0
 	var y := 74.0
-	draw_rect(Rect2(12, 50, 330, 196), Color(0.07, 0.08, 0.09, 0.8))
+	draw_rect(Rect2(12, 50, 330, 216), Color(0.07, 0.08, 0.09, 0.8))
 	draw_rect(Rect2(12, 50, 330, 3), UI.HAZARD)
 	draw_string(_font, Vector2(x, y), "%s  →  %s" % [sim.data.places[loc["from"]]["name"], sim.data.places[loc["to"]]["name"]], HORIZONTAL_ALIGNMENT_LEFT, 310, 14, UI.TEXT)
+	if r.get("route", "") != "":
+		draw_string(_font, Vector2(x + 200, y + 28), r["route"], HORIZONTAL_ALIGNMENT_LEFT, 120, 11, UI.DIM)
 	y += 28
 	draw_string(_font, Vector2(x, y), r["phase"], HORIZONTAL_ALIGNMENT_LEFT, -1, 18, UI.AMBER if r["phase"] != "COASTING" else UI.DIM)
 	y += 26
@@ -41,6 +43,7 @@ func _draw() -> void:
 		["THRUST", "%.2f milli-g" % (r["accel"] / 9.80665 * 1000.0)],
 		["TO GO", UI.km(r["remaining"])],
 		["ARRIVE", UI.duration(r["eta"])],
+		["MOON ALT", UI.km(r["moon_alt"]) if r["moon_alt"] < 6.0e7 else "—"],
 		["TIME", "x%d%s" % [int(sim.state.time_scale), "  PAUSED" if sim.state.paused else ""]],
 	]:
 		draw_string(_font, Vector2(x, y), row[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, UI.DIM)

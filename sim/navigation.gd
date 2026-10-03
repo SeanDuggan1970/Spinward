@@ -229,8 +229,76 @@ static func _rotating(location: Dictionary) -> bool:
 	return location.get("rot_axis") != null
 
 
+# --- Gravity-flown trips: replayed from recorded samples ---------------------------
+#
+# A sampled trip stores [t, pos, vel, thrust] points from gravity_flight.gd in the
+# Earth frame. Between samples the path is a cubic Hermite in position and velocity.
+# Before the first sample and after the last, the co-pilot is climbing out of or
+# down into a gravity well: the ship slides between the station and the hand-off.
+
+static func _sampled(location: Dictionary) -> bool:
+	return location.get("samples") != null
+
+
+## Index i with samples[i].t <= t < samples[i+1].t (clamped).
+static func _seg(samples: Array, t: float) -> int:
+	var lo := 0
+	var hi := samples.size() - 1
+	while hi - lo > 1:
+		var mid := (lo + hi) >> 1
+		if float(samples[mid][0]) <= t:
+			lo = mid
+		else:
+			hi = mid
+	return lo
+
+
+static func _sampled_position(location: Dictionary, t: float) -> Array:
+	var samples: Array = location["samples"]
+	var first: Array = samples[0]
+	var last: Array = samples[-1]
+	if t <= float(first[0]):
+		var span := maxf(float(first[0]) - float(location["depart_t"]), 1.0)
+		return V.lerp(location["from_pos"], first[1], clampf((t - float(location["depart_t"])) / span, 0.0, 1.0))
+	if t >= float(last[0]):
+		var span := maxf(float(location["arrive_t"]) - float(last[0]), 1.0)
+		return V.lerp(last[1], location["to_pos"], clampf((t - float(last[0])) / span, 0.0, 1.0))
+	var i := _seg(samples, t)
+	var a: Array = samples[i]
+	var b: Array = samples[i + 1]
+	var T := float(b[0]) - float(a[0])
+	return _hermite(a[1], a[2], b[1], b[2], (t - float(a[0])) / T, T)
+
+
+static func _sampled_velocity(location: Dictionary, t: float) -> Array:
+	var samples: Array = location["samples"]
+	var first: Array = samples[0]
+	var last: Array = samples[-1]
+	if t <= float(first[0]):
+		return V.scale(V.sub(first[1], location["from_pos"]), 1.0 / maxf(float(first[0]) - float(location["depart_t"]), 1.0))
+	if t >= float(last[0]):
+		return V.scale(V.sub(location["to_pos"], last[1]), 1.0 / maxf(float(location["arrive_t"]) - float(last[0]), 1.0))
+	var i := _seg(samples, t)
+	var a: Array = samples[i]
+	var b: Array = samples[i + 1]
+	var T := float(b[0]) - float(a[0])
+	return _hermite_vel(a[1], a[2], b[1], b[2], (t - float(a[0])) / T, T)
+
+
+static func _sampled_accel(location: Dictionary, t: float) -> Array:
+	var samples: Array = location["samples"]
+	if t <= float(samples[0][0]) or t >= float(samples[-1][0]):
+		return [0.0, 0.0, 0.0]
+	var i := _seg(samples, t)
+	var a: Array = samples[i]
+	var b: Array = samples[i + 1]
+	return V.lerp(a[3], b[3], (t - float(a[0])) / (float(b[0]) - float(a[0])))
+
+
 ## Ship position in the trip frame during transit.
 static func transit_position(location: Dictionary, t: float) -> Array:
+	if _sampled(location):
+		return _sampled_position(location, t)
 	var ph := _burn_phase(location, t)
 	var s: float = ph[1]
 	var T: float = ph[2]
@@ -243,6 +311,8 @@ static func transit_position(location: Dictionary, t: float) -> Array:
 
 ## Ship velocity in the trip frame during transit (m/s).
 static func transit_velocity(location: Dictionary, t: float) -> Array:
+	if _sampled(location):
+		return _sampled_velocity(location, t)
 	var ph := _burn_phase(location, t)
 	var s: float = ph[1]
 	var T: float = ph[2]
@@ -260,6 +330,8 @@ static func transit_velocity(location: Dictionary, t: float) -> Array:
 
 ## The thrust (acceleration) vector during transit (m/s^2); zero outside the burn.
 static func transit_accel(location: Dictionary, t: float) -> Array:
+	if _sampled(location):
+		return _sampled_accel(location, t)
 	var ph := _burn_phase(location, t)
 	var T: float = ph[2]
 	if T <= 0.0 or t < float(ph[0]) or t > float(ph[0]) + T:

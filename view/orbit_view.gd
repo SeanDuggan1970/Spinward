@@ -153,7 +153,10 @@ func _process(dt: float) -> void:
 	var ship_pos := _p(Navigation.transit_position(loc, t))
 	var dest_pos := _p(eph.relative(loc["to"], frame, t))
 	var meet := _p(Navigation.transit_position(loc, float(loc["arrive_t"])))
-	var cam_dist := _frame_camera(ship_pos, dest_pos, meet, dt)
+	var moon_pos := _moon.position
+	var near_moon := ship_pos.distance_to(moon_pos) < 60.0 and float(loc.get("peri_t", -1.0)) > 0.0
+	# During a lunar pass, frame the ship and the Moon tight; otherwise the whole trip.
+	var cam_dist := _frame_camera(ship_pos, moon_pos, moon_pos, dt) if near_moon else _frame_camera(ship_pos, dest_pos, meet, dt)
 	# The destination's own track to the meeting point, and the meeting point itself.
 	_dest_track.clear_surfaces()
 	var track := Navigation.track_id(sim.data, loc["to"], frame)
@@ -203,6 +206,8 @@ func _process(dt: float) -> void:
 		"speed": vel.length(), "accel": accel.length(),
 		"remaining": V.distance(Navigation.transit_position(loc, t), eph.relative(loc["to"], frame, t)),
 		"eta": float(loc["arrive_t"]) - t,
+		"moon_alt": V.distance(Navigation.transit_position(loc, t), eph.relative("moon", frame, t)) - float(sim.data.bodies["moon"]["radius_m"]),
+		"route": loc.get("route_label", ""),
 	}
 	_cam_ready = true
 
@@ -212,7 +217,7 @@ func _process(dt: float) -> void:
 func _frame_camera(ship_pos: Vector3, dest_pos: Vector3, meet: Vector3, dt: float) -> float:
 	var mid := (ship_pos + dest_pos + meet) / 3.0
 	var sep := maxf(ship_pos.distance_to(dest_pos), maxf(ship_pos.distance_to(meet), dest_pos.distance_to(meet)))
-	var dist := maxf(sep * 1.45, 45.0)
+	var dist := maxf(sep * 1.45, 6.0)
 	var chord := (meet - ship_pos)
 	chord.y = 0.0
 	var side := Vector3.UP.cross(chord.normalized()) if chord.length() > 1e-3 else Vector3.RIGHT
