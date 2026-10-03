@@ -1,38 +1,240 @@
-## M0 placeholder screen: shows the game clock and drives it through commands.
-## Space toggles pause; [ and ] change time compression.
+## Game shell: owns the sim, ticks it, and shows the screen that matches where the
+## ship is (docked → station, transit → map, approach → flight). Screens only send
+## commands; this shell turns sim events into on-screen notices.
+##
+## Keys: P pause, [ ] time compression, F5 quick save, F9 quick load.
+## Command line (after --): --smoke runs an end-to-end headless check;
+## --tour=<dir> captures one screenshot per screen (needs a window).
 extends Control
 
 const Sim := preload("res://sim/sim.gd")
+const SaveIO := preload("res://sim/save_io.gd")
+const UI := preload("res://view/ui/ui_kit.gd")
+const StationScreen := preload("res://view/station_screen.gd")
+const MapScreen := preload("res://view/map_screen.gd")
+const FlightScene := preload("res://view/flight/flight_scene.gd")
+
+const QUICKSAVE := "user://quicksave.json"
 
 var sim: Sim
-@onready var _date: Label = %Date
-@onready var _status: Label = %Status
+var _mode := ""
+var _screen: Node
+var _top: Label
+var _notices: VBoxContainer
+var _layer: Control
 
 
 func _ready() -> void:
+	theme = UI.make_theme()
 	sim = Sim.new()
 	sim.new_game(1)
-	if "--smoke" in OS.get_cmdline_user_args():
-		_process(0.016)
-		print("SMOKE_OK ", sim.state.date_string())
-		get_tree().quit(0)
+	_layer = Control.new()
+	_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(_layer)
+	var bar := PanelContainer.new()
+	bar.add_theme_stylebox_override("panel", UI.box(Color("101215"), UI.HAZARD, 0, 8))
+	bar.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	add_child(bar)
+	_top = UI.label("")
+	bar.add_child(_top)
+	_notices = VBoxContainer.new()
+	_notices.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	_notices.position = Vector2(-460, -200)
+	_notices.custom_minimum_size = Vector2(440, 180)
+	_notices.alignment = BoxContainer.ALIGNMENT_END
+	_notices.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_notices)
+	var args := OS.get_cmdline_user_args()
+	if "--smoke" in args:
+		_smoke.call_deferred()
+		return
+	for a in args:
+		if a.begins_with("--tour="):
+			_tour.call_deferred(a.trim_prefix("--tour="))
+			return
+	_sync_mode()
 
 
 func _process(delta: float) -> void:
 	sim.tick(delta)
-	sim.take_events()
-	_date.text = sim.state.date_string().replace("T", "  ") + " UTC"
-	_status.text = "%s   ×%d   %d credits" % [
-		"PAUSED" if sim.state.paused else "RUNNING", int(sim.state.time_scale), int(sim.state.credits)]
+	_handle_events()
+	_sync_mode()
+	var s = sim.state
+	var where := ""
+	match s.location.get("status"):
+		"docked":
+			where = "Docked at " + sim.data.places[s.location["place"]]["name"]
+		"transit":
+			where = "En route to " + sim.data.places[s.location["to"]]["name"]
+		"approach":
+			where = "Approaching " + sim.data.places[s.location["place"]]["name"]
+	_top.text = "SPINWARD   %s UTC   ×%d%s   %s   %s" % [
+		s.date_string().replace("T", " ").substr(0, 16), int(s.time_scale), "  PAUSED" if s.paused else "",
+		UI.money(s.credits), where]
+
+
+func _handle_events() -> void:
+	var refresh := false
+	for e in sim.take_events():
+		var d: Dictionary = e["data"]
+		match e["type"]:
+			"rejected":
+				notice(d["reason"].capitalize(), UI.WARN)
+			"traded":
+				var good: String = sim.data.goods[d["good"]]["name"]
+				if d["credits"] < 0.0:
+					notice("Bought %.1f t %s for %s" % [d["tonnes"], good, UI.money(-d["credits"])])
+				else:
+					notice("Sold %.1f t %s for %s  (profit %s)" % [d["tonnes"], good, UI.money(d["credits"]), UI.money(d["profit"])], UI.GOOD if d["profit"] >= 0.0 else UI.WARN)
+				refresh = true
+			"refuelled":
+				notice("Took on %.2f t propellant for %s" % [d["tonnes"], UI.money(-d["credits"])])
+				refresh = true
+			"module_installed":
+				notice("Fitted %s" % sim.data.modules[d["module"]]["name"], UI.GOOD)
+				refresh = true
+			"departed":
+				notice("Departed for %s" % sim.data.places[d["to"]]["name"], UI.AMBER)
+			"arrived":
+				notice("Arrived at %s. Take her in, or press T for the tug." % sim.data.places[d["place"]]["name"], UI.AMBER)
+			"docked":
+				notice("Docked at %s%s" % [sim.data.places[d["place"]]["name"], "  (hand-flown, no fee)" if d["manual"] else ""], UI.GOOD)
+	if refresh and _screen is StationScreen:
+		_screen.refresh()
+
+
+func notice(text: String, colour: Color = UI.TEXT) -> void:
+	var l := UI.label(text, colour, 14)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_notices.add_child(l)
+	while _notices.get_child_count() > 6:
+		_notices.get_child(0).free()
+	get_tree().create_timer(7.0).timeout.connect(func(): if is_instance_valid(l): l.queue_free())
+
+
+func _sync_mode() -> void:
+	var mode: String = sim.state.location.get("status", "docked")
+	if mode == _mode:
+		return
+	_mode = mode
+	if _screen:
+		_screen.queue_free()
+	match mode:
+		"docked":
+			_screen = StationScreen.new(sim)
+			_layer.add_child(_screen)
+		"transit":
+			_screen = MapScreen.new(sim)
+			_layer.add_child(_screen)
+		"approach":
+			# 3D renders in the root viewport underneath all 2D; its HUD sits in this layer.
+			_screen = FlightScene.new(sim)
+			_layer.add_child(_screen)
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not (event is InputEventKey and event.pressed and not event.echo):
 		return
 	match event.keycode:
-		KEY_SPACE:
+		KEY_P:
 			sim.apply({"type": "set_paused", "paused": not sim.state.paused})
 		KEY_BRACKETRIGHT, KEY_BRACKETLEFT:
 			var scales: Array = sim.data.balance["time"]["scales"]
 			var i := scales.find(sim.state.time_scale) + (1 if event.keycode == KEY_BRACKETRIGHT else -1)
 			sim.apply({"type": "set_time_scale", "scale": scales[clampi(i, 0, scales.size() - 1)]})
+		KEY_F5:
+			notice("Saved." if SaveIO.save(sim.state, QUICKSAVE) == OK else "Save failed.", UI.GOOD)
+		KEY_F9:
+			var loaded := SaveIO.load_file(QUICKSAVE)
+			if loaded:
+				sim.load_state(loaded)
+				_mode = ""
+				notice("Loaded quick save.", UI.GOOD)
+			else:
+				notice("No quick save to load.", UI.WARN)
+
+
+## Headless end-to-end check: every screen builds and the full loop runs.
+func _smoke() -> void:
+	_sync_mode()
+	await get_tree().process_frame
+	var ok := _screen is StationScreen
+	ok = ok and sim.apply({"type": "buy", "good": "food", "tonnes": 5}) == ""
+	ok = ok and sim.apply({"type": "depart", "to": "halo_depot"}) == ""
+	_sync_mode()
+	await get_tree().process_frame
+	ok = ok and _screen is MapScreen
+	sim.advance_game_time(float(sim.state.location["arrive_t"]) - sim.state.time_s + 1.0)
+	_sync_mode()
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	ok = ok and _screen is FlightScene and not (_screen as FlightScene).readout.is_empty()
+	# Hands-off approach: aligned, creeping in at 0.8 m/s, co-pilot spin match on.
+	# Proves the docking rules can be met by real flight, not just by the command.
+	var flight: FlightScene = _screen
+	# First too fast: the port must refuse capture.
+	flight.ship_node.position = Vector3(0.0, 0.0, flight.station["port_z"] + 20.0 - flight.nose_z)
+	flight.ship_node.rotation = Vector3.ZERO
+	flight.velocity = Vector3(0, 0, -4.0)
+	for _i in 60 * 10:
+		flight._physics_process(1.0 / 60.0)
+	ok = ok and not flight.docked and sim.state.location["status"] == "approach"
+	print("SMOKE fast approach refused=%s contacts=%d" % [not flight.docked, flight.bumps])
+	flight.bumps = 0
+	flight.ship_node.position = Vector3(1.0, -0.5, flight.station["port_z"] + 30.0 - flight.nose_z)
+	flight.ship_node.rotation = Vector3(0.0, 0.0, 1.0)
+	flight.velocity = Vector3(0, 0, -0.8)
+	for _i in 60 * 90:
+		if flight.docked:
+			break
+		flight._physics_process(1.0 / 60.0)
+	ok = ok and flight.docked and sim.state.stats["manual_docks"] == 1
+	print("SMOKE flight docked=%s contacts=%d" % [flight.docked, flight.bumps])
+	_sync_mode()
+	await get_tree().process_frame
+	ok = ok and _screen is StationScreen
+	print("SMOKE_OK " if ok else "SMOKE_FAIL ", sim.state.date_string())
+	get_tree().quit(0 if ok else 1)
+
+
+## Windowed screenshot tour for visual checks: station, map, flight.
+func _tour(dir: String) -> void:
+	DirAccess.make_dir_recursive_absolute(dir)
+	_sync_mode()
+	for _i in 10:
+		await get_tree().process_frame
+	_shot(dir + "/1-station.png")
+	if _screen is StationScreen:
+		_screen._tabs.current_tab = 1
+	for _i in 5:
+		await get_tree().process_frame
+	_shot(dir + "/2-departures.png")
+	sim.apply({"type": "depart", "to": "kernel_l5"})
+	sim.apply({"type": "set_time_scale", "scale": 1000})
+	_sync_mode()
+	sim.advance_game_time((float(sim.state.location["arrive_t"]) - sim.state.time_s) * 0.4)
+	for _i in 10:
+		await get_tree().process_frame
+	_shot(dir + "/3-map.png")
+	sim.advance_game_time(float(sim.state.location["arrive_t"]) - sim.state.time_s + 1.0)
+	_sync_mode()
+	for _i in 90:
+		await get_tree().process_frame
+	_shot(dir + "/4-flight.png")
+	var flight: FlightScene = _screen
+	flight.ship_node.position = Vector3(3, 2, flight.station["port_z"] + 70.0 - flight.nose_z)
+	flight.ship_node.rotation = Vector3.ZERO
+	for _i in 30:
+		await get_tree().process_frame
+	_shot(dir + "/5-flight-close.png")
+	flight.nose_cam = true
+	for _i in 10:
+		await get_tree().process_frame
+	_shot(dir + "/6-flight-nose.png")
+	get_tree().quit()
+
+
+func _shot(path: String) -> void:
+	get_viewport().get_texture().get_image().save_png(path)
+	print("SHOT ", path)

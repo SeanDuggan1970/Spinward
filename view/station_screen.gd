@@ -1,0 +1,273 @@
+## Docked: market, departures and shipyard, with the ship's status alongside.
+## Rebuilt from state after every change; it never edits state, only sends commands.
+extends Control
+
+const UI := preload("res://view/ui/ui_kit.gd")
+const Market := preload("res://sim/market.gd")
+const Navigation := preload("res://sim/navigation.gd")
+const ShipStats := preload("res://sim/ship_stats.gd")
+const ShipyardSystem := preload("res://sim/systems/shipyard_system.gd")
+
+var sim
+var _tabs: TabContainer
+var _side: VBoxContainer
+var _header: VBoxContainer
+var _tab_index := 0
+
+
+func _init(owner_sim) -> void:
+	sim = owner_sim
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
+
+func _ready() -> void:
+	var margin := MarginContainer.new()
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	for side in ["left", "right", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 16)
+	margin.add_theme_constant_override("margin_top", 52)
+	add_child(margin)
+	var root := VBoxContainer.new()
+	root.add_theme_constant_override("separation", 10)
+	margin.add_child(root)
+	_header = VBoxContainer.new()
+	root.add_child(_header)
+	var body := HBoxContainer.new()
+	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	body.add_theme_constant_override("separation", 12)
+	root.add_child(body)
+	_tabs = TabContainer.new()
+	_tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_tabs.size_flags_stretch_ratio = 2.2
+	_tabs.tab_changed.connect(func(i): _tab_index = i)
+	body.add_child(_tabs)
+	_side = VBoxContainer.new()
+	_side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_side.add_theme_constant_override("separation", 10)
+	body.add_child(_side)
+	refresh()
+
+
+func send(command: Dictionary) -> void:
+	sim.apply(command)
+	refresh()
+
+
+func refresh() -> void:
+	if _tabs == null or sim.state.location.get("status") != "docked":
+		return
+	var place_id: String = sim.state.location["place"]
+	var place: Dictionary = sim.data.places[place_id]
+	for c in _header.get_children():
+		c.queue_free()
+	_header.add_child(UI.label(place["name"].to_upper(), UI.AMBER, 26))
+	_header.add_child(UI.label("%s  ·  %s" % [place["operator"], place["description"]], UI.DIM, 14))
+	for c in _tabs.get_children():
+		_tabs.remove_child(c)
+		c.queue_free()
+	_tabs.add_child(_market_tab(place_id))
+	_tabs.add_child(_departures_tab(place_id))
+	if "shipyard" in place.get("services", []):
+		_tabs.add_child(_shipyard_tab())
+	_tabs.current_tab = mini(_tab_index, _tabs.get_tab_count() - 1)
+	for c in _side.get_children():
+		c.queue_free()
+	_side.add_child(_ship_panel(place_id))
+
+
+func _scroll(name_: String) -> Array:
+	var scroll := ScrollContainer.new()
+	scroll.name = name_
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	var v := VBoxContainer.new()
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	v.add_theme_constant_override("separation", 8)
+	scroll.add_child(v)
+	return [scroll, v]
+
+
+func _market_tab(place_id: String) -> Control:
+	var parts := _scroll("Market")
+	var grid := GridContainer.new()
+	grid.columns = 8
+	grid.add_theme_constant_override("h_separation", 14)
+	grid.add_theme_constant_override("v_separation", 6)
+	parts[1].add_child(grid)
+	for h in ["GOOD", "STOCK", "BUY", "SELL", "ABOARD", "", "", ""]:
+		grid.add_child(UI.label(h, UI.DIM, 12))
+	var s = sim.state
+	var d = sim.data
+	var free := ShipStats.cargo_capacity_t(s.ship, d) - ShipStats.cargo_t(s.ship)
+	for good in d.places[place_id]["market"]:
+		var base := float(d.goods[good]["base_price"])
+		var buy := Market.buy_price(s, d, place_id, good)
+		var sell := Market.sell_price(s, d, place_id, good)
+		var aboard := float(s.ship["cargo"].get(good, 0.0))
+		var name_label := UI.label(d.goods[good]["name"])
+		name_label.tooltip_text = d.goods[good]["description"]
+		name_label.mouse_filter = Control.MOUSE_FILTER_PASS
+		grid.add_child(name_label)
+		grid.add_child(UI.label("%.1f t" % Market.stock(s, place_id, good), UI.DIM))
+		grid.add_child(UI.label("%d" % int(buy), UI.GOOD if buy < base * 0.9 else UI.TEXT))
+		grid.add_child(UI.label("%d" % int(sell), UI.AMBER if sell > base * 1.1 else UI.TEXT))
+		grid.add_child(UI.label("%.1f t" % aboard if aboard > 0.0 else "—", UI.TEXT if aboard > 0.0 else UI.DIM))
+		var max_buy := minf(minf(free, Market.stock(s, place_id, good)), s.credits / maxf(buy, 0.01))
+		max_buy = floorf(max_buy * 10.0) / 10.0
+		grid.add_child(UI.button("Buy 1", send.bind({"type": "buy", "good": good, "tonnes": 1.0}), max_buy >= 1.0))
+		grid.add_child(UI.button("Buy max", _buy_max.bind(good), max_buy >= 0.1))
+		grid.add_child(UI.button("Sell all", send.bind({"type": "sell", "good": good, "tonnes": aboard}), aboard > 0.0))
+	var unsellable := []
+	for good in s.ship["cargo"]:
+		if not Market.trades(d, place_id, good):
+			unsellable.append(d.goods[good]["name"])
+	if not unsellable.is_empty():
+		parts[1].add_child(UI.label("Not traded here: " + ", ".join(unsellable), UI.DIM, 13))
+	parts[1].add_child(UI.label("Green buy prices are below normal; amber sell prices are above normal. Your trades move the price.", UI.DIM, 12))
+	return parts[0]
+
+
+## Buy as much as fits, adjusting for the price rising as you buy.
+func _buy_max(good: String) -> void:
+	var s = sim.state
+	var d = sim.data
+	var place_id: String = s.location["place"]
+	var t := minf(ShipStats.cargo_capacity_t(s.ship, d) - ShipStats.cargo_t(s.ship), Market.stock(s, place_id, good))
+	t = floorf(t * 10.0) / 10.0
+	while t >= 0.1 and Market.buy_price(s, d, place_id, good, t) * t > s.credits:
+		t = floorf(t * 0.95 * 10.0) / 10.0
+	if t >= 0.1:
+		send({"type": "buy", "good": good, "tonnes": t})
+
+
+func _departures_tab(place_id: String) -> Control:
+	var parts := _scroll("Departures")
+	var s = sim.state
+	var d = sim.data
+	parts[1].add_child(UI.label("Your co-pilot plots a constant-thrust transfer at the ship's current mass. Time compression handles the cruise.", UI.DIM, 13))
+	for to in d.places:
+		if to == place_id:
+			continue
+		var plan: Dictionary = Navigation.plan(s, d, sim.ephemeris, place_id, to, s.time_s)
+		var p := UI.panel("")
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 16)
+		p[1].add_child(row)
+		var info := VBoxContainer.new()
+		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(info)
+		info.add_child(UI.label(d.places[to]["name"], UI.AMBER, 17))
+		if plan.has("distance_m"):
+			info.add_child(UI.label("%s   ·   %s   ·   %.2f t propellant" % [UI.km(plan["distance_m"]), UI.duration(plan["duration_s"]), plan["fuel_t"]]))
+		var notes := []
+		if not plan["ok"]:
+			notes.append([plan["reason"], UI.WARN])
+		elif plan["strand_risk"]:
+			notes.append(["No fuel sold there, and you would not have enough to come back this way", UI.WARN])
+		elif not plan["dest_refuels"]:
+			notes.append(["No fuel sold there", UI.HAZARD])
+		var tip := _best_cargo(place_id, to)
+		if tip != "":
+			notes.append([tip, UI.GOOD])
+		for n in notes:
+			info.add_child(UI.label(n[0], n[1], 13))
+		var go := UI.button("Depart", _depart.bind(to), plan["ok"])
+		go.custom_minimum_size = Vector2(110, 0)
+		row.add_child(go)
+		parts[1].add_child(p[0])
+	return parts[0]
+
+
+## The co-pilot's best single-good suggestion for a route, from current price boards.
+func _best_cargo(from: String, to: String) -> String:
+	var s = sim.state
+	var d = sim.data
+	var best := ""
+	var best_margin := 0.0
+	for good in d.places[from]["market"]:
+		if Market.trades(d, to, good):
+			var m := Market.sell_price(s, d, to, good) - Market.buy_price(s, d, from, good)
+			if m > best_margin:
+				best_margin = m
+				best = good
+	return "" if best == "" else "Co-pilot: %s sells for about %d cr/t more there" % [d.goods[best]["name"].to_lower(), int(best_margin)]
+
+
+func _depart(to: String) -> void:
+	if sim.apply({"type": "depart", "to": to}) == "":
+		sim.apply({"type": "set_time_scale", "scale": 1000})
+
+
+func _shipyard_tab() -> Control:
+	var parts := _scroll("Shipyard")
+	var s = sim.state
+	var d = sim.data
+	var stock: Array = ShipyardSystem.yard_stock(s, d)
+	var resale := float(d.balance["shipyard"]["resale_fraction"])
+	parts[1].add_child(UI.label("Swap bolt-on modules. Your old module is taken in part-exchange at %d%% of its price." % int(resale * 100), UI.DIM, 13))
+	var slots: Array = s.ship["modules"].keys()
+	slots.sort()
+	for slot in slots:
+		var kind: String = slot.split(".")[0]
+		var current: Dictionary = d.modules[s.ship["modules"][slot]]
+		var p := UI.panel("%s %s" % [kind, int(slot.split(".")[1]) + 1])
+		p[1].add_child(UI.label("Fitted: %s  (%s)" % [current["name"], _module_stats(current)]))
+		for module_id in stock:
+			var m: Dictionary = d.modules[module_id]
+			if m["kind"] != kind or module_id == s.ship["modules"][slot]:
+				continue
+			var cost := float(m["price"]) - float(current["price"]) * resale
+			var row := HBoxContainer.new()
+			var l := UI.label("%s  (%s)" % [m["name"], _module_stats(m)], UI.DIM)
+			l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			row.add_child(l)
+			row.add_child(UI.button("Fit for %s" % UI.money(cost), send.bind({"type": "install_module", "slot": slot, "module": module_id}), cost <= s.credits))
+			p[1].add_child(row)
+		parts[1].add_child(p[0])
+	return parts[0]
+
+
+func _module_stats(m: Dictionary) -> String:
+	var bits := ["%.1f t" % float(m["mass_t"])]
+	if m.has("cargo_t"):
+		bits.append("%d t cargo" % int(m["cargo_t"]))
+	if m.has("fuel_t"):
+		bits.append("%d t propellant" % int(m["fuel_t"]))
+	if m.has("thrust_n"):
+		bits.append("%d N, %d MW heat" % [int(m["thrust_n"]), int(m["heat_mw"])])
+	if m.has("reject_mw"):
+		bits.append("rejects %.1f MW" % float(m["reject_mw"]))
+	return ", ".join(bits)
+
+
+func _ship_panel(place_id: String) -> Control:
+	var s = sim.state
+	var d = sim.data
+	var p := UI.panel(s.ship["name"])
+	var v: VBoxContainer = p[1]
+	v.add_child(UI.label(d.ships[s.ship["hull"]]["name"], UI.DIM, 13))
+	var cap := ShipStats.cargo_capacity_t(s.ship, d)
+	var fuel_cap := ShipStats.fuel_capacity_t(s.ship, d)
+	v.add_child(UI.label("Cargo   %.1f / %d t" % [ShipStats.cargo_t(s.ship), int(cap)]))
+	for good in s.ship["cargo"]:
+		v.add_child(UI.label("  %s  %.1f t" % [d.goods[good]["name"], s.ship["cargo"][good]], UI.DIM, 13))
+	v.add_child(UI.label("Fuel    %.2f / %d t" % [s.ship["fuel_t"], int(fuel_cap)], UI.WARN if s.ship["fuel_t"] < fuel_cap * 0.25 else UI.TEXT))
+	var fuel_bar := ProgressBar.new()
+	fuel_bar.max_value = fuel_cap
+	fuel_bar.value = s.ship["fuel_t"]
+	fuel_bar.show_percentage = false
+	fuel_bar.custom_minimum_size = Vector2(0, 8)
+	v.add_child(fuel_bar)
+	v.add_child(UI.label("Mass    %.1f t" % ShipStats.total_mass_t(s.ship, d)))
+	v.add_child(UI.label("Accel   %.2f milli-g" % (ShipStats.accel_mps2(s.ship, d) / 9.80665 * 1000.0)))
+	var heat := ShipStats.heat_ratio(s.ship, d)
+	v.add_child(UI.label("Heat    %d%% of radiator capacity%s" % [int(heat * 100.0), "  (drive throttled)" if heat > 1.0 else ""], UI.WARN if heat > 1.0 else UI.TEXT))
+	var services: Array = d.places[place_id].get("services", [])
+	if "refuel" in services:
+		var need := fuel_cap - float(s.ship["fuel_t"])
+		var cost := Market.buy_price(s, d, place_id, "propellant", need) * need
+		v.add_child(UI.button("Refuel  (%s)" % UI.money(cost), send.bind({"type": "refuel", "fill": true}), need > 0.01))
+	else:
+		v.add_child(UI.label("No fuel sold here.", UI.HAZARD, 13))
+		var price := float(d.goods["propellant"]["base_price"]) * float(d.balance["economy"]["emergency_fuel_price_mult"])
+		v.add_child(UI.button("Emergency tanker  (%s/t)" % UI.money(price), send.bind({"type": "emergency_refuel"}), float(s.ship["fuel_t"]) < fuel_cap))
+	return p[0]
