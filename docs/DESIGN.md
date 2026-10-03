@@ -116,6 +116,30 @@ They appear in four places:
 
 Stations also have view-only work pods and a tug, so a port always looks busy. Later NPC roles: passengers and contracts, rescue calls (hazards), disputes (conflict ladder) and faction reputation.
 
+## Information: knowledge, tips and brokers
+
+There is no free perfect information.
+- **Your knowledge:** you know a port's prices from when you were last docked there. The Departures cards show that board with its age.
+- **The logbook:** a new pilot starts with the previous owner's logbook, 3-day-old boards for every port, so the start isn't blind.
+- **Brokers:** info brokers (`data/brokers.json`, `sim/systems/tip_system.gd`) sell tips about other ports at the station where they work.
+
+| Broker | Works at | Price | Character |
+|---|---|---|---|
+| Maisie Tran | Kibo Ring | 260 | Retired customs clerk. Good on near-Earth ports. |
+| Lamplighter | Halo Depot | 700 | Unregistered AI in the traffic computer. Hears everything. Rarely wrong. |
+| Dusty Okafor | Shackleton Port | 70 | Rumour merchant. Cheap and enthusiastic, right about half the time. |
+| Auntie Vell | The Kernel | 150 | Noodle bar gossip network. Good on L4/L5 and Farside. |
+
+- **How tips work:**
+  - A tip is true with the broker's hidden reliability, give or take some price noise. Otherwise it's invented.
+  - When you next dock at the tipped port, the tip is checked against the real board ("held up" or "wrong").
+  - The broker's track record with you builds up, so trust is learned, not shown.
+  - Tips expire after 5 days.
+- **Later ideas:**
+  - NPCs acting on the same public tips, which crowds the trade
+  - brokers who sell *to* other traders about you
+  - a market-data subscription upgrade
+
 ## Exploration and claims
 
 Scan bodies to reveal their composition, value and hazards. Sell survey data or keep it. To claim a body, file with the relevant authority: costs, rules and politics vary by region. Real named bodies are handmade. The many unnamed small bodies are generated from real orbit-population statistics, so new discoveries are possible.

@@ -13,6 +13,9 @@ var ships: Dictionary = {}
 var npcs: Dictionary = {}
 var projects: Dictionary = {}
 var projects_reserve_fraction := 0.4
+var brokers: Dictionary = {}
+## tip_ttl_days, verify_tolerance.
+var brokers_meta: Dictionary = {}
 
 
 static func load_default():
@@ -32,6 +35,10 @@ func load_from(root: String) -> void:
 	projects = read_json(root + "/projects.json")
 	projects_reserve_fraction = float(projects.get("reserve_fraction", 0.4))
 	projects.erase("reserve_fraction")
+	var broker_file := read_json(root + "/brokers.json")
+	brokers = broker_file.get("brokers", {})
+	brokers_meta = {"tip_ttl_days": float(broker_file.get("tip_ttl_days", 5.0)), "verify_tolerance": float(broker_file.get("verify_tolerance", 0.8)),
+		"logbook_age_days": float(broker_file.get("logbook_age_days", 3.0))}
 
 
 func read_json(path: String) -> Dictionary:
@@ -157,6 +164,26 @@ func validate() -> Array[String]:
 			if features_seen.has(feature):
 				problems.append("project %s: feature %s already driven by %s" % [id, feature, features_seen[feature]])
 			features_seen[feature] = id
+	for id in brokers:
+		var b: Dictionary = brokers[id]
+		if not places.has(b.get("place", "")):
+			problems.append("broker %s: unknown place %s" % [id, b.get("place")])
+		var r := float(b.get("reliability", -1.0))
+		if r < 0.0 or r > 1.0:
+			problems.append("broker %s: reliability must be 0..1" % id)
+		if float(b.get("price", -1.0)) < 0.0:
+			problems.append("broker %s: price must not be negative" % id)
+		var cov = b.get("coverage", [])
+		if cov is String:
+			if cov != "all":
+				problems.append("broker %s: coverage must be 'all' or a list of places" % id)
+		else:
+			for p in cov:
+				if not places.has(p):
+					problems.append("broker %s: covers unknown place %s" % [id, p])
+		for kind in ["short", "glut"]:
+			if b.get(kind, []).is_empty():
+				problems.append("broker %s: needs at least one '%s' line" % [id, kind])
 	var start: Dictionary = balance.get("start", {})
 	if not places.has(start.get("place", "")):
 		problems.append("balance.start.place is not a place")

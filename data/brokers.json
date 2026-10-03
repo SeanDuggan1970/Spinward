@@ -1,0 +1,52 @@
+{
+	"_note": "Info brokers sell tips about other destinations. reliability (hidden from the player) is the chance a tip reflects the real market; otherwise it is stale or invented. noise is the typical price error of a true tip. coverage lists places the broker hears about ('all' for everywhere). Tips expire after tip_ttl_days. Templates: {good} {place} {price} {broker}.",
+	"tip_ttl_days": 5,
+	"verify_tolerance": 0.8,
+	"logbook_age_days": 3,
+	"brokers": {
+		"maisie_tran": {
+			"name": "Maisie Tran",
+			"place": "kibo_ring",
+			"style": "Retired Compact customs clerk. Still drinks with the dock crews, still hears everything near Earth.",
+			"reliability": 0.82,
+			"noise": 0.08,
+			"price": 260,
+			"coverage": ["clarke_exchange", "kalpana_one", "halo_depot", "kibo_ring"],
+			"short": ["\"{place} is crying out for {good}, love. Paying about {price} a tonne, last I heard.\"", "\"Word from the {place} crews: {good} at {price} and nobody's bringing it.\""],
+			"glut": ["\"Don't haul {good} to {place}. They're drowning in it. Could pick it up there for {price}, though.\""]
+		},
+		"lamplighter": {
+			"name": "Lamplighter",
+			"place": "halo_depot",
+			"style": "An unregistered AI living in the depot's traffic computer. Sells what it overhears on every channel. Polite. Expensive.",
+			"reliability": 0.94,
+			"noise": 0.04,
+			"price": 700,
+			"coverage": "all",
+			"short": ["LAMPLIGHTER: {place} manifests show {good} demand unmet. Indicative bid {price} cr/t. This message will not be repeated.", "LAMPLIGHTER: Three captains asked {place} for {good} today and were refused. Bid {price}."],
+			"glut": ["LAMPLIGHTER: {place} storage of {good} is near capacity. Indicative ask {price} cr/t."]
+		},
+		"dusty_okafor": {
+			"name": "Dusty Okafor",
+			"place": "shackleton_port",
+			"style": "Prospector turned rumour merchant. Wildly enthusiastic. Right about half the time, and cheap with it.",
+			"reliability": 0.5,
+			"noise": 0.2,
+			"price": 70,
+			"coverage": "all",
+			"short": ["\"Mate. MATE. {good} at {place}. {price} a tonne! Trust me!\"", "\"Heard it from a rover driver who heard it from a pilot: {place} wants {good}. {price}, easy.\""],
+			"glut": ["\"Whatever you do, don't take {good} to {place}. Unless you're buying. {price}, they're giving it away.\""]
+		},
+		"auntie_vell": {
+			"name": "Auntie Vell",
+			"place": "kernel_l5",
+			"style": "Runs the Kernel's noodle bar and its gossip network. Knows what the settlers need before they do.",
+			"reliability": 0.75,
+			"noise": 0.1,
+			"price": 150,
+			"coverage": ["kernel_l5", "trojan_yards", "farside_array", "halo_depot"],
+			"short": ["\"The Yards folk were in last night moaning about {good}. {place}'s paying {price}, they said.\"", "\"Between us? {place} is short of {good}. {price} a tonne. Eat something, you look thin.\""],
+			"glut": ["\"{place} has more {good} than it knows what to do with. You'd get it for {price}.\""]
+		}
+	}
+}

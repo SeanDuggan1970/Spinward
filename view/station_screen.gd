@@ -9,6 +9,7 @@ const ShipStats := preload("res://sim/ship_stats.gd")
 const ShipyardSystem := preload("res://sim/systems/shipyard_system.gd")
 const EconomySystem := preload("res://sim/systems/economy_system.gd")
 const ProjectSystem := preload("res://sim/systems/project_system.gd")
+const TipsText := preload("res://view/tips_text.gd")
 const SystemMap := preload("res://view/system_map.gd")
 const Comms := preload("res://view/comms.gd")
 const DAY := 86400.0
@@ -83,6 +84,7 @@ func refresh() -> void:
 	_tabs.add_child(_departures_tab(place_id))
 	_tabs.add_child(_traffic_tab(place_id))
 	_tabs.add_child(_projects_tab(place_id))
+	_tabs.add_child(_tips_tab(place_id))
 	if "shipyard" in place.get("services", []):
 		_tabs.add_child(_shipyard_tab())
 	_tab_index = mini(keep_tab, _tabs.get_tab_count() - 1)
@@ -171,7 +173,7 @@ func _departures_tab(place_id: String) -> Control:
 	var parts := _scroll("Departures")
 	var s = sim.state
 	var d = sim.data
-	parts[1].add_child(UI.label("Your co-pilot plots a constant-thrust transfer at the ship's current mass. Time compression handles the cruise.", UI.DIM, 13))
+	parts[1].add_child(UI.label("Your co-pilot plots a constant-thrust transfer at the ship's current mass. Prices elsewhere are what you last saw there, or what you have been told: buy tips on the Tip Line.", UI.DIM, 13))
 	for to in d.places:
 		if to == place_id:
 			continue
@@ -193,9 +195,8 @@ func _departures_tab(place_id: String) -> Control:
 			notes.append(["No fuel sold there, and you would not have enough to come back this way", UI.WARN])
 		elif not plan["dest_refuels"]:
 			notes.append(["No fuel sold there", UI.HAZARD])
-		var tip := _best_cargo(place_id, to)
-		if tip != "":
-			notes.append([tip, UI.GOOD])
+		for note in _intel(place_id, to):
+			notes.append(note)
 		for n in notes:
 			info.add_child(UI.label(n[0], n[1], 13))
 		var go := UI.button("Depart", _depart.bind(to), plan["ok"])
@@ -205,19 +206,33 @@ func _departures_tab(place_id: String) -> Control:
 	return parts[0]
 
 
-## The co-pilot's best single-good suggestion for a route, from current price boards.
-func _best_cargo(from: String, to: String) -> String:
+## What you know about a destination: your own last look at its board (with its age)
+## and any live tips about it. No perfect information: boards go stale, tips can lie.
+func _intel(from: String, to: String) -> Array:
 	var s = sim.state
 	var d = sim.data
-	var best := ""
-	var best_margin := 0.0
-	for good in d.places[from]["market"]:
-		if Market.trades(d, to, good):
-			var m := Market.sell_price(s, d, to, good) - Market.buy_price(s, d, from, good)
-			if m > best_margin:
-				best_margin = m
-				best = good
-	return "" if best == "" else "Co-pilot: %s sells for about %d cr/t more there" % [d.goods[best]["name"].to_lower(), int(best_margin)]
+	var out := []
+	var known: Dictionary = s.knowledge.get(to, {})
+	if known.is_empty():
+		out.append(["No price board on file: you have never been there.", UI.DIM])
+	else:
+		var best := ""
+		var best_margin := 0.0
+		for good in d.places[from]["market"]:
+			if known["prices"].has(good):
+				var m: float = float(known["prices"][good][1]) - Market.buy_price(s, d, from, good)
+				if m > best_margin:
+					best_margin = m
+					best = good
+		var when := TipsText.age(sim, float(known["t"])) + (" (old logbook)" if known.get("source") == "logbook" else "")
+		if best != "":
+			out.append(["Board seen %s: %s sold there for about %d cr/t more than here" % [when, String(d.goods[best]["name"]).to_lower(), int(best_margin)], UI.GOOD])
+		else:
+			out.append(["Board seen %s: nothing you can buy here sold for more there" % when, UI.DIM])
+	for tip in s.tips:
+		if tip["place"] == to and tip["verified"] == null and not tip.get("expired", false):
+			out.append(["Tip from %s, %s: %s" % [d.brokers[tip["broker"]]["name"], TipsText.age(sim, float(tip["t"])), TipsText.line(sim, tip)], UI.AMBER])
+	return out
 
 
 func _depart(to: String) -> void:
@@ -405,4 +420,42 @@ func _projects_tab(place_id: String) -> Control:
 		if st["done"]:
 			v.add_child(UI.label("Complete. Your haulage over the whole build: %.1f t" % st["player_total_t"], UI.GOOD, 13))
 		parts[1].add_child(p[0])
+	return parts[0]
+
+
+## The Tip Line: brokers working this station, and your book of tips.
+func _tips_tab(place_id: String) -> Control:
+	var parts := _scroll("Tip Line")
+	var s = sim.state
+	var d = sim.data
+	parts[1].add_child(UI.label("Information has a price, and not all of it is true. Brokers sell what they hear about other ports. Tips are checked when you dock where they point, and you learn whom to trust.", UI.DIM, 13))
+	var here := []
+	for id in d.brokers:
+		if d.brokers[id]["place"] == place_id:
+			here.append(id)
+	if here.is_empty():
+		parts[1].add_child(UI.label("No brokers work this station.", UI.DIM, 13))
+	for id in here:
+		var b: Dictionary = d.brokers[id]
+		var p := UI.panel(b["name"])
+		p[1].add_child(UI.label(b["style"], UI.DIM, 12))
+		var row := HBoxContainer.new()
+		var rec := UI.label(TipsText.record_text(sim, id), UI.TEXT, 13)
+		rec.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(rec)
+		row.add_child(UI.button("Buy a tip  (%s)" % UI.money(float(b["price"])), send.bind({"type": "buy_tip", "broker": id}), s.credits >= float(b["price"])))
+		p[1].add_child(row)
+		parts[1].add_child(p[0])
+	var book := UI.panel("Your tip book")
+	if s.tips.is_empty():
+		book[1].add_child(UI.label("Empty.", UI.DIM, 13))
+	for i in range(s.tips.size() - 1, -1, -1):
+		var tip: Dictionary = s.tips[i]
+		var st: Array = TipsText.status(tip)
+		var head := UI.label("%-10s %s  ·  %s  ·  about %s" % [st[0], d.brokers[tip["broker"]]["name"], TipsText.age(sim, float(tip["t"])), d.places[tip["place"]]["name"]], st[1], 12)
+		book[1].add_child(head)
+		book[1].add_child(UI.label("    " + TipsText.line(sim, tip), UI.TEXT, 12))
+		if tip.has("actual"):
+			book[1].add_child(UI.label("    Board when you got there: %d cr/t" % int(tip["actual"]), UI.DIM, 12))
+	parts[1].add_child(book[0])
 	return parts[0]

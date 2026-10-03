@@ -40,8 +40,9 @@ You start docked at Kibo Ring in low Earth orbit with 10,000 credits and a secon
    - M switches to the system map.
    - `[` / `]` change time compression, which drops to ×1 on arrival.
 4. **Approach:** fly in and dock, or press **T** for the tug (60 cr).
-5. **Traffic tab:** see who's in port, who's inbound and what's on comms. Use time compression while docked to wait for prices to move.
-6. **Shipyard** (Kibo Ring, Trojan Yards): bolt on bigger cargo pods, tanks, radiators and drives.
+5. **Tip Line tab:** buy tips about other ports from local info brokers. They aren't all honest or right. Tips are checked when you dock there, and you build a record of whom to trust. Your knowledge of other ports' prices is only as fresh as your last visit (you start with an old logbook).
+6. **Traffic tab:** see who's in port, who's inbound and what's on comms. Use time compression while docked to wait for prices to move.
+7. **Shipyard** (Kibo Ring, Trojan Yards): bolt on bigger cargo pods, tanks, radiators and drives.
 
 | Keys | Flight |
 |---|---|

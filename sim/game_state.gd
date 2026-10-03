@@ -34,6 +34,13 @@ var projects: Dictionary = {}
 ## Lasting changes to place flows from finished projects: {place: {produces_mult, consumes_mult}}.
 var place_mods: Dictionary = {}
 var project_t: float = 0.0
+## Paid tips: [{id, broker, place, good, kind, price, t, expires_t, truthful, verified, ...}].
+var tips: Array = []
+## Per broker, how their tips have held up for this player: {broker: {good, bad}}.
+var broker_record: Dictionary = {}
+## The player's own (ageing) price knowledge: {place: {t, prices: {good: [buy, sell]}}}.
+var knowledge: Dictionary = {}
+var tip_seq: int = 0
 
 
 static func from_unix(unix_seconds: float) -> float:
@@ -63,6 +70,10 @@ func to_dict() -> Dictionary:
 		"projects": projects.duplicate(true),
 		"place_mods": place_mods.duplicate(true),
 		"project_t": project_t,
+		"tips": tips.duplicate(true),
+		"broker_record": broker_record.duplicate(true),
+		"knowledge": knowledge.duplicate(true),
+		"tip_seq": tip_seq,
 	}
 
 
@@ -83,3 +94,7 @@ func load_dict(d: Dictionary) -> void:
 	projects = d.get("projects", {}).duplicate(true)
 	place_mods = d.get("place_mods", {}).duplicate(true)
 	project_t = float(d.get("project_t", time_s))
+	tips = d.get("tips", []).duplicate(true)
+	broker_record = d.get("broker_record", {}).duplicate(true)
+	knowledge = d.get("knowledge", {}).duplicate(true)
+	tip_seq = int(d.get("tip_seq", 0))

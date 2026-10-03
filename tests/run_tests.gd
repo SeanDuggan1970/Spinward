@@ -42,6 +42,7 @@ func _initialize() -> void:
 	test_npcs()
 	test_projects()
 	test_review_regressions()
+	test_tips()
 	test_saves_and_determinism()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
@@ -438,6 +439,63 @@ func test_review_regressions() -> void:
 	arr.advance_game_time(arrive - arr.state.time_s - 100.0)
 	arr.tick(1.0)
 	check(arr.state.location["status"] == "approach" and arr.state.time_s - arrive < 2.0, "Clock stops racing at arrival (%.1f s past)" % (arr.state.time_s - arrive))
+
+
+func test_tips() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	check(s.knowledge["kibo_ring"]["source"] == "seen" and s.knowledge["clarke_exchange"]["source"] == "logbook", "Fresh board where you start, the old logbook elsewhere")
+	check(s.time_s - float(s.knowledge["clarke_exchange"]["t"]) >= 2.9 * DAY, "The logbook is days old")
+	check(sim.apply({"type": "buy_tip", "broker": "lamplighter"}) != "", "Brokers sell only where they work")
+	var credits := s.credits
+	check(sim.apply({"type": "buy_tip", "broker": "maisie_tran"}) == "", "Buy a tip from Maisie at Kibo")
+	check(s.credits == credits - float(d.brokers["maisie_tran"]["price"]) and s.tips.size() == 1, "Tips cost money and go in the book")
+	var tip: Dictionary = s.tips[0]
+	check(tip["place"] != "kibo_ring" and tip["place"] in d.brokers["maisie_tran"]["coverage"], "Tips are about other places the broker hears of")
+	# Reliability shows up statistically: an expensive AI vs a cheap enthusiast.
+	var truthful := {"lamplighter": 0, "dusty_okafor": 0}
+	for broker in truthful:
+		var bs := fresh()
+		bs.state.credits = 1e7
+		bs.state.location = {"status": "docked", "place": d.brokers[broker]["place"]}
+		for _i in 60:
+			bs.apply({"type": "buy_tip", "broker": broker})
+			if bs.state.tips[-1]["truthful"]:
+				truthful[broker] += 1
+	check(truthful["lamplighter"] >= 48 and truthful["dusty_okafor"] <= 42, "Lamplighter is mostly right, Dusty is a coin toss (%d vs %d of 60)" % [truthful["lamplighter"], truthful["dusty_okafor"]])
+	# A true tip about Clarke Exchange is checked when you dock there.
+	var v := fresh()
+	v.state.npcs = []
+	v.state.tips = [{"id": 1, "broker": "maisie_tran", "place": "clarke_exchange", "good": "food", "kind": "short",
+		"price": Market.sell_price(v.state, v.data, "clarke_exchange", "food") * 0.95, "t": v.state.time_s,
+		"expires_t": v.state.time_s + 5 * DAY, "verified": null, "truthful": true, "template": 0}]
+	v.apply({"type": "depart", "to": "clarke_exchange"})
+	v.advance_game_time(float(v.state.location["arrive_t"]) - v.state.time_s + 1.0)
+	v.apply({"type": "dock"})
+	v.advance_game_time(60.0)
+	check(v.state.tips[0]["verified"] == true and v.state.broker_record["maisie_tran"]["good"] == 1, "Tip checked on arrival and the broker credited")
+	check(v.state.knowledge.has("clarke_exchange"), "Docking updates your knowledge of that board")
+	# An invented tip is exposed.
+	var f := fresh()
+	f.state.npcs = []
+	f.state.tips = [{"id": 1, "broker": "dusty_okafor", "place": "clarke_exchange", "good": "food", "kind": "short",
+		"price": 5000.0, "t": f.state.time_s, "expires_t": f.state.time_s + 5 * DAY, "verified": null, "truthful": false, "template": 0}]
+	f.state.location = {"status": "docked", "place": "clarke_exchange"}
+	f.advance_game_time(60.0)
+	check(f.state.tips[0]["verified"] == false and f.state.broker_record["dusty_okafor"]["bad"] == 1, "A bad tip is found out")
+	# Tips expire, and everything survives a save.
+	var e := fresh()
+	e.apply({"type": "buy_tip", "broker": "maisie_tran"})
+	e.advance_game_time(6 * DAY)
+	check(e.state.tips[0].get("expired", false), "Unchecked tips expire")
+	check(SaveIO.from_text(SaveIO.to_text(e.state)).to_dict() == e.state.to_dict(), "Tips and knowledge round-trip through saves")
+	var a := fresh()
+	var b := fresh()
+	for x in [a, b]:
+		x.apply({"type": "buy_tip", "broker": "maisie_tran"})
+		x.apply({"type": "buy_tip", "broker": "maisie_tran"})
+	check(a.state.tips == b.state.tips, "Same seed, same tips")
 
 
 func test_saves_and_determinism() -> void:

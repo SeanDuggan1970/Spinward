@@ -16,6 +16,7 @@ const MapScreen := preload("res://view/map_screen.gd")
 const FlightScene := preload("res://view/flight/flight_scene.gd")
 const Comms := preload("res://view/comms.gd")
 const TitleScreen := preload("res://view/title_screen.gd")
+const TipsText := preload("res://view/tips_text.gd")
 const COMMS_KEEP := 40
 
 const QUICKSAVE := "user://quicksave.json"
@@ -149,6 +150,15 @@ func _handle_events() -> void:
 				notice("%s is finished. The system just got a little bigger." % project["name"], UI.AMBER)
 				comms.append("%s  NEWS  %s is complete." % [_clock(e["time_s"]), project["name"]])
 				refresh = true
+			"tip_bought":
+				var tip := _tip_by_id(int(d["tip"]))
+				if not tip.is_empty():
+					notice("%s: %s" % [sim.data.brokers[d["broker"]]["name"], TipsText.line(sim, tip)], UI.AMBER)
+				refresh = true
+			"tip_verified":
+				var name: String = sim.data.brokers[d["broker"]]["name"]
+				notice("%s's tip %s (board says %d cr/t)." % [name, "held up" if d["held"] else "was wrong", int(d["actual"])], UI.GOOD if d["held"] else UI.WARN)
+				refresh = true
 			"rejected":
 				notice(d["reason"].capitalize(), UI.WARN)
 			"traded":
@@ -175,6 +185,13 @@ func _handle_events() -> void:
 				notice("Docked at %s%s" % [sim.data.places[d["place"]]["name"], "  (hand-flown, no fee)" if d["manual"] else ""], UI.GOOD)
 	if refresh and _screen is StationScreen:
 		_screen.refresh()
+
+
+func _tip_by_id(id: int) -> Dictionary:
+	for tip in sim.state.tips:
+		if int(tip["id"]) == id:
+			return tip
+	return {}
 
 
 func _clock(t: float) -> String:
@@ -311,6 +328,21 @@ func _tour(dir: String) -> void:
 	for _i in 5:
 		await get_tree().process_frame
 	_shot(dir + "/2c-projects.png")
+	sim.apply({"type": "buy_tip", "broker": "maisie_tran"})
+	sim.apply({"type": "buy_tip", "broker": "maisie_tran"})
+	_handle_events()
+	if _screen is StationScreen:
+		_screen._tab_index = 4
+		_screen.refresh()
+	for _i in 5:
+		await get_tree().process_frame
+	_shot(dir + "/2d-tips.png")
+	if _screen is StationScreen:
+		_screen._tab_index = 1
+		_screen.refresh()
+	for _i in 5:
+		await get_tree().process_frame
+	_shot(dir + "/2e-departures-intel.png")
 	sim.apply({"type": "depart", "to": "shackleton_port"})
 	sim.apply({"type": "set_time_scale", "scale": 1000})
 	_sync_mode()
