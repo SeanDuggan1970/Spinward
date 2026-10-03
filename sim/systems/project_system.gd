@@ -20,6 +20,14 @@ func start_game() -> void:
 
 func tick(_game_dt: float) -> void:
 	var s = sim().state
+	# Saves from before a project existed (or a project added to data later) get a
+	# fresh entry, rather than failing on every tick.
+	for id in sim().data.projects:
+		if not s.projects.has(id):
+			var seen := {}
+			for good in sim().data.projects[id]["stages"][0]["needs"]:
+				seen[good] = _net_imported(s, sim().data.projects[id]["place"], good)
+			s.projects[id] = {"stage": 0, "delivered": {}, "player_t": 0.0, "player_total_t": 0.0, "done": false, "seen": seen}
 	var step := float(sim().data.balance["economy"]["step_hours"]) * 3600.0
 	while s.project_t + step <= s.time_s:
 		s.project_t += step
@@ -59,12 +67,15 @@ func _advance(id: String, days: float, t: float) -> void:
 	for good in needs:
 		var remaining := float(needs[good]) - float(p["delivered"].get(good, 0.0))
 		# Credit the player for needed goods they hauled here since we last looked.
-		var sold := _net_imported(s, place, good)
-		var seen := float(p["seen"].get(good, 0.0))
-		if sold > seen and remaining > 0.0:
-			p["player_t"] += minf(sold - seen, remaining)
-			p["player_total_t"] += minf(sold - seen, remaining)
-		p["seen"][good] = sold
+		# High-water mark on net imports: buying then selling back only returns the net
+		# to where it was, so it earns nothing; only new net imports are credited.
+		var net := _net_imported(s, place, good)
+		var high := float(p["seen"].get(good, 0.0))
+		if net > high:
+			if remaining > 0.0:
+				p["player_t"] += minf(net - high, remaining)
+				p["player_total_t"] += minf(net - high, remaining)
+			p["seen"][good] = net
 		if remaining <= 1e-6:
 			continue
 		var stock: float = s.markets[place][good]

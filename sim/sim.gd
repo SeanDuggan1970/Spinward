@@ -69,9 +69,21 @@ func apply(command: Dictionary) -> String:
 	return error
 
 
-## Advance by real seconds at the current time compression.
+## Advance by real seconds at the current time compression. Time compression is
+## re-read after every chunk (arrival drops it to x1), and a chunk never runs past
+## the player's arrival, so the clock does not race on after reaching port.
 func tick(real_dt: float) -> void:
-	advance_game_time(real_dt * state.time_scale)
+	var real_left := real_dt
+	var step := float(data.balance["economy"]["step_hours"]) * 3600.0
+	while real_left > 1e-9 and not state.paused:
+		var scale := state.time_scale
+		var game := minf(real_left * scale, step)
+		if state.location.get("status") == "transit":
+			var to_arrival := float(state.location["arrive_t"]) - state.time_s
+			if to_arrival > 1e-6:
+				game = minf(game, to_arrival)
+		advance_game_time(game)
+		real_left -= game / scale
 
 
 ## Advance game time by exactly `game_seconds` (bots and tests use this directly).

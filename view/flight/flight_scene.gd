@@ -12,6 +12,7 @@ const UI := preload("res://view/ui/ui_kit.gd")
 const V := preload("res://sim/v3.gd")
 const SystemMap := preload("res://view/system_map.gd")
 const SetPieces := preload("res://view/flight/set_pieces.gd")
+const SkyKit := preload("res://view/flight/sky.gd")
 const ProjectSystem := preload("res://sim/systems/project_system.gd")
 
 const ASSIST_MODES := ["full", "assisted", "manual"]
@@ -116,19 +117,7 @@ func _ready() -> void:
 
 
 func _build_environment() -> void:
-	var env := Environment.new()
-	env.background_mode = Environment.BG_SKY
-	var sky := Sky.new()
-	var sky_mat := PanoramaSkyMaterial.new()
-	sky_mat.panorama = _starfield()
-	sky.sky_material = sky_mat
-	env.sky = sky
-	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color("2a3340")
-	env.ambient_light_energy = 0.6
-	var we := WorldEnvironment.new()
-	we.environment = env
-	add_child(we)
+	add_child(SkyKit.environment())
 	var eph = sim.ephemeris
 	var t: float = sim.state.time_s
 	var here: Array = eph.position(place_id, t)
@@ -147,7 +136,7 @@ func _build_environment() -> void:
 		var r := float(sim.data.bodies[body]["radius_m"])
 		var dir := _dir_to(p, here)
 		body_dirs[body] = dir
-		var mesh := Kit.sphere(SKY_DISTANCE * minf(r / d, 0.97), _body_material(body), dir * SKY_DISTANCE)
+		var mesh := Kit.sphere(SKY_DISTANCE * minf(r / d, 0.97), SkyKit.body_material(body), dir * SKY_DISTANCE)
 		(mesh.mesh as SphereMesh).radial_segments = 64
 		(mesh.mesh as SphereMesh).rings = 32
 		add_child(mesh)
@@ -157,42 +146,6 @@ func _build_environment() -> void:
 func _dir_to(to: Array, from: Array) -> Vector3:
 	var d := V.normalized(V.sub(to, from))
 	return Vector3(d[0], d[2], -d[1]).normalized()
-
-
-func _body_material(body: String) -> StandardMaterial3D:
-	var m := StandardMaterial3D.new()
-	var noise := FastNoiseLite.new()
-	noise.seed = 7 if body == "earth" else 3
-	noise.frequency = 0.004 if body == "earth" else 0.01
-	noise.fractal_octaves = 5
-	var tex := NoiseTexture2D.new()
-	tex.width = 1024
-	tex.height = 512
-	tex.seamless = true
-	tex.noise = noise
-	var ramp := Gradient.new()
-	if body == "earth":
-		ramp.offsets = PackedFloat32Array([0.0, 0.52, 0.56, 0.68, 0.8, 1.0])
-		ramp.colors = PackedColorArray([Color("10305e"), Color("1d4f8a"), Color("4f6b3a"), Color("7a6a48"), Color("e8ecef"), Color("ffffff")])
-	else:
-		ramp.offsets = PackedFloat32Array([0.0, 0.5, 1.0])
-		ramp.colors = PackedColorArray([Color("4a4844"), Color("8d8a83"), Color("bdb9b0")])
-	tex.color_ramp = ramp
-	m.albedo_texture = tex
-	m.roughness = 1.0
-	return m
-
-
-func _starfield() -> ImageTexture:
-	var img := Image.create(2048, 1024, false, Image.FORMAT_RGB8)
-	img.fill(Color("020306"))
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 2061
-	for i in 5000:
-		var b := pow(rng.randf(), 6.0)
-		var c := Color(0.55 + b * 0.45, 0.55 + b * 0.45, 0.6 + b * 0.4) * (0.25 + b * 0.75)
-		img.set_pixel(rng.randi_range(0, 2047), rng.randi_range(0, 1023), c)
-	return ImageTexture.create_from_image(img)
 
 
 func flash(text: String, colour: Color = Color.WHITE, seconds: float = 3.0) -> void:

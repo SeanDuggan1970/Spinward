@@ -276,9 +276,28 @@ func _tour(dir: String) -> void:
 	sim.apply({"type": "set_time_scale", "scale": 1000})
 	_sync_mode()
 	sim.advance_game_time((float(sim.state.location["arrive_t"]) - sim.state.time_s) * 0.4)
+	for _i in 30:
+		await get_tree().process_frame
+	_shot(dir + "/3-transit-cockpit.png")
+	# Past the midpoint the ship flips and brakes; give the turn a few seconds.
+	sim.advance_game_time((float(sim.state.location["arrive_t"]) - sim.state.time_s) * 0.4)
+	for _i in 300:
+		await get_tree().process_frame
+	_shot(dir + "/3b-transit-braking.png")
+	# Telescope on the Moon: the awe shot.
+	var tv = (_screen as MapScreen)._view
+	if tv:
+		var to_moon: Vector3 = tv.camera.global_transform.basis.inverse() * Vector3(tv.readout["moon_dir"])
+		tv.look_yaw = atan2(-to_moon.x, -to_moon.z)
+		tv.look_pitch = asin(clampf(to_moon.y, -1.0, 1.0))
+		tv.telescope = true
+		for _i in 90:
+			await get_tree().process_frame
+		_shot(dir + "/3d-transit-telescope.png")
+	(_screen as MapScreen)._set_mode(false)
 	for _i in 10:
 		await get_tree().process_frame
-	_shot(dir + "/3-map.png")
+	_shot(dir + "/3c-map.png")
 	sim.advance_game_time(float(sim.state.location["arrive_t"]) - sim.state.time_s + 1.0)
 	_sync_mode()
 	for _i in 90:

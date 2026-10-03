@@ -32,7 +32,11 @@ You start docked at Kibo Ring in low Earth orbit with 10,000 credits and a secon
 
 1. **Market:** buy low. Green prices are cheap, amber prices are good to sell into.
 2. **Departures:** pick a destination. The co-pilot shows distance, time, propellant and the best cargo for that route.
-3. **Transit:** watch the map. `[` / `]` change time compression, and it drops to ×1 on arrival.
+3. **Transit:** you ride in the cockpit. Earth, Moon and Sun are at their true positions and sizes from wherever the ship is.
+   - Halfway, the ship flips and brakes tail-first.
+   - Arrows look around, C re-centres, and Z is a telescope.
+   - M switches to the system map.
+   - `[` / `]` change time compression, which drops to ×1 on arrival.
 4. **Approach:** fly in and dock, or press **T** for the tug (60 cr).
 5. **Traffic tab:** see who's in port, who's inbound and what's on comms. Use time compression while docked to wait for prices to move.
 6. **Shipyard** (Kibo Ring, Trojan Yards): bolt on bigger cargo pods, tanks, radiators and drives.

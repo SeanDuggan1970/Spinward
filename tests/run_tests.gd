@@ -408,6 +408,36 @@ func test_review_regressions() -> void:
 		wt.apply({"type": "sell", "good": "refined_metals", "tonnes": 5.0})
 	wt.advance_game_time(DAY)
 	check(float(w.projects["island_one"]["player_t"]) == 0.0, "Wash trading earns no project credit")
+	# Second review: wash trading split across ticks also earns nothing.
+	var wt2 := fresh()
+	wt2.state.credits = 1e6
+	wt2.state.location = {"status": "docked", "place": "halo_depot"}
+	for _i in 5:
+		wt2.apply({"type": "buy", "good": "refined_metals", "tonnes": 5.0})
+		wt2.advance_game_time(3600.0)
+		wt2.apply({"type": "sell", "good": "refined_metals", "tonnes": 5.0})
+		wt2.advance_game_time(3600.0)
+	check(float(wt2.state.projects["luna_line_2"]["player_t"]) == 0.0, "Wash trading across ticks earns no credit")
+	# Saves without project entries keep working and grow them back.
+	var old := fresh()
+	old.state.projects = {}
+	old.advance_game_time(2 * 3600.0)
+	check(old.state.projects.size() == old.data.projects.size(), "Missing project entries are recreated")
+	# Credit covers one rescue load only.
+	var debt := fresh()
+	debt.state.ship["fuel_t"] = 0.0
+	debt.state.credits = 0.0
+	debt.apply({"type": "emergency_refuel"})
+	var after_one: float = debt.state.ship["fuel_t"]
+	check(debt.apply({"type": "emergency_refuel"}) != "" and debt.state.ship["fuel_t"] == after_one, "No second rescue load on credit")
+	# Real-time ticks stop at arrival and drop to x1 for the rest of the frame.
+	var arr := fresh()
+	arr.apply({"type": "depart", "to": "clarke_exchange"})
+	arr.apply({"type": "set_time_scale", "scale": 10000})
+	var arrive: float = arr.state.location["arrive_t"]
+	arr.advance_game_time(arrive - arr.state.time_s - 100.0)
+	arr.tick(1.0)
+	check(arr.state.location["status"] == "approach" and arr.state.time_s - arrive < 2.0, "Clock stops racing at arrival (%.1f s past)" % (arr.state.time_s - arrive))
 
 
 func test_saves_and_determinism() -> void:

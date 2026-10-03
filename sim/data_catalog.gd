@@ -96,6 +96,13 @@ func validate() -> Array[String]:
 				problems.append("ship %s: slot %s does not exist on the spine" % [id, slot])
 	for fleet_id in npcs.get("fleets", {}):
 		var fleet: Dictionary = npcs["fleets"][fleet_id]
+		if fleet.get("names", []).is_empty():
+			problems.append("fleet %s: needs at least one name" % fleet_id)
+		if int(fleet.get("count", 0)) < 1:
+			problems.append("fleet %s: count must be at least 1" % fleet_id)
+		var dwell: Array = fleet.get("dwell_hours", [])
+		if dwell.size() != 2 or float(dwell[0]) < 0.0 or float(dwell[1]) < float(dwell[0]):
+			problems.append("fleet %s: dwell_hours must be [min, max]" % fleet_id)
 		if not ships.has(fleet.get("hull", "")):
 			problems.append("fleet %s: unknown hull %s" % [fleet_id, fleet.get("hull")])
 		if not fleet.get("behaviour") in ["trader", "route", "shuttle"]:
@@ -118,19 +125,38 @@ func validate() -> Array[String]:
 			for good in leg.get("buy", []):
 				if not (places[leg["at"]]["market"].has(good) and places[leg["to"]]["market"].has(good)):
 					problems.append("fleet %s leg %d: %s must be traded at both ends" % [fleet_id, i, good])
+	var features_seen := {}
 	for id in projects:
 		var project: Dictionary = projects[id]
 		var place: String = project.get("place", "")
 		if not places.has(place):
 			problems.append("project %s: unknown place %s" % [id, place])
 			continue
+		if project.get("stages", []).is_empty():
+			problems.append("project %s: has no stages" % id)
+		if float(project.get("draw_t_per_day", 0.0)) <= 0.0:
+			problems.append("project %s: draw_t_per_day must be positive" % id)
 		for stage in project.get("stages", []):
+			if stage.get("needs", {}).is_empty():
+				problems.append("project %s: stage %s needs nothing" % [id, stage.get("name", "?")])
 			for good in stage.get("needs", {}):
-				if not places[place]["market"].has(good):
+				if not places[place].get("market", {}).has(good):
 					problems.append("project %s: %s is needed but not traded at %s" % [id, good, place])
+				if float(stage["needs"][good]) <= 0.0:
+					problems.append("project %s: %s need must be positive" % [id, good])
 		for target in project.get("effects", {}):
 			if not places.has(target):
 				problems.append("project %s: effect on unknown place %s" % [id, target])
+			for key in project["effects"][target]:
+				if not key in ["produces_mult", "consumes_mult"]:
+					problems.append("project %s: unknown effect %s" % [id, key])
+				elif float(project["effects"][target][key]) <= 0.0:
+					problems.append("project %s: effect %s must be positive" % [id, key])
+		var feature: String = project.get("feature", "")
+		if feature != "":
+			if features_seen.has(feature):
+				problems.append("project %s: feature %s already driven by %s" % [id, feature, features_seen[feature]])
+			features_seen[feature] = id
 	var start: Dictionary = balance.get("start", {})
 	if not places.has(start.get("place", "")):
 		problems.append("balance.start.place is not a place")

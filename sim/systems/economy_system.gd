@@ -186,9 +186,14 @@ func _emergency_refuel(command: Dictionary) -> String:
 	var on_credit := false
 	if price * tonnes > s.credits:
 		var affordable := maxf(0.0, s.credits) / price
-		var rescue := minf(tonnes, float(e["emergency_rescue_t"]))
+		var rescue_t := float(e["emergency_rescue_t"])
+		# Credit covers one rescue load: never once already in debt, never to top up a
+		# tank that already holds a rescue load.
+		var rescue := minf(tonnes, maxf(0.0, rescue_t - float(s.ship["fuel_t"]))) if s.credits >= 0.0 else 0.0
 		on_credit = affordable < rescue
 		tonnes = maxf(affordable, rescue)
+		if tonnes <= 1e-6:
+			return "no more credit: sell cargo or modules first"
 	s.credits -= price * tonnes
 	s.ship["fuel_t"] += tonnes
 	sim().emit("refuelled", {"place": s.location["place"], "tonnes": tonnes, "credits": -price * tonnes, "emergency": true, "on_credit": on_credit})
