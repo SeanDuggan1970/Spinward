@@ -2,7 +2,8 @@
 ## ship is (docked → station, transit → map, approach → flight). Screens only send
 ## commands; this shell turns sim events into on-screen notices.
 ##
-## Keys: P pause, [ ] time compression, F5 quick save, F9 quick load.
+## Opens on the attract screen (view/title_screen.gd); the sim does not tick until
+## the player starts. Keys: P pause, [ ] time compression, F5 quick save, F9 quick load.
 ## Command line (after --): --smoke runs an end-to-end headless check;
 ## --tour=<dir> captures one screenshot per screen (needs a window).
 extends Control
@@ -14,6 +15,7 @@ const StationScreen := preload("res://view/station_screen.gd")
 const MapScreen := preload("res://view/map_screen.gd")
 const FlightScene := preload("res://view/flight/flight_scene.gd")
 const Comms := preload("res://view/comms.gd")
+const TitleScreen := preload("res://view/title_screen.gd")
 const COMMS_KEEP := 40
 
 const QUICKSAVE := "user://quicksave.json"
@@ -25,6 +27,8 @@ var _top: Label
 var _notices: VBoxContainer
 var _layer: Control
 var _ticker: Label
+var _bar: Control
+var _title: Node3D
 ## Rolling comms log (view-only), shared with the station's Traffic tab.
 var comms: Array = []
 
@@ -40,6 +44,7 @@ func _ready() -> void:
 	bar.add_theme_stylebox_override("panel", UI.box(Color("101215"), UI.HAZARD, 0, 8))
 	bar.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
 	add_child(bar)
+	_bar = bar
 	_top = UI.label("")
 	bar.add_child(_top)
 	_ticker = UI.label("", UI.DIM, 12)
@@ -68,10 +73,36 @@ func _ready() -> void:
 		if a.begins_with("--tour="):
 			_tour.call_deferred(a.trim_prefix("--tour="))
 			return
+	show_title()
+
+
+## The attract screen. The game shell's own UI is hidden and the sim is held.
+func show_title() -> void:
+	_title = TitleScreen.new(sim.data, FileAccess.file_exists(QUICKSAVE))
+	_title.start_requested.connect(_on_start)
+	_bar.visible = false
+	_ticker.visible = false
+	_layer.add_child(_title)
+
+
+func _on_start(load_save: bool) -> void:
+	if load_save:
+		var loaded := SaveIO.load_file(QUICKSAVE)
+		if loaded:
+			sim.load_state(loaded)
+	_title.queue_free()
+	_title = null
+	_bar.visible = true
+	_ticker.visible = true
+	_mode = ""
 	_sync_mode()
+	if load_save:
+		notice("Loaded quick save.", UI.GOOD)
 
 
 func _process(delta: float) -> void:
+	if _title:
+		return
 	sim.tick(delta)
 	_handle_events()
 	_sync_mode()
@@ -181,7 +212,7 @@ func _sync_mode() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not (event is InputEventKey and event.pressed and not event.echo):
+	if _title or not (event is InputEventKey and event.pressed and not event.echo):
 		return
 	match event.keycode:
 		KEY_P:
@@ -248,6 +279,14 @@ func _smoke() -> void:
 ## Windowed screenshot tour for visual checks: station, map, flight.
 func _tour(dir: String) -> void:
 	DirAccess.make_dir_recursive_absolute(dir)
+	show_title()
+	for _i in 200:
+		await get_tree().process_frame
+	_shot(dir + "/0-title.png")
+	for _i in 140:
+		await get_tree().process_frame
+	_shot(dir + "/0b-title.png")
+	_on_start(false)
 	_sync_mode()
 	for _i in 10:
 		await get_tree().process_frame

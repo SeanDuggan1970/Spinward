@@ -28,6 +28,8 @@ Placeholder art throughout. See [docs/balance/NOTES.md](docs/balance/NOTES.md) f
 
 `Play.cmd` runs the game and `Edit.cmd` opens the Godot editor. The first run downloads the pinned Godot 4.7.2 into `.tools/` and checks its SHA-512.
 
+The game opens on an attract screen: each ship class flies in and turns under a work light, with its caption, in front of Kibo Ring and Earth. Press Space to start, L to load your quick save, or Esc to quit.
+
 You start docked at Kibo Ring in low Earth orbit with 10,000 credits and a second-hand hauler.
 
 1. **Market:** buy low. Green prices are cheap, amber prices are good to sell into.
