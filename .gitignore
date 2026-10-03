@@ -1,0 +1,6 @@
+.tools/
+.godot/
+build/
+*.translation
+__pycache__/
+*.pyc
