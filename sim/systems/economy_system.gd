@@ -10,6 +10,7 @@ func setup(owner) -> void:
 	owner.register("buy", _buy)
 	owner.register("sell", _sell)
 	owner.register("refuel", _refuel)
+	owner.register("emergency_refuel", _emergency_refuel)
 
 
 func start_game() -> void:
@@ -20,6 +21,10 @@ func start_game() -> void:
 		for good in sim().data.places[place].get("market", {}):
 			stocks[good] = Market.target(sim().data, place, good)
 		s.markets[place] = stocks
+	# Let surpluses and shortages develop before the player arrives, so day one has trades.
+	var step := float(sim().data.balance["economy"]["step_hours"]) / 24.0
+	for _i in int(float(sim().data.balance["economy"]["warmup_days"]) / step):
+		_integrate(step)
 	s.economy_t = s.time_s
 
 
@@ -134,4 +139,24 @@ func _refuel(command: Dictionary) -> String:
 	s.markets[place]["propellant"] -= tonnes
 	s.ship["fuel_t"] += tonnes
 	sim().emit("refuelled", {"place": place, "tonnes": tonnes, "credits": -price * tonnes})
+	return ""
+
+
+## Stranded where nobody sells fuel: a tanker drone brings propellant at a steep premium.
+## Exists so the game can never soft-lock; priced so planning ahead is always better.
+func _emergency_refuel(command: Dictionary) -> String:
+	var s = sim().state
+	if s.location.get("status") != "docked":
+		return "not docked"
+	if "refuel" in sim().data.places[s.location["place"]].get("services", []):
+		return "refuel normally here"
+	var e: Dictionary = sim().data.balance["economy"]
+	var price := float(sim().data.goods["propellant"]["base_price"]) * float(e["emergency_fuel_price_mult"])
+	var space := ShipStats.fuel_capacity_t(s.ship, sim().data) - float(s.ship["fuel_t"])
+	var tonnes := minf(minf(float(command.get("tonnes", space)), space), s.credits / price)
+	if tonnes <= 1e-6:
+		return "cannot afford emergency propellant" if space > 1e-6 else "tanks full"
+	s.credits -= price * tonnes
+	s.ship["fuel_t"] += tonnes
+	sim().emit("refuelled", {"place": s.location["place"], "tonnes": tonnes, "credits": -price * tonnes, "emergency": true})
 	return ""

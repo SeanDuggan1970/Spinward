@@ -51,9 +51,14 @@ static func plan(state, data, eph, from_place: String, to_place: String, t: floa
 		distance = V.distance(from_pos, to_pos)
 	burn = 2.0 * sqrt(distance / accel)
 	var fuel_t := ShipStats.thrust_n(state.ship, data) / ve * burn / 1000.0
+	var fuel_after := float(state.ship.get("fuel_t", 0.0)) - fuel_t
+	var dest_refuels: bool = "refuel" in data.places[to_place].get("services", [])
 	result.merge({
 		"distance_m": distance, "burn_s": burn, "duration_s": burn + overhead, "fuel_t": fuel_t,
 		"arrive_t": t + burn + overhead, "from_pos": from_pos, "to_pos": to_pos, "frame": frame,
+		"fuel_after_t": fuel_after, "dest_refuels": dest_refuels,
+		# No fuel at the destination and not enough left to come back the same way.
+		"strand_risk": not dest_refuels and fuel_after < fuel_t,
 	}, true)
 	if fuel_t > float(state.ship.get("fuel_t", 0.0)) + 1e-9:
 		result["reason"] = "not enough propellant: need %.2f t, have %.2f t" % [fuel_t, state.ship["fuel_t"]]

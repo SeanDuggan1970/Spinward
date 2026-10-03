@@ -18,7 +18,9 @@
 		"spread": 0.06,
 		"relaxation_per_day": 0.12,
 		"max_stock_mult": 4.0,
-		"step_hours": 1.0
+		"step_hours": 1.0,
+		"emergency_fuel_price_mult": 6.0,
+		"warmup_days": 60
 	},
 	"travel": {
 		"_note": "Brachistochrone at current mass and thrust, plus fixed overheads for undock/capture. Gravity wells and orbital velocity are deliberately ignored: the co-pilot 'handles it'.",

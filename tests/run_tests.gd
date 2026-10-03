@@ -125,7 +125,7 @@ func test_economy() -> void:
 	var sim := fresh()
 	var s := sim.state
 	var d := sim.data
-	check(s.markets["kibo_ring"]["food"] == 160.0, "Markets start at target stock")
+	check(s.markets["kibo_ring"]["food"] > 160.0 and s.markets["shackleton_port"]["food"] < 60.0, "Warm-up leaves surpluses and shortages on day one")
 	var mid := Market.mid_price_at(d, "kibo_ring", "food", 160.0)
 	check(is_equal_approx(mid, 600.0), "Price equals base at target")
 	check(Market.mid_price_at(d, "kibo_ring", "food", 40.0) > mid, "Scarcity raises price")
@@ -133,8 +133,9 @@ func test_economy() -> void:
 	check(Market.buy_price(s, d, "kibo_ring", "food") > Market.sell_price(s, d, "kibo_ring", "food"), "Buy above sell (spread)")
 
 	var credits := s.credits
+	var food_stock: float = s.markets["kibo_ring"]["food"]
 	check(sim.apply({"type": "buy", "good": "food", "tonnes": 5}) == "", "Buy food")
-	check(s.ship["cargo"]["food"] == 5.0 and s.credits < credits and s.markets["kibo_ring"]["food"] == 155.0, "Buying moves credits, cargo and stock")
+	check(s.ship["cargo"]["food"] == 5.0 and s.credits < credits and is_equal_approx(s.markets["kibo_ring"]["food"], food_stock - 5.0), "Buying moves credits, cargo and stock")
 	check(sim.apply({"type": "buy", "good": "regolith", "tonnes": 1}) != "", "Cannot buy a good not traded here")
 	check(sim.apply({"type": "buy", "good": "food", "tonnes": 50}) != "", "Cargo capacity enforced")
 	s.credits = 10.0
@@ -161,6 +162,13 @@ func test_economy() -> void:
 	s.ship["fuel_t"] = 1.0
 	check(sim.apply({"type": "refuel", "fill": true}) == "" and is_equal_approx(s.ship["fuel_t"], 3.0), "Refuel fills the tank")
 	check(sim.apply({"type": "refuel", "fill": true}) != "", "Full tank refuel rejected")
+	check(sim.apply({"type": "emergency_refuel"}) != "", "No emergency fuel where normal fuel is sold")
+	s.location = {"status": "docked", "place": "kernel_l5"}
+	s.ship["fuel_t"] = 0.0
+	check(sim.apply({"type": "refuel", "fill": true}) != "", "The Kernel sells no fuel")
+	var before := s.credits
+	check(sim.apply({"type": "emergency_refuel", "tonnes": 1}) == "" and s.ship["fuel_t"] == 1.0, "Emergency fuel delivery")
+	check(before - s.credits == 120.0 * 6.0, "Emergency fuel costs six times base")
 
 
 func test_travel() -> void:
@@ -175,6 +183,13 @@ func test_travel() -> void:
 	var days: float = plan["duration_s"] / DAY
 	check(days > 1.5 and days < 3.5, "Empty trip to L1 takes a couple of days (%.2f d)" % days)
 	check(plan["fuel_t"] > 0.1 and plan["fuel_t"] < 1.0, "Trip burns a fraction of the tank (%.2f t)" % plan["fuel_t"])
+	check(not plan["strand_risk"], "No strand risk going to a fuel depot")
+	var full_tank := Navigation.plan(s, d, sim.ephemeris, "kibo_ring", "kernel_l5", s.time_s)
+	check(full_tank["ok"] and not full_tank["strand_risk"], "A full tank reaches The Kernel and back")
+	s.ship["fuel_t"] = float(full_tank["fuel_t"]) * 1.5
+	var to_kernel := Navigation.plan(s, d, sim.ephemeris, "kibo_ring", "kernel_l5", s.time_s)
+	check(to_kernel["ok"] and to_kernel["strand_risk"], "Warn when heading somewhere without fuel on a thin tank")
+	s.ship["fuel_t"] = 3.0
 
 	sim.apply({"type": "buy", "good": "water_ice", "tonnes": 20})
 	var loaded := Navigation.plan(s, d, sim.ephemeris, "kibo_ring", "halo_depot", s.time_s)

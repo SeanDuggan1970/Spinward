@@ -20,9 +20,9 @@
 		"location": {"type": "orbit", "parent": "earth", "elements": {"a_m": 4.2164e7, "e": 0.0, "i_deg": 0.0, "node_deg": 0.0, "peri_deg": 0.0, "m0_deg": 120.0, "frame": "equatorial"}},
 		"station": {"hub_radius_m": 10, "hub_length_m": 60, "ring_radius_m": 70, "ring_tube_m": 8, "spokes": 3, "spin_rpm": 3.2, "colour": "grey"},
 		"services": ["market", "refuel"],
-		"market": {"electronics": 30, "machine_parts": 40, "food": 60, "oxygen": 40, "propellant": 80},
+		"market": {"electronics": 20, "machine_parts": 40, "food": 60, "oxygen": 40, "propellant": 80},
 		"produces": {},
-		"consumes": {"electronics": 1.5, "machine_parts": 2, "food": 3, "oxygen": 2, "propellant": 4},
+		"consumes": {"electronics": 0.8, "machine_parts": 2, "food": 3, "oxygen": 2, "propellant": 4},
 		"recipes": []
 	},
 	"halo_depot": {
