@@ -1,6 +1,8 @@
 ## Headless balance bot. Plays the trading game through the same commands as the
 ## player and writes docs/balance/report.md.
-##   godot --headless --path . --script res://tools/balance_bot.gd -- [days=180] [upgrade=1]
+##   godot --headless --path . --script res://tools/balance_bot.gd -- [days=180] [upgrade=1] [seeds=5]
+## Runs one game per seed (NPC choices differ per seed) and reports the spread; the
+## detailed sections come from the first seed.
 ##
 ## Strategy (deliberately simple and greedy, so the numbers are a floor on what a
 ## thoughtful player earns): at each dock, sell everything, refuel, then pick the
@@ -28,6 +30,7 @@ var log_rows: Array = []
 var route_profit: Dictionary = {}
 var milestones: Array = []
 var credit_curve: Array = []
+var first_upgrade_day := -1.0
 
 
 func _initialize() -> void:
@@ -38,22 +41,36 @@ func _initialize() -> void:
 			args[kv[0]] = kv[1]
 	var days := float(args["days"])
 	var upgrade: bool = args["upgrade"] == "1"
-
-	sim = Sim.new()
-	sim.new_game(1)
-	var start_matrix := route_matrix()
-	var t0 := sim.state.time_s
-	var next_sample := t0
-	while sim.state.time_s - t0 < days * DAY:
-		if sim.state.time_s >= next_sample:
-			credit_curve.append([(sim.state.time_s - t0) / DAY, sim.state.credits])
-			next_sample += 10.0 * DAY
-		if not do_leg(upgrade):
-			milestones.append("Day %.1f: bot stuck at %s, stopping" % [(sim.state.time_s - t0) / DAY, sim.state.location.get("place")])
-			break
-	credit_curve.append([(sim.state.time_s - t0) / DAY, sim.state.credits])
-	var end_matrix := route_matrix()
-	write_report(days, upgrade, start_matrix, end_matrix)
+	var seeds := int(args.get("seeds", "5"))
+	var runs := []
+	var detail := {}
+	for seed_value in range(1, seeds + 1):
+		route_profit = {}
+		milestones = []
+		credit_curve = []
+		first_upgrade_day = -1.0
+		sim = Sim.new()
+		sim.new_game(seed_value)
+		var start_matrix := route_matrix()
+		var t0 := sim.state.time_s
+		var next_sample := t0
+		while sim.state.time_s - t0 < days * DAY:
+			if sim.state.time_s >= next_sample:
+				credit_curve.append([(sim.state.time_s - t0) / DAY, sim.state.credits])
+				next_sample += 10.0 * DAY
+			if not do_leg(upgrade):
+				milestones.append("Day %.1f: bot stuck at %s, stopping" % [(sim.state.time_s - t0) / DAY, sim.state.location.get("place")])
+				break
+		credit_curve.append([(sim.state.time_s - t0) / DAY, sim.state.credits])
+		runs.append({"seed": seed_value, "credits": sim.state.credits, "trips": int(sim.state.stats["trips"]), "first_upgrade": first_upgrade_day})
+		print("BOT_RUN seed=%d credits=%d trips=%d first_upgrade_day=%.1f" % [seed_value, int(sim.state.credits), int(sim.state.stats["trips"]), first_upgrade_day])
+		if seed_value == 1:
+			detail = {"start": start_matrix, "end": route_matrix(), "routes": route_profit, "milestones": milestones, "curve": credit_curve, "state": sim.state, "sim": sim}
+	route_profit = detail["routes"]
+	milestones = detail["milestones"]
+	credit_curve = detail["curve"]
+	sim = detail["sim"]
+	write_report(days, upgrade, detail["start"], detail["end"], runs)
 	quit()
 
 
@@ -178,6 +195,8 @@ func try_upgrades() -> void:
 		if s.credits - price < UPGRADE_RESERVE:
 			return
 		if sim.apply({"type": "install_module", "slot": u[0], "module": u[1]}) == "":
+			if first_upgrade_day < 0.0:
+				first_upgrade_day = day()
 			milestones.append("Day %.1f: fitted %s at %s (credits %d)" % [day(), sim.data.modules[u[1]]["name"], name_of(s.location["place"]), int(s.credits)])
 
 
@@ -224,7 +243,7 @@ func name_of(place: String) -> String:
 	return sim.data.places[place]["name"]
 
 
-func write_report(days: float, upgrade: bool, start_matrix: Array, end_matrix: Array) -> void:
+func write_report(days: float, upgrade: bool, start_matrix: Array, end_matrix: Array, runs: Array) -> void:
 	var s := sim.state
 	var lines := PackedStringArray()
 	lines.append("# Balance bot report")
@@ -233,7 +252,21 @@ func write_report(days: float, upgrade: bool, start_matrix: Array, end_matrix: A
 	lines.append("")
 	lines.append("Run: %d game days, upgrades %s, greedy single-good trader, always auto-docks (pays the fee). This is a **floor**: a player who docks manually, carries mixed cargo or plans two legs ahead will do better." % [int(days), "on" if upgrade else "off"])
 	lines.append("")
-	lines.append("## Outcome")
+	lines.append("## Across seeds")
+	lines.append("")
+	lines.append("| Seed | End credits | Trips | First upgrade (game day) |")
+	lines.append("|---|---|---|---|")
+	var total := 0.0
+	var ups := []
+	for r in runs:
+		total += float(r["credits"])
+		if r["first_upgrade"] >= 0.0:
+			ups.append(r["first_upgrade"])
+		lines.append("| %d | %d | %d | %s |" % [r["seed"], int(r["credits"]), r["trips"], "%.1f" % r["first_upgrade"] if r["first_upgrade"] >= 0.0 else "none"])
+	ups.sort()
+	lines.append("| **mean / median** | **%d** | | **%s** |" % [int(total / maxf(1.0, runs.size())), "%.1f" % ups[ups.size() / 2] if not ups.is_empty() else "none"])
+	lines.append("")
+	lines.append("## Outcome (seed 1)")
 	lines.append("")
 	var start_credits := float(sim.data.balance["start"]["credits"])
 	lines.append("| Measure | Value |")
@@ -281,4 +314,4 @@ func write_report(days: float, upgrade: bool, start_matrix: Array, end_matrix: A
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://docs/balance"))
 	var f := FileAccess.open("res://docs/balance/report.md", FileAccess.WRITE)
 	f.store_string("\n".join(lines) + "\n")
-	print("BOT_DONE credits=%d trips=%d" % [int(s.credits), int(s.stats["trips"])])
+	print("BOT_DONE mean_credits=%d median_first_upgrade=%s" % [int(total / maxf(1.0, runs.size())), "%.1f" % ups[ups.size() / 2] if not ups.is_empty() else "none"])

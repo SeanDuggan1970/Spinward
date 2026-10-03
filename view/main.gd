@@ -62,6 +62,9 @@ func _ready() -> void:
 		_smoke.call_deferred()
 		return
 	for a in args:
+		if a.begins_with("--gallery="):
+			_gallery.call_deferred(a.trim_prefix("--gallery="))
+			return
 		if a.begins_with("--tour="):
 			_tour.call_deferred(a.trim_prefix("--tour="))
 			return
@@ -268,6 +271,26 @@ func _tour(dir: String) -> void:
 	for _i in 10:
 		await get_tree().process_frame
 	_shot(dir + "/6-flight-chase.png")
+	get_tree().quit()
+
+
+## Windowed: an approach at every place, cockpit and wide shots, to check set pieces.
+func _gallery(dir: String) -> void:
+	DirAccess.make_dir_recursive_absolute(dir)
+	sim.advance_game_time(12.0 * 3600.0)
+	for place in sim.data.places:
+		sim.state.location = {"status": "approach", "place": place}
+		_mode = ""
+		_sync_mode()
+		for _i in 60:
+			await get_tree().process_frame
+		(_screen as FlightScene).hud.show_keys = false
+		await get_tree().process_frame
+		_shot("%s/%s-cockpit.png" % [dir, place])
+		(_screen as FlightScene).view_mode = "beauty"
+		for _i in 20:
+			await get_tree().process_frame
+		_shot("%s/%s-wide.png" % [dir, place])
 	get_tree().quit()
 
 

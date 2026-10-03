@@ -4,8 +4,14 @@ A hopeful near-future space trading game set in our real solar system. Trade to 
 
 Inspired by Elite, but not a remake. See [docs/DESIGN.md](docs/DESIGN.md) for the game and its architecture, and [docs/RESEARCH.md](docs/RESEARCH.md) for the sources and reasoning behind it.
 
-**Status: M1, the cislunar trading slice, is playable.**
-- **Places:** six real-orbit places around Earth and the Moon, including three Lagrange-point stations.
+**Status: M1, the cislunar trading slice, is playable,** with eight places and megastructures in the sky.
+- **Places:** eight real-orbit places around Earth and the Moon, including four Lagrange-point stations and Kalpana One, a 500 m-wide settlement drum.
+- **Megastructures** on the approaches:
+  - the Kibo skyhook
+  - Clarke Exchange's kilometre-wide power satellites
+  - the Luna Line lunar elevator rising from Halo Depot
+  - Island One, a Bernal sphere under construction beside The Kernel
+  - the Farside megatelescope mirrors
 - **Trading:** eleven goods with supply, demand and production chains.
 - **Ship:** a modular Mule-class hauler with shipyard upgrades.
 - **Travel:** routes plotted by the co-pilot under time compression.
@@ -20,7 +26,7 @@ Placeholder art throughout. See [docs/balance/NOTES.md](docs/balance/NOTES.md) f
 
 `Play.cmd` runs the game and `Edit.cmd` opens the Godot editor. The first run downloads the pinned Godot 4.7.2 into `.tools/` and checks its SHA-512.
 
-You start docked at Kibo Ring in low Earth orbit with 5,000 credits and a second-hand hauler.
+You start docked at Kibo Ring in low Earth orbit with 10,000 credits and a second-hand hauler.
 
 1. **Market:** buy low. Green prices are cheap, amber prices are good to sell into.
 2. **Departures:** pick a destination. The co-pilot shows distance, time, propellant and the best cargo for that route.

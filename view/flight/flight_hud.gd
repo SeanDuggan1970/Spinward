@@ -46,7 +46,7 @@ func _process(_dt: float) -> void:
 
 
 func _draw() -> void:
-	if flight.readout.is_empty():
+	if flight.readout.is_empty() or flight.view_mode == "beauty":
 		return
 	var w := size.x
 	var h := size.y

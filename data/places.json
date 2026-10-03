@@ -1,81 +1,470 @@
 {
-	"_note": "Flows are tonnes per game day. market.target is the stock where price equals base price. Recipes run per day while inputs last. Station geometry drives the docking scene. Orbits flagged 'equatorial' are relative to Earth's equator.",
+	"_note": "Flows are tonnes per game day. market.target is the stock where price equals base price. Recipes run per day while inputs last. Station geometry drives the docking scene. Orbits flagged 'equatorial' are relative to Earth's equator. 'features' add view-only megastructure set pieces (skyhook, power_arrays, elevator, bernal_frame, telescope_array). station.type is 'wheel' (default) or 'cylinder'.",
 	"kibo_ring": {
 		"name": "Kibo Ring",
 		"operator": "Terran Compact",
-		"description": "The old up-port in low Earth orbit. Earth's factories ship goods up the well to here, and everything from the Moon ends up here eventually.",
-		"location": {"type": "orbit", "parent": "earth", "elements": {"a_m": 6.791e6, "e": 0.0005, "i_deg": 51.6, "node_deg": 40.0, "peri_deg": 0.0, "m0_deg": 0.0, "frame": "equatorial"}},
-		"station": {"hub_radius_m": 14, "hub_length_m": 90, "ring_radius_m": 110, "ring_tube_m": 11, "spokes": 4, "spin_rpm": 2.6, "colour": "offwhite"},
-		"services": ["market", "refuel", "shipyard"],
-		"shipyard_stock": ["cargo_pod_s", "cargo_pod_m", "tank_s", "tank_m", "radiator_panel"],
-		"market": {"electronics": 60, "medical": 12, "food": 160, "machine_parts": 80, "helium3": 1, "water_ice": 200, "oxygen": 120, "propellant": 160},
-		"produces": {"electronics": 3, "medical": 0.6, "food": 8, "machine_parts": 4},
-		"consumes": {"helium3": 0.05, "water_ice": 10, "oxygen": 6, "propellant": 8},
-		"recipes": []
+		"description": "The old up-port in low Earth orbit. Earth's factories ship goods up the well to here, much of it now flung up by the Kibo skyhook, a spinning tether that catches cargo from suborbital launchers. Everything from the Moon ends up here eventually.",
+		"location": {
+			"type": "orbit",
+			"parent": "earth",
+			"elements": {
+				"a_m": 6791000.0,
+				"e": 0.0005,
+				"i_deg": 51.6,
+				"node_deg": 40.0,
+				"peri_deg": 0.0,
+				"m0_deg": 0.0,
+				"frame": "equatorial"
+			}
+		},
+		"station": {
+			"hub_radius_m": 14,
+			"hub_length_m": 90,
+			"ring_radius_m": 110,
+			"ring_tube_m": 11,
+			"spokes": 4,
+			"spin_rpm": 2.6,
+			"colour": "offwhite"
+		},
+		"services": [
+			"market",
+			"refuel",
+			"shipyard"
+		],
+		"shipyard_stock": [
+			"cargo_pod_s",
+			"cargo_pod_m",
+			"tank_s",
+			"tank_m",
+			"radiator_panel"
+		],
+		"market": {
+			"electronics": 60,
+			"medical": 12,
+			"food": 160,
+			"machine_parts": 80,
+			"helium3": 1,
+			"water_ice": 200,
+			"oxygen": 120,
+			"propellant": 160
+		},
+		"produces": {
+			"electronics": 3,
+			"medical": 0.6,
+			"food": 8,
+			"machine_parts": 4
+		},
+		"consumes": {
+			"helium3": 0.05,
+			"water_ice": 10,
+			"oxygen": 6,
+			"propellant": 8
+		},
+		"recipes": [],
+		"features": [
+			"skyhook"
+		]
 	},
 	"clarke_exchange": {
 		"name": "Clarke Exchange",
 		"operator": "Terran Compact",
-		"description": "Geostationary service yard for the power-beaming and comms belt. Always short of parts and people who can fit them.",
-		"location": {"type": "orbit", "parent": "earth", "elements": {"a_m": 4.2164e7, "e": 0.0, "i_deg": 0.0, "node_deg": 0.0, "peri_deg": 0.0, "m0_deg": 120.0, "frame": "equatorial"}},
-		"station": {"hub_radius_m": 10, "hub_length_m": 60, "ring_radius_m": 70, "ring_tube_m": 8, "spokes": 3, "spin_rpm": 3.2, "colour": "grey"},
-		"services": ["market", "refuel"],
-		"market": {"electronics": 20, "machine_parts": 40, "food": 60, "oxygen": 40, "propellant": 80},
-		"produces": {},
-		"consumes": {"electronics": 0.8, "machine_parts": 2, "food": 3, "oxygen": 2, "propellant": 4},
-		"recipes": []
+		"description": "Geostationary service yard for the power-beaming belt: kilometre-wide solar power satellites that beam energy down to Earth's rectennas. Always short of parts and people who can fit them, and always stripping metal out of the old satellites it retires.",
+		"location": {
+			"type": "orbit",
+			"parent": "earth",
+			"elements": {
+				"a_m": 42164000.0,
+				"e": 0.0,
+				"i_deg": 0.0,
+				"node_deg": 0.0,
+				"peri_deg": 0.0,
+				"m0_deg": 120.0,
+				"frame": "equatorial"
+			}
+		},
+		"station": {
+			"hub_radius_m": 10,
+			"hub_length_m": 60,
+			"ring_radius_m": 70,
+			"ring_tube_m": 8,
+			"spokes": 3,
+			"spin_rpm": 3.2,
+			"colour": "grey"
+		},
+		"services": [
+			"market",
+			"refuel"
+		],
+		"market": {
+			"electronics": 20,
+			"machine_parts": 40,
+			"food": 60,
+			"oxygen": 40,
+			"propellant": 80,
+			"refined_metals": 30
+		},
+		"produces": {
+			"refined_metals": 1.5
+		},
+		"consumes": {
+			"electronics": 0.8,
+			"machine_parts": 2,
+			"food": 3,
+			"oxygen": 2,
+			"propellant": 4
+		},
+		"recipes": [],
+		"features": [
+			"power_arrays"
+		]
 	},
 	"halo_depot": {
 		"name": "Halo Depot",
 		"operator": "Luna Cooperative",
-		"description": "Propellant depot on a halo orbit around Earth-Moon L1. Cracks lunar ice into fuel and air for anyone passing through.",
-		"location": {"type": "lagrange", "system": ["earth", "moon"], "point": "L1"},
-		"station": {"hub_radius_m": 9, "hub_length_m": 70, "ring_radius_m": 55, "ring_tube_m": 7, "spokes": 2, "spin_rpm": 3.0, "colour": "orange"},
-		"services": ["market", "refuel"],
-		"market": {"water_ice": 200, "propellant": 150, "oxygen": 60, "food": 20},
-		"produces": {},
-		"consumes": {"food": 1},
-		"recipes": [{"inputs": {"water_ice": 10}, "outputs": {"propellant": 7, "oxygen": 3}}]
+		"description": "The L1 terminus of the Luna Line, the first lunar space elevator: a Zylon ribbon hung from Earth-Moon L1 down to the near-side equator. Climbers haul regolith and ice up the ribbon; the depot cracks the ice into fuel and air for anyone passing through.",
+		"location": {
+			"type": "lagrange",
+			"system": [
+				"earth",
+				"moon"
+			],
+			"point": "L1"
+		},
+		"station": {
+			"hub_radius_m": 9,
+			"hub_length_m": 70,
+			"ring_radius_m": 55,
+			"ring_tube_m": 7,
+			"spokes": 2,
+			"spin_rpm": 3.0,
+			"colour": "orange"
+		},
+		"services": [
+			"market",
+			"refuel"
+		],
+		"market": {
+			"water_ice": 200,
+			"propellant": 150,
+			"oxygen": 60,
+			"food": 20,
+			"regolith": 300
+		},
+		"produces": {
+			"regolith": 15,
+			"water_ice": 6
+		},
+		"consumes": {
+			"food": 1
+		},
+		"recipes": [
+			{
+				"inputs": {
+					"water_ice": 10
+				},
+				"outputs": {
+					"propellant": 7,
+					"oxygen": 3
+				}
+			}
+		],
+		"features": [
+			"elevator"
+		]
 	},
 	"shackleton_port": {
 		"name": "Shackleton Port",
 		"operator": "Luna Cooperative",
 		"description": "Polar orbit port above Shackleton crater. Surface crews and their AI rovers lift ice, regolith and helium-3 to it.",
-		"location": {"type": "orbit", "parent": "moon", "elements": {"a_m": 1.8374e6, "e": 0.0, "i_deg": 90.0, "node_deg": 0.0, "peri_deg": 0.0, "m0_deg": 0.0}},
-		"station": {"hub_radius_m": 11, "hub_length_m": 75, "ring_radius_m": 80, "ring_tube_m": 9, "spokes": 4, "spin_rpm": 2.2, "colour": "grey"},
-		"services": ["market", "refuel"],
-		"market": {"water_ice": 400, "regolith": 600, "helium3": 2, "propellant": 40, "food": 60, "medical": 4, "machine_parts": 40, "electronics": 10},
-		"produces": {"water_ice": 25, "regolith": 40, "helium3": 0.08},
-		"consumes": {"food": 3, "medical": 0.2, "machine_parts": 2, "electronics": 0.5},
-		"recipes": [{"inputs": {"water_ice": 3}, "outputs": {"propellant": 2}}]
+		"location": {
+			"type": "orbit",
+			"parent": "moon",
+			"elements": {
+				"a_m": 1837400.0,
+				"e": 0.0,
+				"i_deg": 90.0,
+				"node_deg": 0.0,
+				"peri_deg": 0.0,
+				"m0_deg": 0.0
+			}
+		},
+		"station": {
+			"hub_radius_m": 11,
+			"hub_length_m": 75,
+			"ring_radius_m": 80,
+			"ring_tube_m": 9,
+			"spokes": 4,
+			"spin_rpm": 2.2,
+			"colour": "grey"
+		},
+		"services": [
+			"market",
+			"refuel"
+		],
+		"market": {
+			"water_ice": 400,
+			"regolith": 600,
+			"helium3": 2,
+			"propellant": 40,
+			"food": 60,
+			"medical": 4,
+			"machine_parts": 40,
+			"electronics": 10
+		},
+		"produces": {
+			"water_ice": 25,
+			"regolith": 40,
+			"helium3": 0.08
+		},
+		"consumes": {
+			"food": 3,
+			"medical": 0.2,
+			"machine_parts": 2,
+			"electronics": 0.5
+		},
+		"recipes": [
+			{
+				"inputs": {
+					"water_ice": 3
+				},
+				"outputs": {
+					"propellant": 2
+				}
+			}
+		]
 	},
 	"trojan_yards": {
 		"name": "Trojan Yards",
 		"operator": "The Commons",
 		"description": "An AI-run foundry and shipyard at Earth-Moon L4. Smelts regolith, builds parts and pressure hulls, and fits ships.",
-		"location": {"type": "lagrange", "system": ["earth", "moon"], "point": "L4"},
-		"station": {"hub_radius_m": 16, "hub_length_m": 120, "ring_radius_m": 95, "ring_tube_m": 10, "spokes": 6, "spin_rpm": 1.6, "colour": "rust"},
-		"services": ["market", "refuel", "shipyard"],
-		"shipyard_stock": ["cargo_pod_s", "cargo_pod_m", "cargo_pod_l", "tank_s", "tank_m", "pathfinder_mk2", "radiator_panel", "radiator_panel_l"],
-		"market": {"regolith": 600, "refined_metals": 120, "machine_parts": 60, "habitat_modules": 40, "electronics": 10, "food": 40, "oxygen": 40, "propellant": 60},
+		"location": {
+			"type": "lagrange",
+			"system": [
+				"earth",
+				"moon"
+			],
+			"point": "L4"
+		},
+		"station": {
+			"hub_radius_m": 16,
+			"hub_length_m": 120,
+			"ring_radius_m": 95,
+			"ring_tube_m": 10,
+			"spokes": 6,
+			"spin_rpm": 1.6,
+			"colour": "rust"
+		},
+		"services": [
+			"market",
+			"refuel",
+			"shipyard"
+		],
+		"shipyard_stock": [
+			"cargo_pod_s",
+			"cargo_pod_m",
+			"cargo_pod_l",
+			"tank_s",
+			"tank_m",
+			"pathfinder_mk2",
+			"radiator_panel",
+			"radiator_panel_l"
+		],
+		"market": {
+			"regolith": 600,
+			"refined_metals": 120,
+			"machine_parts": 60,
+			"habitat_modules": 40,
+			"electronics": 10,
+			"food": 40,
+			"oxygen": 40,
+			"propellant": 60
+		},
 		"produces": {},
-		"consumes": {"food": 2, "oxygen": 2, "propellant": 3},
+		"consumes": {
+			"food": 2,
+			"oxygen": 2,
+			"propellant": 3
+		},
 		"recipes": [
-			{"inputs": {"regolith": 30}, "outputs": {"refined_metals": 6}},
-			{"inputs": {"refined_metals": 4, "electronics": 0.5}, "outputs": {"machine_parts": 3}},
-			{"inputs": {"refined_metals": 3, "machine_parts": 1}, "outputs": {"habitat_modules": 2}}
+			{
+				"inputs": {
+					"regolith": 30
+				},
+				"outputs": {
+					"refined_metals": 6
+				}
+			},
+			{
+				"inputs": {
+					"refined_metals": 4,
+					"electronics": 0.5
+				},
+				"outputs": {
+					"machine_parts": 3
+				}
+			},
+			{
+				"inputs": {
+					"refined_metals": 3,
+					"machine_parts": 1
+				},
+				"outputs": {
+					"habitat_modules": 2
+				}
+			}
 		]
 	},
 	"kernel_l5": {
 		"name": "The Kernel",
 		"operator": "Kernel Settlers",
-		"description": "The seed of the first true O'Neill habitat, growing at Earth-Moon L5 one pressure module at a time. No fuel to spare: bring enough to leave.",
-		"location": {"type": "lagrange", "system": ["earth", "moon"], "point": "L5"},
-		"station": {"hub_radius_m": 20, "hub_length_m": 140, "ring_radius_m": 160, "ring_tube_m": 14, "spokes": 6, "spin_rpm": 1.1, "colour": "offwhite"},
-		"services": ["market"],
-		"market": {"habitat_modules": 50, "food": 80, "medical": 6, "water_ice": 120, "oxygen": 40},
+		"description": "The seed of L5's first big habitat. Settlers live in a spun ring while the Commons builds Island One, a Bernal sphere, alongside. Farm modules already feed them and then some. No fuel to spare: bring enough to leave.",
+		"location": {
+			"type": "lagrange",
+			"system": [
+				"earth",
+				"moon"
+			],
+			"point": "L5"
+		},
+		"station": {
+			"hub_radius_m": 20,
+			"hub_length_m": 140,
+			"ring_radius_m": 160,
+			"ring_tube_m": 14,
+			"spokes": 6,
+			"spin_rpm": 1.1,
+			"colour": "offwhite"
+		},
+		"services": [
+			"market"
+		],
+		"market": {
+			"habitat_modules": 50,
+			"food": 80,
+			"medical": 6,
+			"water_ice": 120,
+			"oxygen": 40
+		},
 		"produces": {},
-		"consumes": {"habitat_modules": 2.5, "food": 4, "medical": 0.3, "water_ice": 6, "oxygen": 2},
-		"recipes": [{"inputs": {"water_ice": 4}, "outputs": {"food": 1}}]
+		"consumes": {
+			"habitat_modules": 2.5,
+			"food": 4,
+			"medical": 0.3,
+			"water_ice": 6,
+			"oxygen": 2
+		},
+		"recipes": [
+			{
+				"inputs": {
+					"water_ice": 6
+				},
+				"outputs": {
+					"food": 3
+				}
+			}
+		],
+		"features": [
+			"bernal_frame"
+		]
+	},
+	"kalpana_one": {
+		"name": "Kalpana One",
+		"operator": "Kalpana Settlement Trust",
+		"description": "A Globus-pattern settlement drum: 250 m radius, 325 m long, home to three thousand people. Equatorial low orbit keeps it inside Earth's magnetic shield, so it needs no heavy radiation shell. It spins at just under 2 rpm for a full gee.",
+		"location": {
+			"type": "orbit",
+			"parent": "earth",
+			"elements": {
+				"a_m": 6878000.0,
+				"e": 0.0,
+				"i_deg": 0.0,
+				"node_deg": 0.0,
+				"peri_deg": 0.0,
+				"m0_deg": 200.0,
+				"frame": "equatorial"
+			}
+		},
+		"station": {
+			"type": "cylinder",
+			"hub_radius_m": 250,
+			"hub_length_m": 325,
+			"ring_radius_m": 0,
+			"ring_tube_m": 0,
+			"spokes": 0,
+			"spin_rpm": 1.89,
+			"port_radius_m": 9,
+			"colour": "offwhite"
+		},
+		"services": [
+			"market",
+			"refuel"
+		],
+		"market": {
+			"food": 120,
+			"medical": 10,
+			"water_ice": 160,
+			"oxygen": 80,
+			"machine_parts": 40,
+			"electronics": 20,
+			"habitat_modules": 20,
+			"propellant": 50
+		},
+		"produces": {
+			"electronics": 1.0,
+			"medical": 0.3
+		},
+		"consumes": {
+			"food": 5,
+			"water_ice": 4,
+			"oxygen": 3,
+			"machine_parts": 1,
+			"habitat_modules": 0.6,
+			"propellant": 2
+		},
+		"recipes": []
+	},
+	"farside_array": {
+		"name": "Farside Array",
+		"operator": "Terran Compact Science",
+		"description": "Tender station for the megatelescope arrays strung around Earth-Moon L2, hidden behind the Moon from Earth's radio noise. A dozen staff, a hundred robots, and the best view of the early universe anyone has had. No fuel: bring enough to leave.",
+		"location": {
+			"type": "lagrange",
+			"system": [
+				"earth",
+				"moon"
+			],
+			"point": "L2"
+		},
+		"station": {
+			"hub_radius_m": 8,
+			"hub_length_m": 55,
+			"ring_radius_m": 45,
+			"ring_tube_m": 6,
+			"spokes": 3,
+			"spin_rpm": 3.4,
+			"colour": "grey"
+		},
+		"features": [
+			"telescope_array"
+		],
+		"services": [
+			"market"
+		],
+		"market": {
+			"electronics": 15,
+			"machine_parts": 30,
+			"food": 30,
+			"medical": 4,
+			"oxygen": 30
+		},
+		"produces": {},
+		"consumes": {
+			"electronics": 0.6,
+			"machine_parts": 1.2,
+			"food": 1.5,
+			"medical": 0.1,
+			"oxygen": 1.2
+		},
+		"recipes": []
 	}
 }

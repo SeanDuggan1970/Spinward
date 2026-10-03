@@ -11,6 +11,7 @@ const Models := preload("res://view/flight/models.gd")
 const UI := preload("res://view/ui/ui_kit.gd")
 const V := preload("res://sim/v3.gd")
 const SystemMap := preload("res://view/system_map.gd")
+const SetPieces := preload("res://view/flight/set_pieces.gd")
 
 const ASSIST_MODES := ["full", "assisted", "manual"]
 const SKY_DISTANCE := 60000.0
@@ -54,6 +55,11 @@ var _traffic_check := 0.0
 ## Cosmetic station work craft: [{node, radius, z, period, phase, tilt}]
 var _work_craft: Array = []
 
+## Directions to the Sun, Earth and Moon from this station (Godot frame).
+var body_dirs: Dictionary = {}
+## Megastructure set pieces (view-only), animated each frame.
+var _set_pieces: Array = []
+
 ## Live readouts for the HUD.
 var readout := {}
 
@@ -72,7 +78,7 @@ func _ready() -> void:
 	var geom: Dictionary = sim.data.places[place_id]["station"]
 	spin_rate = float(geom["spin_rpm"]) * TAU / 60.0
 	_build_environment()
-	station = Models.station(geom)
+	station = Models.station(geom, sim.data.places[place_id]["name"])
 	add_child(station["node"])
 	var model := Models.ship(sim.state.ship, sim.data)
 	ship_node = model["node"]
@@ -84,7 +90,7 @@ func _ready() -> void:
 	var h := hash(place_id)
 	var off := float(tune_dock["spawn_offset_m"])
 	ship_node.position = Vector3(off * (float(h % 7) / 3.0 - 1.0), off * (float((h / 7) % 5) / 2.0 - 1.0) * 0.5,
-		float(station["port_z"]) + float(tune_dock["spawn_distance_m"]) - nose_z)
+		float(station["port_z"]) + maxf(float(tune_dock["spawn_distance_m"]), float(station["hub_radius"]) * 3.0) - nose_z)
 	ship_node.rotation = Vector3(0.05, -0.08, 0.6)
 	spin_angle = fposmod(float(sim.state.time_s) * spin_rate, TAU)
 	camera = Camera3D.new()
@@ -94,6 +100,7 @@ func _ready() -> void:
 	add_child(camera)
 	camera.make_current()
 	_update_camera(1.0)
+	_set_pieces = SetPieces.build(self, sim.data.places[place_id].get("features", []), body_dirs, station)
 	_spawn_work_craft()
 	_sync_traffic()
 	hud = load("res://view/flight/flight_hud.gd").new(self)
@@ -121,6 +128,7 @@ func _build_environment() -> void:
 	var here: Array = eph.position(place_id, t)
 	var sun := DirectionalLight3D.new()
 	var sun_dir := _dir_to(eph.position("sun", t), here)
+	body_dirs["sun"] = sun_dir
 	sun.light_energy = 1.6
 	sun.shadow_enabled = true
 	sun.directional_shadow_max_distance = 800.0
@@ -132,6 +140,7 @@ func _build_environment() -> void:
 		var d := V.distance(p, here)
 		var r := float(sim.data.bodies[body]["radius_m"])
 		var dir := _dir_to(p, here)
+		body_dirs[body] = dir
 		var mesh := Kit.sphere(SKY_DISTANCE * minf(r / d, 0.97), _body_material(body), dir * SKY_DISTANCE)
 		(mesh.mesh as SphereMesh).radial_segments = 64
 		(mesh.mesh as SphereMesh).rings = 32
@@ -228,6 +237,7 @@ func _physics_process(dt: float) -> void:
 		_sync_traffic()
 	_move_traffic()
 	_move_work_craft()
+	SetPieces.animate(_set_pieces, clock)
 	_fly(dt)
 	_collide()
 	_check_docking()
@@ -307,10 +317,7 @@ func _update_readout() -> void:
 
 func _collide() -> void:
 	var probes := [[ship_node.position, ship_radius], [_nose(), 1.5]]
-	var rh: float = station["hub_radius"]
-	var lh: float = station["hub_length"]
-	var rr: float = station["ring_radius"]
-	var rt: float = station["ring_tube"]
+	var colliders: Dictionary = station["colliders"]
 	for probe in probes:
 		var p: Vector3 = probe[0]
 		var r: float = probe[1]
@@ -318,22 +325,27 @@ func _collide() -> void:
 		var depth := 0.0
 		var rxy := Vector2(p.x, p.y).length()
 		var radial := Vector3(p.x, p.y, 0.0).normalized() if rxy > 1e-4 else Vector3.RIGHT
-		# Hub (and its port collar, which docking handles before we get here).
-		if absf(p.z) < lh * 0.5 + 3.0 + r and rxy < rh + r:
-			var into_side := rh + r - rxy
-			var into_end := lh * 0.5 + 3.0 + r - absf(p.z)
-			if into_side < into_end:
-				normal = radial
-				depth = into_side
-			else:
-				normal = Vector3(0, 0, signf(p.z))
-				depth = into_end
-		# Ring torus.
-		var q := Vector2(rxy - rr, p.z)
-		if q.length() < rt + r:
-			var qn := q.normalized() if q.length() > 1e-4 else Vector2.RIGHT
-			normal = (radial * qn.x + Vector3(0, 0, qn.y)).normalized()
-			depth = rt + r - q.length()
+		# Axial cylinders (hub, drum, docking nub); docking is checked before we get here.
+		for c in colliders["cylinders"]:
+			var cr: float = c[0]
+			var z0: float = c[1]
+			var z1: float = c[2]
+			if p.z > z0 - r and p.z < z1 + r and rxy < cr + r:
+				var into_side := cr + r - rxy
+				var into_front := z1 + r - p.z
+				var into_back := p.z - (z0 - r)
+				var d := minf(into_side, minf(into_front, into_back))
+				if d > depth:
+					depth = d
+					normal = radial if d == into_side else (Vector3(0, 0, 1) if d == into_front else Vector3(0, 0, -1))
+		# Rings.
+		for torus in colliders["tori"]:
+			var q := Vector2(rxy - float(torus[0]), p.z)
+			var reach := float(torus[1]) + r
+			if q.length() < reach and reach - q.length() > depth:
+				var qn := q.normalized() if q.length() > 1e-4 else Vector2.RIGHT
+				normal = (radial * qn.x + Vector3(0, 0, qn.y)).normalized()
+				depth = reach - q.length()
 		if depth > 0.0:
 			_bounce(normal, depth)
 
@@ -384,7 +396,13 @@ func contacts() -> Array:
 
 func _update_camera(dt: float) -> void:
 	var t := ship_node.global_transform
-	ship_node.visible = view_mode == "chase"
+	ship_node.visible = view_mode != "cockpit"
+	if view_mode == "beauty":
+		# Gallery/screenshot camera: pulled far back and up to take in the set pieces.
+		camera.fov = 70.0
+		camera.global_position = t * Vector3(0, 500.0, 2600.0)
+		camera.look_at(Vector3(0, 0, -400.0), Vector3.UP)
+		return
 	if view_mode == "cockpit":
 		# Pilot's eye just behind the command pod's front window.
 		camera.fov = 72.0
@@ -461,7 +479,7 @@ func _move_traffic() -> void:
 		# Lanes run outside the ring, from far out to the back of the station where the
 		# freight berths are, well clear of the player's approach axis.
 		var lane := absi(hash(id)) % 4
-		var lane_r: float = station["ring_radius"] + station["ring_tube"] + 60.0
+		var lane_r: float = maxf(station["ring_radius"] + station["ring_tube"], station["hub_radius"]) + 60.0
 		var a := PI * 0.25 + PI * 0.5 * lane
 		var offset := Vector3(cos(a) * lane_r, sin(a) * lane_r, 0.0)
 		var z0: float = -station["hub_length"] * 0.5
@@ -491,7 +509,7 @@ func _spawn_work_craft() -> void:
 		add_child(node)
 		_work_craft.append({
 			"node": node,
-			"radius": (rh + 40.0) if tug else rng.randf_range(rh + 15.0, rr * 0.75),
+			"radius": (rh + 40.0) if tug else rng.randf_range(rh + 15.0, maxf(rr * 0.75, rh + 90.0)),
 			"z": (float(station["port_z"]) + 25.0) if tug else rng.randf_range(-lh * 0.5, lh * 0.5),
 			"period": 240.0 if tug else rng.randf_range(150.0, 420.0),
 			"phase": rng.randf() * TAU,

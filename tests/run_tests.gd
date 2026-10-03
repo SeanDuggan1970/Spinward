@@ -54,7 +54,7 @@ func test_data() -> void:
 func test_clock_and_commands() -> void:
 	var sim := fresh()
 	check(sim.state.date_string() == "2061-03-01T00:00:00", "Start date from balance.json")
-	check(sim.state.credits == 5000.0, "Start credits from balance.json")
+	check(sim.state.credits == float(sim.data.balance["start"]["credits"]), "Start credits from balance.json")
 	sim.take_events()
 	check(sim.apply({"type": "nonsense"}) != "", "Unknown command rejected")
 	check(sim.apply({"type": "set_time_scale", "scale": 7}) != "", "Disallowed time scale rejected")
@@ -108,6 +108,11 @@ func test_orbits() -> void:
 	check(l1_ratio > 0.845 and l1_ratio < 0.853 and V.dot(l1, moon) > 0.0, "L1 at ~0.849 of the Earth-Moon distance")
 	var l4 := eph.relative("trojan_yards", "earth", t)
 	check(absf(V.length(l4) - V.length(moon)) < 1.0 and absf(V.distance(l4, moon) - V.length(moon)) < 1.0, "L4 is equilateral")
+	var l2 := eph.relative("farside_array", "earth", t)
+	var l2_ratio := V.length(l2) / V.length(moon)
+	check(l2_ratio > 1.15 and l2_ratio < 1.18 and V.dot(l2, moon) > 0.0, "L2 sits ~1.167 Earth-Moon distances out, behind the Moon")
+	var kalpana := eph.relative("kalpana_one", "earth", t)
+	check(absf(V.length(kalpana) - 6.878e6) < 1000.0, "Kalpana One orbits at 500 km")
 	var l5 := eph.relative("kernel_l5", "earth", t)
 	check(V.distance(l4, l5) > 1.7 * V.length(moon), "L4 and L5 are on opposite sides of the Moon")
 	# Low Earth orbit station: 420 km altitude, ~92 minute period.

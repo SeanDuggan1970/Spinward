@@ -45,6 +45,31 @@ Other upgrade tracks: cargo, tanks, radiators (heat), shielding (radiation), sen
 - **Events** shift supply and demand: a solar storm grounds traffic, a new habitat opens, a comet arrives.
 - **Post-scarcity flavour:** basic goods get cheaper over the campaign as automation spreads. Profit moves to rare, distant, time-critical or skilled work. This keeps the frontier attractive and stops early routes from staying optimal.
 
+## Megastructures: the awe ladder
+
+The system should feel like a place where big things are being built. Each tier adds structures that are plausible at that point in the story, and each one does a job in the economy, not just in the sky. Inspired by Isaac Arthur's *Megastructure Compendium* (Science & Futurism with Isaac Arthur, [YouTube](https://www.youtube.com/watch?v=1xt13dn74wc)). The descriptions here are our own.
+
+| Structure | Where | Tier | Status | Role |
+|---|---|---|---|---|
+| Skyhook (rotating launch tether) | Kibo Ring, LEO | 1 | **In** (set piece) | Why Earth goods are cheap at Kibo |
+| Solar power satellites / power beamers | Clarke Exchange, GEO | 1 | **In** (set piece) | Clarke's parts demand; salvage exports |
+| Lunar space elevator (the Luna Line) | Halo Depot, L1 | 1 | **In** (set piece) | Regolith and ice delivered to L1 |
+| Kalpana One (Globus settlement drum) | Equatorial LEO | 1 | **In** (place) | A settlement market of 3,000 people |
+| Megatelescope array | Farside Array, L2 | 1 | **In** (place + set piece) | Remote science market, no fuel |
+| Bernal sphere (Island One) | Beside The Kernel, L5 | 1–2 | **In** (set piece, under construction) | Habitat-module demand; grows over the campaign |
+| Stanford torus | L4/L5 | 2 | Planned | A completed habitat; big food and passenger market |
+| Earth–Mars cycler (Aldrin cycler) | Earth–Mars | 2 | Planned | A moving station you catch on its schedule |
+| Space farms | Kernel, Belt | 2–3 | Partly in (Kernel food) | Food chain away from Earth |
+| Lofstrom loop (launch loop) | Earth equator | 2 | Planned (backdrop) | Cheaper Earth-to-orbit freight |
+| Asteroid colonies / hollowed-rock habitats | Belt | 3 | Planned | **The player's own base** |
+| O'Neill cylinder | Player base, L5 later | 3–4 | Planned | End-game home; grows in stages |
+| Orbital ring (lunar) | Moon | 4 | Maybe | Late lunar industry |
+| Solar shades, statites | Venus, Sun–Earth L1 | 4+ | Maybe | Terraforming hints, story beats |
+| McKendree cylinder, Bishop ring | — | Far future | Out of scope | Lore and dreams only |
+| Dyson swarms, Matrioshka brains, stellar engines | — | Far future | Out of scope | "What the Commons dream about" |
+
+Set pieces are built at true scale (kilometres) in `view/flight/set_pieces.gd`, arranged in the sky beyond each station and oriented by the real Sun, Earth and Moon directions. They are view-only; their economic role lives in the place data.
+
 ## Other ships (NPC traffic)
 
 The system is shared. NPC fleets live in the sim (`data/npcs.json`, `sim/systems/npc_system.gd`) and buy and sell from the same markets as the player:
