@@ -11,6 +11,7 @@ signal start_requested(load_save: bool)
 
 const Kit := preload("res://view/flight/kit.gd")
 const Models := preload("res://view/flight/models.gd")
+const Livery := preload("res://view/flight/livery.gd")
 const SetPieces := preload("res://view/flight/set_pieces.gd")
 const SkyKit := preload("res://view/flight/sky.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
@@ -28,6 +29,7 @@ var clock := 0.0
 var camera: Camera3D
 var _hulls: Array = []
 var _hero_index := -1
+var _hero_round := 0
 var _hero: Node3D
 var _hero_plume: Node3D
 var _hero_radius := 5.0
@@ -62,13 +64,15 @@ func _ready() -> void:
 	# The Sun sits behind the camera, front-lighting the showcase.
 	add_child(Kit.sphere(800.0, Kit.glow(Color("fff6e0"), 6.0), Vector3(-0.55, 0.35, 0.75).normalized() * 60000.0))
 	# Earth's limb filling the lower right, the Moon high on the left.
-	_earth = Kit.sphere(14000.0, SkyKit.body_material("earth"), Vector3(9500.0, -11800.0, -17000.0))
+	_earth = Kit.sphere(14000.0, SkyKit.body_material("earth", data.bodies["earth"].get("look", {})), Vector3(9500.0, -11800.0, -17000.0))
 	(_earth.mesh as SphereMesh).radial_segments = 96
 	(_earth.mesh as SphereMesh).rings = 48
 	add_child(_earth)
-	add_child(Kit.sphere(700.0, SkyKit.body_material("moon"), Vector3(-15000.0, 7000.0, -42000.0)))
+	var moon := Kit.sphere(700.0, SkyKit.body_material("moon", data.bodies["moon"].get("look", {})), Vector3(-15000.0, 7000.0, -42000.0))
+	add_child(moon)
+	SkyKit.update_body(_earth, Vector3(-0.55, 0.35, 0.75).normalized(), 0.0)
 	# Kibo Ring at three-quarter view, spinning, corridor lights stepping in.
-	_station = Models.station(data.places["kibo_ring"]["station"], data.places["kibo_ring"]["name"])
+	_station = Models.station(data.places["kibo_ring"]["station"], data.places["kibo_ring"]["name"], Livery.for_station(data, "kibo_ring"))
 	var holder := Node3D.new()
 	holder.position = Vector3(-230.0, 60.0, -760.0)
 	holder.rotation = Vector3(0.12, 0.85, 0.0)
@@ -88,7 +92,7 @@ func _ready() -> void:
 	for i in traffic_hulls.size():
 		if not data.ships.has(traffic_hulls[i]):
 			continue
-		var model := Models.ship(_ship_dict(traffic_hulls[i]), data)
+		var model := Models.ship(_ship_dict(traffic_hulls[i]), data, _livery_for(traffic_hulls[i], i))
 		var node: Node3D = model["node"]
 		node.add_child(Kit.sphere(2.0, Kit.glow(Color("ffe0a0"), 4.0), Vector3(0, 3.0, 0)))
 		add_child(node)
@@ -107,6 +111,20 @@ func _ready() -> void:
 	_next_hero()
 
 
+## A real fleet's colours and one of its names for a hull, so the showcase ships are
+## ones you will meet; hulls nobody flies go out as independents.
+func _livery_for(hull: String, i: int) -> Dictionary:
+	var fleets: Array = []
+	for id in data.npcs["fleets"]:
+		if data.npcs["fleets"][id]["hull"] == hull:
+			fleets.append(data.npcs["fleets"][id])
+	if fleets.is_empty():
+		return Livery.for_ship(data, "Independent", data.ships[hull]["name"])
+	var fleet: Dictionary = fleets[i % fleets.size()]
+	var names: Array = fleet["names"]
+	return Livery.for_ship(data, fleet["operator"], names[i % names.size()])
+
+
 func _ship_dict(hull: String) -> Dictionary:
 	var h: Dictionary = data.ships[hull]
 	var ship := {"hull": hull, "modules": h["modules"].duplicate(), "cargo": {}, "fuel_t": 0.0}
@@ -118,7 +136,9 @@ func _next_hero() -> void:
 	if _hero:
 		_hero.queue_free()
 	_hero_index = (_hero_index + 1) % _hulls.size()
-	var model := Models.ship(_ship_dict(_hulls[_hero_index]), data)
+	if _hero_index == 0:
+		_hero_round += 1
+	var model := Models.ship(_ship_dict(_hulls[_hero_index]), data, _livery_for(_hulls[_hero_index], _hero_index + _hero_round))
 	_hero = model["node"]
 	_hero_radius = model["length"] * 0.5
 	_hero_plume = _hero.find_child("DrivePlume", true, false)
@@ -145,7 +165,7 @@ func _process(dt: float) -> void:
 	clock += dt
 	var t := Time.get_ticks_msec() / 1000.0
 	_station["rotor"].rotation.z = t * float(data.places["kibo_ring"]["station"]["spin_rpm"]) * TAU / 60.0
-	_earth.rotation.y = t * 0.004
+	(_earth.material_override as ShaderMaterial).set_shader_parameter("spin", t * 0.004)
 	SetPieces.animate(_set_pieces, t)
 	Kit.update_blinkers(_blinkers, t)
 	for p in _pods:

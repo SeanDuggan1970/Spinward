@@ -45,7 +45,7 @@ func _ready() -> void:
 	_sun_disc = Kit.sphere(1.0, Kit.glow(Color("fff6e0"), 6.0))
 	add_child(_sun_disc)
 	for body in ["earth", "moon"]:
-		var mesh := Kit.sphere(1.0, SkyKit.body_material(body))
+		var mesh := Kit.sphere(1.0, SkyKit.body_material(body, sim.data.bodies[body].get("look", {})))
 		(mesh.mesh as SphereMesh).radial_segments = 64
 		(mesh.mesh as SphereMesh).rings = 32
 		add_child(mesh)
@@ -82,6 +82,8 @@ func _update(dt: float) -> void:
 	var sun_dir := SkyKit.dir_between(eph.position("sun", t), ship)
 	_sun.look_at_from_position(Vector3.ZERO, -sun_dir, Vector3.UP if absf(sun_dir.y) < 0.99 else Vector3.RIGHT)
 	_sun_disc.position = sun_dir * SKY_DISTANCE
+	for body in _bodies:
+		SkyKit.update_body(_bodies[body], sun_dir, t)
 	_sun_disc.scale = Vector3.ONE * SKY_DISTANCE * 0.0047 * 3.0
 
 	# Attitude: the main drive pushes along the nose, so face along the thrust vector

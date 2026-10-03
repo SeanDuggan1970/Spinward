@@ -1,5 +1,5 @@
 {
-	"_note": "Flows are tonnes per game day. market.target is the stock where price equals base price. Recipes run per day while inputs last. Station geometry drives the docking scene. Orbits flagged 'equatorial' are relative to Earth's equator. 'features' add view-only megastructure set pieces (skyhook, power_arrays, elevator, bernal_frame, telescope_array). station.type is 'wheel' (default) or 'cylinder'.",
+	"_note": "Flows are tonnes per game day. market.target is the stock where price equals base price. Recipes run per day while inputs last. Station geometry drives the docking scene. Orbits flagged 'equatorial' are relative to Earth's equator. 'features' add view-only megastructure set pieces (skyhook, power_arrays, elevator, bernal_frame, telescope_array, captured_rock). station.type is 'wheel' (default) or 'cylinder'.",
 	"kibo_ring": {
 		"name": "Kibo Ring",
 		"operator": "Terran Compact",
@@ -240,7 +240,7 @@
 	"trojan_yards": {
 		"name": "Trojan Yards",
 		"operator": "The Commons",
-		"description": "An AI-run foundry and shipyard at Earth-Moon L4. Smelts regolith, builds parts and pressure hulls, and fits ships.",
+		"description": "An AI-run foundry and shipyard at Earth-Moon L4. Smelts lunar regolith and a captured near-Earth asteroid, 2058 QT, harnessed alongside; builds parts and pressure hulls, and fits ships.",
 		"location": {
 			"type": "lagrange",
 			"system": [
@@ -317,6 +317,9 @@
 					"habitat_modules": 2
 				}
 			}
+		],
+		"features": [
+			"captured_rock"
 		]
 	},
 	"kernel_l5": {

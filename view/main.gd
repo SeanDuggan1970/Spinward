@@ -5,7 +5,8 @@
 ## Opens on the attract screen (view/title_screen.gd); the sim does not tick until
 ## the player starts. Keys: P pause, [ ] time compression, F5 quick save, F9 quick load.
 ## Command line (after --): --smoke runs an end-to-end headless check;
-## --tour=<dir> captures one screenshot per screen (needs a window).
+## --tour=<dir> captures one screenshot per screen (needs a window); --gallery=<dir>
+## every approach; --flyby=<dir> a low lunar pass; --art=<dir> planet surfaces and ship liveries.
 extends Control
 
 const Sim := preload("res://sim/sim.gd")
@@ -72,6 +73,10 @@ func _ready() -> void:
 		_dock_trial.call_deferred()
 		return
 	for a in args:
+		if a.begins_with("--art="):
+			visible = false
+			get_tree().root.add_child.call_deferred(load("res://view/art_gallery.gd").new(sim.data, a.trim_prefix("--art=")))
+			return
 		if a.begins_with("--flyby="):
 			_flyby_tour.call_deferred(a.trim_prefix("--flyby="))
 			return
@@ -505,4 +510,4 @@ func _gallery(dir: String) -> void:
 
 func _shot(path: String) -> void:
 	get_viewport().get_texture().get_image().save_png(path)
-	print("SHOT ", path)
+	print("SHOT %s  (%d fps)" % [path, Engine.get_frames_per_second()])

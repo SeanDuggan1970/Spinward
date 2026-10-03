@@ -26,4 +26,4 @@ Read `docs/DESIGN.md` first. It is the source of truth for scope, pillars and ar
 
 ## Checks
 
-Run `./tools/validate.ps1` (PowerShell) before committing. Add tests in `tests/run_tests.gd` for new sim rules. After changing `data/`, re-run the balance bot (`tools/balance_bot.gd`, command in README) and note findings in `docs/balance/NOTES.md`. Use `-- --tour=<dir>` to screenshot every screen and look at them after view changes.
+Run `./tools/validate.ps1` (PowerShell) before committing. Add tests in `tests/run_tests.gd` for new sim rules. After changing `data/`, re-run the balance bot (`tools/balance_bot.gd`, command in README) and note findings in `docs/balance/NOTES.md`. Use `-- --tour=<dir>` to screenshot every screen and look at them after view changes. For surfaces, shaders and liveries, also use `-- --art=<dir>`.

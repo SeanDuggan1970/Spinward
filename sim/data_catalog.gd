@@ -14,6 +14,8 @@ var npcs: Dictionary = {}
 var projects: Dictionary = {}
 var projects_reserve_fraction := 0.4
 var brokers: Dictionary = {}
+## Paint schemes for the view (data/liveries.json); the sim never reads them.
+var liveries: Dictionary = {}
 ## tip_ttl_days, verify_tolerance.
 var brokers_meta: Dictionary = {}
 
@@ -35,6 +37,8 @@ func load_from(root: String) -> void:
 	projects = read_json(root + "/projects.json")
 	projects_reserve_fraction = float(projects.get("reserve_fraction", 0.4))
 	projects.erase("reserve_fraction")
+	if FileAccess.file_exists(root + "/liveries.json"):
+		liveries = read_json(root + "/liveries.json")
 	var broker_file := read_json(root + "/brokers.json")
 	brokers = broker_file.get("brokers", {})
 	brokers_meta = {"tip_ttl_days": float(broker_file.get("tip_ttl_days", 5.0)), "verify_tolerance": float(broker_file.get("verify_tolerance", 0.8)),
@@ -189,4 +193,24 @@ func validate() -> Array[String]:
 		problems.append("balance.start.place is not a place")
 	if not ships.has(start.get("ship", "")):
 		problems.append("balance.start.ship is not a ship")
+	# Liveries: every operator wears one, and every colour parses.
+	var operators: Dictionary = liveries.get("operators", {})
+	var flown := {}
+	for id in places:
+		flown[places[id].get("operator", "")] = "place " + id
+	for id in npcs.get("fleets", {}):
+		flown[npcs["fleets"][id].get("operator", "")] = "fleet " + id
+	for op in flown:
+		if op != "Independent" and not operators.has(op):
+			problems.append("%s: operator %s has no livery" % [flown[op], op])
+	var schemes: Array = operators.values() + liveries.get("independent", {}).get("palette", [])
+	if liveries.has("player"):
+		schemes.append(liveries["player"])
+	for scheme in schemes:
+		for role in ["hull", "accent", "trim", "foil", "patch"]:
+			if scheme.has(role) and not Color.html_is_valid(String(scheme[role])):
+				problems.append("livery colour %s is not a colour" % scheme[role])
+	for c in liveries.get("containers", []):
+		if not Color.html_is_valid(String(c)):
+			problems.append("livery container colour %s is not a colour" % c)
 	return problems

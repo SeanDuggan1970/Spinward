@@ -219,6 +219,26 @@ Touchstone: the Eagle Transporter from *Space: 1999*, with ships that look built
 - **Cockpit:** first-person by default, in the spirit of the original Elite. The canopy frame and hazard-striped dashboard carry the classic elliptical 3D scanner (stalks for height, square-root range scale so close traffic separates), a port compass, and lamp gauges that light green inside docking tolerances. A chase camera is optional.
 - **UI:** instrument-panel style. Clear labels, monospace readouts, physical-looking switches. Functional, not holographic glamour.
 - **Build approach:** low-to-mid poly kitbash parts with simple shared materials and decals, so a small team (or one person) can make many variations. A good fit for the Compatibility renderer and the GTX 960M baseline.
+- **Procedural surfaces, no texture files** (`view/shaders/`). Everything is computed per pixel from position, so it is seamless and keeps its detail at any range. Detail too small for the pixel fades out first, so it doesn't shimmer and stays cheap from far off.
+  - **The Moon and rocky bodies** (`moon.gdshader`):
+    - lava-flooded basins for maria
+    - craters at six scales, from 400 km basins down to kilometre pits; old ones slumped and soft, young ones crisp with bright haloes
+    - central peaks in the big craters, a few ray systems, rolling ground and regolith grain
+    - lava buries older craters smoothly, so no crater is cut off at a shoreline
+    - one shader serves rocks too: Trojan Yards' captured asteroid, 2058 QT, is a lumpy noise mesh with the same shader at rock scale
+  - **Earth** (`earth.gdshader`):
+    - warped continents with latitude biomes and polar ice
+    - oceans with a soft sun glint
+    - drifting cloud
+    - city lights on the night side, clustered along coasts
+    - a blue limb on the day side, with the axial tilt and a sidereal spin from game time
+  - **Hulls** (`hull.gdshader`): the kit's materials are panelled plate with fine seams, the odd replacement panel or primer patch, grime streaked along the ship, and chipped edges. There are also bare-metal, crinkled-foil and corrugated-container finishes.
+- **Liveries** (`data/liveries.json`, `view/flight/livery.gd`). Each operator's ships and stations wear its colours and band. Each ship then weathers in its own way, seeded by its name, so a fleet reads as one outfit but no two hulls match.
+  - Independents pick a scheme from a palette.
+  - Cargo pods are whatever containers turned up.
+  - Ships carry their names stencilled on the command pod.
+  - The starter ship is second-hand and looks it.
+- **Art check:** `--art=<dir>` renders the bodies under several lights and one ship from every fleet up close. `--flyby=<dir>` captures a 39 km lunar pass, and `--gallery=<dir>` every approach.
 
 ## Architecture
 

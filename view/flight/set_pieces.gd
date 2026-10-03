@@ -10,9 +10,11 @@
 ##   elevator         the Luna Line lunar elevator ribbon through Halo Depot
 ##   bernal_frame     Island One, a Bernal sphere under construction by The Kernel
 ##   telescope_array  Farside Array's chain of megatelescope mirrors at L2
+##   captured_rock    Trojan Yards' captured near-Earth asteroid, harnessed and mined
 extends RefCounted
 
 const Kit := preload("res://view/flight/kit.gd")
+const SkyKit := preload("res://view/flight/sky.gd")
 
 
 ## Builds the features under `parent`; returns animation entries for animate().
@@ -33,6 +35,8 @@ static func build(parent: Node3D, features: Array, dirs: Dictionary, station: Di
 				anims.append_array(_kalpana_two(parent, station, float(progress.get("kalpana_two", 0.0))))
 			"telescope_array":
 				anims.append_array(_telescopes(parent, dirs))
+			"captured_rock":
+				anims.append_array(_captured_rock(parent, station))
 	return anims
 
 
@@ -357,3 +361,77 @@ static func _telescopes(parent: Node3D, dirs: Dictionary) -> Array:
 			var a := TAU * float(k) / 6.0
 			t.add_child(Kit.beacon(Color("ff3a2a"), Vector3(cos(a) * 320.0, sin(a) * 320.0, 0), 9.0, 2.4, float(i) * 0.14))
 	return []
+
+
+# --- A captured asteroid --------------------------------------------------------
+
+## A lumpy rock: a sphere pushed in and out by noise, then stretched. Cratered by the
+## airless-body shader at rock scale, in carbonaceous near-black.
+static func rock(radius: float, stretch: Vector3, seed: int, look: Dictionary = {}) -> MeshInstance3D:
+	var sphere := SphereMesh.new()
+	sphere.radius = 1.0
+	sphere.height = 2.0
+	sphere.radial_segments = 96
+	sphere.rings = 48
+	var arrays := sphere.get_mesh_arrays()
+	var noise := FastNoiseLite.new()
+	noise.seed = seed
+	noise.frequency = 1.0
+	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	for i in verts.size():
+		var d := verts[i].normalized()
+		var h := 1.0 + 0.22 * noise.get_noise_3dv(d * 1.1) + 0.07 * noise.get_noise_3dv(d * 3.7 + Vector3(5, 1, 3)) + 0.025 * noise.get_noise_3dv(d * 11.0 + Vector3(2, 7, 1))
+		verts[i] = d * h * radius * stretch
+	arrays[Mesh.ARRAY_VERTEX] = verts
+	# Without UVs and normals the seam's duplicate vertices merge, so the rebuilt
+	# normals are smooth all round.
+	arrays[Mesh.ARRAY_NORMAL] = null
+	arrays[Mesh.ARRAY_TANGENT] = null
+	arrays[Mesh.ARRAY_TEX_UV] = null
+	var st := SurfaceTool.new()
+	st.create_from_arrays(arrays)
+	st.index()
+	st.generate_normals()
+	var mi := MeshInstance3D.new()
+	mi.mesh = st.commit()
+	var params := {"radius_km": 60.0, "largest_km": 40.0, "basin_flooding": 0.0, "ray_chance": 0.0, "relief": 1.3, "grain_per_radius": 900.0,
+		"highland_colour": Color("4d4943"), "mare_colour": Color("3a3733"), "seed": float(seed)}
+	params.merge(look, true)
+	mi.material_override = SkyKit.body_material("rock", params)
+	return mi
+
+
+static func _captured_rock(parent: Node3D, station: Dictionary) -> Array:
+	# 2058 QT, a 400 m rubble-pile caught from a near-Earth orbit and towed to L4:
+	# despun inside a harness of cable bands, with a mining head chewing at one end
+	# and a conveyor truss feeding the foundry.
+	var centre := Vector3(-float(station["ring_radius"]) - 900.0, 160.0, -1500.0)
+	var radius := 190.0
+	var body := rock(radius, Vector3(1.45, 0.95, 1.1), 2058)
+	body.position = centre
+	body.rotation = Vector3(0.3, 0.7, 0.2)
+	parent.add_child(body)
+	var steel := Kit.mat("steel")
+	for i in 3:
+		var band := Kit.torus(radius * 1.12, 2.5, steel, centre, 96)
+		band.rotation = Vector3(PI * 0.5, float(i) * PI / 3.0, 0.0)
+		band.scale = Vector3(1.3, 1.0, 1.0)
+		parent.add_child(band)
+	# Mining head on the station-facing end, under work lights that flicker as it bites.
+	var head_at := centre + (Vector3.ZERO - centre).normalized() * radius * 1.35
+	var head := _facing(centre - head_at, head_at)
+	head.add_child(Kit.box(Vector3(40.0, 30.0, 50.0), Kit.mat("yellow")))
+	head.add_child(Kit.box(Vector3(60.0, 6.0, 6.0), Kit.mat("black"), Vector3(0, 18.0, -10.0)))
+	var flicker := []
+	for k in 4:
+		var l := Kit.sphere(3.0, Kit.glow(Color("fff0c0"), 4.0), Vector3(-18.0 + 12.0 * k, -16.0, -26.0))
+		l.set_meta("seed", float(k) * 0.37)
+		head.add_child(l)
+		flicker.append(l)
+	parent.add_child(head)
+	var feed := _facing(-head_at, head_at * 0.5)
+	feed.add_child(Kit.truss(head_at.length() - float(station["ring_radius"]), 8.0, steel))
+	parent.add_child(feed)
+	for k in 6:
+		parent.add_child(Kit.beacon(Color("ff3a2a"), centre + Vector3(cos(k * 1.05) * radius * 1.5, sin(k * 1.7) * radius * 0.9, sin(k * 1.05) * radius * 1.2), 4.0, 2.2, float(k) * 0.17))
+	return [{"kind": "flicker", "nodes": flicker}]

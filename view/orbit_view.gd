@@ -9,6 +9,7 @@ const V := preload("res://sim/v3.gd")
 const Navigation := preload("res://sim/navigation.gd")
 const Kit := preload("res://view/flight/kit.gd")
 const Models := preload("res://view/flight/models.gd")
+const Livery := preload("res://view/flight/livery.gd")
 const SkyKit := preload("res://view/flight/sky.gd")
 const SystemMap := preload("res://view/system_map.gd")
 const UI := preload("res://view/ui/ui_kit.gd")
@@ -57,11 +58,13 @@ func _ready() -> void:
 	_sun = DirectionalLight3D.new()
 	_sun.light_energy = 1.5
 	add_child(_sun)
-	_earth = Kit.sphere(float(sim.data.bodies["earth"]["radius_m"]) / UNIT, SkyKit.body_material("earth"))
+	_earth = Kit.sphere(float(sim.data.bodies["earth"]["radius_m"]) / UNIT, SkyKit.body_material("earth", sim.data.bodies["earth"].get("look", {})))
 	(_earth.mesh as SphereMesh).radial_segments = 64
 	(_earth.mesh as SphereMesh).rings = 32
 	add_child(_earth)
-	_moon = Kit.sphere(float(sim.data.bodies["moon"]["radius_m"]) / UNIT, SkyKit.body_material("moon"))
+	_moon = Kit.sphere(float(sim.data.bodies["moon"]["radius_m"]) / UNIT, SkyKit.body_material("moon", sim.data.bodies["moon"].get("look", {})))
+	(_moon.mesh as SphereMesh).radial_segments = 128
+	(_moon.mesh as SphereMesh).rings = 64
 	add_child(_moon)
 	_line_mat = StandardMaterial3D.new()
 	_line_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -99,7 +102,7 @@ func _ready() -> void:
 		label.no_depth_test = true
 		add_child(label)
 		_places[place] = {"marker": marker, "label": label}
-	var model := Models.ship(sim.state.ship, sim.data)
+	var model := Models.ship(sim.state.ship, sim.data, Livery.for_ship(sim.data, "", sim.state.ship.get("name", ""), true))
 	_ship = Node3D.new()
 	var inner: Node3D = model["node"]
 	_ship.add_child(inner)
@@ -145,10 +148,11 @@ func _process(dt: float) -> void:
 	var t: float = s.time_s
 	frame = loc["frame"]
 	_earth.position = _p(eph.relative("earth", frame, t))
-	_earth.rotation.y = t / DAY * TAU
 	_moon.position = _p(eph.relative("moon", frame, t))
 	var sun_dir := SkyKit.dir_between(eph.position("sun", t), eph.position(frame, t))
 	_sun.look_at_from_position(Vector3.ZERO, -sun_dir, Vector3.UP if absf(sun_dir.y) < 0.99 else Vector3.RIGHT)
+	SkyKit.update_body(_earth, sun_dir, t)
+	SkyKit.update_body(_moon, sun_dir, t)
 
 	var ship_pos := _p(Navigation.transit_position(loc, t))
 	var dest_pos := _p(eph.relative(loc["to"], frame, t))

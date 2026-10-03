@@ -22,7 +22,7 @@ Three megaprojects are under way: Island One, the second Luna Line ribbon and Ka
 
 Twenty-seven NPC ships share the system: Cooperative ice tankers, Commons drone freighters, independent haulers, Compact couriers and Kernel shuttles. They trade from the same markets you do, chatter on comms, and come and go around the stations.
 
-Placeholder art throughout. See [docs/balance/NOTES.md](docs/balance/NOTES.md) for balance status.
+The Moon is cratered from orbit to a 30 km pass. Earth has weather, ice and city lights, and every ship wears its operator's livery and its own wear and tear. All of it is procedural, with no texture files. The 3D models are still placeholder kitbash. See [docs/balance/NOTES.md](docs/balance/NOTES.md) for balance status.
 
 ## Play
 
@@ -95,6 +95,12 @@ To capture screenshots of every screen into a folder (needs a window):
 ```powershell
 .tools/godot/Godot_v4.7.2-stable_win64_console.exe --path . -- --tour=C:/temp/spinward-tour
 ```
+
+For the art check, the same window mode takes these options:
+
+- `--art=<dir>`: planet surfaces and one ship from every fleet up close
+- `--gallery=<dir>`: every station approach
+- `--flyby=<dir>`: a low lunar pass
 
 ## Layout
 

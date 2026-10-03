@@ -8,6 +8,7 @@ extends Node3D
 
 const Kit := preload("res://view/flight/kit.gd")
 const Models := preload("res://view/flight/models.gd")
+const Livery := preload("res://view/flight/livery.gd")
 const UI := preload("res://view/ui/ui_kit.gd")
 const V := preload("res://sim/v3.gd")
 const SystemMap := preload("res://view/system_map.gd")
@@ -92,9 +93,9 @@ func _ready() -> void:
 	var geom: Dictionary = sim.data.places[place_id]["station"]
 	spin_rate = float(geom["spin_rpm"]) * TAU / 60.0
 	_build_environment()
-	station = Models.station(geom, sim.data.places[place_id]["name"])
+	station = Models.station(geom, sim.data.places[place_id]["name"], Livery.for_station(sim.data, place_id))
 	add_child(station["node"])
-	var model := Models.ship(sim.state.ship, sim.data)
+	var model := Models.ship(sim.state.ship, sim.data, Livery.for_ship(sim.data, "", sim.state.ship.get("name", ""), true))
 	ship_node = model["node"]
 	nose_z = model["nose_z"]
 	ship_radius = model["radius"]
@@ -146,9 +147,10 @@ func _build_environment() -> void:
 		var r := float(sim.data.bodies[body]["radius_m"])
 		var dir := _dir_to(p, here)
 		body_dirs[body] = dir
-		var mesh := Kit.sphere(SKY_DISTANCE * minf(r / d, 0.97), SkyKit.body_material(body), dir * SKY_DISTANCE)
+		var mesh := Kit.sphere(SKY_DISTANCE * minf(r / d, 0.97), SkyKit.body_material(body, sim.data.bodies[body].get("look", {})), dir * SKY_DISTANCE)
 		(mesh.mesh as SphereMesh).radial_segments = 64
 		(mesh.mesh as SphereMesh).rings = 32
+		SkyKit.update_body(mesh, sun_dir, t)
 		add_child(mesh)
 
 
@@ -444,7 +446,9 @@ func _sync_traffic() -> void:
 		if _traffic.has(id):
 			continue
 		var w: Dictionary = wanted[id]
-		var model := Models.ship(w["npc"]["ship"], sim.data)
+		var npc: Dictionary = w["npc"]
+		var operator: String = sim.data.npcs["fleets"][npc["fleet"]]["operator"]
+		var model := Models.ship(npc["ship"], sim.data, Livery.for_ship(sim.data, operator, npc["name"]))
 		var node: Node3D = model["node"]
 		if w["mode"] == "berth":
 			# Moored alongside the hub's forward half on a short arm, spinning with the station.
