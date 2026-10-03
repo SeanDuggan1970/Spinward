@@ -43,6 +43,7 @@ func _initialize() -> void:
 	test_projects()
 	test_review_regressions()
 	test_tips()
+	test_docking_help()
 	test_saves_and_determinism()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
@@ -496,6 +497,19 @@ func test_tips() -> void:
 		x.apply({"type": "buy_tip", "broker": "maisie_tran"})
 		x.apply({"type": "buy_tip", "broker": "maisie_tran"})
 	check(a.state.tips == b.state.tips, "Same seed, same tips")
+
+
+func test_docking_help() -> void:
+	var sim := fresh()
+	var s := sim.state
+	s.location = {"status": "approach", "place": "kibo_ring"}
+	s.credits = 10.0
+	check(sim.apply({"type": "dock"}) == "" and s.location["status"] == "docked" and s.credits < 0.0, "Broke pilots are towed in on credit")
+	check(sim.apply({"type": "buy", "good": "food", "tonnes": 1}) != "", "No buying while in debt")
+	var dc := fresh()
+	dc.state.credits = 50000.0
+	check(dc.apply({"type": "install_module", "slot": "avionics.0", "module": "docking_computer"}) == "", "Fit a docking computer at Kibo Ring")
+	check(ShipStats.has_docking_computer(dc.state.ship, dc.data) and dc.state.credits == 35000.0, "Docking computer fitted and paid for")
 
 
 func test_saves_and_determinism() -> void:

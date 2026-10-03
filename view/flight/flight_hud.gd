@@ -6,6 +6,7 @@
 extends Control
 
 const UI := preload("res://view/ui/ui_kit.gd")
+const ShipStats := preload("res://sim/ship_stats.gd")
 
 const DASH_H := 220.0
 const SCANNER_RX := 200.0
@@ -55,6 +56,7 @@ func _draw() -> void:
 		_draw_frame(w, h)
 		_draw_crosshair(Vector2(w * 0.5, (h - DASH_H) * 0.5 + 16.0))
 	_draw_markers()
+	_draw_guidance(w, h)
 	_draw_dashboard(w, h)
 	if show_keys:
 		_draw_keys(w)
@@ -111,6 +113,18 @@ func _draw_markers() -> void:
 				draw_arc(p, 7.0, 0.0, TAU, 20, UI.GOOD, 1.5)
 				for d in [Vector2(1, 0), Vector2(-1, 0), Vector2(0, -1)]:
 					draw_line(p + d * 7.0, p + d * 13.0, UI.GOOD, 1.5)
+
+
+## The co-pilot's next instruction, on a strip just above the dashboard.
+func _draw_guidance(w: float, h: float) -> void:
+	var g: Dictionary = flight.guidance()
+	if g.is_empty():
+		return
+	var text: String = g["text"]
+	var tw := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
+	var y := h - DASH_H - 22.0
+	draw_rect(Rect2(w * 0.5 - tw * 0.5 - 12, y - 18, tw + 24, 26), Color(0.06, 0.07, 0.08, 0.8))
+	draw_string(_font, Vector2(w * 0.5 - tw * 0.5, y), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, UI.GOOD if text.begins_with("Good") else UI.AMBER)
 
 
 func _all_ok() -> bool:
@@ -213,8 +227,34 @@ func _draw_right_panel(rect: Rect2) -> void:
 	var r: Dictionary = flight.readout
 	var x := rect.position.x
 	var y := rect.position.y + 14
-	# Compass: where the port is, relative to the nose.
 	var cc := Vector2(x + 44, y + 40)
+	if r["range"] < 400.0:
+		_draw_axis_display(cc)
+	else:
+		_draw_compass(cc, x, y)
+	_draw_right_lamps(x, y)
+
+
+## Inside 400 m: where the station's axis is relative to you. Centre the dot to sit
+## on the axis; the ring is the capture zone.
+func _draw_axis_display(cc: Vector2) -> void:
+	var g: Dictionary = flight.guidance()
+	draw_circle(cc, 36, PANEL_DARK)
+	draw_arc(cc, 36, 0, TAU, 40, SCANNER_LINE, 1.5)
+	draw_line(cc - Vector2(36, 0), cc + Vector2(36, 0), Color(SCANNER_LINE, 0.3), 1.0)
+	draw_line(cc - Vector2(0, 36), cc + Vector2(0, 36), Color(SCANNER_LINE, 0.3), 1.0)
+	var capture: float = float(flight.tune_dock["capture_distance_m"])
+	draw_arc(cc, 30.0 * capture / 30.0, 0, TAU, 24, UI.GOOD, 1.0)
+	if not g.is_empty():
+		var o: Vector3 = g["offset_local"]
+		var p := Vector2(o.x, -o.y)
+		var pr := clampf(p.length(), 0.0, 30.0)
+		var dot := cc + (p.normalized() * pr if p.length() > 1e-3 else Vector2.ZERO)
+		draw_circle(dot, 5.0, UI.GOOD if p.length() <= capture else UI.AMBER)
+	draw_string(_font, cc + Vector2(-40, 56), "AXIS (30 m)", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, UI.DIM)
+
+
+func _draw_compass(cc: Vector2, x: float, y: float) -> void:
 	draw_circle(cc, 36, PANEL_DARK)
 	draw_arc(cc, 36, 0, TAU, 40, SCANNER_LINE, 1.5)
 	draw_line(cc - Vector2(36, 0), cc + Vector2(36, 0), Color(SCANNER_LINE, 0.3), 1.0)
@@ -227,6 +267,10 @@ func _draw_right_panel(rect: Rect2) -> void:
 	else:
 		draw_arc(dot, 5.0, 0, TAU, 16, UI.WARN, 2.0)
 	draw_string(_font, Vector2(x + 4, y + 96), "COMPASS · PORT", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, UI.DIM)
+
+
+func _draw_right_lamps(x: float, y: float) -> void:
+	var r: Dictionary = flight.readout
 	# Mode lamps.
 	var lx := x + 110
 	var ly := y + 4
@@ -242,7 +286,7 @@ func _draw_right_panel(rect: Rect2) -> void:
 		ly += 22
 	var ship: Dictionary = flight.sim.state.ship
 	draw_string(_font, Vector2(lx, ly + 8), "FUEL %.2f t   %s" % [ship["fuel_t"], UI.money(flight.sim.state.credits)], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, UI.DIM)
-	draw_string(_font, Vector2(lx, ly + 28), "C view  H keys  T tug", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, UI.DIM)
+	draw_string(_font, Vector2(lx, ly + 28), "C view  H keys  T tug%s" % ("  K computer" if ShipStats.has_docking_computer(ship, flight.sim.data) else ""), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, UI.DIM)
 
 
 func _lamp(at: Vector2, on: bool) -> void:
@@ -253,7 +297,8 @@ func _lamp(at: Vector2, on: bool) -> void:
 func _draw_keys(w: float) -> void:
 	var lines := ["W/S thrust   A/D strafe   R/F up/down   Shift boost   X brake",
 		"Arrows pitch/yaw   Q/E roll   Z assist   V spin match",
-		"G scanner range   C cockpit/chase   T tug (%d cr)   P pause   H hide keys" % int(flight.tune_dock["auto_dock_fee"])]
+		"G scanner range   C cockpit/chase   K docking computer   P pause",
+		"T tug (%d cr, on credit if you are broke)   H hide keys" % int(flight.tune_dock["auto_dock_fee"])]
 	var y := 140.0
 	for l in lines:
 		draw_string(_font, Vector2(w * 0.5 - 300, y), l, HORIZONTAL_ALIGNMENT_LEFT, 600, 13, Color(UI.TEXT, 0.8))

@@ -17,6 +17,7 @@ const FlightScene := preload("res://view/flight/flight_scene.gd")
 const Comms := preload("res://view/comms.gd")
 const TitleScreen := preload("res://view/title_screen.gd")
 const TipsText := preload("res://view/tips_text.gd")
+const Autopilot := preload("res://view/flight/autopilot.gd")
 const COMMS_KEEP := 40
 
 const QUICKSAVE := "user://quicksave.json"
@@ -66,6 +67,9 @@ func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
 	if "--smoke" in args:
 		_smoke.call_deferred()
+		return
+	if "--dock-trial" in args:
+		_dock_trial.call_deferred()
 		return
 	for a in args:
 		if a.begins_with("--gallery="):
@@ -182,7 +186,10 @@ func _handle_events() -> void:
 			"arrived":
 				notice("Arrived at %s. Take her in, or press T for the tug." % sim.data.places[d["place"]]["name"], UI.AMBER)
 			"docked":
-				notice("Docked at %s%s" % [sim.data.places[d["place"]]["name"], "  (hand-flown, no fee)" if d["manual"] else ""], UI.GOOD)
+				if d.get("on_credit", false):
+					notice("The tug brought you in on credit. You owe %s; sell cargo to clear it." % UI.money(-sim.state.credits), UI.WARN)
+				else:
+					notice("Docked at %s%s" % [sim.data.places[d["place"]]["name"], "  (hand-flown, no fee)" if d["manual"] else ""], UI.GOOD)
 	if refresh and _screen is StationScreen:
 		_screen.refresh()
 
@@ -291,6 +298,31 @@ func _smoke() -> void:
 	ok = ok and _screen is StationScreen
 	print("SMOKE_OK " if ok else "SMOKE_FAIL ", sim.state.date_string())
 	get_tree().quit(0 if ok else 1)
+
+
+## Headless: fly the autopilot from the real approach spawn at every station, using
+## only player controls, and report how long docking takes. Proves approaches are
+## flyable and measures how forgiving the tolerances are.
+func _dock_trial() -> void:
+	var all_ok := true
+	for place in sim.data.places:
+		sim.state.location = {"status": "approach", "place": place}
+		_mode = ""
+		_sync_mode()
+		await get_tree().physics_frame
+		var flight: FlightScene = _screen
+		var steps := 0
+		var limit := 60 * 900
+		while not flight.docked and steps < limit:
+			flight.control_override = Autopilot.controls(flight)
+			flight._physics_process(1.0 / 60.0)
+			steps += 1
+		var ok := flight.docked
+		all_ok = all_ok and ok
+		print("DOCK_TRIAL %-16s docked=%s time=%5.0f s refusals=%d contacts=%d" % [place, ok, steps / 60.0, flight.refusals, flight.bumps])
+		sim.state.location = {"status": "docked", "place": place}
+	print("DOCK_TRIAL_OK" if all_ok else "DOCK_TRIAL_FAIL")
+	get_tree().quit(0 if all_ok else 1)
 
 
 ## Windowed screenshot tour for visual checks: station, map, flight.

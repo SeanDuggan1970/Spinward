@@ -52,13 +52,15 @@ func _dock(command: Dictionary) -> String:
 	if s.location.get("status") != "approach":
 		return "not on approach"
 	var manual := bool(command.get("manual", false))
+	var on_credit := false
 	if not manual:
+		# The tug always comes; if you cannot pay, the fee goes on your account
+		# (credits go negative) so a pilot can never be stuck outside a port.
 		var fee := float(sim().data.balance["docking"]["auto_dock_fee"])
-		if s.credits < fee:
-			return "cannot afford the %d credit docking fee" % int(fee)
+		on_credit = s.credits < fee
 		s.credits -= fee
 	s.stats["manual_docks" if manual else "auto_docks"] += 1
 	var place: String = s.location["place"]
 	s.location = {"status": "docked", "place": place}
-	sim().emit("docked", {"place": place, "manual": manual})
+	sim().emit("docked", {"place": place, "manual": manual, "on_credit": on_credit})
 	return ""

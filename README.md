@@ -59,7 +59,15 @@ You start docked at Kibo Ring in low Earth orbit with 10,000 credits and a secon
 
 You fly from the cockpit. The dashboard has the classic Elite 3D scanner: an ellipse for your horizontal plane, with forward up the screen. Each contact sits at its bearing on the ellipse, with a stalk up or down for height: green for the station, fleet colours for ships, yellow for work pods. The compass dot shows the port, solid when it's ahead and hollow when it's behind.
 
-To dock, bring the ship's nose to the port slowly (under 1.2 m/s). Keep the nose on the axis (within 12°) and key the slot (roll within 15°). The port lights turn green when all three are right.
+**How to dock by hand.** The co-pilot's prompt above the dashboard walks you through it:
+1. Point the nose straight down the station's axis, along the amber corridor lights. Not at the port box: the ALIGN gauge must be under 15°.
+2. Strafe (A/D, R/F) onto the axis. Inside 400 m, the AXIS display shows where the axis is; put the dot in the green ring.
+3. Close in (W) at the advised speed, which falls as you get near. Brake with S or X.
+4. Leave spin match on and it keys the slot for you.
+
+A clean approach from 600 m takes about three minutes. The docking computer (15,000 cr at Kibo Ring or Trojan Yards, then press K) flies it for you, and the tug (T) always comes, on credit if you're broke. In the Market tab, "keep a reserve" makes Buy max leave money for the tug and a full tank.
+
+To dock, bring the ship's nose to the port slowly (under 1.5 m/s). Keep the nose on the axis (within 15°) and key the slot (roll within 20°). The port lights turn green when all three are right.
 
 Everywhere: P pauses, F5 quick saves, F9 quick loads.
 

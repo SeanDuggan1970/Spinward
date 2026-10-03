@@ -13,6 +13,8 @@ const V := preload("res://sim/v3.gd")
 const SystemMap := preload("res://view/system_map.gd")
 const SetPieces := preload("res://view/flight/set_pieces.gd")
 const SkyKit := preload("res://view/flight/sky.gd")
+const Autopilot := preload("res://view/flight/autopilot.gd")
+const ShipStats := preload("res://sim/ship_stats.gd")
 const ProjectSystem := preload("res://sim/systems/project_system.gd")
 
 const ASSIST_MODES := ["full", "assisted", "manual"]
@@ -44,6 +46,9 @@ var ship_radius := 5.0
 var spin_rate := 0.0
 var spin_angle := 0.0
 var bumps := 0
+var refusals := 0
+## Docking computer engaged (K), if the ship has one fitted.
+var computer := false
 var message := ""
 var message_colour := Color.WHITE
 var message_until := 0.0
@@ -63,6 +68,11 @@ var _work_craft: Array = []
 var body_dirs: Dictionary = {}
 ## Megastructure set pieces (view-only), animated each frame.
 var _set_pieces: Array = []
+
+## When set, flight reads these instead of the keyboard (tests, scripted pilots,
+## later gamepads): {thrust: Vector3 (local, -Z forward), stick: Vector3 (pitch, yaw,
+## roll), boost: bool, brake: bool}.
+var control_override: Dictionary = {}
 
 ## Live readouts for the HUD.
 var readout := {}
@@ -173,6 +183,12 @@ func _unhandled_input(event: InputEvent) -> void:
 			hud.show_keys = not hud.show_keys
 		KEY_T:
 			_request_tug()
+		KEY_K:
+			if ShipStats.has_docking_computer(sim.state.ship, sim.data):
+				computer = not computer
+				flash("Docking computer %s" % ("engaged: hands off" if computer else "off: you have control"), UI.AMBER)
+			else:
+				flash("No docking computer fitted (shipyards sell them)", UI.DIM)
 
 
 func _request_tug() -> void:
@@ -207,23 +223,37 @@ func _input_axis(pos: Key, neg: Key) -> float:
 	return (1.0 if Input.is_physical_key_pressed(pos) else 0.0) - (1.0 if Input.is_physical_key_pressed(neg) else 0.0)
 
 
+func read_controls() -> Dictionary:
+	if not control_override.is_empty():
+		return control_override
+	if computer:
+		return Autopilot.controls(self)
+	return {
+		# Translation: W/S forward/back, A/D strafe, R/F up/down.
+		"thrust": Vector3(_input_axis(KEY_D, KEY_A), _input_axis(KEY_R, KEY_F), _input_axis(KEY_S, KEY_W)),
+		# Rotation: arrows pitch/yaw, Q/E roll.
+		"stick": Vector3(_input_axis(KEY_UP, KEY_DOWN), _input_axis(KEY_LEFT, KEY_RIGHT), _input_axis(KEY_Q, KEY_E)),
+		"boost": Input.is_physical_key_pressed(KEY_SHIFT),
+		"brake": Input.is_physical_key_pressed(KEY_X),
+	}
+
+
 func _fly(dt: float) -> void:
 	var basis := ship_node.global_transform.basis
-	var boost := float(tune_flight["boost_mult"]) if Input.is_physical_key_pressed(KEY_SHIFT) else 1.0
+	var controls := read_controls()
+	var boost := float(tune_flight["boost_mult"]) if controls["boost"] else 1.0
 	var accel := float(tune_flight["rcs_accel_mps2"]) * boost
-	# Translation: W/S forward/back, A/D strafe, R/F up/down.
-	var thrust := Vector3(_input_axis(KEY_D, KEY_A), _input_axis(KEY_R, KEY_F), _input_axis(KEY_S, KEY_W))
-	var braking := Input.is_physical_key_pressed(KEY_X) or (assist == "full" and thrust == Vector3.ZERO)
+	var thrust: Vector3 = controls["thrust"]
+	var braking: bool = controls["brake"] or (assist == "full" and thrust == Vector3.ZERO)
 	if thrust != Vector3.ZERO:
 		velocity += basis * thrust.normalized() * accel * dt
 	elif braking:
 		velocity = velocity.move_toward(Vector3.ZERO, accel * dt)
 	if _drive_plume:
 		_drive_plume.visible = thrust.z < 0.0
-	# Rotation: arrows pitch/yaw, Q/E roll.
 	var turn := deg_to_rad(float(tune_flight["turn_rate_dps"]))
 	var turn_accel := deg_to_rad(float(tune_flight["turn_accel_dps2"]))
-	var stick := Vector3(_input_axis(KEY_UP, KEY_DOWN), _input_axis(KEY_LEFT, KEY_RIGHT), _input_axis(KEY_Q, KEY_E))
+	var stick: Vector3 = controls["stick"]
 	if assist == "manual":
 		ang_vel += stick * turn_accel * dt
 	else:
@@ -333,6 +363,7 @@ func _check_docking() -> void:
 		reasons.append("nose off the axis")
 	if not readout["ok_roll"]:
 		reasons.append("not keyed to the slot")
+	refusals += 1
 	flash("Capture refused: " + ", ".join(reasons), UI.WARN, 3.0)
 	_bounce(Vector3(0, 0, 1), 0.5)
 
@@ -497,3 +528,36 @@ func _move_work_craft() -> void:
 		var ahead := Vector3(cos(a + 0.05) * w["radius"], sin(a + 0.05) * w["radius"], pos.z)
 		node.position = pos
 		node.look_at(ahead, Vector3(0, 0, 1))
+
+
+## The co-pilot's next instruction for a manual approach, and the axis offset in the
+## ship's own frame (x right, y up), for the HUD's axis display.
+func guidance() -> Dictionary:
+	if readout.is_empty():
+		return {}
+	var basis := ship_node.global_transform.basis
+	var nose := _nose()
+	var along := nose.z - float(station["port_z"])
+	var offset_world := Vector3(-nose.x, -nose.y, 0.0)
+	var offset_local := basis.inverse() * offset_world
+	var limit := float(tune_dock["max_speed_mps"])
+	var advised := clampf(along * 0.02, limit * 0.5, 6.0) if along > 25.0 else limit * 0.6
+	var text := ""
+	if computer:
+		text = "Docking computer has control."
+	elif readout["align"] > float(tune_dock["max_angle_deg"]):
+		text = "Turn to face straight down the station's axis (nose along the amber lights)."
+	elif Vector2(nose.x, nose.y).length() > maxf(1.5, along * 0.08):
+		var parts := []
+		if absf(offset_local.x) > 0.5:
+			parts.append("right (D)" if offset_local.x > 0.0 else "left (A)")
+		if absf(offset_local.y) > 0.5:
+			parts.append("up (R)" if offset_local.y > 0.0 else "down (F)")
+		text = "Strafe %s onto the axis: %.0f m off." % [" and ".join(parts), Vector2(nose.x, nose.y).length()]
+	elif readout["speed"] > advised * 1.3:
+		text = "Too fast for this range. Brake (S or X) to about %.1f m/s." % advised
+	elif readout["closing"] < advised * 0.5 and along > 6.0:
+		text = "On the axis. Close in: aim for %.1f m/s (W)." % advised
+	else:
+		text = "Good. Hold it there. Capture under %.1f m/s." % limit
+	return {"text": text, "offset_local": offset_local, "advised": advised, "along": along}

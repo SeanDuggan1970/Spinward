@@ -36,7 +36,8 @@
 			"cargo_pod_m",
 			"tank_s",
 			"tank_m",
-			"radiator_panel"
+			"radiator_panel",
+			"docking_computer"
 		],
 		"market": {
 			"electronics": 60,
@@ -270,7 +271,8 @@
 			"tank_m",
 			"pathfinder_mk2",
 			"radiator_panel",
-			"radiator_panel_l"
+			"radiator_panel_l",
+			"docking_computer"
 		],
 		"market": {
 			"regolith": 600,

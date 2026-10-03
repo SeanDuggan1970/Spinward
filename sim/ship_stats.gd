@@ -70,3 +70,10 @@ static func _sum(ship: Dictionary, data, key: String) -> float:
 	for m in modules_of(ship, data):
 		total += float(m.get(key, 0.0))
 	return total
+
+
+static func has_docking_computer(ship: Dictionary, data) -> bool:
+	for m in modules_of(ship, data):
+		if m.get("docking_computer", false):
+			return true
+	return false

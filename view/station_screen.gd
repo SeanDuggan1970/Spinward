@@ -21,6 +21,8 @@ var _tabs: TabContainer
 var _side: VBoxContainer
 var _header: VBoxContainer
 var _tab_index := 0
+## Buy max leaves enough for the tug at the next port and a full tank here.
+static var keep_reserve := true
 
 
 func _init(owner_sim, comms_log: Array = []) -> void:
@@ -143,7 +145,7 @@ func _market_tab(place_id: String) -> Control:
 		grid.add_child(UI.label("%d" % int(buy), UI.GOOD if buy < base * 0.9 else UI.TEXT))
 		grid.add_child(UI.label("%d" % int(sell), UI.AMBER if sell > base * 1.1 else UI.TEXT))
 		grid.add_child(UI.label("%.1f t" % aboard if aboard > 0.0 else "—", UI.TEXT if aboard > 0.0 else UI.DIM))
-		var max_buy := floorf(Market.affordable_tonnes(s, d, place_id, good, s.credits, minf(free, Market.stock(s, place_id, good))) * 10.0) / 10.0
+		var max_buy := floorf(Market.affordable_tonnes(s, d, place_id, good, _spendable(place_id), minf(free, Market.stock(s, place_id, good))) * 10.0) / 10.0
 		grid.add_child(UI.button("Buy 1", send.bind({"type": "buy", "good": good, "tonnes": 1.0}), max_buy >= 1.0))
 		grid.add_child(UI.button("Buy max", _buy_max.bind(good), max_buy >= 0.1))
 		grid.add_child(UI.button("Sell all", send.bind({"type": "sell", "good": good, "tonnes": aboard}), aboard > 0.0))
@@ -155,7 +157,29 @@ func _market_tab(place_id: String) -> Control:
 		parts[1].add_child(UI.label("Not traded here: " + ", ".join(unsellable), UI.DIM, 13))
 	parts[1].add_child(UI.label("Green buy prices are below normal; amber sell prices are above normal. Your trades move the price.", UI.DIM, 12))
 	parts[1].add_child(UI.label("◆ needed here for a megaproject: deliveries count toward it, and toward your share.", UI.HAZARD, 12))
+	var keep := CheckButton.new()
+	keep.text = "Buy max keeps a reserve for the tug and a full tank (%s)" % UI.money(_reserve(place_id))
+	keep.button_pressed = keep_reserve
+	keep.focus_mode = Control.FOCUS_NONE
+	keep.toggled.connect(func(on): keep_reserve = on; refresh())
+	parts[1].add_child(keep)
 	return parts[0]
+
+
+## Credits held back by the reserve toggle: the next tug fee plus filling the tank here.
+func _reserve(place_id: String) -> float:
+	var s = sim.state
+	var d = sim.data
+	var reserve := float(d.balance["docking"]["auto_dock_fee"])
+	if "refuel" in d.places[place_id].get("services", []):
+		var space := minf(ShipStats.fuel_capacity_t(s.ship, d) - float(s.ship["fuel_t"]), Market.stock(s, place_id, "propellant"))
+		if space > 0.01:
+			reserve += Market.buy_cost(s, d, place_id, "propellant", space)
+	return reserve
+
+
+func _spendable(place_id: String) -> float:
+	return maxf(0.0, sim.state.credits - (_reserve(place_id) if keep_reserve else 0.0))
 
 
 ## Buy as much as fits, adjusting for the price rising as you buy.
@@ -164,7 +188,7 @@ func _buy_max(good: String) -> void:
 	var d = sim.data
 	var place_id: String = s.location["place"]
 	var room := minf(ShipStats.cargo_capacity_t(s.ship, d) - ShipStats.cargo_t(s.ship), Market.stock(s, place_id, good))
-	var t := floorf(Market.affordable_tonnes(s, d, place_id, good, s.credits, room) * 10.0) / 10.0
+	var t := floorf(Market.affordable_tonnes(s, d, place_id, good, _spendable(place_id), room) * 10.0) / 10.0
 	if t >= 0.1:
 		send({"type": "buy", "good": good, "tonnes": t})
 
