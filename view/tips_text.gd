@@ -9,12 +9,18 @@ static func line(sim, tip: Dictionary) -> String:
 	var broker: Dictionary = sim.data.brokers.get(tip["broker"], {})
 	var options: Array = broker.get(tip["kind"], ["{good} at {place}: {price}"])
 	var template: String = options[int(tip.get("template", 0)) % options.size()]
-	return template.format({
+	var text: String = template.format({
 		"good": String(sim.data.goods[tip["good"]]["name"]).to_lower(),
 		"place": sim.data.places[tip["place"]]["name"],
 		"price": "%d" % int(round(float(tip["price"]))),
 		"broker": broker.get("name", "?"),
 	})
+	if tip.has("rumour"):
+		var r: Dictionary = tip["rumour"]
+		text += "  And between us: there's a %s job going begging at %s, paying about %s. Ask at the dock office." % [
+			{"package": "courier", "pickup": "pickup-and-deliver", "long_haul": "long-haul courier"}.get(r["kind"], "courier"),
+			sim.data.places[r["place"]]["name"], UI.money(float(r["reward"]))]
+	return text
 
 
 static func age(sim, t: float) -> String:

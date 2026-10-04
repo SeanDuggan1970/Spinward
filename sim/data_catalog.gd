@@ -14,6 +14,8 @@ var npcs: Dictionary = {}
 var projects: Dictionary = {}
 var projects_reserve_fraction := 0.4
 var brokers: Dictionary = {}
+## Courier contracts and reputation tiers (data/contracts.json).
+var contracts: Dictionary = {}
 ## Paint schemes for the view (data/liveries.json); the sim never reads them.
 var liveries: Dictionary = {}
 ## tip_ttl_days, verify_tolerance.
@@ -37,6 +39,7 @@ func load_from(root: String) -> void:
 	projects = read_json(root + "/projects.json")
 	projects_reserve_fraction = float(projects.get("reserve_fraction", 0.4))
 	projects.erase("reserve_fraction")
+	contracts = read_json(root + "/contracts.json")
 	if FileAccess.file_exists(root + "/liveries.json"):
 		liveries = read_json(root + "/liveries.json")
 	var broker_file := read_json(root + "/brokers.json")
@@ -193,6 +196,14 @@ func validate() -> Array[String]:
 		problems.append("balance.start.place is not a place")
 	if not ships.has(start.get("ship", "")):
 		problems.append("balance.start.ship is not a ship")
+	# Contracts: reference ships must be buildable.
+	for range_name in contracts.get("reference_ships", {}):
+		var spec: Dictionary = contracts["reference_ships"][range_name]
+		if not ships.has(spec.get("hull", "")):
+			problems.append("contracts: reference ship %s has unknown hull %s" % [range_name, spec.get("hull", "")])
+		for slot in spec.get("modules", {}):
+			if not modules.has(spec["modules"][slot]):
+				problems.append("contracts: reference ship %s has unknown module %s" % [range_name, spec["modules"][slot]])
 	# Liveries: every operator wears one, and every colour parses.
 	var operators: Dictionary = liveries.get("operators", {})
 	var flown := {}

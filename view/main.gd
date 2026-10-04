@@ -189,6 +189,31 @@ func _handle_events() -> void:
 				else:
 					notice("Took on %.2f t propellant for %s" % [d["tonnes"], UI.money(-d["credits"])])
 				refresh = true
+			"contract_accepted":
+				notice("Job taken: %s due at %s. Pays %s." % ["collection" if d["pickup"] != "" else "delivery", sim.data.places[d["to"]]["name"], UI.money(float(d["reward"]))], UI.AMBER)
+				refresh = true
+			"contract_collected":
+				notice("Collected the consignment at %s." % sim.data.places[d["place"]]["name"], UI.GOOD)
+				refresh = true
+			"contract_no_room":
+				notice("Can't collect: %s." % d["reason"], UI.WARN)
+			"contract_delivered":
+				if d["on_time"]:
+					notice("Delivered on time: %s paid. %s will remember that." % [UI.money(float(d["credits"])), d["client"]], UI.GOOD)
+				else:
+					notice("Delivered late: %s paid, and %s noticed." % [UI.money(float(d["credits"])), d["client"]], UI.WARN)
+				refresh = true
+			"contract_failed":
+				notice("A job has failed: far too late. %s will not forget it." % d["client"], UI.WARN)
+				refresh = true
+			"contract_abandoned":
+				notice("Job abandoned. %s is disappointed." % d["client"], UI.WARN)
+				refresh = true
+			"contract_approach":
+				notice("Someone at %s is asking for you by name. See Contracts." % sim.data.places[d["place"]]["name"], UI.AMBER)
+				refresh = true
+			"reputation_tier":
+				notice("%s now counts you as %s." % [d["operator"], String(d["tier"]).to_lower()], UI.GOOD if d["up"] else UI.WARN)
 			"module_installed":
 				notice("Fitted %s" % sim.data.modules[d["module"]]["name"], UI.GOOD)
 				refresh = true
@@ -375,9 +400,15 @@ func _tour(dir: String) -> void:
 		_screen.refresh()
 	for _i in 5:
 		await get_tree().process_frame
-	_shot(dir + "/2b-traffic.png")
+	_shot(dir + "/2a-contracts.png")
 	if _screen is StationScreen:
 		_screen._tab_index = 3
+		_screen.refresh()
+	for _i in 5:
+		await get_tree().process_frame
+	_shot(dir + "/2b-traffic.png")
+	if _screen is StationScreen:
+		_screen._tab_index = 4
 		_screen.refresh()
 	for _i in 5:
 		await get_tree().process_frame
@@ -386,7 +417,7 @@ func _tour(dir: String) -> void:
 	sim.apply({"type": "buy_tip", "broker": "maisie_tran"})
 	_handle_events()
 	if _screen is StationScreen:
-		_screen._tab_index = 4
+		_screen._tab_index = 5
 		_screen.refresh()
 	for _i in 5:
 		await get_tree().process_frame

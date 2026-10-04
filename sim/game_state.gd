@@ -41,6 +41,11 @@ var broker_record: Dictionary = {}
 ## The player's own (ageing) price knowledge: {place: {t, prices: {good: [buy, sell]}}}.
 var knowledge: Dictionary = {}
 var tip_seq: int = 0
+## Courier contracts: {board: {place: [offer]}, next_t: {place: t}, active: [job],
+## history: [job], seq, last_dock}. See contract_system.gd.
+var contracts: Dictionary = {}
+## Standing with each operator: {operator: score}. Tiers in data/contracts.json.
+var reputation: Dictionary = {}
 
 
 static func from_unix(unix_seconds: float) -> float:
@@ -74,6 +79,8 @@ func to_dict() -> Dictionary:
 		"broker_record": broker_record.duplicate(true),
 		"knowledge": knowledge.duplicate(true),
 		"tip_seq": tip_seq,
+		"contracts": contracts.duplicate(true),
+		"reputation": reputation.duplicate(true),
 	}
 
 
@@ -98,3 +105,5 @@ func load_dict(d: Dictionary) -> void:
 	broker_record = d.get("broker_record", {}).duplicate(true)
 	knowledge = d.get("knowledge", {}).duplicate(true)
 	tip_seq = int(d.get("tip_seq", 0))
+	contracts = d.get("contracts", {}).duplicate(true)
+	reputation = d.get("reputation", {}).duplicate(true)

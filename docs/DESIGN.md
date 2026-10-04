@@ -381,7 +381,25 @@ Sean's direction (2026-10-04). It goes beyond trade into opportunities, refits a
    - **Piazzi Station:** tanks, rig, lander, arrays
 
    Buying whole hulls (the heavy keel) is still to come.
-4. **Reputation and opportunities.** Being reliable gets you known. Offers come from boards, approaches, and rumours sold as bonus info by the tip line. Kinds of job:
+4. **Reputation and opportunities** (courier work done; survey, salvage and mining next). Being reliable gets you known. Offers come from boards, approaches, and rumours sold as bonus info by the tip line.
+
+   **Done** (`data/contracts.json`, `sim/contracts.gd`, `sim/systems/contract_system.gd`, the Contracts tab):
+   - **Boards:** each port keeps a board, refreshed while you are docked there.
+   - **Kinds:**
+     - packages, light and urgent
+     - passengers, who need berths
+     - pickups: collect at A, deliver to B
+     - long hauls between worlds; a port alone at its world offers only these
+   - **Deadlines:** each job allows a window from when it is taken, set from a stock Mule's (or long-haul refit's) fastest trip x slack. A light, direct ship makes it; a laden one may not. The board shows the co-pilot's estimate at your current mass.
+   - **Outcomes:**
+     - On time pays in full and builds standing with the client operator.
+     - Late pays half and costs standing.
+     - Past twice the window, or abandoned, the job fails.
+   - **Standing tiers:** Unknown, Known, Reliable, Trusted, One of their own. Pickups and long hauls ask for Known or better, and the board says how many jobs are waiting for known pilots.
+   - **Approaches:** a Reliable+ pilot docking may be sought out, with an opener and a better-paid, tighter job.
+   - **Rumours:** a bought tip sometimes carries word of a real job at another port that nobody else has heard of.
+
+   Still to come:
    - **Courier contracts:** a package, a passenger or a party, with a deadline. Some are pickups: go and get something or someone and take it on somewhere else. They weigh little but demand a direct, light, fast trip, so less or no other cargo.
    - survey, salvage, prospecting and mining claims
    - derelicts

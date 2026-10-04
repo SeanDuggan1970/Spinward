@@ -1,0 +1,189 @@
+{
+	"_note": "Courier contracts and reputation. Boards refresh every refresh_days per port. Each job allows a window from when it is taken: a reference ship's quick plan (a stock Mule at full tanks, or a long-haul refit) x slack, so a light, fast, direct trip makes it and a laden one may not. Pay = (pay_base + pay_per_day x trip days) x (1 + urgency x (slack_max - slack)) x kind/channel multipliers; passengers pay per head. Reputation is per operator (the client); tiers gate premium jobs and approaches. Lateness pays late_fraction and costs reputation; past fail_after x the window the contract fails.",
+	"board": {
+		"refresh_days": 2.0,
+		"max_offers": 4,
+		"offer_days": [
+			3.0,
+			8.0
+		],
+		"max_active": 4
+	},
+	"reference_ships": {
+		"local": {
+			"hull": "mule"
+		},
+		"long_haul": {
+			"hull": "mule",
+			"modules": {
+				"cargo.0": "tank_l",
+				"cargo.1": "hab_extended",
+				"tank.0": "tank_l",
+				"drive.0": "pathfinder_mk3",
+				"radiator.0": "radiator_array",
+				"radiator.1": "radiator_array"
+			}
+		}
+	},
+	"kinds": {
+		"package": {
+			"weight": 5,
+			"mass_t": [
+				0.05,
+				1.5
+			],
+			"slack": [
+				1.3,
+				2.2
+			],
+			"pay_base": 1500,
+			"pay_per_day": 900,
+			"urgency": 1.0,
+			"rep": 2.0,
+			"min_rep": 0.0,
+			"items": [
+				"a cold-chain case of vaccines",
+				"sealed ice-core samples",
+				"replacement gyros for a stranded tug",
+				"a wedding cake (do not ask)",
+				"legal papers that must be signed by hand",
+				"an urn, going home",
+				"seed stock for the farm modules",
+				"a kidney on a chip",
+				"a diplomatic pouch",
+				"a crate of real coffee",
+				"dialysis unit spares",
+				"an old violin in a pressure case",
+				"a reactor controller, re-flashed",
+				"a box of letters, written on paper",
+				"calibration masters for a telescope"
+			]
+		},
+		"passenger": {
+			"weight": 3,
+			"count": [
+				1,
+				4
+			],
+			"slack": [
+				1.4,
+				2.4
+			],
+			"pay_base": 800,
+			"pay_per_day": 450,
+			"urgency": 0.8,
+			"rep": 2.0,
+			"min_rep": 0.0,
+			"per_head": true,
+			"who": [
+				"a surveyor and her instruments",
+				"engineers on a deadline",
+				"a family moving out",
+				"a doctor called to an emergency",
+				"a journalist who asks a lot of questions",
+				"a Commons envoy (a drone, but it insists on a seat)",
+				"an auditor from the Compact",
+				"exchange students",
+				"a retired pilot going home",
+				"a wedding party, late"
+			]
+		},
+		"pickup": {
+			"weight": 2,
+			"mass_t": [
+				0.1,
+				2.0
+			],
+			"slack": [
+				1.6,
+				2.6
+			],
+			"pay_base": 2500,
+			"pay_per_day": 1100,
+			"urgency": 1.0,
+			"rep": 3.0,
+			"min_rep": 6.0,
+			"items": [
+				"a prototype radiator",
+				"a patient for treatment",
+				"a crate the sender will not describe",
+				"the station's only spare pump",
+				"a survey team's samples",
+				"a sculpture for the Kernel's commons",
+				"medical scans that cannot go by radio",
+				"a court witness"
+			]
+		},
+		"long_haul": {
+			"weight": 2,
+			"mass_t": [
+				0.1,
+				1.0
+			],
+			"slack": [
+				1.3,
+				1.9
+			],
+			"pay_base": 8000,
+			"pay_per_day": 900,
+			"urgency": 1.0,
+			"rep": 5.0,
+			"min_rep": 12.0,
+			"range": "long_haul",
+			"items": [
+				"a crate of reactor-grade spares",
+				"a vintage of Martian wine, the first",
+				"fusion fuel samples for assay",
+				"a court order with a seal on it",
+				"a refurbished heart for a Valhalla surgeon",
+				"survey data too big to send",
+				"a child's birthday present, promised"
+			]
+		}
+	},
+	"late": {
+		"pay_fraction": 0.5,
+		"rep": -4.0,
+		"fail_after": 2.0,
+		"fail_rep": -8.0,
+		"abandon_rep": -5.0
+	},
+	"approach": {
+		"min_rep": 10.0,
+		"chance": 0.35,
+		"pay_mult": 2.0,
+		"slack_mult": 0.85,
+		"openers": [
+			"Someone has left a message at the dock office, marked for you by name.",
+			"A woman in a Commons jacket finds you at the bar. 'You're the one who got the vaccines through. We have something.'",
+			"The harbourmaster catches you before you're through the lock. 'There's a client asking for you specifically.'",
+			"Your co-pilot flags a private channel request. Encrypted, polite, and well paid."
+		]
+	},
+	"rumour": {
+		"chance": 0.35,
+		"pay_mult": 1.5
+	},
+	"reputation_tiers": [
+		[
+			0.0,
+			"Unknown"
+		],
+		[
+			6.0,
+			"Known"
+		],
+		[
+			20.0,
+			"Reliable"
+		],
+		[
+			50.0,
+			"Trusted"
+		],
+		[
+			100.0,
+			"One of their own"
+		]
+	]
+}

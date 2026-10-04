@@ -15,6 +15,8 @@ const RoutePlanner := preload("res://sim/route_planner.gd")
 const OrbitMech := preload("res://sim/orbit_mech.gd")
 const LightTime := preload("res://sim/light_time.gd")
 const Interplanetary := preload("res://sim/interplanetary.gd")
+const Contracts := preload("res://sim/contracts.gd")
+const ContractSystemScript := preload("res://sim/systems/contract_system.gd")
 
 const AU := 1.495978707e11
 const DAY := 86400.0
@@ -55,6 +57,7 @@ func _initialize() -> void:
 	test_ephemeris_against_horizons()
 	test_interplanetary()
 	test_refits()
+	test_contracts()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -784,3 +787,109 @@ func test_refits() -> void:
 	sim.state.ship["fuel_t"] = ShipStats.fuel_capacity_t(sim.state.ship, d)
 	var q: Dictionary = Interplanetary.quick(sim.state.ship, d, sim.ephemeris, "trojan_yards", "valhalla_station", sim.state.time_s)
 	check(q["ok"] and float(q["duration_s"]) / DAY < 200.0, "A Mk3 long-hauler reaches Jupiter (%.0f d, %.1f t) %s" % [float(q.get("duration_s", 0.0)) / DAY, float(q.get("fuel_t", 0.0)), q["reason"]])
+
+
+func _dock_at(sim: Sim, place: String) -> void:
+	sim.state.location = {"status": "docked", "place": place}
+	sim.advance_game_time(60.0)
+
+
+func _first_offer(sim: Sim, place: String, kind: String) -> Dictionary:
+	for o in sim.state.contracts["board"].get(place, []):
+		if o["kind"] == kind and ContractSystemScript.visible_to(sim.state, sim.data, o):
+			return o
+	return {}
+
+
+func test_contracts() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var board: Array = s.contracts["board"].get("kibo_ring", [])
+	check(board.size() >= 2, "Kibo Ring's board has jobs at the start (%d)" % board.size())
+	# Find a package job (re-roll the board until one shows), take it, deliver on time.
+	var offer := {}
+	for _i in 20:
+		offer = _first_offer(sim, "kibo_ring", "package")
+		if not offer.is_empty():
+			break
+		s.contracts["next_t"]["kibo_ring"] = 0.0
+		sim.advance_game_time(60.0)
+	check(not offer.is_empty(), "A courier package is offered")
+	if offer.is_empty():
+		return
+	var before := ShipStats.cargo_t(s.ship)
+	check(sim.apply({"type": "accept_contract", "id": offer["id"]}) == "", "Take the package job")
+	check(absf(ShipStats.cargo_t(s.ship) - before - float(offer["mass_t"])) < 1e-9, "The parcel's mass is aboard")
+	var credits := s.credits
+	_dock_at(sim, offer["to"])
+	check(absf(s.credits - credits - float(offer["reward"])) < 1e-6, "On-time delivery pays in full (%s)" % offer["reward"])
+	check(Contracts.rep_of(s, offer["client"]) > 0.0 and s.contracts["active"].is_empty(), "On time builds standing and closes the job")
+	check(ShipStats.cargo_t(s.ship) == before, "The parcel is off the ship")
+	# Late: half pay and lost standing.
+	_dock_at(sim, "kibo_ring")
+	s.contracts["next_t"]["kibo_ring"] = 0.0
+	sim.advance_game_time(60.0)
+	var late_offer := {}
+	for o in s.contracts["board"]["kibo_ring"]:
+		if o["kind"] == "package":
+			late_offer = o
+	if not late_offer.is_empty():
+		sim.apply({"type": "accept_contract", "id": late_offer["id"]})
+		var rep0 := Contracts.rep_of(s, late_offer["client"])
+		s.time_s += float(late_offer["window_s"]) + 3600.0
+		credits = s.credits
+		_dock_at(sim, late_offer["to"])
+		check(absf(s.credits - credits - float(late_offer["reward"]) * 0.5) < 1e-6 and Contracts.rep_of(s, late_offer["client"]) < rep0, "Late delivery pays half and costs standing")
+	# Passengers need berths.
+	var pax := {"id": 9001, "kind": "passenger", "client": "Terran Compact", "issued_at": "kibo_ring", "pickup": "", "to": "halo_depot", "item": "engineers", "mass_t": 0.2, "passengers": 2,
+		"reward": 5000.0, "window_s": 10 * DAY, "expires_t": s.time_s + 5 * DAY, "min_rep": 0.0, "rep": 2.0, "channel": "board", "hidden": false}
+	_dock_at(sim, "kibo_ring")
+	s.reputation["Terran Compact"] = 0.0
+	s.contracts["board"]["kibo_ring"].append(pax)
+	check(String(sim.apply({"type": "accept_contract", "id": 9001})).begins_with("no berths"), "Passengers refused without berths")
+	# Pickups: collect first, then deliver.
+	var pick: Dictionary = pax.duplicate()
+	pick.merge({"id": 9002, "kind": "pickup", "passengers": 0, "mass_t": 0.5, "pickup": "shackleton_port", "to": "kernel_l5"}, true)
+	s.contracts["board"]["kibo_ring"].append(pick)
+	check(sim.apply({"type": "accept_contract", "id": 9002}) == "", "Take a pickup job")
+	_dock_at(sim, "kernel_l5")
+	check(s.contracts["active"].any(func(j): return int(j["id"]) == 9002 and j["state"] == "collect"), "Delivering before collecting does nothing")
+	_dock_at(sim, "shackleton_port")
+	check(s.contracts["active"].any(func(j): return int(j["id"]) == 9002 and j["state"] == "carried"), "Collected at the pickup")
+	credits = s.credits
+	_dock_at(sim, "kernel_l5")
+	check(s.credits > credits, "Pickup delivered and paid")
+	# Far too late fails.
+	var fail: Dictionary = pax.duplicate()
+	fail.merge({"id": 9003, "kind": "package", "passengers": 0, "mass_t": 0.1, "window_s": 2 * DAY}, true)
+	_dock_at(sim, "kibo_ring")
+	s.contracts["board"]["kibo_ring"].append(fail)
+	sim.apply({"type": "accept_contract", "id": 9003})
+	s.location = {"status": "transit_test"}
+	sim.advance_game_time(6 * DAY)
+	check(s.stats.get("contracts_failed", 0) >= 1 and not s.contracts["active"].any(func(j): return int(j["id"]) == 9003), "A job far past its deadline fails")
+	# Known pilots are approached when they dock.
+	var known := fresh()
+	known.data.contracts["approach"]["chance"] = 1.0
+	known.state.reputation["Luna Cooperative"] = 30.0
+	_dock_at(known, "shackleton_port")
+	check(known.state.contracts["board"]["shackleton_port"].any(func(o): return o["channel"] == "approach" and o.has("opener")), "A trusted pilot is approached at the dock")
+	known.data.contracts["approach"]["chance"] = 0.35
+	# Rumours: a tip can carry word of a real, hidden-to-others job elsewhere.
+	var gossip := fresh()
+	gossip.data.contracts["rumour"]["chance"] = 1.0
+	gossip.state.credits = 1.0e6
+	var broker := ""
+	for b in gossip.data.brokers:
+		if gossip.data.brokers[b]["place"] == "kibo_ring":
+			broker = b
+	gossip.apply({"type": "buy_tip", "broker": broker})
+	var tip: Dictionary = gossip.state.tips[-1] if not gossip.state.tips.is_empty() else {}
+	check(tip.has("rumour"), "A tip came with a rumoured job")
+	if tip.has("rumour"):
+		var r: Dictionary = tip["rumour"]
+		check(gossip.state.contracts["board"][r["place"]].any(func(o): return int(o["id"]) == int(r["offer"]) and o["channel"] == "rumour"), "The rumoured job is on that port's board")
+	gossip.data.contracts["rumour"]["chance"] = 0.35
+	# Contracts and standing survive a save.
+	var saved := SaveIO.from_text(SaveIO.to_text(sim.state))
+	check(saved.contracts == sim.state.contracts and saved.reputation == sim.state.reputation, "Contracts and reputation are saved")

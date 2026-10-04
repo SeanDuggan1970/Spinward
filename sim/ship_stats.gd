@@ -26,8 +26,9 @@ static func fuel_capacity_t(ship: Dictionary, data) -> float:
 	return _sum(ship, data, "fuel_t")
 
 
+## Freight aboard, including contract parcels and passengers (parcels_t).
 static func cargo_t(ship: Dictionary) -> float:
-	var total := 0.0
+	var total := float(ship.get("parcels_t", 0.0))
 	for g in ship.get("cargo", {}):
 		total += float(ship["cargo"][g])
 	return total
@@ -79,6 +80,10 @@ static func life_support_days(ship: Dictionary, data) -> float:
 			return INF
 	var days := _sum(ship, data, "life_support_days")
 	return days if days > 0.0 else INF
+
+
+static func berths(ship: Dictionary, data) -> int:
+	return int(_sum(ship, data, "berths"))
 
 
 static func has_docking_computer(ship: Dictionary, data) -> bool:

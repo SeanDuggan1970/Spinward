@@ -14,6 +14,8 @@ const TipsText := preload("res://view/tips_text.gd")
 const TravelSystem := preload("res://sim/systems/travel_system.gd")
 const SystemMap := preload("res://view/system_map.gd")
 const Comms := preload("res://view/comms.gd")
+const Contracts := preload("res://sim/contracts.gd")
+const ContractSystem := preload("res://sim/systems/contract_system.gd")
 const DAY := 86400.0
 
 var sim
@@ -92,6 +94,7 @@ func refresh() -> void:
 		c.queue_free()
 	_tabs.add_child(_market_tab(place_id))
 	_tabs.add_child(_departures_tab(place_id))
+	_tabs.add_child(_contracts_tab(place_id))
 	_tabs.add_child(_traffic_tab(place_id))
 	_tabs.add_child(_projects_tab(place_id))
 	_tabs.add_child(_tips_tab(place_id))
@@ -229,6 +232,12 @@ func _departures_tab(place_id: String) -> Control:
 			notes.append(["No fuel sold there", UI.HAZARD])
 		for note in _intel(place_id, to):
 			notes.append(note)
+		for job in sim.state.contracts.get("active", []):
+			var stop: String = job["pickup"] if job["state"] == "collect" else job["to"]
+			if stop == to:
+				var verb := "Collect" if job["state"] == "collect" else "Deliver"
+				var left: float = float(job["deadline_t"]) - sim.state.time_s
+				notes.append(["Contract: %s %s here, due in %s" % [verb.to_lower(), job["item"], UI.duration(maxf(left, 0.0))], UI.GOOD if left > float(plan.get("duration_s", 0.0)) else UI.WARN])
 		for n in notes:
 			info.add_child(UI.label(n[0], n[1], 13))
 		var side := VBoxContainer.new()
@@ -237,6 +246,107 @@ func _departures_tab(place_id: String) -> Control:
 		_route_controls(place_id, to, plan, p[1], side)
 		parts[1].add_child(p[0])
 	return parts[0]
+
+
+## Courier work: your standing, your jobs, and this port's board. Jobs set their
+## deadlines from a light courier's fastest trip, so a laden ship may not make it:
+## the co-pilot's estimate at your current mass is shown against each.
+func _contracts_tab(place_id: String) -> Control:
+	var parts := _scroll("Contracts")
+	var s = sim.state
+	var d = sim.data
+	var client := Contracts.client_of(d, place_id)
+	var rep := Contracts.rep_of(s, client)
+	parts[1].add_child(UI.label("Standing with %s: %s (%d).  Deliver on time to be known; known pilots get the better jobs, and people come to find them." % [client, Contracts.tier(d, rep), int(round(rep))], UI.DIM, 13))
+	var known := []
+	for op in s.reputation:
+		if op != client and absf(float(s.reputation[op])) >= 1.0:
+			known.append("%s: %s" % [op, Contracts.tier(d, float(s.reputation[op]))])
+	if not known.is_empty():
+		parts[1].add_child(UI.label("Elsewhere: " + "  ·  ".join(known), UI.DIM, 12))
+	var active: Array = s.contracts.get("active", [])
+	if not active.is_empty():
+		var mine := UI.panel("Your jobs  (%d)" % active.size())
+		for job in active:
+			var row := HBoxContainer.new()
+			var left: float = float(job["deadline_t"]) - s.time_s
+			var where := ("collect at %s, then " % d.places[job["pickup"]]["name"]) if job["state"] == "collect" else ""
+			var text := "%s  ·  %sdeliver to %s  ·  due in %s  ·  %s" % [_cargo_words(job), where, d.places[job["to"]]["name"], UI.duration(maxf(left, 0.0)) if left > 0.0 else "OVERDUE", UI.money(float(job["reward"]))]
+			var l := UI.label(text, UI.TEXT if left > 0.0 else UI.WARN, 13)
+			l.autowrap_mode = TextServer.AUTOWRAP_WORD
+			l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			row.add_child(l)
+			row.add_child(UI.button("Abandon", send.bind({"type": "abandon_contract", "id": job["id"]})))
+			mine[1].add_child(row)
+		parts[1].add_child(mine[0])
+	var board: Array = s.contracts.get("board", {}).get(place_id, [])
+	var shown := 0
+	var gated := 0
+	var gate_tier := ""
+	# Approaches first: someone came looking for you.
+	var ordered := board.filter(func(o): return o["channel"] == "approach") + board.filter(func(o): return o["channel"] != "approach")
+	for offer in ordered:
+		if not ContractSystem.visible_to(s, d, offer):
+			if not offer.get("hidden", false):
+				gated += 1
+				gate_tier = Contracts.tier(d, float(offer["min_rep"]))
+			continue
+		shown += 1
+		parts[1].add_child(_offer_card(place_id, offer))
+	if shown == 0:
+		parts[1].add_child(UI.label("Nothing on the board right now. Check back in a day or two.", UI.DIM, 13))
+	if gated > 0:
+		parts[1].add_child(UI.label("%d more job%s here for pilots they know (%s)." % [gated, "s" if gated > 1 else "", gate_tier], UI.HAZARD, 13))
+	return parts[0]
+
+
+func _cargo_words(job: Dictionary) -> String:
+	if int(job["passengers"]) > 0:
+		return "%s (%d aboard)" % [job["item"], int(job["passengers"])]
+	return "%s, %.2f t" % [job["item"], float(job["mass_t"])]
+
+
+func _offer_card(place_id: String, offer: Dictionary) -> Control:
+	var s = sim.state
+	var d = sim.data
+	var title: String = {"package": "Courier", "passenger": "Passage", "pickup": "Pick up and deliver", "long_haul": "Long-haul courier"}.get(offer["kind"], "Job")
+	if offer["channel"] == "rumour":
+		title += "  ·  heard through the grapevine"
+	var p := UI.panel(title)
+	if offer.has("opener"):
+		var o := UI.label(offer["opener"], UI.AMBER, 13)
+		o.autowrap_mode = TextServer.AUTOWRAP_WORD
+		p[1].add_child(o)
+	var route: String = d.places[offer["to"]]["name"]
+	if offer["pickup"] != "":
+		route = "collect at %s, deliver to %s" % [d.places[offer["pickup"]]["name"], route]
+	var due: float = float(offer["window_s"])
+	p[1].add_child(UI.label("%s  ·  %s" % [_cargo_words(offer), route], UI.TEXT, 14))
+	# How the co-pilot rates our chances at the ship's current mass.
+	var first: String = offer["pickup"] if offer["pickup"] != "" else offer["to"]
+	var plan := Navigation.plan(s.ship, d, sim.ephemeris, place_id, first, s.time_s)
+	var est := "co-pilot: no route from here with this ship"
+	var colour := UI.WARN
+	if plan.get("ok", false):
+		var need := float(plan["duration_s"])
+		if offer["pickup"] != "":
+			var onward := Navigation.plan(s.ship, d, sim.ephemeris, offer["pickup"], offer["to"], s.time_s + need)
+			need += float(onward.get("duration_s", INF))
+		est = "co-pilot reckons %s at your mass" % UI.duration(need)
+		colour = UI.GOOD if need < due * 0.85 else (UI.AMBER if need < due else UI.WARN)
+	p[1].add_child(UI.label("Allow %s  ·  %s  ·  pays %s  ·  %s" % [UI.duration(due), est, UI.money(float(offer["reward"])), offer["client"]], colour, 13))
+	var why := ""
+	if int(offer["passengers"]) > 0 and ContractSystem.free_berths(s, d) < int(offer["passengers"]):
+		why = "needs %d berths (fit passenger berths)" % int(offer["passengers"])
+	elif offer["pickup"] == "" and ShipStats.cargo_t(s.ship) + float(offer["mass_t"]) > ShipStats.cargo_capacity_t(s.ship, d) + 1e-9:
+		why = "no room in the hold"
+	var row := HBoxContainer.new()
+	var hint := UI.label(why, UI.WARN, 12)
+	hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(hint)
+	row.add_child(UI.button("Take the job", send.bind({"type": "accept_contract", "id": offer["id"]}), why == ""))
+	p[1].add_child(row)
+	return p[0]
 
 
 ## What you know about a destination: your own last look at its board (with its age)

@@ -16,6 +16,7 @@ const TravelSystem := preload("res://sim/systems/travel_system.gd")
 const NpcSystem := preload("res://sim/systems/npc_system.gd")
 const ProjectSystem := preload("res://sim/systems/project_system.gd")
 const TipSystem := preload("res://sim/systems/tip_system.gd")
+const ContractSystem := preload("res://sim/systems/contract_system.gd")
 
 ## Undrained events are capped so headless runs (bots, tests) cannot grow without bound.
 const MAX_PENDING_EVENTS := 2000
@@ -36,7 +37,7 @@ func _init(catalog: DataCatalog = null) -> void:
 	ephemeris = Ephemeris.new(data.bodies, data.places)
 	state = GameState.new()
 	# Order matters within a tick: the clock moves first, then everything catches up to it.
-	systems = [CalendarSystem.new(), EconomySystem.new(), ShipyardSystem.new(), TravelSystem.new(), NpcSystem.new(), ProjectSystem.new(), TipSystem.new()]
+	systems = [CalendarSystem.new(), EconomySystem.new(), ShipyardSystem.new(), TravelSystem.new(), NpcSystem.new(), ProjectSystem.new(), TipSystem.new(), ContractSystem.new()]
 	for system in systems:
 		system.setup(self)
 

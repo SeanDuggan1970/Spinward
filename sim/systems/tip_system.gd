@@ -10,6 +10,7 @@
 extends "res://sim/systems/system.gd"
 
 const Market := preload("res://sim/market.gd")
+const Contracts := preload("res://sim/contracts.gd")
 
 const DAY := 86400.0
 const KNOWLEDGE_REFRESH_S := 3600.0
@@ -112,6 +113,8 @@ func _buy_tip(command: Dictionary) -> String:
 	_rng.seed = hash(s.seed) ^ 0x5EED
 	_rng.state = s.rng_state
 	var tip := _make_tip(id, broker)
+	if not tip.is_empty():
+		_maybe_rumour(tip)
 	s.rng_state = _rng.state
 	if tip.is_empty():
 		return "%s has nothing worth selling right now" % broker["name"]
@@ -121,6 +124,38 @@ func _buy_tip(command: Dictionary) -> String:
 	s.tips.append(tip)
 	sim().emit("tip_bought", {"tip": tip["id"], "broker": id, "credits": -price})
 	return ""
+
+
+## Brokers hear things besides prices: sometimes a tip comes with word of a job
+## nobody has taken, at another port. The job is real, and only you have heard of it.
+func _maybe_rumour(tip: Dictionary) -> void:
+	var s = sim().state
+	var data = sim().data
+	var rc: Dictionary = data.contracts.get("rumour", {})
+	if s.contracts.is_empty() or _rng.randf() >= float(rc.get("chance", 0.0)):
+		return
+	var here: String = s.location["place"]
+	var ports: Array = data.places.keys().filter(func(p): return p != here)
+	var place := ""
+	var kind := ""
+	var offer := {}
+	for _try in 5:
+		place = ports[_rng.randi() % ports.size()]
+		var rep := Contracts.rep_of(s, Contracts.client_of(data, place))
+		kind = Contracts.pick_kind(data, _rng, func(k): return k != "passenger" and float(data.contracts["kinds"][k].get("min_rep", 0.0)) <= maxf(rep, 0.0))
+		if kind != "":
+			offer = Contracts.make_offer(data, sim().ephemeris, s, _rng, place, kind, "rumour")
+		if not offer.is_empty():
+			break
+	if offer.is_empty():
+		return
+	offer["hidden"] = false
+	s.contracts["seq"] = int(s.contracts["seq"]) + 1
+	offer["id"] = int(s.contracts["seq"])
+	var board: Array = s.contracts["board"].get(place, [])
+	board.append(offer)
+	s.contracts["board"][place] = board
+	tip["rumour"] = {"place": place, "offer": offer["id"], "kind": kind, "reward": offer["reward"], "window_s": offer["window_s"]}
 
 
 func _make_tip(id: String, broker: Dictionary) -> Dictionary:
