@@ -216,7 +216,7 @@ static func merge_static(root: Node3D) -> void:
 		var n: Node = mi
 		var skip := false
 		while n != root and n != null:
-			if n.name == "DrivePlume":
+			if n.name == "DrivePlume" or n.has_meta("no_merge"):
 				skip = true
 				break
 			xform = (n as Node3D).transform * xform

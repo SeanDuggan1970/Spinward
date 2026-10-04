@@ -30,7 +30,7 @@ func _draw() -> void:
 		return
 	var x := 24.0
 	var y := 74.0
-	draw_rect(Rect2(12, 50, 330, 216), Color(0.07, 0.08, 0.09, 0.8))
+	draw_rect(Rect2(12, 50, 330, 256), Color(0.07, 0.08, 0.09, 0.8))
 	draw_rect(Rect2(12, 50, 330, 3), UI.HAZARD)
 	draw_string(_font, Vector2(x, y), "%s  →  %s" % [sim.data.places[loc["from"]]["name"], sim.data.places[loc["to"]]["name"]], HORIZONTAL_ALIGNMENT_LEFT, 310, 14, UI.TEXT)
 	if r.get("route", "") != "":
@@ -44,6 +44,8 @@ func _draw() -> void:
 		["TO GO", UI.km(r["remaining"])],
 		["ARRIVE", UI.duration(r["eta"])],
 		["MOON ALT", UI.km(r["moon_alt"]) if r["moon_alt"] < 6.0e7 else "—"],
+		["COMMS", "%.3f s light time" % float(r.get("light_s", 0.0))],
+		["LEAD", "%.2f arcsec point-ahead" % (rad_to_deg(float(r.get("point_ahead", 0.0))) * 3600.0)],
 		["TIME", "x%d%s" % [int(sim.state.time_scale), "  PAUSED" if sim.state.paused else ""]],
 	]:
 		draw_string(_font, Vector2(x, y), row[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, UI.DIM)

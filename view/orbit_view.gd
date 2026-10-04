@@ -9,6 +9,8 @@ const V := preload("res://sim/v3.gd")
 const Navigation := preload("res://sim/navigation.gd")
 const Kit := preload("res://view/flight/kit.gd")
 const Models := preload("res://view/flight/models.gd")
+const ShipRig := preload("res://view/flight/ship_rig.gd")
+const LightTime := preload("res://sim/light_time.gd")
 const Livery := preload("res://view/flight/livery.gd")
 const SkyKit := preload("res://view/flight/sky.gd")
 const SystemMap := preload("res://view/system_map.gd")
@@ -27,6 +29,7 @@ var _earth: MeshInstance3D
 var _moon: MeshInstance3D
 var _ship: Node3D
 var _ship_len := 26.0
+var _rig: Dictionary = {}
 var _plume: Node3D
 var _path_ahead: ImmediateMesh
 var _path_behind: ImmediateMesh
@@ -108,6 +111,7 @@ func _ready() -> void:
 	_ship.add_child(inner)
 	_ship_len = float(model["length"])
 	_plume = inner.find_child("DrivePlume", true, false)
+	_rig = model["rig"]
 	# A long exhaust streak so the burn reads from far above.
 	var streak := Kit.cone(0.5, 3.0, 60.0, Kit.glow(Color("8fd0ff"), 3.0), Vector3(0, 0, _ship_len * 0.5 + 32.0))
 	streak.name = "Streak"
@@ -197,12 +201,19 @@ func _process(dt: float) -> void:
 	var vel := _d(Navigation.transit_velocity(loc, t))
 	var thrusting := accel.length() > 1e-5
 	var face := accel.normalized() if thrusting else (vel.normalized() if vel.length() > 1.0 else Vector3.FORWARD)
-	var want := Basis.looking_at(face, Vector3.UP if absf(face.y) < 0.98 else Vector3.RIGHT)
+	# Roll about the line of thrust to keep the Sun in the panels' plane.
+	var want := ShipRig.roll_to_sun(face, sun_dir)
 	_attitude = want if not _cam_ready else Basis(_attitude.get_rotation_quaternion().slerp(want.get_rotation_quaternion(), clampf(dt * 3.0, 0.0, 1.0)))
 	var ship_scale := cam_dist * 0.045 / _ship_len
 	_ship.transform = Transform3D(_attitude.scaled(Vector3.ONE * ship_scale), ship_pos)
 	if _plume:
 		_plume.visible = thrusting
+	# Comms: the dish leads the destination by the light time, corrected for the
+	# ship's own velocity (sim/light_time.gd).
+	var ship_abs := V.add(eph.position(frame, t), Navigation.transit_position(loc, t))
+	var ship_vel := V.add(eph.velocity(frame, t), Navigation.transit_velocity(loc, t))
+	var comms := LightTime.pointing(eph, loc["to"], ship_abs, ship_vel, t)
+	ShipRig.aim(_rig, _attitude, sun_dir, _d(comms["transmit"]["dir"]), dt)
 	_ship.find_child("Streak", true, false).visible = thrusting
 	var into := V.dot(V.normalized(Navigation.transit_accel(loc, t)), V.normalized(Navigation.transit_velocity(loc, t)))
 	readout = {
@@ -212,6 +223,8 @@ func _process(dt: float) -> void:
 		"eta": float(loc["arrive_t"]) - t,
 		"moon_alt": V.distance(Navigation.transit_position(loc, t), eph.relative("moon", frame, t)) - float(sim.data.bodies["moon"]["radius_m"]),
 		"route": loc.get("route_label", ""),
+		"light_s": comms["tau_s"],
+		"point_ahead": comms["point_ahead_rad"],
 	}
 	_cam_ready = true
 

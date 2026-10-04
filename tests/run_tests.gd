@@ -13,6 +13,7 @@ const V := preload("res://sim/v3.gd")
 const ProjectSystem := preload("res://sim/systems/project_system.gd")
 const RoutePlanner := preload("res://sim/route_planner.gd")
 const OrbitMech := preload("res://sim/orbit_mech.gd")
+const LightTime := preload("res://sim/light_time.gd")
 
 const AU := 1.495978707e11
 const DAY := 86400.0
@@ -49,6 +50,7 @@ func _initialize() -> void:
 	test_trajectories()
 	test_gravity_routes()
 	test_saves_and_determinism()
+	test_light_time()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -665,3 +667,37 @@ func test_saves_and_determinism() -> void:
 		r.apply({"type": "sell", "good": "food", "tonnes": 4})
 		return r.state.to_dict()
 	check(run.call() == run.call(), "Same seed and commands give the same state")
+
+
+## A target in uniform motion, for checking the light-time geometry exactly.
+class StubEphemeris:
+	var p0: Array
+	var v: Array
+	func _init(start: Array, vel: Array) -> void:
+		p0 = start
+		v = vel
+	func position(_id: String, t: float) -> Array:
+		return [p0[0] + v[0] * t, p0[1] + v[1] * t, p0[2] + v[2] * t]
+
+
+func test_light_time() -> void:
+	var c := LightTime.C
+	var d := 3.84e8
+	var zero := [0.0, 0.0, 0.0]
+	# Still target, still ship: one light time, no point-ahead.
+	var still := LightTime.pointing(StubEphemeris.new([d, 0.0, 0.0], zero), "x", zero, zero, 0.0)
+	check(absf(float(still["tau_s"]) - d / c) < 1e-9 and float(still["point_ahead_rad"]) < 1e-12, "Light time to a still target is d/c (%.4f s)" % still["tau_s"])
+	# Target crossing the line of sight at u: transmit leads and receive lags by u/c each.
+	var u := 1000.0
+	var crossing := LightTime.pointing(StubEphemeris.new([d, 0.0, 0.0], [0.0, u, 0.0]), "x", zero, zero, 0.0)
+	var want := 2.0 * u / c
+	check(absf(float(crossing["point_ahead_rad"]) / want - 1.0) < 1e-3, "Point-ahead for a crossing target is 2u/c (%s vs %s rad)" % [String.num_scientific(crossing["point_ahead_rad"]), String.num_scientific(want)])
+	check(float(crossing["transmit"]["dir"][1]) > 0.0 and float(crossing["receive"]["dir"][1]) < 0.0, "Transmit leads the target, receive sees it where it was")
+	# Ship and target moving together: aberration cancels light time exactly (to first order).
+	var together := LightTime.pointing(StubEphemeris.new([d, 0.0, 0.0], [0.0, 3.0e4, 0.0]), "x", zero, [0.0, 3.0e4, 0.0], 0.0)
+	check(float(together["point_ahead_rad"]) < 1e-9, "Co-moving ship and target need no point-ahead (%s rad)" % String.num_scientific(together["point_ahead_rad"]))
+	# The real thing: Kibo Ring to Shackleton Port is a little over a light second.
+	var sim := fresh()
+	var t: float = sim.state.time_s
+	var real := LightTime.pointing(sim.ephemeris, "shackleton_port", sim.ephemeris.position("kibo_ring", t), sim.ephemeris.velocity("kibo_ring", t), t)
+	check(float(real["tau_s"]) > 1.1 and float(real["tau_s"]) < 1.45, "Kibo to Shackleton light time %.3f s" % real["tau_s"])

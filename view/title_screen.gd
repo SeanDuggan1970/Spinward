@@ -11,6 +11,9 @@ signal start_requested(load_save: bool)
 
 const Kit := preload("res://view/flight/kit.gd")
 const Models := preload("res://view/flight/models.gd")
+const ShipRig := preload("res://view/flight/ship_rig.gd")
+## Toward the Sun, as the title's light falls.
+const SUN_DIR := Vector3(-0.55, 0.35, 0.75)
 const Livery := preload("res://view/flight/livery.gd")
 const SetPieces := preload("res://view/flight/set_pieces.gd")
 const SkyKit := preload("res://view/flight/sky.gd")
@@ -29,6 +32,7 @@ var clock := 0.0
 var camera: Camera3D
 var _hulls: Array = []
 var _hero_index := -1
+var _hero_rig: Dictionary = {}
 var _hero_round := 0
 var _hero: Node3D
 var _hero_plume: Node3D
@@ -96,7 +100,7 @@ func _ready() -> void:
 		var node: Node3D = model["node"]
 		node.add_child(Kit.sphere(2.0, Kit.glow(Color("ffe0a0"), 4.0), Vector3(0, 3.0, 0)))
 		add_child(node)
-		_traffic.append({"node": node, "from": Vector3(-1800.0 + 500.0 * i, 140.0 - 120.0 * i, -1300.0 - 500.0 * i),
+		_traffic.append({"node": node, "rig": model["rig"], "from": Vector3(-1800.0 + 500.0 * i, 140.0 - 120.0 * i, -1300.0 - 500.0 * i),
 			"to": Vector3(1900.0, 260.0 - 90.0 * i, -900.0 - 650.0 * i), "period": 70.0 + 25.0 * i, "phase": 0.3 * i})
 	camera = Camera3D.new()
 	camera.fov = 50.0
@@ -142,6 +146,7 @@ func _next_hero() -> void:
 	_hero = model["node"]
 	_hero_radius = model["length"] * 0.5
 	_hero_plume = _hero.find_child("DrivePlume", true, false)
+	_hero_rig = model["rig"]
 	add_child(_hero)
 	_blinkers = Kit.collect_blinkers(self)
 	clock = 0.0
@@ -176,8 +181,12 @@ func _process(dt: float) -> void:
 		var f := fposmod(float(tr["phase"]) + t / float(tr["period"]), 1.0)
 		var node: Node3D = tr["node"]
 		node.position = tr["from"].lerp(tr["to"], f)
-		node.look_at(node.position + (tr["from"] - tr["to"]), Vector3.UP)
+		node.basis = ShipRig.roll_to_sun(tr["to"] - tr["from"], SUN_DIR)
+		ShipRig.aim(tr["rig"], node.basis, SUN_DIR, _earth.position - node.position, dt)
 	_animate_hero(dt)
+	# The showcase ship turns on its stand; its wings and dish keep their bearings.
+	if is_instance_valid(_hero):
+		ShipRig.aim(_hero_rig, _hero.basis, SUN_DIR, _earth.position - _hero.position, dt)
 	# A slow drift, as if the camera ship is holding station by hand.
 	camera.position = Vector3(sin(t * 0.13) * 1.5, 4.0 + sin(t * 0.21) * 0.8, 0.0)
 	camera.look_at(Vector3(sin(t * 0.07) * 4.0, 0.0, -HERO_DISTANCE), Vector3.UP)

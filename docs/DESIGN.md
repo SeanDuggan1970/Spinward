@@ -231,6 +231,21 @@ Touchstone: the Eagle Transporter from *Space: 1999*, with ships that look built
     - Each drive is a reactor drum in a cage of longerons, with field coils and a heat-tinted bell.
   - **Barnacles.** Pumps, gas bottles, pipe runs over the shield to the tanks, and cable trays. They are seeded by the ship's name, as are its dishes and aerials, so sister ships differ in the details.
   - **Draw calls.** Static parts are merged per material after building (`Kit.merge_static`), so a ship of several hundred parts costs a few dozen draw calls.
+  - **Moving parts** (`view/flight/ship_rig.gd`). The parts that move are left out of the merge.
+    - **Panels:** every panel hangs on a boom along the ship's X axis, all in one plane (never stacked), and turns about that boom.
+      - Solar wings on the crew hab, housekeeping power for when the reactor is cold, face the Sun.
+      - Radiators turn edge-on to it, so they shed heat rather than absorb sunlight.
+      - One hinge can only reach the Sun if it lies in the ship's Y-Z plane. So in transit (orbit view, lane traffic, the attract screen) ships roll about their line of thrust to put it there.
+      - While docking the pilot owns the roll, and the panels do the best one hinge can.
+    - **High-gain dish:** an azimuth/elevation mount with limited slew rates. It aims at:
+      - the destination, in transit
+      - the station's traffic control, while docking
+      - Earth, while moored
+      - the next port, for outbound traffic
+    - **Light time** (`sim/light_time.gd`, tested). In transit the dish points ahead to where the destination will be when the signal arrives, at t + tau with tau = |target(t + tau) − ship(t)| / c.
+      - The aim is corrected for aberration from the ship's own velocity. A ship and a target moving together need no lead, and the test checks that.
+      - The receive solution sees the target where it was, at t − tau.
+      - The orbit HUD shows the light time and the point-ahead angle between the two solutions: about 2 arcsec across cislunar space, where both move at about 1 km/s.
 - **Materials:** off-white and grey panels, bare metal, gold foil insulation, rubberised seals. Restrained colour with practical markings: hazard stripes, hull numbers, operator logos, stencilled warnings, rescue-orange handles.
 - **Wear and history:** scuffs, sun-bleaching, replaced mismatched panels, patch repairs. Older ships look older, and a second-hand starter ship looks second-hand.
 - **Lighting:** hard, single-source sunlight with deep shadows. Working lights, floodlights and blinking navigation beacons. Interiors are cramped and lit by instruments.

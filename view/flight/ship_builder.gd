@@ -7,6 +7,10 @@
 ## Layout follows the hull's data (ships.json "look") and modules (modules.json
 ## "look"); the small hardware is seeded by the ship's name, so sister ships differ.
 ## Static parts are merged per material at the end to keep draw calls down.
+##
+## Moving parts are returned as a rig for view/flight/ship_rig.gd: every panel (solar
+## and radiator) hangs on a boom along the ship's X axis, all in one plane, and turns
+## about that boom; the high-gain dish sits on an azimuth/elevation mount.
 extends RefCounted
 
 const Kit := preload("res://view/flight/kit.gd")
@@ -26,7 +30,8 @@ static func build(ship_state: Dictionary, data, livery: Dictionary) -> Dictionar
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(String(livery.get("name", "")) + "|" + String(ship_state["hull"]))
 	var by_kind := _modules_by_kind(ship_state["modules"], data)
-	var ctx := {"livery": livery, "mats": livery["mats"], "rng": rng, "look": look, "truss_w": truss_w}
+	var rig := {"arrays": [], "dish": {}}
+	var ctx := {"livery": livery, "mats": livery["mats"], "rng": rng, "look": look, "truss_w": truss_w, "rig": rig}
 
 	var parts := Node3D.new()
 	var z := 0.0
@@ -73,7 +78,7 @@ static func build(ship_state: Dictionary, data, livery: Dictionary) -> Dictionar
 	parts.position.z = -length * 0.5
 	root.add_child(parts)
 	Kit.merge_static(root)
-	return {"node": root, "nose_z": -length * 0.5, "radius": radius, "length": length}
+	return {"node": root, "nose_z": -length * 0.5, "radius": radius, "length": length, "rig": rig}
 
 
 static func _modules_by_kind(mods: Dictionary, data) -> Dictionary:
@@ -131,6 +136,55 @@ static func dish(base: Vector3, facing: Vector3, r: float, ctx: Dictionary) -> N
 	holder.add_child(Kit.box(Vector3(0.18, 0.18, 0.25), mats["dark"], Vector3(0, 0, r * 0.95)))
 	n.add_child(holder)
 	return n
+
+
+## The high-gain dish on an azimuth/elevation mount atop a mast at `base` (mast +Y).
+## Registers itself as the rig's dish; ship_rig.gd turns "az" about Y and "el" about X.
+static func steerable_dish(base: Vector3, r: float, ctx: Dictionary) -> Node3D:
+	var mats: Dictionary = ctx["mats"]
+	var n := Node3D.new()
+	var mast_top := base + Vector3(0, maxf(1.0, r * 1.1), 0)
+	n.add_child(strut(base, mast_top, 0.16, mats["steel"]))
+	var az := Node3D.new()
+	az.position = mast_top
+	az.set_meta("no_merge", true)
+	az.add_child(Kit.box(Vector3(0.4, 0.3, 0.4), mats["dark"]))
+	var el := Node3D.new()
+	el.position = Vector3(0, 0.25, 0)
+	az.add_child(el)
+	# Opening toward +Z: reflector, back frame, and the feed on its strut.
+	el.add_child(Kit.cone(r, r * 0.15, r * 0.35, Kit.mat("offwhite"), Vector3(0, 0, r * 0.15), 16))
+	el.add_child(Kit.box(Vector3(r * 0.5, r * 0.5, 0.2), mats["dark"], Vector3(0, 0, -0.05)))
+	el.add_child(strut(Vector3(0, 0, 0.0), Vector3(0, 0, r * 0.95), 0.06, mats["steel"]))
+	el.add_child(Kit.box(Vector3(0.18, 0.18, 0.25), mats["dark"], Vector3(0, 0, r)))
+	n.add_child(az)
+	ctx["rig"]["dish"] = {"az": az, "el": el}
+	return n
+
+
+## A panel on a boom: the boom is fixed, the panel turns about it. The panel spans
+## `span` outward along X, `width` along Z; kind "solar" or "radiator".
+static func boom_panel(root: Vector3, side: float, reach: float, span: float, width: float, kind: String, material: Material, ctx: Dictionary) -> Node3D:
+	var mats: Dictionary = ctx["mats"]
+	var n := Node3D.new()
+	var boom_end := root + Vector3(side * reach, 0, 0)
+	n.add_child(strut(root, boom_end, 0.22, mats["steel"]))
+	var gimbal := Node3D.new()
+	gimbal.position = boom_end
+	gimbal.set_meta("no_merge", true)
+	gimbal.add_child(Kit.box(Vector3(0.35, 0.35, 0.35), mats["dark"]))
+	var at := Vector3(side * (span * 0.5 + 0.2), 0, 0)
+	gimbal.add_child(Kit.box(Vector3(span, 0.08 if kind == "solar" else 0.2, width), material, at))
+	gimbal.add_child(rod(Vector3(side * 0.2, 0, 0), Vector3(side * (span + 0.2), 0, 0), 0.07, mats["steel"]))
+	for f in [-0.5, 0.5]:
+		gimbal.add_child(Kit.box(Vector3(span, 0.1, 0.08), mats["steel"], at + Vector3(0, 0, width * f)))
+	n.add_child(gimbal)
+	ctx["rig"]["arrays"].append({"node": gimbal, "kind": kind})
+	return n
+
+
+static func solar_cells(ctx: Dictionary) -> Material:
+	return Livery.paint(ctx["livery"], Color("1d2b4a"), {"finish": 1, "mismatch": 0.0, "panel_m": 0.3, "roughness": 0.3, "metallic": 0.35, "wear": 0.1})
 
 
 ## Reaction-control quad: a block with four little nozzles.
@@ -222,7 +276,13 @@ static func _crew(m: Dictionary, ctx: Dictionary) -> Dictionary:
 			n.add_child(port)
 	# Deep-space kit on the hab's back: high-gain dish, nav radar, aerials, star trackers.
 	var top := Vector3(0, hab_r, hab_z)
-	n.add_child(dish(top + Vector3(rng.randf_range(-0.4, 0.4), 0, hab_len * 0.15), Vector3(rng.randf_range(-0.3, 0.3), 1.0, rng.randf_range(0.2, 0.9)), rng.randf_range(1.0, 1.6), ctx))
+	n.add_child(steerable_dish(top + Vector3(0, 0, hab_len * rng.randf_range(0.0, 0.25)), rng.randf_range(1.0, 1.6), ctx))
+	# Housekeeping solar wings, for when the reactor is cold: one each side, in the
+	# same plane as the radiators aft.
+	var cells := solar_cells(ctx)
+	var wing := rng.randf_range(3.0, 4.5)
+	for side in [1.0, -1.0]:
+		n.add_child(boom_panel(Vector3(side * hab_r, 0, hab_z - hab_len * 0.15), side, 0.8, wing, minf(hab_len * 0.55, 2.4), "solar", cells, ctx))
 	n.add_child(dish(Vector3(w * 0.5, h * 0.3, deck_z), Vector3(1.0, 0.4, -0.2), 0.45, ctx))
 	for k in rng.randi_range(2, 4):
 		var at := Vector3(rng.randf_range(-w, w) * 0.4, h * 0.5, nose_len + rng.randf_range(0.2, deck_len))
@@ -254,7 +314,10 @@ static func _drone_bus(m: Dictionary, ctx: Dictionary) -> Dictionary:
 	for k in 4:
 		var a := TAU * float(k) / 4.0 + PI * 0.25
 		n.add_child(Kit.sphere(0.12, Kit.glow(ctx["livery"]["accent"], 2.0), Vector3(cos(a) * r * 0.75, sin(a) * r * 0.75, 0.4)))
-	n.add_child(dish(Vector3(0, r * 0.9, 1.2 + l * 0.6), Vector3(0.2, 1.0, 0.5), rng.randf_range(0.9, 1.4), ctx))
+	n.add_child(steerable_dish(Vector3(0, r * 0.9, 1.2 + l * 0.6), rng.randf_range(0.9, 1.4), ctx))
+	var cells := solar_cells(ctx)
+	for side in [1.0, -1.0]:
+		n.add_child(boom_panel(Vector3(side * r * 0.95, 0, 1.2 + l * 0.35), side, 0.6, 3.0, 1.6, "solar", cells, ctx))
 	n.add_child(dish(Vector3(r * 0.9, 0, 1.2 + l * 0.7), Vector3(1.0, -0.2, 0.3), rng.randf_range(0.5, 0.8), ctx))
 	for k in rng.randi_range(2, 4):
 		var a := rng.randf_range(0.0, TAU)
@@ -452,7 +515,9 @@ static func _propulsion(tanks: Array, drives: Array, radiators: Array, ctx: Dict
 		var s := _size(m)
 		var off := Vector3.ZERO
 		if tanks.size() > 1:
-			var a := TAU * float(k) / float(tanks.size())
+			# Starting overhead, so a pair sits above and below and leaves the
+			# radiator plane (X-Z) clear.
+			var a := TAU * float(k) / float(tanks.size()) + PI * 0.5
 			off = Vector3(cos(a), sin(a), 0) * (s.x * 0.5 + truss_w * 0.5 + 0.2)
 		var t := Node3D.new()
 		t.position = off + Vector3(0, 0, s.z * 0.5)
@@ -483,21 +548,18 @@ static func _propulsion(tanks: Array, drives: Array, radiators: Array, ctx: Dict
 	var shield_r := spread + drive_r * 1.15
 	# Radiators fold out from the tank section on booms, edge-on to the crew.
 	var rads_z := z * 0.5
+	# All in the ship's X-Z plane, one pair after another along the hull, never
+	# stacked, so each can turn edge-on to the Sun without shading the next.
+	var rad_mat := Livery.paint(ctx["livery"], Kit.COLOURS["dark"], {"finish": 1, "mismatch": 0.0, "panel_m": 0.35, "roughness": 0.6, "metallic": 0.3})
+	var pair_z := rads_z
 	for k in radiators.size():
 		var s := _size(radiators[k][1])
 		var side := 1.0 if k % 2 == 0 else -1.0
-		var tier := float(k >> 1)
-		var root := Vector3(side * (truss_w * 0.5 + 0.2), tier * 1.2 - (0.6 if radiators.size() > 2 else 0.0), rads_z + tier * 0.8)
-		var boom_end := root + Vector3(side * maxf(1.2, shield_r - truss_w * 0.5), 0, 0)
-		n.add_child(strut(root, boom_end, 0.25, mats["steel"]))
-		var panel := Node3D.new()
-		panel.position = boom_end + Vector3(side * s.y * 0.5, 0, 0)
-		panel.add_child(Kit.box(Vector3(s.y, s.x, s.z), Livery.paint(ctx["livery"], Kit.COLOURS["dark"], {"mismatch": 0.0, "panel_m": 0.35, "roughness": 0.6})))
-		panel.add_child(rod(Vector3(-side * s.y * 0.5, 0, -s.z * 0.5), Vector3(-side * s.y * 0.5, 0, s.z * 0.5), 0.12, mats["steel"]))
-		panel.add_child(Kit.box(Vector3(s.y, 0.08, 0.1), mats["steel"], Vector3(0, 0, -s.z * 0.5)))
-		panel.add_child(Kit.box(Vector3(s.y, 0.08, 0.1), mats["steel"], Vector3(0, 0, s.z * 0.5)))
-		n.add_child(panel)
-		radius = maxf(radius, absf(boom_end.x) + s.y)
+		var reach := maxf(1.2, shield_r - truss_w * 0.5)
+		n.add_child(boom_panel(Vector3(side * (truss_w * 0.5 + 0.1), 0, pair_z), side, reach, s.y, s.z, "radiator", rad_mat, ctx))
+		radius = maxf(radius, truss_w * 0.5 + reach + s.y + 0.3)
+		if side < 0.0:
+			pair_z += s.z + 0.6
 	# Shadow shield: a thick plate between the reactor(s) and everything forward.
 	var shield_z := z + 0.3
 	n.add_child(Kit.cylinder(shield_r, 0.6, mats["steel"], Vector3(0, 0, shield_z), 16))

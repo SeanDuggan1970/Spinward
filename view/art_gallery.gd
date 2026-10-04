@@ -8,6 +8,7 @@ const SkyKit := preload("res://view/flight/sky.gd")
 const Models := preload("res://view/flight/models.gd")
 const Livery := preload("res://view/flight/livery.gd")
 const SetPieces := preload("res://view/flight/set_pieces.gd")
+const ShipRig := preload("res://view/flight/ship_rig.gd")
 
 ## [name, body, sun direction (towards the Sun), camera distance in radii, spin]
 const SHOTS := [
@@ -103,6 +104,10 @@ func _ships() -> void:
 		var plume := node.find_child("DrivePlume", true, false)
 		if plume:
 			plume.visible = false
+		# Rolled to the Sun as in transit: wings square on, radiators edge-on, dish
+		# on a target up and ahead.
+		node.basis = ShipRig.roll_to_sun(Vector3.FORWARD, sun_dir)
+		ShipRig.aim(model["rig"], node.basis, sun_dir, Vector3(0.5, 0.4, -1.0), -1.0)
 		var half: float = float(model["length"]) * 0.5
 		var views := {
 			"": [Vector3(half * 1.7, half * 0.6, -half * 0.5), Vector3(0, 0, -half * 0.05)],

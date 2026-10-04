@@ -9,6 +9,7 @@ extends Node3D
 const Kit := preload("res://view/flight/kit.gd")
 const Models := preload("res://view/flight/models.gd")
 const Livery := preload("res://view/flight/livery.gd")
+const ShipRig := preload("res://view/flight/ship_rig.gd")
 const UI := preload("res://view/ui/ui_kit.gd")
 const V := preload("res://sim/v3.gd")
 const SystemMap := preload("res://view/system_map.gd")
@@ -56,6 +57,8 @@ var message_until := 0.0
 var clock := 0.0
 var docked := false
 var _drive_plume: Node3D
+## The player ship's panels and dish (ship_rig.gd).
+var _rig: Dictionary = {}
 var _blinkers: Array = []
 ## NPC id -> {node, mode: "berth"|"inbound"|"outbound"}
 var _traffic: Dictionary = {}
@@ -100,6 +103,7 @@ func _ready() -> void:
 	nose_z = model["nose_z"]
 	ship_radius = model["radius"]
 	_drive_plume = ship_node.find_child("DrivePlume", true, false)
+	_rig = model["rig"]
 	add_child(ship_node)
 	# Start out on the approach axis with a deterministic offset per station.
 	var h := hash(place_id)
@@ -212,9 +216,12 @@ func _physics_process(dt: float) -> void:
 	if _traffic_check <= 0.0:
 		_traffic_check = 1.0
 		_sync_traffic()
-	_move_traffic()
+	_move_traffic(dt)
 	_move_work_craft()
 	SetPieces.animate(_set_pieces, clock)
+	# Docking: the pilot owns the roll, so the panels do what one hinge can; the dish
+	# holds on the station's traffic control.
+	ShipRig.aim(_rig, ship_node.global_basis, body_dirs["sun"], -ship_node.global_position, dt)
 	_fly(dt)
 	_collide()
 	_check_docking()
@@ -461,23 +468,30 @@ func _sync_traffic() -> void:
 			holder.add_child(node)
 			holder.add_child(Kit.box(Vector3(model["radius"] + 6.0, 0.6, 0.6), Kit.mat("steel"), Vector3(station["hub_radius"] + (model["radius"] + 6.0) * 0.5, 0, node.position.z)))
 			station["rotor"].add_child(holder)
-			_traffic[id] = {"node": holder, "ship": node, "mode": "berth", "npc": w["npc"]}
+			_traffic[id] = {"node": holder, "ship": node, "mode": "berth", "npc": w["npc"], "rig": model["rig"]}
 		else:
 			# A bright running light so distant traffic reads as a moving star.
 			node.add_child(Kit.sphere(2.5, Kit.glow(Color("ffe0a0"), 4.0), Vector3(0, 3.0, 0)))
 			add_child(node)
-			_traffic[id] = {"node": node, "ship": node, "mode": w["mode"], "npc": w["npc"]}
+			# Outbound, the dish swings to wherever the ship is bound.
+			var bound: String = npc["location"].get("to", place_id)
+			var dest_dir := _dir_to(sim.ephemeris.position(bound, sim.state.time_s), sim.ephemeris.position(place_id, sim.state.time_s)) if bound != place_id else Vector3.FORWARD
+			_traffic[id] = {"node": node, "ship": node, "mode": w["mode"], "npc": w["npc"], "rig": model["rig"], "dest_dir": dest_dir}
 		changed = true
 	if changed or _blinkers.is_empty():
 		_blinkers = Kit.collect_blinkers(self)
-	_move_traffic()
+	_move_traffic(0.0)
 
 
-func _move_traffic() -> void:
+## Lane traffic flies in and out; everyone keeps panels on the Sun and dish on target.
+func _move_traffic(dt: float) -> void:
 	var t: float = sim.state.time_s
+	var sun: Vector3 = body_dirs["sun"]
 	for id in _traffic:
 		var entry: Dictionary = _traffic[id]
 		if entry["mode"] == "berth":
+			# Moored: talking home to Earth while the panels ride the station's spin.
+			ShipRig.aim(entry["rig"], entry["ship"].global_basis, sun, body_dirs["earth"], dt)
 			continue
 		var loc: Dictionary = entry["npc"]["location"]
 		if loc["status"] != "transit":
@@ -492,13 +506,17 @@ func _move_traffic() -> void:
 		var span: float = float(station["port_z"]) + LANE_LENGTH - z0
 		var f: float
 		var node: Node3D = entry["ship"]
+		# In the lanes ships still roll freely, keeping the Sun in their panels' plane.
+		var target: Vector3
 		if entry["mode"] == "inbound":
 			f = clampf((float(loc["arrive_t"]) - t) / LANE_WINDOW, 0.0, 1.0)
-			node.rotation = Vector3.ZERO
+			node.basis = ShipRig.roll_to_sun(Vector3.FORWARD, sun)
 		else:
 			f = clampf((t - float(loc["depart_t"])) / LANE_WINDOW, 0.0, 1.0)
-			node.rotation = Vector3(0, PI, 0)
+			node.basis = ShipRig.roll_to_sun(Vector3.BACK, sun)
 		node.position = offset + Vector3(0, 0, z0 + span * f)
+		target = -node.position if entry["mode"] == "inbound" else entry.get("dest_dir", Vector3.BACK)
+		ShipRig.aim(entry["rig"], node.basis, sun, target, dt)
 
 
 ## View-only station life: work pods circling the hub and a tug standing off the port.
