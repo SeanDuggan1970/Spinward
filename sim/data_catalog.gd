@@ -101,7 +101,7 @@ func validate() -> Array[String]:
 			var kind: String = slot.split(".")[0]
 			var index := int(slot.split(".")[1])
 			var module: Dictionary = modules.get(ship["modules"][slot], {})
-			if module.get("kind") != kind:
+			if not kind in module.get("mounts", [module.get("kind")]):
 				problems.append("ship %s: slot %s holds %s of the wrong kind" % [id, slot, ship["modules"][slot]])
 			if index >= int(spine["slots"].get(kind, 0)):
 				problems.append("ship %s: slot %s does not exist on the spine" % [id, slot])

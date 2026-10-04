@@ -1,5 +1,5 @@
 {
-	"_note": "Ships are a spine plus bolt-on modules. mass_t is dry mass. Drives: thrust_n and isp_s set acceleration and propellant use; heat_mw must be rejected by radiators or thrust is throttled. 'look' feeds the kit-bash renderer (view/flight/ship_builder.gd): command shape 'cockpit' or 'drone'; cargo shape 'cage' (open frame of half-length containers), 'container' (standard 2.4 x 2.6 x 6 m boxes, containers = [across, high, long]), 'bulk' (hopper), 'cradle' (open flatbed for outsize loads) or 'hab' (passenger can, mounted behind the crew); spine truss_m is the keel's width; drive coils is the number of field coils on the nozzle.",
+	"_note": "Ships are a spine plus bolt-on modules. mass_t is dry mass. Drives: thrust_n and isp_s set acceleration and propellant use; heat_mw must be rejected by radiators or thrust is throttled. 'mounts' lists the slot kinds a module fits (default: its own kind), so long-haul refits can trade cargo bays for tanks, life support, berths, a lander or a rig. life_support_days and berths add up across modules; crewless ships need none. 'look' feeds the kit-bash renderer (view/flight/ship_builder.gd): command shape 'cockpit' or 'drone'; cargo shape 'cage' (open frame of half-length containers), 'container' (standard 2.4 x 2.6 x 6 m boxes, containers = [across, high, long]), 'bulk' (hopper), 'cradle' (open flatbed for outsize loads); 'hab' (passenger can or long-duration hab, mounted behind the crew); 'lander', 'sensor' and 'mining' ride in the cargo section; tanks of any slot cluster ahead of the drives; spine truss_m is the keel's width; drive coils is the number of field coils on the nozzle.",
 	"mule_spine": {
 		"name": "Mule truss spine",
 		"kind": "spine",
@@ -82,7 +82,8 @@
 				7.0
 			],
 			"colour": "offwhite"
-		}
+		},
+		"berths": 24
 	},
 	"cargo_pod_s": {
 		"name": "10 t cargo cage",
@@ -172,7 +173,11 @@
 				3.2
 			],
 			"colour": "foil"
-		}
+		},
+		"mounts": [
+			"tank",
+			"cargo"
+		]
 	},
 	"tank_m": {
 		"name": "6 t propellant tank",
@@ -186,6 +191,30 @@
 				3.4,
 				3.4,
 				5.5
+			],
+			"colour": "foil"
+		},
+		"mounts": [
+			"tank",
+			"cargo"
+		]
+	},
+	"tank_l": {
+		"name": "20 t long-haul tank",
+		"kind": "tank",
+		"mounts": [
+			"tank",
+			"cargo"
+		],
+		"mass_t": 3.0,
+		"price": 60000,
+		"fuel_t": 20,
+		"look": {
+			"shape": "cylinder",
+			"size_m": [
+				4.6,
+				4.6,
+				8.0
 			],
 			"colour": "foil"
 		}
@@ -228,6 +257,25 @@
 			"coils": 3
 		}
 	},
+	"pathfinder_mk3": {
+		"name": "Pathfinder Mk3 fusion drive (D-He3)",
+		"kind": "drive",
+		"mass_t": 7.0,
+		"price": 450000,
+		"thrust_n": 2600,
+		"isp_s": 60000,
+		"heat_mw": 9.0,
+		"look": {
+			"shape": "drive",
+			"size_m": [
+				3.8,
+				3.8,
+				6.2
+			],
+			"colour": "grey",
+			"coils": 4
+		}
+	},
 	"radiator_panel": {
 		"name": "1.5 MW radiator panel",
 		"kind": "radiator",
@@ -260,6 +308,22 @@
 			"colour": "dark"
 		}
 	},
+	"radiator_array": {
+		"name": "6 MW radiator array",
+		"kind": "radiator",
+		"mass_t": 1.8,
+		"price": 30000,
+		"reject_mw": 6.0,
+		"look": {
+			"shape": "panel",
+			"size_m": [
+				0.2,
+				12.0,
+				5.0
+			],
+			"colour": "dark"
+		}
+	},
 	"docking_computer": {
 		"name": "Docking computer",
 		"kind": "avionics",
@@ -274,6 +338,103 @@
 				0.5
 			],
 			"colour": "dark"
+		}
+	},
+	"hab_extended": {
+		"name": "Long-duration hab (300 days)",
+		"kind": "hab",
+		"mounts": [
+			"cargo"
+		],
+		"mass_t": 3.5,
+		"price": 45000,
+		"life_support_days": 300,
+		"look": {
+			"shape": "hab",
+			"size_m": [
+				4.4,
+				4.4,
+				6.5
+			],
+			"colour": "offwhite"
+		}
+	},
+	"passenger_berths": {
+		"name": "Passenger berths (6)",
+		"kind": "hab",
+		"mounts": [
+			"cargo"
+		],
+		"mass_t": 2.5,
+		"price": 25000,
+		"berths": 6,
+		"life_support_days": 40,
+		"look": {
+			"shape": "hab",
+			"size_m": [
+				4.0,
+				4.0,
+				5.0
+			],
+			"colour": "offwhite"
+		}
+	},
+	"lander_bay": {
+		"name": "Lander bay, Bramble-class lander",
+		"kind": "lander",
+		"mounts": [
+			"cargo"
+		],
+		"mass_t": 6.0,
+		"price": 85000,
+		"lander": true,
+		"look": {
+			"shape": "lander",
+			"size_m": [
+				5.0,
+				4.6,
+				7.0
+			],
+			"colour": "yellow"
+		}
+	},
+	"survey_pod": {
+		"name": "Survey sensor pod",
+		"kind": "sensor",
+		"mounts": [
+			"cargo",
+			"avionics"
+		],
+		"mass_t": 1.2,
+		"price": 30000,
+		"survey": true,
+		"look": {
+			"shape": "sensor",
+			"size_m": [
+				2.4,
+				2.4,
+				3.0
+			],
+			"colour": "offwhite"
+		}
+	},
+	"mining_rig": {
+		"name": "Prospecting and mining rig",
+		"kind": "mining",
+		"mounts": [
+			"cargo"
+		],
+		"mass_t": 5.0,
+		"price": 70000,
+		"mining": true,
+		"look": {
+			"shape": "mining",
+			"size_m": [
+				4.0,
+				4.0,
+				7.0
+			],
+			"colour": "orange"
 		}
 	}
 }

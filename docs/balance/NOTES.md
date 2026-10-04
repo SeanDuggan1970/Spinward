@@ -118,6 +118,19 @@ Starting date 2061-03-01, from Halo Depot.
   - Kibo, Trojan Yards and the Kernel buy them.
 - **To tune:** whether a Mars run pays for its fuel and three months.
 
+## Refits (Phase 3)
+
+From Halo Depot, 2061-03-01, at full tanks.
+
+| Fit | Mass | Accel | Fuel | Life | Mars | Ceres | Jupiter | Saturn |
+|---|---|---|---|---|---|---|---|---|
+| Mars runner (tank_l, pod_m, tank_m) | 48 t | 2.1 milli-g | 26 t | 120 d | 55 d | 109 d | - | - |
+| Outer (Mk3, 2 x tank_l, hab, arrays) | 70 t | 3.8 milli-g | 40 t | 420 d | 41 d | 82 d | 101 d | 91 d |
+| Prospector (lander, tank_l, Mk2) | 53 t | 3.3 milli-g | 26 t | 120 d | 44 d | 93 d | - | - |
+
+- The outer fit costs about 675k cr: late game.
+- **Watch:** at this launch date Saturn comes out quicker than Jupiter, because Jupiter is far round the Sun.
+
 ## Next tuning ideas
 
 1. Give Clarke Exchange and The Kernel exports: salvage or refurbished parts from GEO, and fresh food, art and people from the Kernel's farms. Then there's always something to carry home.

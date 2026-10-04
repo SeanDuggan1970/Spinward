@@ -42,7 +42,10 @@ static func build(ship_state: Dictionary, data, livery: Dictionary) -> Dictionar
 	if not command.is_empty():
 		sections.append(_crew(command[0][1], ctx))
 	var cargo := []
-	for entry in by_kind.get("cargo", []):
+	# Whatever bay a module sits in, it goes where it belongs: habs behind the crew,
+	# freight and working kit amidships, tanks ahead of the drives.
+	var bay: Array = by_kind.get("cargo", []) + by_kind.get("hab", []) + by_kind.get("lander", []) + by_kind.get("sensor", []) + by_kind.get("mining", [])
+	for entry in bay:
 		if entry[1]["look"].get("shape", "") == "hab":
 			sections.append(_hab(entry[1], ctx))
 		else:
@@ -86,7 +89,7 @@ static func _modules_by_kind(mods: Dictionary, data) -> Dictionary:
 	var slots: Array = mods.keys()
 	slots.sort()
 	for slot in slots:
-		var kind: String = String(slot).split(".")[0]
+		var kind: String = String(data.modules[mods[slot]]["kind"])
 		if not out.has(kind):
 			out[kind] = []
 		out[kind].append([slot, data.modules[mods[slot]]])
@@ -424,6 +427,27 @@ static func _cargo_block(m: Dictionary, slot: String, ctx: Dictionary) -> Dictio
 			for f in [-0.25, 0.0]:
 				n.add_child(Kit.box(Vector3(1.4, 0.3, 1.4), Kit.mat("yellow"), Vector3(0, r + 0.1, size.z * f)))
 			return {"node": n, "size": Vector3(2.0 * r, 2.0 * r, size.z)}
+		"lander":
+			n.free()
+			return _lander(m, ctx)
+		"sensor":
+			# A survey pod: sensor drum, a lens turret and a small dish.
+			var size := _size(m)
+			n.add_child(Kit.cylinder(size.x * 0.45, size.z, mats["hull"], Vector3.ZERO, 12))
+			n.add_child(Kit.cylinder(size.x * 0.47, 0.4, mats["accent"], Vector3(0, 0, -size.z * 0.2), 12))
+			n.add_child(Kit.sphere(0.5, Kit.mat("black"), Vector3(0, -size.y * 0.5, 0)))
+			n.add_child(Kit.sphere(0.2, Kit.glow(Color("8fd0ff"), 2.0), Vector3(0, -size.y * 0.5 - 0.35, 0)))
+			n.add_child(dish(Vector3(0, size.y * 0.45, size.z * 0.2), Vector3(0.3, 1.0, 0.2), 0.7, ctx))
+			return {"node": n, "size": size + Vector3(0.0, 1.5, 0.0)}
+		"mining":
+			# A prospecting and mining rig: a drill boom folded along a hopper.
+			var size := _size(m)
+			n.add_child(Kit.box(Vector3(size.x * 0.8, size.y * 0.7, size.z * 0.6), mats["hull"], Vector3(0, -size.y * 0.1, size.z * 0.15)))
+			n.add_child(Kit.cone(size.x * 0.35, size.x * 0.15, size.z * 0.25, mats["steel"], Vector3(0, -size.y * 0.1, size.z * 0.55), 10))
+			n.add_child(strut(Vector3(size.x * 0.3, size.y * 0.35, size.z * 0.4), Vector3(size.x * 0.3, size.y * 0.35, -size.z * 0.5), 0.35, Kit.mat("orange")))
+			n.add_child(Kit.cone(0.15, 0.6, 1.4, mats["steel"], Vector3(size.x * 0.3, size.y * 0.35, -size.z * 0.5 - 0.7), 8))
+			n.add_child(Kit.hazard_band(size.x * 0.42, 0.4, Vector3(0, -size.y * 0.1, -size.z * 0.12), 12))
+			return {"node": n, "size": size}
 		_:
 			# Standard containers stacked across, high and long on a pallet frame.
 			var c: Array = look.get("containers", [1, 1, 1])
@@ -452,6 +476,35 @@ static func _container(size: Vector3, colour: Color, livery: Dictionary, at: Vec
 		n.add_child(Kit.box(Vector3(size.x + 0.06, size.y + 0.06, 0.18), frame, Vector3(0, 0, size.z * f)))
 	n.add_child(Kit.box(Vector3(0.02, 0.5, 1.0), Kit.mat("offwhite"), Vector3(size.x * 0.5 + 0.02, size.y * 0.2, -size.z * 0.3)))
 	return n
+
+
+## A lander in its bay: an open cradle holding a squat two-seat lander, legs folded,
+## descent engine down and its own little dish.
+static func _lander(m: Dictionary, ctx: Dictionary) -> Dictionary:
+	var mats: Dictionary = ctx["mats"]
+	var size := _size(m)
+	var n := Node3D.new()
+	var bed_y := float(ctx["truss_w"]) * 0.5 + 0.5
+	for f in [-0.45, 0.45]:
+		n.add_child(Kit.box(Vector3(size.x, 0.3, 0.3), mats["steel"], Vector3(0, bed_y, size.z * f)))
+		n.add_child(strut(Vector3(0, 0, size.z * f), Vector3(0, bed_y, size.z * f), 0.3, mats["steel"]))
+	var lander := Node3D.new()
+	lander.position = Vector3(0, bed_y + size.y * 0.55, 0)
+	var cab := Livery.paint(ctx["livery"], Kit.COLOURS["yellow"], {"wear": 0.55})
+	lander.add_child(Kit.cylinder(size.x * 0.32, size.z * 0.45, cab, Vector3(0, size.y * 0.1, 0), 8))
+	lander.add_child(Kit.box(Vector3(size.x * 0.4, 0.06, size.z * 0.12), Kit.glass(0.3), Vector3(0, size.y * 0.1 + size.x * 0.3, -size.z * 0.15)))
+	var engine := Kit.cone(size.x * 0.22, size.x * 0.12, size.y * 0.3, mats["steel"], Vector3(0, -size.y * 0.2, 0), 10)
+	engine.basis = Basis(Vector3.RIGHT, PI)  # wide bell down
+	lander.add_child(engine)
+	for k in 4:
+		var a := TAU * float(k) / 4.0 + PI * 0.25
+		var foot := Vector3(cos(a) * size.x * 0.48, -size.y * 0.4, sin(a) * size.z * 0.36)
+		lander.add_child(strut(Vector3(cos(a) * size.x * 0.25, 0.0, sin(a) * size.z * 0.2), foot, 0.12, mats["steel"]))
+		lander.add_child(Kit.cylinder(0.35, 0.1, mats["dark"], foot + Vector3(0, -0.05, 0), 8))
+	lander.add_child(dish(Vector3(0, size.y * 0.1 + size.x * 0.32, size.z * 0.15), Vector3(0.0, 1.0, 0.3), 0.45, ctx))
+	lander.add_child(Kit.beacon(Color("f0a030"), Vector3(0, size.y * 0.1 + size.x * 0.34, -size.z * 0.05), 0.15, 1.6, 0.3))
+	n.add_child(lander)
+	return {"node": n, "size": Vector3(size.x, (bed_y + size.y) * 2.0, size.z)}
 
 
 ## An open flatbed for outsize loads: a mirror segment, a hull section, or a netted
@@ -508,19 +561,18 @@ static func _propulsion(tanks: Array, drives: Array, radiators: Array, ctx: Dict
 	var n := Node3D.new()
 	var z := 0.0
 	var radius := 2.0
-	# Tank cluster round the keel.
+	# Tanks in pairs above and below the keel, stepping aft: the radiator plane (X-Z)
+	# stays clear however many a long-haul refit carries.
 	var tank_len := 0.0
+	var tz := 0.0
 	for k in tanks.size():
 		var m: Dictionary = tanks[k][1]
 		var s := _size(m)
 		var off := Vector3.ZERO
 		if tanks.size() > 1:
-			# Starting overhead, so a pair sits above and below and leaves the
-			# radiator plane (X-Z) clear.
-			var a := TAU * float(k) / float(tanks.size()) + PI * 0.5
-			off = Vector3(cos(a), sin(a), 0) * (s.x * 0.5 + truss_w * 0.5 + 0.2)
+			off = Vector3(0, (1.0 if k % 2 == 0 else -1.0) * (s.x * 0.5 + truss_w * 0.5 + 0.2), 0)
 		var t := Node3D.new()
-		t.position = off + Vector3(0, 0, s.z * 0.5)
+		t.position = off + Vector3(0, 0, tz + s.z * 0.5)
 		if m["look"].get("shape", "") == "sphere":
 			t.add_child(Kit.sphere(s.x * 0.5, mats["foil"]))
 			t.add_child(Kit.torus(s.x * 0.5, 0.08, mats["steel"], Vector3.ZERO, 32))
@@ -529,7 +581,11 @@ static func _propulsion(tanks: Array, drives: Array, radiators: Array, ctx: Dict
 			t.add_child(Kit.hazard_band(s.x * 0.5 + 0.02, 0.4, Vector3(0, 0, s.z * 0.4), 12))
 			t.add_child(Kit.torus(s.x * 0.5 + 0.03, 0.12, mats["accent"], Vector3(0, 0, -s.z * 0.35), 32))
 		n.add_child(t)
-		tank_len = maxf(tank_len, s.z)
+		if off.length() > 0.01:
+			n.add_child(strut(Vector3(0, 0, tz + s.z * 0.5), off * 0.7 + Vector3(0, 0, tz + s.z * 0.5), 0.3, mats["steel"]))
+		tank_len = maxf(tank_len, tz + s.z)
+		if tanks.size() == 1 or k % 2 == 1:
+			tz = tank_len + 0.4
 		radius = maxf(radius, off.length() + s.x * 0.5)
 	z += tank_len + 0.4
 	# Drive cluster geometry, to size the shield.

@@ -37,7 +37,11 @@
 			"tank_s",
 			"tank_m",
 			"radiator_panel",
-			"docking_computer"
+			"docking_computer",
+			"tank_l",
+			"hab_extended",
+			"passenger_berths",
+			"survey_pod"
 		],
 		"market": {
 			"electronics": 60,
@@ -278,7 +282,13 @@
 			"pathfinder_mk2",
 			"radiator_panel",
 			"radiator_panel_l",
-			"docking_computer"
+			"docking_computer",
+			"tank_l",
+			"pathfinder_mk3",
+			"radiator_array",
+			"lander_bay",
+			"mining_rig",
+			"hab_extended"
 		],
 		"market": {
 			"regolith": 600,
@@ -525,7 +535,12 @@
 		"shipyard_stock": [
 			"cargo_pod_m",
 			"tank_m",
-			"radiator_panel_l"
+			"radiator_panel_l",
+			"tank_l",
+			"hab_extended",
+			"lander_bay",
+			"mining_rig",
+			"survey_pod"
 		],
 		"market": {
 			"deuterium": 6,
@@ -588,7 +603,8 @@
 		},
 		"services": [
 			"market",
-			"refuel"
+			"refuel",
+			"shipyard"
 		],
 		"market": {
 			"water_ice": 600,
@@ -627,6 +643,13 @@
 					"oxygen": 1
 				}
 			}
+		],
+		"shipyard_stock": [
+			"tank_m",
+			"tank_l",
+			"mining_rig",
+			"lander_bay",
+			"radiator_array"
 		]
 	},
 	"psyche_claims": {

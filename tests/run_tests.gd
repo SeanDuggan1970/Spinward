@@ -54,6 +54,7 @@ func _initialize() -> void:
 	test_light_time()
 	test_ephemeris_against_horizons()
 	test_interplanetary()
+	test_refits()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -762,3 +763,24 @@ func test_interplanetary() -> void:
 	sim.state.time_scale = 1.0e6
 	sim.advance_game_time(float(sim.state.location.get("arrive_t", t)) - t + 10.0)
 	check(sim.state.location.get("status") == "approach" and sim.state.location.get("place") == "ares_ring", "Arrives on approach to Ares Ring")
+
+
+func test_refits() -> void:
+	var sim := fresh()
+	sim.state.credits = 2.0e6
+	var d := sim.data
+	# Cargo bays take long-haul tanks and habs (Kibo Ring's yard); tank slots do not take habs.
+	check(sim.apply({"type": "install_module", "slot": "cargo.0", "module": "tank_l"}) == "", "A long-haul tank fits a cargo bay")
+	check(sim.apply({"type": "install_module", "slot": "cargo.1", "module": "hab_extended"}) == "", "A long-duration hab fits a cargo bay")
+	check(sim.apply({"type": "install_module", "slot": "tank.0", "module": "hab_extended"}) != "", "A hab does not fit a tank slot")
+	check(ShipStats.fuel_capacity_t(sim.state.ship, d) == 23.0, "Tankage adds up across bays (%.0f t)" % ShipStats.fuel_capacity_t(sim.state.ship, d))
+	check(ShipStats.life_support_days(sim.state.ship, d) == 420.0, "Life support adds up (%.0f days)" % ShipStats.life_support_days(sim.state.ship, d))
+	check(ShipStats.cargo_capacity_t(sim.state.ship, d) == 0.0, "Trading bays for range leaves no cargo space")
+	check(d.validate().is_empty(), "Data valid with mounts (%s)" % ", ".join(d.validate()))
+	# The Mk3 drive (Trojan Yards) with the long-haul fit reaches Jupiter.
+	sim.state.location = {"status": "docked", "place": "trojan_yards"}
+	for c in [["drive.0", "pathfinder_mk3"], ["radiator.0", "radiator_array"], ["radiator.1", "radiator_array"], ["tank.0", "tank_l"]]:
+		check(sim.apply({"type": "install_module", "slot": c[0], "module": c[1]}) == "", "Fits %s at Trojan Yards" % c[1])
+	sim.state.ship["fuel_t"] = ShipStats.fuel_capacity_t(sim.state.ship, d)
+	var q: Dictionary = Interplanetary.quick(sim.state.ship, d, sim.ephemeris, "trojan_yards", "valhalla_station", sim.state.time_s)
+	check(q["ok"] and float(q["duration_s"]) / DAY < 200.0, "A Mk3 long-hauler reaches Jupiter (%.0f d, %.1f t) %s" % [float(q.get("duration_s", 0.0)) / DAY, float(q.get("fuel_t", 0.0)), q["reason"]])

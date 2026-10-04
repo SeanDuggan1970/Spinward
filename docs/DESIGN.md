@@ -359,10 +359,28 @@ Sean's direction (2026-10-04). It goes beyond trade into opportunities, refits a
    - new goods: deuterium, volatiles and platinum metals
    - surface shaders: rock, ice with lineae and caps, banded gas giants, cloud worlds, and Saturn's rings
 2. **Interplanetary flight** (done): see the flight model above.
-3. **Refits:**
-   - modules that mount in cargo bays: long-haul tanks, extended life support, passenger berths, a lander, survey and mining rigs
-   - drive tiers beyond the Pathfinders
-   - long burns mean low cargo
+3. **Refits** (done). Modules declare the slot kinds they fit (`mounts`), so cargo bays can carry:
+   - long-haul tanks (`tank_l`, 20 t)
+   - a 300-day hab
+   - passenger berths
+   - a lander bay with a two-seat lander
+   - a survey pod
+   - a prospecting rig
+
+   The Pathfinder Mk3 (D-He3: 2,600 N, Isp 60,000 s) and a 6 MW radiator array open the outer system.
+
+   | Refit | Reach | Cargo |
+   |---|---|---|
+   | Mk3, 2 x tank_l, hab, arrays | Jupiter in about 100 days, Saturn and Enceladus in about 90 | none |
+   | Mars runner (tank_l + one pod) | Mars in 55 days | 20 t |
+
+   Ships are drawn by what a module is, not where it sits: habs behind the crew, tanks in pairs above and below the keel ahead of the drives, landers and rigs amidships. Yards:
+   - **Kibo Ring:** tanks, hab, berths, survey pod
+   - **Trojan Yards:** the Mk3, arrays, lander, rig, hab
+   - **Ares Ring:** tanks, hab, lander, rig, survey pod
+   - **Piazzi Station:** tanks, rig, lander, arrays
+
+   Buying whole hulls (the heavy keel) is still to come.
 4. **Reputation and opportunities.** Being reliable gets you known. Offers come from boards, approaches, and rumours sold as bonus info by the tip line. Kinds of job:
    - **Courier contracts:** a package, a passenger or a party, with a deadline. Some are pickups: go and get something or someone and take it on somewhere else. They weigh little but demand a direct, light, fast trip, so less or no other cargo.
    - survey, salvage, prospecting and mining claims

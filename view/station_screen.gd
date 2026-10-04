@@ -370,7 +370,7 @@ func _shipyard_tab() -> Control:
 		p[1].add_child(UI.label("Fitted: %s  (%s)" % [current["name"], _module_stats(current)]))
 		for module_id in stock:
 			var m: Dictionary = d.modules[module_id]
-			if m["kind"] != kind or module_id == s.ship["modules"][slot]:
+			if not ShipyardSystem.fits(m, slot) or module_id == s.ship["modules"][slot]:
 				continue
 			var cost := float(m["price"]) - float(current["price"]) * resale
 			var row := HBoxContainer.new()
@@ -393,6 +393,16 @@ func _module_stats(m: Dictionary) -> String:
 		bits.append("%d N, %d MW heat" % [int(m["thrust_n"]), int(m["heat_mw"])])
 	if m.has("reject_mw"):
 		bits.append("rejects %.1f MW" % float(m["reject_mw"]))
+	if m.has("life_support_days"):
+		bits.append("+%d days life support" % int(m["life_support_days"]))
+	if m.has("berths"):
+		bits.append("%d berths" % int(m["berths"]))
+	if m.get("lander", false):
+		bits.append("surface landings")
+	if m.get("survey", false):
+		bits.append("surveys")
+	if m.get("mining", false):
+		bits.append("prospecting and mining")
 	return ", ".join(bits)
 
 

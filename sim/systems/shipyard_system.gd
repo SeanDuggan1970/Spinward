@@ -42,6 +42,16 @@ static func slot_names(state, data, kind: String) -> Array:
 	return names
 
 
+## The slot kinds a module fits: its own kind, or the list in its data ("mounts"), so
+## a cargo bay can carry a long-haul tank, a hab, a lander or a rig.
+static func mounts(module: Dictionary) -> Array:
+	return module.get("mounts", [module["kind"]])
+
+
+static func fits(module: Dictionary, slot: String) -> bool:
+	return slot.split(".")[0] in mounts(module)
+
+
 ## {slot: "cargo.1", module: "cargo_pod_m"}. The old module is sold back at resale value.
 func _install(command: Dictionary) -> String:
 	var s = sim().state
@@ -51,7 +61,7 @@ func _install(command: Dictionary) -> String:
 		return "not sold here"
 	var slot: String = command.get("slot", "")
 	var module: Dictionary = data.modules[module_id]
-	if not slot in slot_names(s, data, module["kind"]):
+	if not fits(module, slot) or not slot in slot_names(s, data, slot.split(".")[0]):
 		return "that module does not fit that slot"
 	var old_id: String = s.ship["modules"].get(slot, "")
 	if old_id == module_id:

@@ -111,12 +111,16 @@ func _ships() -> void:
 		get_viewport().get_texture().get_image().save_png("%s/%s.png" % [dir, shot[0]])
 	rock.queue_free()
 	var lineup := [["player", data.balance["start"]["ship"], "", "Second Wind", true]]
+	lineup.append(["refit-outer", "mule", "", "Long Way Round", true, {"cargo.0": "tank_l", "cargo.1": "hab_extended", "tank.0": "tank_l", "drive.0": "pathfinder_mk3", "radiator.0": "radiator_array", "radiator.1": "radiator_array"}])
+	lineup.append(["refit-prospector", "mule", "", "Dirt Under the Nails", true, {"cargo.0": "lander_bay", "cargo.1": "mining_rig", "tank.0": "tank_l"}])
 	for id in data.npcs["fleets"]:
 		var f: Dictionary = data.npcs["fleets"][id]
 		lineup.append([id, f["hull"], f["operator"], f["names"][0], false])
 	for entry in lineup:
 		var hull: Dictionary = data.ships[entry[1]]
 		var ship := {"hull": entry[1], "modules": hull["modules"].duplicate(), "cargo": {}, "fuel_t": 0.0, "name": entry[3]}
+		if entry.size() > 5:
+			ship["modules"].merge(entry[5], true)
 		var model := Models.ship(ship, data, Livery.for_ship(data, entry[2], entry[3], entry[4]))
 		var node: Node3D = model["node"]
 		add_child(node)
