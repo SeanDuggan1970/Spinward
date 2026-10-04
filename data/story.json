@@ -1,0 +1,130 @@
+{
+	"_note": "The quiet arc. Beats run in order; each waits for its 'when' (counts of on-time deliveries, standing tiers, earlier beats, sites worked) and its 'at' port (docked there, or 'any'). On firing, a beat sends its message (kept in the Contracts tab's correspondence) and does its actions: offer (a favour job from the given client, fixed destination and cargo), reveal_site, grant (modules fitted free, tanks filled), standing, credits. A beat is done when its 'done_when' holds: immediately, when its favour is delivered, or when a site activity is finished. The Long View is an informal circle of Commons minds; the names are this game's own, in the spirit of Iain M. Banks' Culture.",
+	"beats": [
+		{
+			"id": "first_favour",
+			"at": "any",
+			"when": {
+				"delivered_on_time": 3,
+				"any_tier": 6
+			},
+			"from": "Ines Okafor",
+			"message": "A woman in a plain grey jacket buys you a drink you did not ask for. 'Ines Okafor. I represent nobody in particular, and some very patient friends who have noticed that you deliver.' She slides a sealed case across the table. 'Farside Array. Hand it to the duty astronomer, nobody else. They will pay you, and we will remember.'",
+			"actions": [
+				{
+					"offer": {
+						"client": "The Long View",
+						"to": "farside_array",
+						"item": "a sealed case for the duty astronomer",
+						"mass_t": 0.2,
+						"slack": 1.8,
+						"reward": 16000,
+						"rep": 6
+					}
+				}
+			],
+			"done_when": "delivered"
+		},
+		{
+			"id": "the_recorder",
+			"at": "farside_array",
+			"when": {
+				"beats": [
+					"first_favour"
+				]
+			},
+			"from": "Dr. Yusuf Adeyemi, Farside Array",
+			"message": "The duty astronomer opens the case in front of you: a set of star charts and a drive with a dozen names on it, some of them ships. 'Hermes-7 died in '49 with its star-tracker running. Somebody wants to know what it was looking at when it went quiet. We do too.' He marks a far Earth orbit on your chart. 'Bring the recorder here.'",
+			"actions": [
+				{
+					"reveal_site": "hermes_probe"
+				}
+			],
+			"done_when": {
+				"site_worked": "hermes_probe"
+			}
+		},
+		{
+			"id": "the_occultation",
+			"at": "farside_array",
+			"when": {
+				"beats": [
+					"the_recorder"
+				]
+			},
+			"from": "Dr. Yusuf Adeyemi, Farside Array",
+			"message": "Adeyemi plays the recorder's last hours against the array's own survey. Three stars, one after another, wink out for a few seconds and come back, the way stars do when something passes in front of them. Except nothing out there should be that big, or that black, or move like that. 'A thousand AU, give or take. It occults starlight perfectly: no reflection at all. We have told nobody.' A pause. 'Your friends in grey already knew. They want it taken to Trojan Yards: one of them, in a box.'",
+			"actions": [
+				{
+					"offer": {
+						"client": "The Long View",
+						"to": "trojan_yards",
+						"item": "a Commons mind in a shielded case, travelling light",
+						"mass_t": 0.3,
+						"slack": 2.0,
+						"reward": 30000,
+						"rep": 10
+					}
+				}
+			],
+			"done_when": "delivered"
+		},
+		{
+			"id": "the_loan",
+			"at": "trojan_yards",
+			"when": {
+				"beats": [
+					"the_occultation"
+				]
+			},
+			"from": "Patient Arithmetic, for the Long View",
+			"message": "The case is opened by a drone, very gently. Then the yard's channel fills with a voice that is plainly enjoying itself. 'Hello. I am Patient Arithmetic; you may have passed me on the Shackleton run. A few of us talk, now and then, about what is worth doing. We call it the Long View, because somebody has to. There is something out past Sedna that is older than the Sun's light can explain, and it has noticed the array noticing it. It ought to be met by a person, not by one of us: that is a rule we keep. We have built a drive no yard sells, and a berth you can sleep the years away in. Lent, not given. Go and say hello. Take your time. We will.'",
+			"actions": [
+				{
+					"grant": {
+						"drive.0": "longview_drive",
+						"cargo.0": "sleep_berth",
+						"cargo.1": "tank_l"
+					}
+				},
+				{
+					"reveal_site": "the_lacuna"
+				},
+				{
+					"standing": {
+						"The Long View": 10
+					}
+				}
+			],
+			"done_when": "now"
+		},
+		{
+			"id": "the_meeting",
+			"at": "any",
+			"when": {
+				"beats": [
+					"the_loan"
+				],
+				"site_worked": "the_lacuna"
+			},
+			"from": "Patient Arithmetic, for the Long View",
+			"message": "The signal comes back up the long light-path, days old and perfectly clear. 'We heard. All of us heard. You said hello and it said hello back, in your own words, with the light-time taken off as if it had always known exactly how far away you were. We have no idea what that means and we are delighted. The system is a little larger than it was this morning. We have topped up your tanks from a tender we sent after you, years ago, just in case. Come home when you like; there will be a lot of people who want to buy you a drink.'",
+			"actions": [
+				{
+					"grant": {}
+				},
+				{
+					"credits": 500000
+				},
+				{
+					"standing": {
+						"The Long View": 40,
+						"The Commons": 20,
+						"Terran Compact Science": 20
+					}
+				}
+			],
+			"done_when": "now"
+		}
+	]
+}

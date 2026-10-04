@@ -61,6 +61,19 @@ func _ready() -> void:
 			plume.visible = false
 		_wreck.position = _view * Vector3(34.0, -12.0, -70.0)
 		add_child(_wreck)
+	if sim.data.sites[site].get("kind", "") == "anomaly":
+		# Perfectly black, and the starlight bends round its edge.
+		var hole := StandardMaterial3D.new()
+		hole.albedo_color = Color.BLACK
+		hole.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		var centre := _view * Vector3(400.0, -110.0, -900.0)
+		add_child(Kit.sphere(120.0, hole, centre))
+		var ring := Kit.torus(123.0, 2.2, Kit.glow(Color("dfe8ff"), 2.5), Vector3.ZERO, 96)
+		var holder := Node3D.new()
+		holder.position = centre
+		holder.look_at_from_position(centre, Vector3.ZERO, Vector3.UP)
+		holder.add_child(ring)
+		add_child(holder)
 	camera = Camera3D.new()
 	camera.fov = 60.0
 	camera.far = SKY_DISTANCE * 3.0

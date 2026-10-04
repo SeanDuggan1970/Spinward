@@ -28,6 +28,8 @@ Courier work runs alongside trading. Each port's board has:
 
 Deliver on time and the operators get to know you; known pilots get the better jobs, and sometimes someone comes looking for you at the dock. A tip from a broker can carry word of a job nobody else has heard about.
 
+Keep delivering on time and somebody may come looking for you: a quiet go-between with a favour to ask, and friends who are very patient indeed.
+
 Three megaprojects are under way: Island One, the second Luna Line ribbon and Kalpana Two. Haul what they need, watch them grow in the sky, and see your share on the Projects tab.
 
 Twenty-nine NPC ships share the system: Cooperative ice tankers, Commons drone freighters and an outsize tender hauling mirror segments, independent haulers, Compact couriers and heavy container ships, and Kernel shuttles. Every ship is built the same way: a crew section up front, standard containers amidships, and a barnacled drive section aft. In flight they roll to keep solar wings on the Sun and radiators edge-on to it, and the high-gain dish tracks the destination, leading it by the light time (shown on the orbit HUD, in seconds and arcseconds). They trade from the same markets you do, chatter on comms, and come and go around the stations.

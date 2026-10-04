@@ -257,5 +257,33 @@
 				"text": "Ten days mapping the neck between the lobes. The Commons buys the map at once; the Belt Assembly pays to see it."
 			}
 		}
+	},
+	"the_lacuna": {
+		"name": "The Lacuna",
+		"kind": "anomaly",
+		"visibility": "hidden",
+		"once": true,
+		"description": "A thousand AU out, past Sedna's long orbit: a sphere a few kilometres across that reflects nothing at all. Stars behind it vanish; stars beside it bend. It was here before the array looked, and probably before anyone looked at anything.",
+		"location": {
+			"type": "orbit",
+			"parent": "sun",
+			"elements": {
+				"a_m": 149600000000000.0,
+				"e": 0.0,
+				"i_deg": 24.0,
+				"node_deg": 300.0,
+				"peri_deg": 0.0,
+				"m0_deg": 75.0
+			}
+		},
+		"activities": {
+			"greet": {
+				"name": "Go and say hello",
+				"needs": [],
+				"days": 2.0,
+				"risk": 0.0,
+				"text": "You close to fifty kilometres and send the oldest greeting there is: a count, one to ten. For two days, nothing. Then your own count comes back, in your own voice, from all around the sky at once."
+			}
+		}
 	}
 }

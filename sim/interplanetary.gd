@@ -32,6 +32,10 @@ const SCAN_STEPS := 48
 const MAX_BURN_FRACTION := 0.5
 ## Economy trades time for fuel up to this multiple of the Express trip time.
 const ECONOMY_TIME_MULT := 2.5
+## Beyond this distance (deep space, the Oort cloud) trips are not flown by guidance:
+## braking takes most of the voyage and the terminal law cannot converge, so the
+## free-fall estimate (quick) is the route.
+const DEEP_SPACE_M := 30.0 * 1.495978707e11
 ## A transfer counts as arriving when it ends this close (capture covers the rest).
 const ARRIVE_MISS_R := 2.0e8
 const ARRIVE_MISS_V := 500.0
@@ -67,6 +71,9 @@ static func well(data, eph, place: String, t: float) -> Dictionary:
 	var loc: Dictionary = data.locations[place]["location"]
 	var dv := 0.0
 	var body: String
+	if loc["type"] == "orbit" and loc["parent"] == "sun":
+		# Free space around the Sun (a deep-space site): nothing to climb out of.
+		return {"dv": 0.0, "body": place}
 	if loc["type"] == "orbit":
 		body = loc["parent"]
 		dv += sqrt(float(data.bodies[body]["gm"]) / float(loc["elements"]["a_m"]))
@@ -108,9 +115,14 @@ static func prepare(ship: Dictionary, data, eph, from_place: String, to_place: S
 	job.merge({"well_out": w_out, "well_in": w_in, "out_s": out_s, "in_s": in_s, "t1": t1}, true)
 	var r_a: Array = eph.position(a_body, t1)
 	var v_a: Array = eph.velocity(a_body, t1)
+	job["r_a"] = r_a
+	job["v_a"] = v_a
 	var d0 := V.distance(r_a, eph.position(b_body, t1))
+	job["deep"] = d0 > DEEP_SPACE_M
+	if job["deep"]:
+		_deep_candidates(job, d0, eph, b_body)
 	var brach := 2.0 * sqrt(d0 / accel)
-	for k in SCAN_STEPS:
+	for k in (0 if job["deep"] else SCAN_STEPS):
 		var tof := brach * SCAN_FROM * pow(SCAN_TO / SCAN_FROM, float(k) / float(SCAN_STEPS - 1))
 		var r_b: Array = eph.position(b_body, t1 + tof)
 		var v_b: Array = eph.velocity(b_body, t1 + tof)
@@ -150,9 +162,40 @@ static func prepare(ship: Dictionary, data, eph, from_place: String, to_place: S
 	return job
 
 
+## Deep space: the Sun's pull is negligible against these speeds, so the plan is the
+## textbook one: accelerate, coast, decelerate along the line. Express spends all
+## the propellant but a tenth (a brachistochrone if there is enough); Economy half of
+## it, coasting longer.
+static func _deep_candidates(job: Dictionary, d: float, eph, b_body: String) -> void:
+	var accel := float(job["accel"])
+	var ve := float(job["ve"])
+	var mass := float(job["mass_t"])
+	var fuel := float(job["fuel_t"])
+	var t1 := float(job["t1"])
+	for share in [0.9, 0.5]:
+		# Delta-v from the propellant spent (rocket equation), less the wells.
+		var dv_total := ve * log(mass / maxf(mass - fuel * share, 1e-3))
+		var dv := dv_total - float(job["well_out"]["dv"]) - float(job["well_in"]["dv"])
+		if dv <= 0.0:
+			continue
+		var tof: float
+		if dv >= 2.0 * sqrt(d * accel):
+			tof = 2.0 * sqrt(d / accel)
+			dv = accel * tof
+		else:
+			var v := dv * 0.5
+			tof = 2.0 * v / accel + (d - v * v / accel) / v
+		var duration := float(job["overhead"]) + float(job["out_s"]) + tof + float(job["in_s"])
+		var total := dv + float(job["well_out"]["dv"]) + float(job["well_in"]["dv"])
+		job["scan"].append({"tof": tof, "dv": total, "fuel_t": mass * (1.0 - exp(-total / ve)), "duration_s": duration, "deep": true,
+			"r_a": job["r_a"], "v_a": job["v_a"], "r_b": eph.position(b_body, t1 + tof), "v_b": eph.velocity(b_body, t1 + tof)})
+
+
 ## Fly the candidates (worker-safe). Options in the same shape as route_planner.gd's.
 static func run(job: Dictionary) -> Array:
 	var opts := []
+	if job.get("deep", false):
+		return opts
 	for entry in job.get("candidates", []):
 		var kind: String = entry[0]
 		var c: Dictionary = {}
@@ -199,12 +242,20 @@ static func quick(ship: Dictionary, data, eph, from_place: String, to_place: Str
 		return result
 	var t1 := float(job["t1"])
 	var tof := float(pick["tof"])
-	var sol := OM.lambert(pick["r_a"], pick["r_b"], tof, job["mu"], V.cross(pick["r_a"], pick["v_a"]))
 	var samples := []
-	for k in 41:
-		var dt := tof * float(k) / 40.0
-		var st := OM.kepler(pick["r_a"], sol[0], dt, job["mu"])
-		samples.append([t1 + dt, st[0], st[1], [0.0, 0.0, 0.0]])
+	if pick.get("deep", false):
+		# Out along the line, thrusting, coasting, braking.
+		var line := V.sub(pick["r_b"], pick["r_a"])
+		for k in 41:
+			var f := float(k) / 40.0
+			var shape := f * f * (3.0 - 2.0 * f)
+			samples.append([t1 + tof * f, V.add(pick["r_a"], V.scale(line, shape)), V.scale(line, 6.0 * f * (1.0 - f) / tof), [0.0, 0.0, 0.0]])
+	else:
+		var sol := OM.lambert(pick["r_a"], pick["r_b"], tof, job["mu"], V.cross(pick["r_a"], pick["v_a"]))
+		for k in 41:
+			var dt := tof * float(k) / 40.0
+			var st := OM.kepler(pick["r_a"], sol[0], dt, job["mu"])
+			samples.append([t1 + dt, st[0], st[1], [0.0, 0.0, 0.0]])
 	var arrive := t + float(pick["duration_s"])
 	var fuel_t := float(pick["fuel_t"])
 	var dest_refuels: bool = "refuel" in data.locations[to_place].get("services", [])

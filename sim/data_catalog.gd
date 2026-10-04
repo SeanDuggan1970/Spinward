@@ -20,6 +20,8 @@ var sites: Dictionary = {}
 ## Ports and sites together, for anything that only needs where something is
 ## (ephemeris, navigation, planners, travel).
 var locations: Dictionary = {}
+## The quiet arc's beats (data/story.json).
+var story: Dictionary = {}
 ## Courier contracts and reputation tiers (data/contracts.json).
 var contracts: Dictionary = {}
 ## Paint schemes for the view (data/liveries.json); the sim never reads them.
@@ -47,6 +49,7 @@ func load_from(root: String) -> void:
 	projects.erase("reserve_fraction")
 	contracts = read_json(root + "/contracts.json")
 	sites = read_json(root + "/sites.json") if FileAccess.file_exists(root + "/sites.json") else {}
+	story = read_json(root + "/story.json") if FileAccess.file_exists(root + "/story.json") else {}
 	locations = places.duplicate()
 	locations.merge(sites)
 	if FileAccess.file_exists(root + "/liveries.json"):
@@ -235,6 +238,24 @@ func validate() -> Array[String]:
 			for good in act.get("yields", {}):
 				if not goods.has(good):
 					problems.append("site %s: activity %s yields unknown good %s" % [id, act_id, good])
+	# Story: beats name real ports, sites and modules, and only earlier beats.
+	var seen_beats := []
+	for beat in story.get("beats", []):
+		var at: String = beat.get("at", "any")
+		if at != "any" and not places.has(at):
+			problems.append("story %s: unknown port %s" % [beat.get("id", "?"), at])
+		for b in beat.get("when", {}).get("beats", []):
+			if not b in seen_beats:
+				problems.append("story %s: waits for %s, which is not an earlier beat" % [beat["id"], b])
+		for action in beat.get("actions", []):
+			if action.has("offer") and not places.has(action["offer"].get("to", "")):
+				problems.append("story %s: favour to unknown port" % beat["id"])
+			if action.has("reveal_site") and not sites.has(action["reveal_site"]):
+				problems.append("story %s: reveals unknown site %s" % [beat["id"], action["reveal_site"]])
+			for slot in action.get("grant", {}):
+				if not modules.has(action["grant"][slot]):
+					problems.append("story %s: lends unknown module %s" % [beat["id"], action["grant"][slot]])
+		seen_beats.append(beat.get("id", ""))
 	# Contracts: reference ships must be buildable.
 	for range_name in contracts.get("reference_ships", {}):
 		var spec: Dictionary = contracts["reference_ships"][range_name]

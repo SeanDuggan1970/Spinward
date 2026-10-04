@@ -436,5 +436,46 @@
 			],
 			"colour": "orange"
 		}
+	},
+	"longview_drive": {
+		"name": "Long View drive (lent)",
+		"kind": "drive",
+		"mass_t": 9.0,
+		"price": 0,
+		"unsold": true,
+		"thrust_n": 6000,
+		"isp_s": 1000000,
+		"heat_mw": 2.0,
+		"description": "No yard sells one. The minds who built it say it is 'mostly a matter of being patient with the plasma'.",
+		"look": {
+			"shape": "drive",
+			"size_m": [
+				4.2,
+				4.2,
+				7.0
+			],
+			"colour": "dark",
+			"coils": 6
+		}
+	},
+	"sleep_berth": {
+		"name": "Long-sleep berth (lent)",
+		"kind": "hab",
+		"mounts": [
+			"cargo"
+		],
+		"mass_t": 4.0,
+		"price": 0,
+		"unsold": true,
+		"life_support_days": 2000,
+		"look": {
+			"shape": "hab",
+			"size_m": [
+				4.4,
+				4.4,
+				6.0
+			],
+			"colour": "offwhite"
+		}
 	}
 }

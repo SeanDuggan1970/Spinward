@@ -327,6 +327,17 @@ func _contracts_tab(place_id: String) -> Control:
 			known.append("%s: %s" % [op, Contracts.tier(d, float(s.reputation[op]))])
 	if not known.is_empty():
 		parts[1].add_child(UI.label("Elsewhere: " + "  ·  ".join(known), UI.DIM, 12))
+	var letters: Array = s.story.get("messages", [])
+	if not letters.is_empty():
+		var corr := UI.panel("Correspondence")
+		for m in letters.slice(maxi(0, letters.size() - 3)):
+			var head := UI.label("%s  ·  %s" % [m["from"], TipsText.age(sim, float(m["t"]))], UI.AMBER, 12)
+			corr[1].add_child(head)
+			var body := UI.label(m["text"], UI.TEXT, 13)
+			body.autowrap_mode = TextServer.AUTOWRAP_WORD
+			body.custom_minimum_size = Vector2(200, 0)
+			corr[1].add_child(body)
+		parts[1].add_child(corr[0])
 	var active: Array = s.contracts.get("active", [])
 	if not active.is_empty():
 		var mine := UI.panel("Your jobs  (%d)" % active.size())

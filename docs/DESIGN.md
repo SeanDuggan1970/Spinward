@@ -431,10 +431,17 @@ Sean's direction (2026-10-04). It goes beyond trade into opportunities, refits a
    - **Valhalla science ring:** invitation only. Terran Compact Science asks in pilots it counts as Reliable.
 
    Projects compete for the same hauling, so which to back is a real choice.
-6. **Powers in the background.** These are inspired by Iain M. Banks' Culture: benevolent minds who intervene quietly, Contact and Special Circumstances, the informal Interesting Times Gang, Outside Context Problems. The analogues are original, not Banks' names.
-   - **The minds' circle:** an informal circle of Commons minds who steer events.
-   - **Cut-outs:** human go-betweens who approach a pilot with favours.
-   - **The arc:** the Oort cloud is story-gated. Something anomalous is out there, and a reliable pilot is eventually offered the means to go and see.
+6. **Powers in the background** (first arc done; `data/story.json`, `sim/systems/story_system.gd`). Inspired by Iain M. Banks' Culture: benevolent minds who intervene quietly, Contact and Special Circumstances, the informal Interesting Times Gang, Outside Context Problems. The names are this game's own.
+   - **The Long View** is an informal circle of Commons minds, some of them the drone freighters you pass every day (*Patient Arithmetic*, *Reasonable Doubt*). They keep a Contact-like rule: the unknown should be met by a person.
+   - **Ines Okafor**, who "represents nobody in particular", is their human go-between.
+   - **The arc, in beats:**
+     1. After three on-time deliveries and a Known standing anywhere, she approaches you with a favour: a sealed case for Farside Array.
+     2. The astronomer puts the dead probe Hermes-7 on your chart. Its recorder shows three stars occulted by something perfectly black at about 1,000 AU.
+     3. You carry a Commons mind in a box to Trojan Yards.
+     4. Patient Arithmetic lends you a drive no yard sells (6 kN, Isp 1,000,000 s) and a long-sleep berth (2,000 days), and shows you **the Lacuna**: a 2.5-year voyage at about 12 milli-g.
+     5. You go and say hello, and it says hello back, in your own words, with the light-time taken off. The outcome is left open and hopeful.
+   - **How beats work:** each waits for its conditions and port, writes to your correspondence (Contracts tab), and acts: a favour job on the local board, a site revealed, modules lent, standing, credits. A favour that fails or is never taken is offered again.
+   - **Deep space** (beyond 30 AU): the Sun's pull is negligible, so trips use a straight-line accelerate-coast-decelerate plan sized to the propellant aboard. Guided flight can't converge when braking takes most of the voyage, and Lambert's solver can't reach those hyperbolic speeds.
 7. **Lander:** a module plus a short guided descent and ascent for surface jobs. A fully flown lander can come later.
 
 ## Milestones

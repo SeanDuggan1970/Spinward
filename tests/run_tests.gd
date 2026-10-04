@@ -63,6 +63,7 @@ func _initialize() -> void:
 	test_contracts()
 	test_project_pitches()
 	test_sites()
+	test_story_arc()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -969,3 +970,49 @@ func test_sites() -> void:
 	check(not gossip.state.tips.is_empty() and gossip.state.tips[-1].has("site") and SiteSystemScript.knows(gossip.state, gossip.state.tips[-1]["site"]), "A broker's tip puts a site on your chart")
 	var saved := SaveIO.from_text(SaveIO.to_text(s))
 	check(saved.sites == s.sites, "Sites are saved")
+
+
+func _favour_on_board(sim: Sim, place: String) -> Dictionary:
+	for o in sim.state.contracts["board"].get(place, []):
+		if o.has("favour"):
+			return o
+	return {}
+
+
+func test_story_arc() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	check(d.validate().is_empty(), "Data valid with the story (%s)" % ", ".join(d.validate()))
+	_dock_at(sim, "kibo_ring")
+	check(_favour_on_board(sim, "kibo_ring").is_empty(), "Nobody approaches an unknown pilot")
+	# A reliable courier is approached.
+	s.stats["contracts_delivered"] = 3
+	s.reputation["Terran Compact"] = 7.0
+	_dock_at(sim, "clarke_exchange")
+	var fav := _favour_on_board(sim, "clarke_exchange")
+	check(not fav.is_empty() and fav["to"] == "farside_array" and fav["client"] == "The Long View", "Ines Okafor's first favour: a case for Farside Array")
+	check(sim.apply({"type": "accept_contract", "id": fav["id"]}) == "", "Take the favour")
+	_dock_at(sim, "farside_array")
+	check("first_favour" in s.story["done"] and SiteSystemScript.knows(s, "hermes_probe"), "Delivered; the astronomer puts Hermes-7 on your chart")
+	# Recover the recorder, then hear what it saw.
+	s.location = {"status": "on_site", "place": "hermes_probe"}
+	sim.apply({"type": "site_work", "activity": "salvage"})
+	sim.advance_game_time(1.5 * DAY)
+	_dock_at(sim, "farside_array")
+	_dock_at(sim, "farside_array")
+	var fav2 := _favour_on_board(sim, "farside_array")
+	check("the_recorder" in s.story["done"] and not fav2.is_empty() and fav2["to"] == "trojan_yards", "The occultation, and a mind in a box for Trojan Yards")
+	sim.apply({"type": "accept_contract", "id": fav2["id"]})
+	_dock_at(sim, "trojan_yards")
+	_dock_at(sim, "trojan_yards")
+	check(s.ship["modules"]["drive.0"] == "longview_drive" and s.ship["modules"]["cargo.0"] == "sleep_berth" and SiteSystemScript.knows(s, "the_lacuna"), "The Long View lends a drive and a long-sleep berth, and shows you where")
+	# The lent ship can actually get there (and the crew can last the trip).
+	var q: Dictionary = Interplanetary.quick(s.ship, d, sim.ephemeris, "trojan_yards", "the_lacuna", s.time_s)
+	check(q["ok"], "The Lacuna is reachable with the lent drive (%.1f years, %.1f t) %s" % [float(q.get("duration_s", 0.0)) / (365.25 * DAY), float(q.get("fuel_t", 0.0)), q["reason"]])
+	# Say hello.
+	var credits := s.credits
+	s.location = {"status": "on_site", "place": "the_lacuna"}
+	check(sim.apply({"type": "site_work", "activity": "greet"}) == "", "Go and say hello")
+	sim.advance_game_time(3.0 * DAY)
+	check("the_meeting" in s.story["done"] and s.credits >= credits + 500000.0, "It says hello back. The system is a little larger.")

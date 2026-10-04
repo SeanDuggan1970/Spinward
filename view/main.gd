@@ -242,6 +242,10 @@ func _handle_events() -> void:
 				var line := Comms.copilot(sim, "copilot_near" if e["type"] == "periapsis_near" else "copilot_pass", float(d["alt"]), float(d.get("in_s", 0.0)))
 				notice(line, UI.AMBER)
 				comms.append("%s  %s" % [_clock(e["time_s"]), line])
+			"story":
+				notice("A message from %s. See Contracts." % d["from"], UI.AMBER)
+				comms.append("%s  PRIVATE  from %s" % [_clock(e["time_s"]), d["from"]])
+				refresh = true
 			"arrived_site":
 				notice("On site at %s. See what there is to do." % sim.data.sites[d["place"]]["name"], UI.AMBER)
 			"site_work_started":
@@ -251,7 +255,7 @@ func _handle_events() -> void:
 				var got := []
 				for good in d["got"]:
 					got.append("%.1f t %s" % [d["got"][good], String(sim.data.goods[good]["name"]).to_lower()])
-				var line := "Done at %s%s." % [sim.data.sites[d["site"]]["name"], " (it went badly)" if d["went_wrong"] else ""]
+				var line := "Done at %s%s. %s" % [sim.data.sites[d["site"]]["name"], " (it went badly)" if d["went_wrong"] else "", sim.data.sites[d["site"]]["activities"][d["activity"]].get("text", "")]
 				if not got.is_empty():
 					line += " Aboard: " + ", ".join(got) + "."
 				if float(d["credits"]) > 0.0:
@@ -531,7 +535,7 @@ func _site_tour(dir: String) -> void:
 	var s = sim.state
 	s.ship["modules"]["avionics.0"] = "survey_pod"
 	s.ship["modules"]["cargo.1"] = "lander_bay"
-	for site in ["ishikawa_maru", "eros_survey"]:
+	for site in ["ishikawa_maru", "eros_survey", "the_lacuna"]:
 		s.location = {"status": "on_site", "place": site}
 		_sync_mode()
 		for _i in 60:
