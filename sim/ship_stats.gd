@@ -72,6 +72,15 @@ static func _sum(ship: Dictionary, data, key: String) -> float:
 	return total
 
 
+## How many days the crew can be kept alive between ports (INF for uncrewed ships).
+static func life_support_days(ship: Dictionary, data) -> float:
+	for m in modules_of(ship, data):
+		if m.get("crewless", false):
+			return INF
+	var days := _sum(ship, data, "life_support_days")
+	return days if days > 0.0 else INF
+
+
 static func has_docking_computer(ship: Dictionary, data) -> bool:
 	for m in modules_of(ship, data):
 		if m.get("docking_computer", false):

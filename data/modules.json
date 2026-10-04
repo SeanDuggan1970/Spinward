@@ -49,7 +49,8 @@
 				5.0
 			],
 			"colour": "offwhite"
-		}
+		},
+		"life_support_days": 120
 	},
 	"drone_core": {
 		"name": "Commons drone core",
@@ -64,7 +65,8 @@
 				2.8
 			],
 			"colour": "dark"
-		}
+		},
+		"crewless": true
 	},
 	"passenger_pod": {
 		"name": "24-seat passenger can",

@@ -7,7 +7,15 @@
 		"ship_name": "Second Wind"
 	},
 	"time": {
-		"scales": [1, 10, 100, 1000, 10000],
+		"scales": [
+			1,
+			10,
+			100,
+			1000,
+			10000,
+			100000,
+			1000000
+		],
 		"arrival_scale": 1
 	},
 	"economy": {
@@ -46,7 +54,12 @@
 		"assist_default": "assisted",
 		"default_view": "cockpit",
 		"transit_view": "orbit",
-		"scanner_ranges_m": [500, 2000, 8000, 30000],
+		"scanner_ranges_m": [
+			500,
+			2000,
+			8000,
+			30000
+		],
 		"scanner_default_index": 1,
 		"bump_restitution": 0.3
 	},

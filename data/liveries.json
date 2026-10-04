@@ -1,25 +1,159 @@
 {
 	"_note": "Paint schemes, view-only. Each operator's ships and stations wear its colours; every ship then weathers differently, seeded by its name. hull: main plate; accent: the operator's band and markings; trim: safety edges and frames; foil: tank blanket tint; wear: 0 fresh to 1 filthy; mismatch: share of replacement panels; patch: their colour. Independents pick from 'palette' by name. containers: cargo box colours, picked per box.",
 	"operators": {
-		"Terran Compact": {"hull": "#dcd8cc", "accent": "#2f5d8a", "trim": "#d8b02a", "foil": "#c9a24a", "wear": 0.22, "mismatch": 0.04, "patch": "#b9b6ad"},
-		"Terran Compact Science": {"hull": "#e4e2da", "accent": "#2f5d8a", "trim": "#d8b02a", "foil": "#d6d6d0", "wear": 0.15, "mismatch": 0.03, "patch": "#c8c6bd"},
-		"Luna Cooperative": {"hull": "#8c9196", "accent": "#d2702c", "trim": "#d8b02a", "foil": "#cfcfc8", "wear": 0.55, "mismatch": 0.14, "patch": "#6d7378"},
-		"The Commons": {"hull": "#4a5250", "accent": "#5fae9c", "trim": "#c8c4b4", "foil": "#a8a8a2", "wear": 0.3, "mismatch": 0.06, "patch": "#3a403e"},
-		"Kernel Settlers": {"hull": "#b9ab8c", "accent": "#5a7a3a", "trim": "#d8b02a", "foil": "#c9a24a", "wear": 0.5, "mismatch": 0.3, "patch": "#8c9196"},
-		"Kalpana Settlement Trust": {"hull": "#e6e2d8", "accent": "#a8322d", "trim": "#d8b02a", "foil": "#d0cfc8", "wear": 0.2, "mismatch": 0.05, "patch": "#c8c3b8"}
+		"Terran Compact": {
+			"hull": "#dcd8cc",
+			"accent": "#2f5d8a",
+			"trim": "#d8b02a",
+			"foil": "#c9a24a",
+			"wear": 0.22,
+			"mismatch": 0.04,
+			"patch": "#b9b6ad"
+		},
+		"Terran Compact Science": {
+			"hull": "#e4e2da",
+			"accent": "#2f5d8a",
+			"trim": "#d8b02a",
+			"foil": "#d6d6d0",
+			"wear": 0.15,
+			"mismatch": 0.03,
+			"patch": "#c8c6bd"
+		},
+		"Luna Cooperative": {
+			"hull": "#8c9196",
+			"accent": "#d2702c",
+			"trim": "#d8b02a",
+			"foil": "#cfcfc8",
+			"wear": 0.55,
+			"mismatch": 0.14,
+			"patch": "#6d7378"
+		},
+		"The Commons": {
+			"hull": "#4a5250",
+			"accent": "#5fae9c",
+			"trim": "#c8c4b4",
+			"foil": "#a8a8a2",
+			"wear": 0.3,
+			"mismatch": 0.06,
+			"patch": "#3a403e"
+		},
+		"Kernel Settlers": {
+			"hull": "#b9ab8c",
+			"accent": "#5a7a3a",
+			"trim": "#d8b02a",
+			"foil": "#c9a24a",
+			"wear": 0.5,
+			"mismatch": 0.3,
+			"patch": "#8c9196"
+		},
+		"Kalpana Settlement Trust": {
+			"hull": "#e6e2d8",
+			"accent": "#a8322d",
+			"trim": "#d8b02a",
+			"foil": "#d0cfc8",
+			"wear": 0.2,
+			"mismatch": 0.05,
+			"patch": "#c8c3b8"
+		},
+		"Mars Accord": {
+			"hull": "#c9b8a2",
+			"accent": "#9a3a24",
+			"trim": "#d8b02a",
+			"foil": "#c9a24a",
+			"wear": 0.45,
+			"mismatch": 0.15,
+			"patch": "#8c9196"
+		},
+		"Belt Assembly": {
+			"hull": "#5d6670",
+			"accent": "#e0a030",
+			"trim": "#d8b02a",
+			"foil": "#cfcfc8",
+			"wear": 0.6,
+			"mismatch": 0.25,
+			"patch": "#7a7f82"
+		},
+		"Huygens Trust": {
+			"hull": "#e2d6c2",
+			"accent": "#c4762a",
+			"trim": "#2b2f33",
+			"foil": "#c9a24a",
+			"wear": 0.3,
+			"mismatch": 0.08,
+			"patch": "#b9b0a0"
+		}
 	},
 	"independent": {
-		"wear": [0.4, 0.85],
-		"mismatch": [0.15, 0.4],
+		"wear": [
+			0.4,
+			0.85
+		],
+		"mismatch": [
+			0.15,
+			0.4
+		],
 		"palette": [
-			{"hull": "#d9d4c7", "accent": "#d2702c", "trim": "#d8b02a", "foil": "#c9a24a", "patch": "#8c9196"},
-			{"hull": "#6f8a9a", "accent": "#e6dcc4", "trim": "#d8b02a", "foil": "#c9a24a", "patch": "#c9c4b6"},
-			{"hull": "#9a5a3a", "accent": "#e8e1cf", "trim": "#d8b02a", "foil": "#c9a24a", "patch": "#7a7f82"},
-			{"hull": "#c9b458", "accent": "#2b2f33", "trim": "#2b2f33", "foil": "#cfcfc8", "patch": "#8c9196"},
-			{"hull": "#5e6b4a", "accent": "#d8b02a", "trim": "#e8e1cf", "foil": "#c9a24a", "patch": "#9a9480"},
-			{"hull": "#b8bcc0", "accent": "#7a2f5a", "trim": "#d8b02a", "foil": "#d6d6d0", "patch": "#d9d4c7"}
+			{
+				"hull": "#d9d4c7",
+				"accent": "#d2702c",
+				"trim": "#d8b02a",
+				"foil": "#c9a24a",
+				"patch": "#8c9196"
+			},
+			{
+				"hull": "#6f8a9a",
+				"accent": "#e6dcc4",
+				"trim": "#d8b02a",
+				"foil": "#c9a24a",
+				"patch": "#c9c4b6"
+			},
+			{
+				"hull": "#9a5a3a",
+				"accent": "#e8e1cf",
+				"trim": "#d8b02a",
+				"foil": "#c9a24a",
+				"patch": "#7a7f82"
+			},
+			{
+				"hull": "#c9b458",
+				"accent": "#2b2f33",
+				"trim": "#2b2f33",
+				"foil": "#cfcfc8",
+				"patch": "#8c9196"
+			},
+			{
+				"hull": "#5e6b4a",
+				"accent": "#d8b02a",
+				"trim": "#e8e1cf",
+				"foil": "#c9a24a",
+				"patch": "#9a9480"
+			},
+			{
+				"hull": "#b8bcc0",
+				"accent": "#7a2f5a",
+				"trim": "#d8b02a",
+				"foil": "#d6d6d0",
+				"patch": "#d9d4c7"
+			}
 		]
 	},
-	"player": {"hull": "#d9d4c7", "accent": "#d2702c", "trim": "#d8b02a", "foil": "#c9a24a", "wear": 0.6, "mismatch": 0.25, "patch": "#8c9196"},
-	"containers": ["#9a5a3a", "#2f5d8a", "#5e7a4a", "#8c9196", "#d2702c", "#c9b458", "#d9d4c7", "#6a3a3a"]
+	"player": {
+		"hull": "#d9d4c7",
+		"accent": "#d2702c",
+		"trim": "#d8b02a",
+		"foil": "#c9a24a",
+		"wear": 0.6,
+		"mismatch": 0.25,
+		"patch": "#8c9196"
+	},
+	"containers": [
+		"#9a5a3a",
+		"#2f5d8a",
+		"#5e7a4a",
+		"#8c9196",
+		"#d2702c",
+		"#c9b458",
+		"#d9d4c7",
+		"#6a3a3a"
+	]
 }

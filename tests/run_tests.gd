@@ -14,6 +14,7 @@ const ProjectSystem := preload("res://sim/systems/project_system.gd")
 const RoutePlanner := preload("res://sim/route_planner.gd")
 const OrbitMech := preload("res://sim/orbit_mech.gd")
 const LightTime := preload("res://sim/light_time.gd")
+const Interplanetary := preload("res://sim/interplanetary.gd")
 
 const AU := 1.495978707e11
 const DAY := 86400.0
@@ -51,6 +52,8 @@ func _initialize() -> void:
 	test_gravity_routes()
 	test_saves_and_determinism()
 	test_light_time()
+	test_ephemeris_against_horizons()
+	test_interplanetary()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -701,3 +704,61 @@ func test_light_time() -> void:
 	var t: float = sim.state.time_s
 	var real := LightTime.pointing(sim.ephemeris, "shackleton_port", sim.ephemeris.position("kibo_ring", t), sim.ephemeris.velocity("kibo_ring", t), t)
 	check(float(real["tau_s"]) > 1.1 and float(real["tau_s"]) < 1.45, "Kibo to Shackleton light time %.3f s" % real["tau_s"])
+
+
+## The baked orbits against JPL Horizons (tests/horizons_reference.json): the
+## planets, dwarf planets, asteroids and moons where Horizons puts them in 2061 and
+## 2063. The Moon keeps its Meeus mean elements, good to a degree or two.
+func test_ephemeris_against_horizons() -> void:
+	var data = DataCatalog.load_default()
+	var eph = Ephemeris.new(data.bodies, data.places)
+	var ref: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://tests/horizons_reference.json"))
+	var worst := ""
+	var worst_deg := 0.0
+	for name in ref:
+		for date in ref[name]:
+			var t: float = Time.get_unix_time_from_datetime_string(date + "T00:00:00") - GameState.J2000_UNIX
+			var ours := eph.relative(name, data.bodies[name]["parent"], t)
+			var theirs: Array = ref[name][date]["r"]
+			var deg := rad_to_deg(acos(clampf(V.dot(V.normalized(ours), V.normalized(theirs)), -1.0, 1.0)))
+			var limit := 2.0 if name == "moon" else 1.0
+			if deg / limit > worst_deg:
+				worst_deg = deg / limit
+				worst = "%s %s %.2f deg" % [name, date, deg]
+	check(worst_deg <= 1.0, "Every body within tolerance of JPL Horizons (worst: %s)" % worst)
+
+
+func test_interplanetary() -> void:
+	var sim := fresh()
+	var d := sim.data
+	var eph := sim.ephemeris
+	var t: float = sim.state.time_s
+	# Spiralling out costs about the orbit's speed: low Earth orbit dear, L-points cheap.
+	var leo: float = Interplanetary.well(d, eph, "kibo_ring", t)["dv"]
+	var l5: float = Interplanetary.well(d, eph, "kernel_l5", t)["dv"]
+	check(leo > 7000.0 and leo < 8000.0, "Climbing out of low Earth orbit costs ~7.7 km/s (%.0f m/s)" % leo)
+	check(l5 > 800.0 and l5 < 1200.0, "Leaving from an Earth-Moon Lagrange point costs ~1 km/s (%.0f m/s)" % l5)
+	check(Interplanetary.well(d, eph, "valhalla_station", t)["body"] == "jupiter", "A Callisto station climbs out to Jupiter's solar orbit")
+	# A long-haul Mule (tanks in the cargo bays) can reach Mars, and the flown route arrives.
+	var ship: Dictionary = sim.state.ship.duplicate(true)
+	for slot in ["cargo.0", "cargo.1", "tank.0"]:
+		ship["modules"][slot] = "tank_m"
+	ship["fuel_t"] = 18.0
+	var opts: Array = Interplanetary.run(Interplanetary.prepare(ship, d, eph, "halo_depot", "ares_ring", t))
+	check(not opts.is_empty(), "Halo Depot to Mars: the refitted Mule gets route options")
+	if not opts.is_empty():
+		var o: Dictionary = opts[0]
+		check(o["affordable"] and o["miss_r"] < Interplanetary.ARRIVE_MISS_R and o["miss_v"] < Interplanetary.ARRIVE_MISS_V,
+			"The flown Mars route arrives (%.0f d, %.1f t, miss %.0f km at %.0f m/s)" % [o["duration_s"] / DAY, o["fuel_t"], o["miss_r"] / 1000.0, o["miss_v"]])
+	# The stock Mule cannot keep a crew alive to Jupiter.
+	var q: Dictionary = Interplanetary.quick(sim.state.ship, d, eph, "kibo_ring", "valhalla_station", t)
+	check(not q["ok"] and (String(q["reason"]).begins_with("life support") or String(q["reason"]).begins_with("not enough")), "Jupiter is out of the stock Mule's reach (%s)" % q["reason"])
+	# Depart on the flown route and arrive at the right place.
+	sim.state.location = {"status": "docked", "place": "halo_depot"}
+	sim.state.ship = ship
+	var key: String = sim.route_key("ares_ring", t)
+	sim.store_route_options(key, opts)
+	check(sim.apply({"type": "depart", "to": "ares_ring", "route": opts[0]["id"], "plan_t": t}) == "", "Departs for Mars on the planned route")
+	sim.state.time_scale = 1.0e6
+	sim.advance_game_time(float(sim.state.location.get("arrive_t", t)) - t + 10.0)
+	check(sim.state.location.get("status") == "approach" and sim.state.location.get("place") == "ares_ring", "Arrives on approach to Ares Ring")

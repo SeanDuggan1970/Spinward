@@ -18,6 +18,8 @@ Inspired by Elite, but not a remake. See [docs/DESIGN.md](docs/DESIGN.md) for th
 - **Docking:** hand-flown at spinning stations, or call a tug for a fee.
 - **Saves:** quick save and quick load.
 
+The whole solar system is there, on orbits fitted to JPL Horizons: the planets, the big moons, the main asteroids, and Pluto out to Sedna. There are new ports at Mars, Ceres, Psyche, Callisto, Titan and Enceladus. Getting there takes a refit (tanks in the cargo bays) and patience: Mars is about 50 days away for a Mule, and the outer worlds need better drives and more life support than a starter ship has. Voyages climb out of each gravity well on a spiral, cross the Sun's domain on a guided burn-and-coast arc, and spiral down at the far end, with time compression up to x1,000,000.
+
 Three megaprojects are under way: Island One, the second Luna Line ribbon and Kalpana Two. Haul what they need, watch them grow in the sky, and see your share on the Projects tab.
 
 Twenty-nine NPC ships share the system: Cooperative ice tankers, Commons drone freighters and an outsize tender hauling mirror segments, independent haulers, Compact couriers and heavy container ships, and Kernel shuttles. Every ship is built the same way: a crew section up front, standard containers amidships, and a barnacled drive section aft. In flight they roll to keep solar wings on the Sun and radiators edge-on to it, and the high-gain dish tracks the destination, leading it by the light time (shown on the orbit HUD, in seconds and arcseconds). They trade from the same markets you do, chatter on comms, and come and go around the stations.

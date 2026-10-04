@@ -107,11 +107,19 @@ static func kepler(el: Dictionary, gm: float, t: float) -> Array:
 	var xp := x * cp - y * sp
 	var yp := x * sp + y * cp
 	var r := [xp * cn - yp * ci * sn, xp * sn + yp * ci * cn, yp * si]
-	if el.get("frame", "ecliptic") == "equatorial":
-		# Elements given relative to the parent's equator (Earth's): rotate about X by obliquity.
-		var co := cos(OBLIQUITY_J2000); var so := sin(OBLIQUITY_J2000)
-		r = [r[0], r[1] * co - r[2] * so, r[1] * so + r[2] * co]
+	match el.get("frame", "ecliptic"):
+		"equatorial":
+			# Elements on Earth's equator (node from the vernal equinox).
+			r = equatorial_to_ecliptic(r)
 	return r
+
+
+## ICRF (Earth-equatorial) to J2000 ecliptic: rotate about X by the obliquity. The
+## equator's point at RA 90 deg lies 23.4 deg south of the ecliptic.
+static func equatorial_to_ecliptic(r: Array) -> Array:
+	var co := cos(OBLIQUITY_J2000)
+	var so := sin(OBLIQUITY_J2000)
+	return [r[0], r[1] * co + r[2] * so, -r[1] * so + r[2] * co]
 
 
 ## Lagrange point of the primary/secondary system ("L1".."L5").

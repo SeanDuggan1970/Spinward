@@ -53,4 +53,5 @@ func _draw() -> void:
 		y += 20
 	var h := size.y
 	draw_string(_font, Vector2(16, h - 82), "M  next view (orbit · cockpit · map)    [ ]  time compression    P  pause", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, UI.DIM)
-	draw_string(_font, Vector2(size.x - 330, 70), "Earth and Moon to scale · ship enlarged to be seen", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(UI.DIM, 0.8))
+	var note := "Sun and planets enlarged to be seen · orbits to scale" if sim.state.location.get("frame", "earth") == "sun" else "Earth and Moon to scale · ship enlarged to be seen"
+	draw_string(_font, Vector2(size.x - 330, 70), note, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(UI.DIM, 0.8))

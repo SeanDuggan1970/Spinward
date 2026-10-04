@@ -16,14 +16,21 @@ const SkyKit := preload("res://view/flight/sky.gd")
 const SystemMap := preload("res://view/system_map.gd")
 const UI := preload("res://view/ui/ui_kit.gd")
 
-## Metres per scene unit (1,000 km), so the whole Earth-Moon system fits in floats.
+## Metres per scene unit: 1,000 km for Earth-Moon trips, a million km for voyages
+## across the Sun's domain, so either fits comfortably in floats.
 const UNIT := 1.0e6
+const SOLAR_UNIT := 1.0e9
 const PATH_SAMPLES := 120
 const DAY := 86400.0
 
 var sim
 var camera: Camera3D
 var frame := "earth"
+var _unit := UNIT
+## Sun-centred trips: the Sun, and planets with their orbits (enlarged to be seen).
+var _solar := false
+var _planets: Dictionary = {}
+var _orbits: ImmediateMesh
 var _sun: DirectionalLight3D
 var _earth: MeshInstance3D
 var _moon: MeshInstance3D
@@ -54,6 +61,8 @@ var readout: Dictionary = {}
 func _init(owner_sim) -> void:
 	sim = owner_sim
 	frame = sim.state.location.get("frame", "earth")
+	_solar = frame == "sun"
+	_unit = SOLAR_UNIT if _solar else UNIT
 
 
 func _ready() -> void:
@@ -61,14 +70,16 @@ func _ready() -> void:
 	_sun = DirectionalLight3D.new()
 	_sun.light_energy = 1.5
 	add_child(_sun)
-	_earth = Kit.sphere(float(sim.data.bodies["earth"]["radius_m"]) / UNIT, SkyKit.body_material("earth", sim.data.bodies["earth"].get("look", {})))
+	_earth = Kit.sphere(float(sim.data.bodies["earth"]["radius_m"]) / _unit, SkyKit.body_material("earth", sim.data.bodies["earth"].get("look", {})))
 	(_earth.mesh as SphereMesh).radial_segments = 64
 	(_earth.mesh as SphereMesh).rings = 32
 	add_child(_earth)
-	_moon = Kit.sphere(float(sim.data.bodies["moon"]["radius_m"]) / UNIT, SkyKit.body_material("moon", sim.data.bodies["moon"].get("look", {})))
+	_moon = Kit.sphere(float(sim.data.bodies["moon"]["radius_m"]) / _unit, SkyKit.body_material("moon", sim.data.bodies["moon"].get("look", {})))
 	(_moon.mesh as SphereMesh).radial_segments = 128
 	(_moon.mesh as SphereMesh).rings = 64
 	add_child(_moon)
+	if _solar:
+		_build_solar()
 	_line_mat = StandardMaterial3D.new()
 	_line_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_line_mat.vertex_color_use_as_albedo = true
@@ -77,6 +88,7 @@ func _ready() -> void:
 	_path_behind = _line_node()
 	_moon_orbit = _line_node()
 	_dest_track = _line_node()
+	_orbits = _line_node()
 	# A ring that always faces the camera (the kit torus lies in its holder's XY plane).
 	_rendezvous = Node3D.new()
 	_rendezvous.add_child(Kit.torus(1.0, 0.12, Kit.glow(UI.AMBER, 3.0)))
@@ -125,6 +137,48 @@ func _ready() -> void:
 	camera.make_current()
 
 
+## The Sun as the light (an omni light at the centre, so every world is lit from the
+## right side), and the Sun's family: planets and dwarf planets, with labels.
+func _build_solar() -> void:
+	_earth.visible = false
+	_moon.visible = false
+	_sun.visible = false
+	var light := OmniLight3D.new()
+	light.omni_range = 50000.0
+	light.omni_attenuation = 0.0
+	light.light_energy = 1.4
+	add_child(light)
+	add_child(Kit.sphere(float(sim.data.bodies["sun"]["radius_m"]) / _unit * 4.0, Kit.glow(Color("fff6e0"), 6.0)))
+	for body in sim.data.bodies:
+		var b: Dictionary = sim.data.bodies[body]
+		if b.get("parent", "") != "sun" or not String(b.get("kind", "")) in ["planet", "dwarf"]:
+			continue
+		var mesh := SkyKit.body_mesh(sim.data, body, 1.0)
+		add_child(mesh)
+		var label := Label3D.new()
+		label.text = b["name"]
+		label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		label.fixed_size = true
+		label.pixel_size = 0.0008
+		label.font_size = 18
+		label.outline_size = 6
+		label.modulate = Color(UI.DIM, 0.9)
+		label.no_depth_test = true
+		add_child(label)
+		_planets[body] = {"mesh": mesh, "label": label}
+
+
+func _draw_planet_orbits(t: float) -> void:
+	_orbits.clear_surfaces()
+	for body in _planets:
+		var period := float(sim.data.bodies[body]["elements"].get("period_days", 365.25)) * DAY
+		_orbits.surface_begin(Mesh.PRIMITIVE_LINE_STRIP)
+		for k in 121:
+			_orbits.surface_set_color(Color(0.3, 0.55, 1.0, 0.35))
+			_orbits.surface_add_vertex(_p(sim.ephemeris.relative(body, "sun", t + period * float(k) / 120.0)))
+		_orbits.surface_end()
+
+
 func _line_node() -> ImmediateMesh:
 	var im := ImmediateMesh.new()
 	var mi := MeshInstance3D.new()
@@ -136,7 +190,7 @@ func _line_node() -> ImmediateMesh:
 
 ## Sim 64-bit position (trip frame, metres) to scene units, ecliptic north up.
 func _p(a: Array) -> Vector3:
-	return Vector3(a[0], a[2], -a[1]) / UNIT
+	return Vector3(a[0], a[2], -a[1]) / _unit
 
 
 func _d(a: Array) -> Vector3:
@@ -153,8 +207,10 @@ func _process(dt: float) -> void:
 	frame = loc["frame"]
 	_earth.position = _p(eph.relative("earth", frame, t))
 	_moon.position = _p(eph.relative("moon", frame, t))
-	var sun_dir := SkyKit.dir_between(eph.position("sun", t), eph.position(frame, t))
-	_sun.look_at_from_position(Vector3.ZERO, -sun_dir, Vector3.UP if absf(sun_dir.y) < 0.99 else Vector3.RIGHT)
+	# The Sun as seen from the ship (in a Sun-centred trip the frame body is the Sun).
+	var sun_dir := SkyKit.dir_between(eph.position("sun", t), V.add(eph.position(frame, t), Navigation.transit_position(loc, t)))
+	if not _solar:
+		_sun.look_at_from_position(Vector3.ZERO, -sun_dir, Vector3.UP if absf(sun_dir.y) < 0.99 else Vector3.RIGHT)
 	SkyKit.update_body(_earth, sun_dir, t)
 	SkyKit.update_body(_moon, sun_dir, t)
 
@@ -183,7 +239,10 @@ func _process(dt: float) -> void:
 	var key := "%s%s%s" % [loc["depart_t"], loc["arrive_t"], loc["to"]]
 	if key != _path_key:
 		_path_key = key
-		_draw_moon_orbit(t)
+		if _solar:
+			_draw_planet_orbits(t)
+		else:
+			_draw_moon_orbit(t)
 	_draw_path(loc, t)
 
 	# Markers scale with the view so they stay legible at any zoom.
@@ -194,7 +253,17 @@ func _process(dt: float) -> void:
 		m["marker"].scale = Vector3.ONE * cam_dist * (0.006 if place == loc["to"] else 0.004)
 		m["label"].position = at + Vector3(0, cam_dist * 0.02, 0)
 		m["label"].modulate = UI.AMBER if place == loc["to"] else Color(UI.TEXT, 0.8)
+		# Across the Sun's domain the stations crowd onto their worlds: label only
+		# where you are going and where you came from.
+		m["label"].visible = not _solar or place == loc["to"] or place == loc["from"]
+		m["marker"].visible = m["label"].visible
 	_update_npcs(t, cam_dist)
+	for body in _planets:
+		var pm: Dictionary = _planets[body]
+		var at := _p(eph.relative(body, "sun", t))
+		pm["mesh"].position = at
+		pm["mesh"].scale = Vector3.ONE * maxf(float(sim.data.bodies[body]["radius_m"]) / _unit, cam_dist * 0.005)
+		pm["label"].position = at + Vector3(0, cam_dist * 0.018, 0)
 
 	# The ship, exaggerated, nose along the thrust vector.
 	var accel := _d(Navigation.transit_accel(loc, t))

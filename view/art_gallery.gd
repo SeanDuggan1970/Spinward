@@ -20,6 +20,22 @@ const SHOTS := [
 	["moon-full", "moon", Vector3(0.1, 0.1, 1.0), 3.2, 0.0],
 	["moon-quarter", "moon", Vector3(1.0, 0.0, 0.1), 3.2, 0.0],
 	["moon-low", "moon", Vector3(1.0, 0.25, 0.4), 1.05, 0.0],
+	["mars", "mars", Vector3(0.5, 0.3, 1.0), 3.2, 0.0],
+	["jupiter", "jupiter", Vector3(0.4, 0.2, 1.0), 3.0, 0.0],
+	["saturn", "saturn", Vector3(0.6, 0.45, 1.0), 4.5, 0.0],
+	["uranus", "uranus", Vector3(0.3, 0.2, 1.0), 3.2, 0.0],
+	["neptune", "neptune", Vector3(0.3, 0.2, 1.0), 3.2, 0.0],
+	["venus", "venus", Vector3(0.5, 0.2, 1.0), 3.2, 0.0],
+	["titan", "titan", Vector3(0.5, 0.2, 1.0), 3.2, 0.0],
+	["io", "io", Vector3(0.5, 0.2, 1.0), 3.2, 0.0],
+	["europa", "europa", Vector3(0.5, 0.2, 1.0), 3.2, 0.0],
+	["ganymede", "ganymede", Vector3(0.5, 0.2, 1.0), 3.2, 0.0],
+	["callisto", "callisto", Vector3(0.5, 0.2, 1.0), 3.2, 0.0],
+	["enceladus", "enceladus", Vector3(0.5, 0.2, 1.0), 3.2, 0.0],
+	["ceres", "ceres", Vector3(0.5, 0.2, 1.0), 3.2, 0.0],
+	["phobos", "phobos", Vector3(0.5, 0.2, 1.0), 3.2, 0.0],
+	["pluto", "pluto", Vector3(0.5, 0.2, 1.0), 3.2, 0.0],
+	["mercury", "mercury", Vector3(0.5, 0.2, 1.0), 3.2, 0.0],
 ]
 
 var data
@@ -39,8 +55,11 @@ func _ready() -> void:
 	_sun = DirectionalLight3D.new()
 	_sun.light_energy = 1.6
 	add_child(_sun)
-	for body in ["earth", "moon"]:
-		var mesh := Kit.sphere(1.0, SkyKit.body_material(body, data.bodies[body].get("look", {})))
+	for shot in SHOTS:
+		var body: String = shot[1]
+		if _bodies.has(body):
+			continue
+		var mesh := SkyKit.body_mesh(data, body, 1.0)
 		(mesh.mesh as SphereMesh).radial_segments = 128
 		(mesh.mesh as SphereMesh).rings = 64
 		add_child(mesh)

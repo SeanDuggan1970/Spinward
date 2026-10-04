@@ -80,6 +80,7 @@ func _depart(command: Dictionary) -> String:
 		"from_pos": route["from_pos"], "to_pos": route["to_pos"], "distance_m": route["distance_m"],
 		"from_vel": route["from_vel"], "to_vel": route["to_vel"],
 		"from_rot": route.get("from_rot"), "to_rot": route.get("to_rot"), "rot_axis": route.get("rot_axis"), "rot_angle": route.get("rot_angle", 0.0),
+		"samples": route.get("samples"),
 	}
 	sim().emit("departed", {"from": here, "to": to, "arrive_t": route["arrive_t"], "fuel_t": route["fuel_t"]})
 	return ""
@@ -131,14 +132,17 @@ func _depart_route(here: String, to: String, route_id: String, plan_t: float) ->
 		return _depart({"type": "depart", "to": to})
 	if not opt["affordable"]:
 		return "not enough propellant: need %.2f t, have %.2f t" % [opt["fuel_t"], s.ship["fuel_t"]]
+	if not opt.get("life_ok", true):
+		return "not enough life support for a trip that long"
 	var samples: Array = opt["samples"]
 	s.ship["fuel_t"] = maxf(0.0, float(s.ship["fuel_t"]) - float(opt["fuel_t"]))
 	var arrive := float(opt["arrive_t"])
+	var frame: String = opt.get("frame", "earth")
 	s.location = {
-		"status": "transit", "from": here, "to": to, "frame": "earth",
+		"status": "transit", "from": here, "to": to, "frame": frame,
 		"depart_t": s.time_s, "arrive_t": arrive,
 		"burn_s": float(samples[-1][0]) - float(samples[0][0]),
-		"from_pos": eph.relative(here, "earth", s.time_s), "to_pos": eph.relative(to, "earth", arrive),
+		"from_pos": eph.relative(here, frame, s.time_s), "to_pos": eph.relative(to, frame, arrive),
 		"distance_m": V.distance(samples[0][1], samples[-1][1]),
 		"samples": samples, "route": route_id, "route_label": opt["label"],
 		"peri_t": float(opt["peri_t"]) if opt["kind"] == "flyby" else -1.0,

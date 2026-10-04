@@ -7,6 +7,7 @@
 extends "res://sim/systems/system.gd"
 
 const Navigation := preload("res://sim/navigation.gd")
+const Interplanetary := preload("res://sim/interplanetary.gd")
 const Market := preload("res://sim/market.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
 
@@ -194,8 +195,12 @@ func _choose_trade(npc: Dictionary, here: String, t: float) -> Dictionary:
 	var s = sim().state
 	var capacity := ShipStats.cargo_capacity_t(npc["ship"], data)
 	var options := []
+	var long_haul: bool = _fleet(npc).get("interplanetary", false)
 	for to in data.places:
 		if to == here:
+			continue
+		# Traders keep to their own planet's neighbourhood unless the fleet runs long hauls.
+		if not long_haul and Interplanetary.is_interplanetary(data, here, to):
 			continue
 		var plan := Navigation.plan(npc["ship"], data, sim().ephemeris, here, to, t)
 		if not plan.get("ok", false) or plan["strand_risk"]:

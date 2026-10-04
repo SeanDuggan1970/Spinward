@@ -77,6 +77,9 @@ func _ready() -> void:
 			visible = false
 			get_tree().root.add_child.call_deferred(load("res://view/art_gallery.gd").new(sim.data, a.trim_prefix("--art=")))
 			return
+		if a.begins_with("--voyage="):
+			_voyage_tour.call_deferred(a.trim_prefix("--voyage="))
+			return
 		if a.begins_with("--flyby="):
 			_flyby_tour.call_deferred(a.trim_prefix("--flyby="))
 			return
@@ -441,6 +444,44 @@ func _tour(dir: String) -> void:
 	for _i in 10:
 		await get_tree().process_frame
 	_shot(dir + "/6-flight-chase.png")
+	get_tree().quit()
+
+
+## Windowed: refit for the long haul (tanks in the cargo bays), plot Halo Depot to Ares
+## Ring, depart on the Express route, and capture the orbit view, map and cockpit at
+## the start, middle and end of the voyage, then the approach to Mars.
+func _voyage_tour(dir: String) -> void:
+	DirAccess.make_dir_recursive_absolute(dir)
+	const TravelSys := preload("res://sim/systems/travel_system.gd")
+	var s = sim.state
+	s.location = {"status": "docked", "place": "halo_depot"}
+	for slot in ["cargo.0", "cargo.1", "tank.0"]:
+		s.ship["modules"][slot] = "tank_m"
+	s.ship["fuel_t"] = 18.0
+	var t: float = s.time_s
+	var options: Array = TravelSys.plan_for(s.ship, sim.data, sim.ephemeris, "halo_depot", "ares_ring", t)
+	sim.store_route_options(sim.route_key("ares_ring", t), options)
+	print("VOYAGE options: ", options.map(func(o): return "%s %.0f d %.1f t" % [o["id"], o["duration_s"] / 86400.0, o["fuel_t"]]))
+	var err: String = sim.apply({"type": "depart", "to": "ares_ring", "route": options[0]["id"], "plan_t": t})
+	if err != "":
+		print("VOYAGE depart failed: ", err)
+		get_tree().quit(1)
+		return
+	_sync_mode()
+	var loc: Dictionary = s.location
+	var span := float(loc["arrive_t"]) - float(loc["depart_t"])
+	for stage in [["1-climb", 0.02], ["2-cruise", 0.5], ["3-arrive", 0.97]]:
+		sim.advance_game_time(float(loc["depart_t"]) + span * float(stage[1]) - s.time_s)
+		for v in ["orbit", "map", "cockpit"]:
+			(_screen as MapScreen).set_view(v)
+			for _i in 40:
+				await get_tree().process_frame
+			_shot("%s/%s-%s.png" % [dir, stage[0], v])
+	sim.advance_game_time(float(loc["arrive_t"]) - s.time_s + 1.0)
+	_sync_mode()
+	for _i in 60:
+		await get_tree().process_frame
+	_shot(dir + "/4-approach.png")
 	get_tree().quit()
 
 

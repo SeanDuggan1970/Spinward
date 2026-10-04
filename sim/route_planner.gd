@@ -8,6 +8,7 @@ const OM := preload("res://sim/orbit_mech.gd")
 const GF := preload("res://sim/gravity_flight.gd")
 const Navigation := preload("res://sim/navigation.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
+const Interplanetary := preload("res://sim/interplanetary.gd")
 
 ## Trip lengths tried, as multiples of the quick (gravity-free) estimate.
 const DURATION_STEPS := [0.9, 1.15, 1.45, 1.8, 2.3, 2.9]
@@ -55,6 +56,8 @@ static func hand_off(data, eph, place: String, t: float) -> Array:
 ## Everything a planning run needs, gathered on the main thread (the ephemeris is not
 ## thread-safe), so run() can execute on a worker thread on plain data.
 static func prepare(ship: Dictionary, data, eph, from_place: String, to_place: String, t: float) -> Dictionary:
+	if Interplanetary.is_interplanetary(data, from_place, to_place):
+		return Interplanetary.prepare(ship, data, eph, from_place, to_place, t)
 	var quick: Dictionary = Navigation.plan(ship, data, eph, from_place, to_place, t)
 	var overhead := float(data.balance["travel"]["overhead_hours"]) * 3600.0
 	var start := t + overhead * 0.5
@@ -87,6 +90,8 @@ static func _moon_anchored(data, place: String) -> bool:
 ## Fly the candidate routes. Pure: safe on a worker thread. Returns route options
 ## [{id, kind, label, duration_s, arrive_t, dv, fuel_t, affordable, samples, peri_alt, ...}].
 static func run(job: Dictionary) -> Array:
+	if job.get("helio", false):
+		return Interplanetary.run(job)
 	var direct := []
 	for arr in job["arrivals"]:
 		var legs := [{"kind": "rendezvous", "t": arr["tf"], "pos": arr["pos"], "vel": arr["vel"]}]

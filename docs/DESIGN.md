@@ -198,6 +198,24 @@ A character, not just a feature. It is the in-world reason the flight is playabl
   - **Honest finding:** with fusion drives, flybys rarely beat a well-timed direct burn in cislunar space; they cost more, apart from roughly break-even to Farside. They're there for the thrill, and the co-pilot says so.
   - **Flyby time:** compression drops for the run-in (×100) and the pass (×10), then restores, and the co-pilot comments by altitude.
   - **NPCs:** NPCs and the departures board keep the quick estimate. NPC captains file flybys by temperament (illustrative only: their paths are not gravity-flown) and chatter about them.
+- **Interplanetary voyages** (`sim/interplanetary.gd`, `sim/helio_flight.gd`). Any trip whose common frame is the Sun.
+  - **Climb-out:** a low-thrust spiral out of the departure well. It costs about the orbit's speed (Edelbaum): about 7.7 km/s from low Earth orbit, about 1 km/s from the Earth-Moon Lagrange stations, which are the cheap way out. It takes delta-v/a of thrust time: days for a Mule.
+  - **Transfer:** Sun-centred. Trip times are scanned with Lambert's problem, using a finite-burn correction (impulsive delta-v / (1 - burn fraction), at most half the trip under thrust). The trip is flown by guidance under the Sun's gravity: Lambert steering, then terminal ZEM/ZEV. The planner tries candidates until one arrives within 200,000 km and 500 m/s; the capture spiral takes the rest.
+  - **Capture:** the spiral in reverse.
+  - **Propellant:** the rocket equation at departure mass.
+  - **Life support:** in days. The crewed command pod carries 120; drones need none. Voyages longer than that are refused, with the reason given.
+  - **Options:**
+    - **Express:** fastest that the tanks and larder allow.
+    - **Economy:** least propellant within 2.5x the Express time.
+  - **Quick estimates:** boards and NPCs get the best candidate, with a free-fall conic path.
+  - **Time compression:** goes to x1,000,000.
+  - **NPC traders** stay in their own planet's neighbourhood unless a fleet is flagged `interplanetary`.
+  - **What a Mule can reach** (from Halo Depot):
+    - Mars in about 50 days with 18 t of tanks in its cargo bays (~8 t used).
+    - Ceres in about 100 days.
+    - Psyche at the edge of its 120-day larder.
+    - Jupiter and Saturn need better drives and extended life support. This is the refit ladder.
+  - **Orbits:** every body is baked from JPL Horizons state vectors (2061-03-01, mean motion fitted to 2063). `tests/horizons_reference.json` holds the reference, and a test keeps every body within a degree.
 - **Transit views** (M cycles):
   - a cinematic god's-eye view, the default, framing ship, destination and rendezvous
   - the cockpit
@@ -327,6 +345,37 @@ Spinward/
   tests/      sim unit tests, data validation, balance reports
   docs/       DESIGN.md, RESEARCH.md, decisions/ (ADRs)
 ```
+
+## The wider system (Oct 2026 expansion)
+
+Sean's direction (2026-10-04). It goes beyond trade into opportunities, refits and the powers in the background.
+
+1. **The solar system** (done):
+   - the planets
+   - 14 major moons
+   - Ceres, Vesta, Pallas, Psyche, Hygiea, Eros and Hektor
+   - Pluto-Charon, Eris, Arrokoth and Sedna
+   - new ports at Mars (Ares Ring), Ceres (Piazzi Station), Psyche (Psyche Claims), Callisto (Valhalla Station), Titan (Huygens Port) and Enceladus (Plume Watch)
+   - new goods: deuterium, volatiles and platinum metals
+   - surface shaders: rock, ice with lineae and caps, banded gas giants, cloud worlds, and Saturn's rings
+2. **Interplanetary flight** (done): see the flight model above.
+3. **Refits:**
+   - modules that mount in cargo bays: long-haul tanks, extended life support, passenger berths, a lander, survey and mining rigs
+   - drive tiers beyond the Pathfinders
+   - long burns mean low cargo
+4. **Reputation and opportunities.** Being reliable gets you known. Offers come from boards, approaches, and rumours sold as bonus info by the tip line. Kinds of job:
+   - **Courier contracts:** a package, a passenger or a party, with a deadline. Some are pickups: go and get something or someone and take it on somewhere else. They weigh little but demand a direct, light, fast trip, so less or no other cargo.
+   - survey, salvage, prospecting and mining claims
+   - derelicts
+5. **Projects that pitch.**
+   - **The pitch:** each megaproject makes its case: what it is for, and what backers get. That might be docking or landing rights, discounts, a berth or a base, or a new station moving out to deeper space.
+   - **Choosing:** players pick which to back.
+   - **Visibility:** not all are visible at the start. Some spin up later, and some are offered only to known pilots.
+6. **Powers in the background.** These are inspired by Iain M. Banks' Culture: benevolent minds who intervene quietly, Contact and Special Circumstances, the informal Interesting Times Gang, Outside Context Problems. The analogues are original, not Banks' names.
+   - **The minds' circle:** an informal circle of Commons minds who steer events.
+   - **Cut-outs:** human go-betweens who approach a pilot with favours.
+   - **The arc:** the Oort cloud is story-gated. Something anomalous is out there, and a reliable pilot is eventually offered the means to go and see.
+7. **Lander:** a module plus a short guided descent and ascent for surface jobs. A fully flown lander can come later.
 
 ## Milestones
 

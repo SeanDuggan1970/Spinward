@@ -29,6 +29,7 @@ extends RefCounted
 
 const V := preload("res://sim/v3.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
+const Interplanetary := preload("res://sim/interplanetary.gd")
 
 const SOLVE_STEPS := 48
 const FUEL_SAMPLES := 24
@@ -93,6 +94,10 @@ static func solve_duration(p0: Array, v0: Array, p1: Array, v1: Array, accel: fl
 
 ## The body whose motion defines the rotating frame for trips in `frame` ("" for none).
 static func rotating_body(data, frame: String) -> String:
+	# Only planet-and-moon systems rotate: a Sun-centred trip has no single dominant
+	# companion, and Jupiter's year is no frame for a voyage to Mars.
+	if frame == "sun" or not data.bodies.has(frame):
+		return ""
 	var best := ""
 	var best_gm := 0.0
 	for body in data.bodies:
@@ -123,9 +128,11 @@ static func plan(ship: Dictionary, data, eph, from_place: String, to_place: Stri
 	if accel <= 0.0 or ve <= 0.0:
 		result["reason"] = "no working drive"
 		return result
+	var frame := frame_body(data, from_place, to_place)
+	if frame == "sun":
+		return Interplanetary.quick(ship, data, eph, from_place, to_place, t)
 	var travel: Dictionary = data.balance["travel"]
 	var overhead := float(travel["overhead_hours"]) * 3600.0
-	var frame := frame_body(data, from_place, to_place)
 	var depart := t + overhead * 0.5
 	var rot_body := rotating_body(data, frame)
 	var from_pos: Array = eph.relative(from_place, frame, depart)

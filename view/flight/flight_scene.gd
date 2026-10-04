@@ -139,21 +139,26 @@ func _build_environment() -> void:
 	var sun := DirectionalLight3D.new()
 	var sun_dir := _dir_to(eph.position("sun", t), here)
 	body_dirs["sun"] = sun_dir
-	sun.light_energy = 1.6
+	# Sunlight fades with distance, gently: eyes and cameras adapt.
+	var au := V.length(V.sub(here, eph.position("sun", t))) / 1.495978707e11
+	sun.light_energy = 1.6 * clampf(1.0 / sqrt(au), 0.45, 1.6)
 	sun.shadow_enabled = true
 	sun.directional_shadow_max_distance = 800.0
 	add_child(sun)
 	sun.look_at_from_position(Vector3.ZERO, -sun_dir, Vector3.UP if absf(sun_dir.y) < 0.99 else Vector3.RIGHT)
-	add_child(Kit.sphere(SKY_DISTANCE * 0.0047 * 3.0, Kit.glow(Color("fff6e0"), 6.0), sun_dir * SKY_DISTANCE))
+	add_child(Kit.sphere(SKY_DISTANCE * 0.0047 * 3.0 / maxf(au, 0.3), Kit.glow(Color("fff6e0"), 6.0), sun_dir * SKY_DISTANCE))
 	for body in ["earth", "moon"]:
-		var p: Array = eph.position(body, t)
-		var d := V.distance(p, here)
-		var r := float(sim.data.bodies[body]["radius_m"])
-		var dir := _dir_to(p, here)
+		body_dirs[body] = _dir_to(eph.position(body, t), here)
+	# Every world big enough to see, true to its angular size. Nearer ones sit nearer
+	# on the sky shell, so a moon passes in front of its planet, never behind.
+	var seen: Array = SkyKit.visible_bodies(sim.data, eph, here, t)
+	for k in seen.size():
+		var body: String = seen[k][0]
+		var dir: Vector3 = seen[k][1]
 		body_dirs[body] = dir
-		var mesh := Kit.sphere(SKY_DISTANCE * minf(r / d, 0.97), SkyKit.body_material(body, sim.data.bodies[body].get("look", {})), dir * SKY_DISTANCE)
-		(mesh.mesh as SphereMesh).radial_segments = 64
-		(mesh.mesh as SphereMesh).rings = 32
+		var shell := SKY_DISTANCE * (0.55 + 0.45 * float(k) / float(maxi(1, seen.size() - 1)))
+		var mesh := SkyKit.body_mesh(sim.data, body, shell * minf(tan(float(seen[k][2])), 0.97))
+		mesh.position = dir * shell
 		SkyKit.update_body(mesh, sun_dir, t)
 		add_child(mesh)
 

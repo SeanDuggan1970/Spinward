@@ -44,10 +44,11 @@ func _ready() -> void:
 	add_child(_sun)
 	_sun_disc = Kit.sphere(1.0, Kit.glow(Color("fff6e0"), 6.0))
 	add_child(_sun_disc)
-	for body in ["earth", "moon"]:
-		var mesh := Kit.sphere(1.0, SkyKit.body_material(body, sim.data.bodies[body].get("look", {})))
-		(mesh.mesh as SphereMesh).radial_segments = 64
-		(mesh.mesh as SphereMesh).rings = 32
+	for body in sim.data.bodies:
+		if body == "sun":
+			continue
+		var mesh := SkyKit.body_mesh(sim.data, body, 1.0)
+		mesh.visible = false
 		add_child(mesh)
 		_bodies[body] = mesh
 	camera = Camera3D.new()
@@ -72,19 +73,24 @@ func _update(dt: float) -> void:
 	var t: float = s.time_s
 	var frame: String = loc["frame"]
 	var ship: Array = V.add(eph.position(frame, t), Navigation.transit_position(loc, t))
+	# Worlds big enough to see, true to angular size; nearer ones nearer on the shell.
+	var seen: Array = SkyKit.visible_bodies(sim.data, eph, ship, t)
 	for body in _bodies:
-		var p: Array = eph.position(body, t)
-		var d := V.distance(p, ship)
-		var r := float(sim.data.bodies[body]["radius_m"])
-		var node: MeshInstance3D = _bodies[body]
-		node.position = SkyKit.dir_between(p, ship) * SKY_DISTANCE
-		node.scale = Vector3.ONE * SKY_DISTANCE * minf(r / d, 0.97)
+		_bodies[body].visible = false
+	for k in seen.size():
+		var node: MeshInstance3D = _bodies[seen[k][0]]
+		var shell := SKY_DISTANCE * (0.55 + 0.45 * float(k) / float(maxi(1, seen.size() - 1)))
+		node.visible = true
+		node.position = (seen[k][1] as Vector3) * shell
+		node.scale = Vector3.ONE * shell * minf(tan(float(seen[k][2])), 0.97)
 	var sun_dir := SkyKit.dir_between(eph.position("sun", t), ship)
 	_sun.look_at_from_position(Vector3.ZERO, -sun_dir, Vector3.UP if absf(sun_dir.y) < 0.99 else Vector3.RIGHT)
 	_sun_disc.position = sun_dir * SKY_DISTANCE
-	for body in _bodies:
-		SkyKit.update_body(_bodies[body], sun_dir, t)
-	_sun_disc.scale = Vector3.ONE * SKY_DISTANCE * 0.0047 * 3.0
+	for k in seen.size():
+		SkyKit.update_body(_bodies[seen[k][0]], sun_dir, t)
+	var au := V.length(V.sub(ship, eph.position("sun", t))) / 1.495978707e11
+	_sun_disc.scale = Vector3.ONE * SKY_DISTANCE * 0.0047 * 3.0 / maxf(au, 0.3)
+	_sun.light_energy = 1.6 * clampf(1.0 / sqrt(au), 0.45, 1.6)
 
 	# Attitude: the main drive pushes along the nose, so face along the thrust vector
 	# (which swings smoothly from toward the target to braking against it). Coasting,

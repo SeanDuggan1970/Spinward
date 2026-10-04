@@ -20,6 +20,13 @@ uniform float largest_km = 420.0;
 uniform float basin_flooding = 0.42;
 // Share of mid-sized craters young enough to still show bright rays.
 uniform float ray_chance = 0.035;
+// Polar ice caps where |latitude sine| exceeds this (0 = none; Mars about 0.9).
+uniform float ice_caps = 0.0;
+// Crack networks across an icy crust (Europa, Enceladus): 0 none, 1 dense.
+uniform float lineae = 0.0;
+uniform vec3 lineae_colour : source_color = vec3(0.55, 0.36, 0.25);
+// A few very bright salt spots in young craters (Ceres' Occator faculae).
+uniform float bright_spots = 0.0;
 // Surface grain (regolith, rubble) cells per body radius; shows only close up.
 uniform float grain_per_radius = 5200.0;
 
@@ -165,11 +172,27 @@ void fragment() {
 		float gf = grain_per_radius * (k == 0 ? 0.25 : 1.0);
 		float near = 1.0 - smoothstep(0.15, 0.6, footprint * gf);
 		if (near > 0.0) {
-			albedo *= 1.0 + (sw_vnoise(p * gf + float(k) * 17.0) - 0.5) * 0.3 * near;
+			albedo *= 1.0 + (sw_fbm(p * gf + float(k) * 17.0, 2) - 0.5) * 0.14 * near;
 		}
 	}
 	if (ray_chance > 0.0) {
 		bright += rays(p) * 0.4;
+	}
+	if (lineae > 0.0) {
+		// Ridged noise makes long, branching cracks; reddish salts stain them.
+		float n1 = 1.0 - abs(sw_fbm(p * 4.0 + seed * 1.3, 4) * 2.0 - 1.0);
+		float n2 = 1.0 - abs(sw_fbm(p * 11.0 + seed * 2.1, 3) * 2.0 - 1.0);
+		float crack = smoothstep(0.978, 0.996, n1) + 0.6 * smoothstep(0.982, 0.997, n2);
+		albedo = mix(albedo, lineae_colour, clamp(crack, 0.0, 1.0) * lineae * 0.75);
+	}
+	if (bright_spots > 0.0) {
+		vec3 c = normalize(vec3(0.42, 0.33, 0.85));
+		float spot = 1.0 - smoothstep(0.004, 0.012, length(p - c));
+		bright += spot * 2.5 * bright_spots;
+	}
+	if (ice_caps > 0.0) {
+		float cap = smoothstep(ice_caps, ice_caps + 0.03, abs(p.y) + (sw_fbm(p * 8.0 + seed, 4) - 0.5) * 0.06);
+		albedo = mix(albedo, vec3(0.92, 0.92, 0.95), cap);
 	}
 	ALBEDO = clamp(albedo * (1.0 + bright), 0.0, 1.0);
 	ROUGHNESS = 1.0;

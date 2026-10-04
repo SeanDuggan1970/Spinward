@@ -1,39 +1,792 @@
 {
-	"_source": "Earth: JPL 'Approximate Positions of the Planets', Table 1 (Earth-Moon barycentre, J2000, valid 1800-2050). Moon: mean elements after Meeus, Astronomical Algorithms ch. 47, including node regression and apsidal precession; period is the anomalistic month. GM values: JPL/IAU. Approximate; to be replaced by a Horizons bake (tools/bake_bodies.py) when more bodies are added.",
+	"_source": "Sun, Earth and Moon: as before (Earth JPL approximate elements, Table 1; Moon mean elements after Meeus ch. 47). Every other body: osculating elements from JPL Horizons state vectors at 2061-03-01 00:00 UT (ecliptic J2000, relative to the parent), with the mean motion fitted to Horizons' position at 2063-03-01, so positions are right through the 2060s. Fetched 2026-10-04. GM values: JPL/IAU. 'kind' sorts bodies on the map; 'look' picks and tunes the surface shader (rock, gas, clouds; Earth has its own).",
 	"sun": {
 		"name": "Sun",
-		"gm": 1.32712440018e20,
-		"radius_m": 6.957e8
+		"gm": 1.32712440018e+20,
+		"radius_m": 695700000.0,
+		"kind": "star"
+	},
+	"mercury": {
+		"name": "Mercury",
+		"kind": "planet",
+		"parent": "sun",
+		"gm": 22032000000000.0,
+		"radius_m": 2439700.0,
+		"pole_ra_deg": 281.01,
+		"pole_dec_deg": 61.41,
+		"elements": {
+			"a_m": 57908980171.98784,
+			"e": 0.2056516420202006,
+			"i_deg": 7.001356931019864,
+			"node_deg": 48.25442415195309,
+			"peri_deg": 29.29820076191007,
+			"m0_deg": 174.75454593966424,
+			"period_days": 87.96930540044305
+		},
+		"look": {
+			"shader": "rock",
+			"highland_colour": "#8a8580",
+			"mare_colour": "#5e5b57",
+			"basin_flooding": 0.25
+		}
+	},
+	"venus": {
+		"name": "Venus",
+		"kind": "planet",
+		"parent": "sun",
+		"gm": 324859000000000.0,
+		"radius_m": 6051800.0,
+		"pole_ra_deg": 272.76,
+		"pole_dec_deg": 67.16,
+		"elements": {
+			"a_m": 108208551563.76279,
+			"e": 0.0067657898142128746,
+			"i_deg": 3.394217481395439,
+			"node_deg": 76.51035320003179,
+			"peri_deg": 55.354141569063195,
+			"m0_deg": 49.90652348922595,
+			"period_days": 224.69947947485647
+		},
+		"look": {
+			"shader": "clouds",
+			"colour_a": "#e8d6a8",
+			"colour_b": "#c9ad74",
+			"bands": 3.0,
+			"turbulence": 0.6
+		}
 	},
 	"earth": {
 		"name": "Earth",
 		"parent": "sun",
-		"gm": 3.986004418e14,
-		"radius_m": 6.371e6,
+		"gm": 398600441800000.0,
+		"radius_m": 6371000.0,
 		"elements": {
-			"a_m": 1.4959826e11,
+			"a_m": 149598260000.0,
 			"e": 0.01671123,
-			"i_deg": -0.00001531,
+			"i_deg": -1.531e-05,
 			"node_deg": 0.0,
 			"peri_deg": 102.93768193,
 			"m0_deg": -2.47311027
-		}
+		},
+		"kind": "planet",
+		"pole_ra_deg": 0.0,
+		"pole_dec_deg": 90.0
 	},
 	"moon": {
 		"name": "Moon",
 		"parent": "earth",
-		"gm": 4.9048695e12,
-		"radius_m": 1.7374e6,
+		"gm": 4904869500000.0,
+		"radius_m": 1737400.0,
 		"elements": {
-			"a_m": 3.84399e8,
+			"a_m": 384399000.0,
 			"e": 0.0549,
 			"i_deg": 5.145,
 			"node_deg": 125.04452,
 			"node_rate_deg_per_day": -0.0529539,
 			"peri_deg": 318.30873,
-			"peri_rate_deg_per_day": 0.1643580,
-			"m0_deg": 134.96340,
-			"period_days": 27.554550
+			"peri_rate_deg_per_day": 0.164358,
+			"m0_deg": 134.9634,
+			"period_days": 27.55455
+		},
+		"kind": "moon",
+		"look": {
+			"shader": "rock"
+		}
+	},
+	"mars": {
+		"name": "Mars",
+		"kind": "planet",
+		"parent": "sun",
+		"gm": 42828370000000.0,
+		"radius_m": 3389500.0,
+		"pole_ra_deg": 317.68,
+		"pole_dec_deg": 52.89,
+		"elements": {
+			"a_m": 227925483790.02936,
+			"e": 0.09355417956691761,
+			"i_deg": 1.8446177907443275,
+			"node_deg": 49.378432164293024,
+			"peri_deg": 286.9390570074824,
+			"m0_deg": 18.8664274825951,
+			"period_days": 686.9643009152144
+		},
+		"look": {
+			"shader": "rock",
+			"highland_colour": "#b56a3e",
+			"mare_colour": "#7a4630",
+			"basin_flooding": 0.3,
+			"ice_caps": 0.9,
+			"ray_chance": 0.01
+		}
+	},
+	"phobos": {
+		"name": "Phobos",
+		"kind": "moon",
+		"parent": "mars",
+		"gm": 708700.0,
+		"radius_m": 11100.0,
+		"elements": {
+			"a_m": 9378665.51784685,
+			"e": 0.015477655479425308,
+			"i_deg": 26.298729757030564,
+			"node_deg": 85.01651202226037,
+			"peri_deg": 345.1422245371719,
+			"m0_deg": 238.28658420592546,
+			"period_days": 0.3191886330001019
+		},
+		"look": {
+			"shader": "rock",
+			"highland_colour": "#6e625a",
+			"mare_colour": "#574d47",
+			"basin_flooding": 0.0
+		}
+	},
+	"deimos": {
+		"name": "Deimos",
+		"kind": "moon",
+		"parent": "mars",
+		"gm": 96000.0,
+		"radius_m": 6200.0,
+		"elements": {
+			"a_m": 23459488.703099966,
+			"e": 0.0002245802502036919,
+			"i_deg": 27.375627749079754,
+			"node_deg": 80.69753382382,
+			"peri_deg": 247.68743158602382,
+			"m0_deg": 329.84209916368127,
+			"period_days": 1.2624402899762437
+		},
+		"look": {
+			"shader": "rock",
+			"highland_colour": "#7a6e62",
+			"mare_colour": "#62584f",
+			"basin_flooding": 0.0
+		}
+	},
+	"ceres": {
+		"name": "Ceres",
+		"kind": "dwarf",
+		"parent": "sun",
+		"gm": 62628400000.0,
+		"radius_m": 469700.0,
+		"elements": {
+			"a_m": 414030311787.0237,
+			"e": 0.07701333936761287,
+			"i_deg": 10.582804030754817,
+			"node_deg": 79.54355658163172,
+			"peri_deg": 76.27981324517054,
+			"m0_deg": 6.222732236781667,
+			"period_days": 1682.1014486379256
+		},
+		"look": {
+			"shader": "rock",
+			"highland_colour": "#6f6b66",
+			"mare_colour": "#55524e",
+			"basin_flooding": 0.0,
+			"bright_spots": 1.0
+		}
+	},
+	"vesta": {
+		"name": "Vesta",
+		"kind": "asteroid",
+		"parent": "sun",
+		"gm": 17288300000.0,
+		"radius_m": 262700.0,
+		"elements": {
+			"a_m": 353232389568.6942,
+			"e": 0.08905495537842215,
+			"i_deg": 7.145035132858883,
+			"node_deg": 103.41595667774321,
+			"peri_deg": 152.43849322184363,
+			"m0_deg": 338.0132276107506,
+			"period_days": 1325.558814447509
+		},
+		"look": {
+			"shader": "rock",
+			"highland_colour": "#8f8a80",
+			"mare_colour": "#6d6860",
+			"basin_flooding": 0.1
+		}
+	},
+	"pallas": {
+		"name": "Pallas",
+		"kind": "asteroid",
+		"parent": "sun",
+		"gm": 13630000000.0,
+		"radius_m": 256000.0,
+		"elements": {
+			"a_m": 414782591990.40076,
+			"e": 0.22810576405515215,
+			"i_deg": 34.90755557079115,
+			"node_deg": 172.59773266845164,
+			"peri_deg": 310.49490576726663,
+			"m0_deg": 358.95053824657407,
+			"period_days": 1686.6691177784237
+		},
+		"look": {
+			"shader": "rock",
+			"highland_colour": "#77736d",
+			"mare_colour": "#5d5a55",
+			"basin_flooding": 0.0
+		}
+	},
+	"psyche": {
+		"name": "Psyche",
+		"kind": "asteroid",
+		"parent": "sun",
+		"gm": 1601000000.0,
+		"radius_m": 111000.0,
+		"elements": {
+			"a_m": 437536716877.00037,
+			"e": 0.1372920693081924,
+			"i_deg": 3.108764399418442,
+			"node_deg": 149.510439666331,
+			"peri_deg": 231.30496089807755,
+			"m0_deg": 342.07584482139373,
+			"period_days": 1828.2470832146892
+		},
+		"look": {
+			"shader": "rock",
+			"highland_colour": "#8e8b86",
+			"mare_colour": "#6f6c68",
+			"basin_flooding": 0.0,
+			"metallic": 0.6
+		}
+	},
+	"hygiea": {
+		"name": "Hygiea",
+		"kind": "asteroid",
+		"parent": "sun",
+		"gm": 7000000000.0,
+		"radius_m": 203500.0,
+		"elements": {
+			"a_m": 469518269503.7413,
+			"e": 0.11608708893161306,
+			"i_deg": 3.8657383251839814,
+			"node_deg": 280.663047471399,
+			"peri_deg": 326.4137032940068,
+			"m0_deg": 317.87602161371433,
+			"period_days": 2031.3881072978259
+		},
+		"look": {
+			"shader": "rock",
+			"highland_colour": "#55524d",
+			"mare_colour": "#45423e",
+			"basin_flooding": 0.0
+		}
+	},
+	"eros": {
+		"name": "Eros",
+		"kind": "asteroid",
+		"parent": "sun",
+		"gm": 446300.0,
+		"radius_m": 8400.0,
+		"elements": {
+			"a_m": 218126256960.86896,
+			"e": 0.22276992343455304,
+			"i_deg": 10.826173976265235,
+			"node_deg": 304.0768406380436,
+			"peri_deg": 179.28197960711103,
+			"m0_deg": 56.62896458546675,
+			"period_days": 643.0959507154693
+		},
+		"look": {
+			"shader": "rock",
+			"highland_colour": "#8d7f6c",
+			"mare_colour": "#6e6355",
+			"basin_flooding": 0.0
+		}
+	},
+	"jupiter": {
+		"name": "Jupiter",
+		"kind": "planet",
+		"parent": "sun",
+		"gm": 1.26686534e+17,
+		"radius_m": 69911000.0,
+		"pole_ra_deg": 268.06,
+		"pole_dec_deg": 64.5,
+		"elements": {
+			"a_m": 778422180035.1517,
+			"e": 0.048765084614574586,
+			"i_deg": 1.3026194241051081,
+			"node_deg": 100.63159297441135,
+			"peri_deg": 274.6201726677315,
+			"m0_deg": 19.466443923011184,
+			"period_days": 4333.814613921039
+		},
+		"look": {
+			"shader": "gas",
+			"colour_a": "#e9dcc4",
+			"colour_b": "#b3825a",
+			"colour_c": "#8a5a3c",
+			"bands": 14.0,
+			"turbulence": 0.7,
+			"storm": 1.0
+		}
+	},
+	"io": {
+		"name": "Io",
+		"kind": "moon",
+		"parent": "jupiter",
+		"gm": 5959916000000.0,
+		"radius_m": 1821600.0,
+		"elements": {
+			"a_m": 422036170.81222194,
+			"e": 0.004597332451091067,
+			"i_deg": 2.169977651993601,
+			"node_deg": 337.45003760704134,
+			"peri_deg": 115.29005384090078,
+			"m0_deg": 112.83971038088202,
+			"period_days": 1.7734241028650912
+		},
+		"look": {
+			"shader": "rock",
+			"highland_colour": "#e3cf6e",
+			"mare_colour": "#b0693a",
+			"basin_flooding": 0.5,
+			"ray_chance": 0.0,
+			"largest_km": 13.0
+		}
+	},
+	"europa": {
+		"name": "Europa",
+		"kind": "moon",
+		"parent": "jupiter",
+		"gm": 3202739000000.0,
+		"radius_m": 1560800.0,
+		"elements": {
+			"a_m": 671324808.9600635,
+			"e": 0.008936155745215668,
+			"i_deg": 1.7625566409657811,
+			"node_deg": 332.9208705852113,
+			"peri_deg": 293.6127436333391,
+			"m0_deg": 353.5753683652729,
+			"period_days": 3.551255268815698
+		},
+		"look": {
+			"shader": "rock",
+			"highland_colour": "#e9e2d2",
+			"mare_colour": "#b89a78",
+			"basin_flooding": 0.3,
+			"largest_km": 13.0,
+			"lineae": 1.0
+		}
+	},
+	"ganymede": {
+		"name": "Ganymede",
+		"kind": "moon",
+		"parent": "jupiter",
+		"gm": 9887834000000.0,
+		"radius_m": 2634100.0,
+		"elements": {
+			"a_m": 1070450086.0045203,
+			"e": 0.0025944998466862755,
+			"i_deg": 2.19410603768812,
+			"node_deg": 332.988645458569,
+			"peri_deg": 85.98752295572577,
+			"m0_deg": 157.45855484972708,
+			"period_days": 7.15453019120419
+		},
+		"look": {
+			"shader": "rock",
+			"highland_colour": "#a9a092",
+			"mare_colour": "#6b6358",
+			"basin_flooding": 0.45
+		}
+	},
+	"callisto": {
+		"name": "Callisto",
+		"kind": "moon",
+		"parent": "jupiter",
+		"gm": 7179289000000.0,
+		"radius_m": 2410300.0,
+		"elements": {
+			"a_m": 1882746500.580508,
+			"e": 0.007226992810899503,
+			"i_deg": 1.891946358359415,
+			"node_deg": 336.1016080784805,
+			"peri_deg": 56.30343469952964,
+			"m0_deg": 46.21265184821095,
+			"period_days": 16.688997247800724
+		},
+		"look": {
+			"shader": "rock",
+			"highland_colour": "#6f675e",
+			"mare_colour": "#4f4943",
+			"basin_flooding": 0.15,
+			"ray_chance": 0.08
+		}
+	},
+	"hektor": {
+		"name": "Hektor",
+		"kind": "trojan",
+		"parent": "sun",
+		"gm": 500000000.0,
+		"radius_m": 112500.0,
+		"elements": {
+			"a_m": 789514503615.3156,
+			"e": 0.0216492932600219,
+			"i_deg": 18.141462928706463,
+			"node_deg": 342.69914147685375,
+			"peri_deg": 184.7861697007683,
+			"m0_deg": 314.23114648854516,
+			"period_days": 4427.781119640181
+		},
+		"look": {
+			"shader": "rock",
+			"highland_colour": "#4d453f",
+			"mare_colour": "#3b3531",
+			"basin_flooding": 0.0
+		}
+	},
+	"saturn": {
+		"name": "Saturn",
+		"kind": "planet",
+		"parent": "sun",
+		"gm": 3.7931187e+16,
+		"radius_m": 58232000.0,
+		"pole_ra_deg": 40.59,
+		"pole_dec_deg": 83.54,
+		"elements": {
+			"a_m": 1433607496448.215,
+			"e": 0.05739660131748289,
+			"i_deg": 2.4855838304953544,
+			"node_deg": 113.49022681895846,
+			"peri_deg": 338.47704099380707,
+			"m0_deg": 323.35119790611407,
+			"period_days": 10829.16489066029
+		},
+		"look": {
+			"shader": "gas",
+			"colour_a": "#efe2bf",
+			"colour_b": "#d2b47c",
+			"colour_c": "#b8955e",
+			"bands": 18.0,
+			"turbulence": 0.35,
+			"rings": 1.0
+		}
+	},
+	"enceladus": {
+		"name": "Enceladus",
+		"kind": "moon",
+		"parent": "saturn",
+		"gm": 7211000000.0,
+		"radius_m": 252100.0,
+		"elements": {
+			"a_m": 238414941.3151881,
+			"e": 0.004188879299450638,
+			"i_deg": 28.058068854543727,
+			"node_deg": 169.52320521383083,
+			"peri_deg": 101.36094574054503,
+			"m0_deg": 119.88089873362333,
+			"period_days": 1.375382632607205
+		},
+		"look": {
+			"shader": "rock",
+			"highland_colour": "#f2f4f6",
+			"mare_colour": "#d6dde4",
+			"basin_flooding": 0.2,
+			"lineae": 1.0,
+			"lineae_colour": "#8fb0c4"
+		}
+	},
+	"rhea": {
+		"name": "Rhea",
+		"kind": "moon",
+		"parent": "saturn",
+		"gm": 153940000000.0,
+		"radius_m": 763800.0,
+		"elements": {
+			"a_m": 527210714.1458655,
+			"e": 0.0008016896809780604,
+			"i_deg": 28.20472782314311,
+			"node_deg": 170.06335828806982,
+			"peri_deg": 176.57976013089316,
+			"m0_deg": 194.46281203185208,
+			"period_days": 4.517500830514057
+		},
+		"look": {
+			"shader": "rock",
+			"highland_colour": "#cfcac2",
+			"mare_colour": "#aaa49b",
+			"basin_flooding": 0.0
+		}
+	},
+	"titan": {
+		"name": "Titan",
+		"kind": "moon",
+		"parent": "saturn",
+		"gm": 8978140000000.0,
+		"radius_m": 2574700.0,
+		"elements": {
+			"a_m": 1221952635.1336343,
+			"e": 0.028579054276118416,
+			"i_deg": 27.621937293012508,
+			"node_deg": 168.8905012312212,
+			"peri_deg": 196.47323259707156,
+			"m0_deg": 132.21795280411607,
+			"period_days": 15.945464279615537
+		},
+		"look": {
+			"shader": "clouds",
+			"colour_a": "#d6a35a",
+			"colour_b": "#b88440",
+			"bands": 2.0,
+			"turbulence": 0.2
+		}
+	},
+	"iapetus": {
+		"name": "Iapetus",
+		"kind": "moon",
+		"parent": "saturn",
+		"gm": 120510000000.0,
+		"radius_m": 734500.0,
+		"elements": {
+			"a_m": 3563792913.183497,
+			"e": 0.02851338722000919,
+			"i_deg": 16.573233040017048,
+			"node_deg": 137.39322132222992,
+			"peri_deg": 239.54736935305502,
+			"m0_deg": 205.64163919721614,
+			"period_days": 79.33510344900296
+		},
+		"look": {
+			"shader": "rock",
+			"highland_colour": "#d8d2c6",
+			"mare_colour": "#3a2e26",
+			"basin_flooding": 0.5
+		}
+	},
+	"uranus": {
+		"name": "Uranus",
+		"kind": "planet",
+		"parent": "sun",
+		"gm": 5793939000000000.0,
+		"radius_m": 25362000.0,
+		"pole_ra_deg": 257.31,
+		"pole_dec_deg": -15.18,
+		"elements": {
+			"a_m": 2865211668368.973,
+			"e": 0.047310575578043676,
+			"i_deg": 0.7706347125846787,
+			"node_deg": 74.0313190307024,
+			"peri_deg": 94.35879754124915,
+			"m0_deg": 143.84200848289578,
+			"period_days": 30587.971531860523
+		},
+		"look": {
+			"shader": "gas",
+			"colour_a": "#bfe7ea",
+			"colour_b": "#9fd3d8",
+			"colour_c": "#8cc4cc",
+			"bands": 6.0,
+			"turbulence": 0.1
+		}
+	},
+	"miranda": {
+		"name": "Miranda",
+		"kind": "moon",
+		"parent": "uranus",
+		"gm": 4400000000.0,
+		"radius_m": 235800.0,
+		"elements": {
+			"a_m": 129873211.63799912,
+			"e": 0.0013394793381582277,
+			"i_deg": 99.77927586867735,
+			"node_deg": 163.67946980809862,
+			"peri_deg": 47.7230292867963,
+			"m0_deg": 252.48788282461464,
+			"period_days": 1.4134740530482417
+		},
+		"look": {
+			"shader": "rock",
+			"highland_colour": "#b9b9b4",
+			"mare_colour": "#8e8e89",
+			"basin_flooding": 0.3
+		}
+	},
+	"titania": {
+		"name": "Titania",
+		"kind": "moon",
+		"parent": "uranus",
+		"gm": 228200000000.0,
+		"radius_m": 788400.0,
+		"elements": {
+			"a_m": 436270090.2284448,
+			"e": 0.000798714524770044,
+			"i_deg": 97.77502173536763,
+			"node_deg": 167.71814894734666,
+			"peri_deg": 34.19860284990356,
+			"m0_deg": 244.3071186641464,
+			"period_days": 8.705887616157225
+		},
+		"look": {
+			"shader": "rock",
+			"highland_colour": "#a8a39b",
+			"mare_colour": "#86817a",
+			"basin_flooding": 0.1
+		}
+	},
+	"neptune": {
+		"name": "Neptune",
+		"kind": "planet",
+		"parent": "sun",
+		"gm": 6836529000000000.0,
+		"radius_m": 24622000.0,
+		"pole_ra_deg": 299.36,
+		"pole_dec_deg": 43.46,
+		"elements": {
+			"a_m": 4532978649589.194,
+			"e": 0.01507045491002694,
+			"i_deg": 1.7748293040405705,
+			"node_deg": 131.58348185265157,
+			"peri_deg": 290.1023194361887,
+			"m0_deg": 244.93933758639594,
+			"period_days": 60964.237697359335
+		},
+		"look": {
+			"shader": "gas",
+			"colour_a": "#5b7fe0",
+			"colour_b": "#3d5fc4",
+			"colour_c": "#2c4aa6",
+			"bands": 8.0,
+			"turbulence": 0.4,
+			"storm": 0.6
+		}
+	},
+	"triton": {
+		"name": "Triton",
+		"kind": "moon",
+		"parent": "neptune",
+		"gm": 1428495000000.0,
+		"radius_m": 1353400.0,
+		"elements": {
+			"a_m": 354693932.95569354,
+			"e": 0.000148171247831933,
+			"i_deg": 128.85711900328894,
+			"node_deg": 231.94808051976673,
+			"peri_deg": 47.05747908684604,
+			"m0_deg": 37.15651231422089,
+			"period_days": 5.876840568242166
+		},
+		"look": {
+			"shader": "rock",
+			"highland_colour": "#d9cfc6",
+			"mare_colour": "#b29a8a",
+			"basin_flooding": 0.4
+		}
+	},
+	"pluto": {
+		"name": "Pluto",
+		"kind": "dwarf",
+		"parent": "sun",
+		"gm": 869960000000.0,
+		"radius_m": 1188300.0,
+		"elements": {
+			"a_m": 5878322700187.999,
+			"e": 0.24547424685914887,
+			"i_deg": 17.070520024432174,
+			"node_deg": 109.84749876146537,
+			"peri_deg": 112.7706952263963,
+			"m0_deg": 16.492385082812575,
+			"period_days": 89966.5912523907
+		},
+		"look": {
+			"shader": "rock",
+			"highland_colour": "#d9c7a8",
+			"mare_colour": "#8f5e3e",
+			"basin_flooding": 0.4,
+			"ray_chance": 0.0
+		},
+		"pole_ra_deg": 132.993,
+		"pole_dec_deg": -6.163
+	},
+	"charon": {
+		"name": "Charon",
+		"kind": "moon",
+		"parent": "pluto",
+		"gm": 106100000000.0,
+		"radius_m": 606000.0,
+		"elements": {
+			"a_m": 19583063.91149164,
+			"e": 0.0005011380520644872,
+			"i_deg": 112.88831951341973,
+			"node_deg": 227.3954686187551,
+			"peri_deg": 325.5199020035826,
+			"m0_deg": 353.5844037691131,
+			"period_days": 6.387210961405264
+		},
+		"look": {
+			"shader": "rock",
+			"highland_colour": "#a7a39c",
+			"mare_colour": "#6e5148",
+			"basin_flooding": 0.2
+		}
+	},
+	"arrokoth": {
+		"name": "Arrokoth",
+		"kind": "kbo",
+		"parent": "sun",
+		"gm": 50000.0,
+		"radius_m": 18000.0,
+		"elements": {
+			"a_m": 6609479086591.644,
+			"e": 0.03697868135846018,
+			"i_deg": 2.4483090503740774,
+			"node_deg": 159.05140825814388,
+			"peri_deg": 188.64597831291746,
+			"m0_deg": 279.10847283736166,
+			"period_days": 107388.24712206663
+		},
+		"look": {
+			"shader": "rock",
+			"highland_colour": "#9a5a42",
+			"mare_colour": "#7a4634",
+			"basin_flooding": 0.0
+		}
+	},
+	"eris": {
+		"name": "Eris",
+		"kind": "dwarf",
+		"parent": "sun",
+		"gm": 1108000000000.0,
+		"radius_m": 1163000.0,
+		"elements": {
+			"a_m": 10191585352631.322,
+			"e": 0.4367273610913591,
+			"i_deg": 43.853278514490476,
+			"node_deg": 35.997077307837564,
+			"peri_deg": 150.5433254931566,
+			"m0_deg": 195.3777386007565,
+			"period_days": 205804.49197661135
+		},
+		"look": {
+			"shader": "rock",
+			"highland_colour": "#e8e6e0",
+			"mare_colour": "#c9c4ba",
+			"basin_flooding": 0.1
+		}
+	},
+	"sedna": {
+		"name": "Sedna",
+		"kind": "detached",
+		"parent": "sun",
+		"gm": 100000000000.0,
+		"radius_m": 500000.0,
+		"elements": {
+			"a_m": 84099265077689.86,
+			"e": 0.864444596361967,
+			"i_deg": 11.918232690576012,
+			"node_deg": 144.4775309930721,
+			"peri_deg": 311.11368212156196,
+			"m0_deg": 357.95010776980905,
+			"period_days": 4871836.65126997
+		},
+		"look": {
+			"shader": "rock",
+			"highland_colour": "#a3523a",
+			"mare_colour": "#7d3e2c",
+			"basin_flooding": 0.0
 		}
 	}
 }
