@@ -54,7 +54,7 @@ func _ready() -> void:
 	_legend.custom_minimum_size = Vector2(220, 0)
 	add_child(_legend)
 	for op in SystemMap.FLEET_COLOURS:
-		legend[1].add_child(UI.label("●  " + op, SystemMap.FLEET_COLOURS[op], 12))
+		legend[1].add_child(UI.label("o  " + op, SystemMap.FLEET_COLOURS[op], 12))
 	set_view(sim.data.balance["flight"].get("transit_view", "orbit"))
 
 
@@ -97,7 +97,7 @@ func _process(_dt: float) -> void:
 		for npc in s.npcs:
 			if npc["location"]["status"] == "transit":
 				flying += 1
-		_hud.text = "%s  →  %s\nArrive in %s  (%s)\nRemaining %s\nTime ×%d%s\n%d other ships under way" % [
+		_hud.text = "%s  to  %s\nArrive in %s  (%s)\nRemaining %s\nTime ×%d%s\n%d other ships under way" % [
 			sim.data.places[loc["from"]]["name"], sim.data.places[loc["to"]]["name"],
 			UI.duration(left), _date(float(loc["arrive_t"])), UI.km(V.distance(pos, loc["to_pos"])),
 			int(s.time_scale), "   PAUSED" if s.paused else "", flying]

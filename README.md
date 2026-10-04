@@ -102,6 +102,10 @@ For the art check, the same window mode takes these options:
 - `--gallery=<dir>`: every station approach
 - `--flyby=<dir>`: a low lunar pass
 
+## Share a web build
+
+`export_presets.cfg` has a single-threaded Web preset. [docs/SHARING.md](docs/SHARING.md) covers building, zipping and uploading to itch.io for friends to play in a browser.
+
 ## Layout
 
 | Folder | Purpose |

@@ -145,7 +145,7 @@ func _market_tab(place_id: String) -> Control:
 		var sell := Market.sell_price(s, d, place_id, good)
 		var aboard := float(s.ship["cargo"].get(good, 0.0))
 		var needed_by := _local_project_need(place_id, good)
-		var name_label := UI.label(d.goods[good]["name"] + ("  ◆" if needed_by != "" else ""), UI.HAZARD if needed_by != "" else UI.TEXT)
+		var name_label := UI.label(d.goods[good]["name"] + ("  *" if needed_by != "" else ""), UI.HAZARD if needed_by != "" else UI.TEXT)
 		name_label.tooltip_text = d.goods[good]["description"] + ("\nNeeded here for %s." % needed_by if needed_by != "" else "")
 		name_label.mouse_filter = Control.MOUSE_FILTER_PASS
 		grid.add_child(name_label)
@@ -164,7 +164,7 @@ func _market_tab(place_id: String) -> Control:
 	if not unsellable.is_empty():
 		parts[1].add_child(UI.label("Not traded here: " + ", ".join(unsellable), UI.DIM, 13))
 	parts[1].add_child(UI.label("Green buy prices are below normal; amber sell prices are above normal. Your trades move the price.", UI.DIM, 12))
-	parts[1].add_child(UI.label("◆ needed here for a megaproject: deliveries count toward it, and toward your share.", UI.HAZARD, 12))
+	parts[1].add_child(UI.label("* needed here for a megaproject: deliveries count toward it, and toward your share.", UI.HAZARD, 12))
 	var keep := CheckButton.new()
 	keep.text = "Buy max keeps a reserve for the tug and a full tank (%s)" % UI.money(_reserve(place_id))
 	keep.button_pressed = keep_reserve
@@ -315,8 +315,13 @@ func _plot(place_id: String, to: String) -> void:
 	var quick: Dictionary = Navigation.plan(sim.state.ship, sim.data, sim.ephemeris, place_id, to, t)
 	var job: Dictionary = RoutePlanner.prepare(sim.state.ship, sim.data, sim.ephemeris, place_id, to, t)
 	job["hop"] = RoutePlanner.is_orbital_hop(sim.data, sim.ephemeris, place_id, to, t)
-	var task := WorkerThreadPool.add_task(func(): box.options = RoutePlanner.options_or_quick(job, quick))
-	_plotting[to] = {"task": task, "box": box, "key": sim.route_key(to, t), "plan_t": t}
+	var fly := func(): box.options = RoutePlanner.options_or_quick(job, quick)
+	if OS.has_feature("web"):
+		# The browser build is single-threaded: fly on the main thread, a couple of
+		# frames from now so "plotting" shows first. It pauses for a second or two.
+		_plotting[to] = {"sync": fly, "frames": 2, "box": box, "key": sim.route_key(to, t), "plan_t": t}
+	else:
+		_plotting[to] = {"task": WorkerThreadPool.add_task(fly), "box": box, "key": sim.route_key(to, t), "plan_t": t}
 	refresh()
 
 
@@ -324,8 +329,16 @@ func _process(_dt: float) -> void:
 	var done := []
 	for to in _plotting:
 		var p: Dictionary = _plotting[to]
-		if WorkerThreadPool.is_task_completed(p["task"]):
+		var finished := false
+		if p.has("sync"):
+			p["frames"] -= 1
+			if p["frames"] <= 0:
+				p["sync"].call()
+				finished = true
+		elif WorkerThreadPool.is_task_completed(p["task"]):
 			WorkerThreadPool.wait_for_task_completion(p["task"])
+			finished = true
+		if finished:
 			sim.store_route_options(p["key"], p["box"].options)
 			_last_plan_t[to] = p["plan_t"]
 			done.append(to)
@@ -508,8 +521,8 @@ func _projects_tab(place_id: String) -> Control:
 		v.add_child(bar)
 		var stages: Array = project["stages"]
 		for i in stages.size():
-			var mark := "■" if st["done"] or i < int(st["stage"]) else ("▶" if i == int(st["stage"]) else "□")
-			var colour := UI.GOOD if mark == "■" else (UI.AMBER if mark == "▶" else UI.DIM)
+			var mark := "[x]" if st["done"] or i < int(st["stage"]) else ("[>]" if i == int(st["stage"]) else "[ ]")
+			var colour := UI.GOOD if mark == "[x]" else (UI.AMBER if mark == "[>]" else UI.DIM)
 			v.add_child(UI.label("%s  %s" % [mark, stages[i]["name"]], colour, 13))
 			if i == int(st["stage"]) and not st["done"]:
 				var needs: Dictionary = stages[i]["needs"]
