@@ -26,7 +26,7 @@ static func yard_mult(state, place: String) -> float:
 
 ## Places built by a project ("opens_with") are closed until it is finished.
 static func place_open(state, data, place: String) -> bool:
-	var builder: String = data.places[place].get("opens_with", "")
+	var builder: String = data.locations.get(place, {}).get("opens_with", "")
 	if builder == "":
 		return true
 	return bool(state.projects.get(builder, {}).get("done", false))

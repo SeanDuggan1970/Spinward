@@ -32,7 +32,7 @@ func _draw() -> void:
 	var y := 74.0
 	draw_rect(Rect2(12, 50, 330, 256), Color(0.07, 0.08, 0.09, 0.8))
 	draw_rect(Rect2(12, 50, 330, 3), UI.HAZARD)
-	draw_string(_font, Vector2(x, y), "%s  to  %s" % [sim.data.places[loc["from"]]["name"], sim.data.places[loc["to"]]["name"]], HORIZONTAL_ALIGNMENT_LEFT, 310, 14, UI.TEXT)
+	draw_string(_font, Vector2(x, y), "%s  to  %s" % [sim.data.locations[loc["from"]]["name"], sim.data.locations[loc["to"]]["name"]], HORIZONTAL_ALIGNMENT_LEFT, 310, 14, UI.TEXT)
 	if r.get("route", "") != "":
 		draw_string(_font, Vector2(x + 200, y + 28), r["route"], HORIZONTAL_ALIGNMENT_LEFT, 120, 11, UI.DIM)
 	y += 28

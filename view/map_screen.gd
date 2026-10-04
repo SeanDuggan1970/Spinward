@@ -98,7 +98,7 @@ func _process(_dt: float) -> void:
 			if npc["location"]["status"] == "transit":
 				flying += 1
 		_hud.text = "%s  to  %s\nArrive in %s  (%s)\nRemaining %s\nTime ×%d%s\n%d other ships under way" % [
-			sim.data.places[loc["from"]]["name"], sim.data.places[loc["to"]]["name"],
+			sim.data.locations[loc["from"]]["name"], sim.data.locations[loc["to"]]["name"],
 			UI.duration(left), _date(float(loc["arrive_t"])), UI.km(V.distance(pos, loc["to_pos"])),
 			int(s.time_scale), "   PAUSED" if s.paused else "", flying]
 		for i in _scale_bar.get_child_count():

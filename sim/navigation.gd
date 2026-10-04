@@ -37,7 +37,7 @@ const FUEL_SAMPLES := 24
 
 ## The chain of bodies a place hangs from, nearest first.
 static func body_chain(data, place: String) -> Array:
-	var loc: Dictionary = data.places[place]["location"]
+	var loc: Dictionary = data.locations[place]["location"]
 	var body: String = loc["parent"] if loc["type"] == "orbit" else loc["system"][0]
 	var chain := []
 	while body != "":
@@ -56,7 +56,7 @@ static func frame_body(data, a: String, b: String) -> String:
 
 ## The motion a ship must match at a place, relative to the trip frame.
 static func anchor_velocity(data, eph, place: String, frame: String, t: float) -> Array:
-	var loc: Dictionary = data.places[place]["location"]
+	var loc: Dictionary = data.locations[place]["location"]
 	var mover: String = loc["parent"] if loc["type"] == "orbit" else place
 	if mover == frame:
 		return [0.0, 0.0, 0.0]
@@ -185,7 +185,7 @@ static func plan(ship: Dictionary, data, eph, from_place: String, to_place: Stri
 	var fuel_t := ShipStats.thrust_n(ship, data) / ve * burn * throttle / 1000.0
 	var distance := V.distance(from_pos, extra.get("to_rot", to_pos))
 	var fuel_after := float(ship.get("fuel_t", 0.0)) - fuel_t
-	var dest_refuels: bool = "refuel" in data.places[to_place].get("services", [])
+	var dest_refuels: bool = "refuel" in data.locations[to_place].get("services", [])
 	result.merge({
 		"distance_m": distance, "burn_s": burn, "duration_s": burn + overhead, "fuel_t": fuel_t,
 		"arrive_t": t + burn + overhead, "from_pos": from_pos, "from_vel": from_vel,
@@ -355,6 +355,6 @@ static func transit_accel(location: Dictionary, t: float) -> Array:
 ## shown by the body it circles (its own orbit is too fast to draw), a Lagrange
 ## station by itself; "" when that is the frame body (nothing moves on the map).
 static func track_id(data, place: String, frame: String) -> String:
-	var loc: Dictionary = data.places[place]["location"]
+	var loc: Dictionary = data.locations[place]["location"]
 	var id: String = loc["parent"] if loc["type"] == "orbit" else place
 	return "" if id == frame else id

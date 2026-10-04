@@ -1,0 +1,261 @@
+{
+	"_note": "Sites: somewhere to go that is not a port. No market, no fuel, no docking; you arrive on site and work. 'location' is as for places. 'visibility': known (on the map from the start), rumour (heard through tips), or hidden (only by story or contract). Each activity: needs (module abilities: survey, lander, mining), days of work, risk (chance it goes wrong: less yield, and for landings a fuel cost), yields (goods tonnes [min, max], into the hold as room allows), credits (paid on completion, e.g. survey data sold by radio), rep ({operator: amount}), and text for the result. 'once': worked out after one go.",
+	"ishikawa_maru": {
+		"name": "Derelict: Ishikawa Maru",
+		"kind": "derelict",
+		"visibility": "known",
+		"once": true,
+		"description": "A Cooperative ice tanker that lost its drive controller in '58 and was left in a high lunar orbit, crew safe, cargo not. Salvage rights lapsed last year. Whoever gets there first.",
+		"location": {
+			"type": "orbit",
+			"parent": "moon",
+			"elements": {
+				"a_m": 6000000.0,
+				"e": 0.12,
+				"i_deg": 38.0,
+				"node_deg": 70.0,
+				"peri_deg": 20.0,
+				"m0_deg": 140.0
+			}
+		},
+		"activities": {
+			"salvage": {
+				"name": "Strip the wreck",
+				"needs": [],
+				"days": 1.5,
+				"risk": 0.1,
+				"yields": {
+					"machine_parts": [
+						4,
+						9
+					],
+					"refined_metals": [
+						6,
+						14
+					],
+					"electronics": [
+						0.5,
+						2
+					]
+				},
+				"text": "Two days in suits with cutters and a cargo net. Her controller was fried, but the pumps are good."
+			}
+		}
+	},
+	"hermes_probe": {
+		"name": "Dead probe: Hermes-7",
+		"kind": "derelict",
+		"visibility": "rumour",
+		"once": true,
+		"description": "A deep-space relay that went silent in 2049 and has drifted ever since on a long, lazy orbit four times the Moon's distance out. The Compact would like its recorder back, and pays well for it.",
+		"location": {
+			"type": "orbit",
+			"parent": "earth",
+			"elements": {
+				"a_m": 1500000000.0,
+				"e": 0.18,
+				"i_deg": 12.0,
+				"node_deg": 200.0,
+				"peri_deg": 40.0,
+				"m0_deg": 300.0
+			}
+		},
+		"activities": {
+			"salvage": {
+				"name": "Recover the recorder",
+				"needs": [],
+				"days": 1.0,
+				"risk": 0.05,
+				"yields": {
+					"electronics": [
+						0.5,
+						1.5
+					]
+				},
+				"credits": 18000,
+				"rep": {
+					"Terran Compact Science": 6
+				},
+				"text": "The recorder comes out whole. Its last log is a long, odd dump of star-tracker data, which the Compact asks you not to share."
+			}
+		}
+	},
+	"eros_survey": {
+		"name": "Eros",
+		"kind": "survey",
+		"visibility": "known",
+		"description": "A 34 km near-Earth asteroid, stony and well mapped from orbit but never properly surveyed for what is under the regolith. The Belt Assembly buys good survey data.",
+		"location": {
+			"type": "orbit",
+			"parent": "eros",
+			"elements": {
+				"a_m": 30000.0,
+				"e": 0.0,
+				"i_deg": 80.0,
+				"node_deg": 0.0,
+				"peri_deg": 0.0,
+				"m0_deg": 0.0
+			}
+		},
+		"activities": {
+			"survey": {
+				"name": "Survey from orbit",
+				"needs": [
+					"survey"
+				],
+				"days": 6.0,
+				"risk": 0.0,
+				"credits": 26000,
+				"rep": {
+					"Belt Assembly": 5
+				},
+				"text": "Six days of radar passes and spectrometry. The data goes out by radio as you finish."
+			},
+			"prospect": {
+				"name": "Land and core",
+				"needs": [
+					"lander"
+				],
+				"days": 3.0,
+				"risk": 0.15,
+				"yields": {
+					"refined_metals": [
+						8,
+						18
+					],
+					"platinum_metals": [
+						0.05,
+						0.2
+					]
+				},
+				"text": "The lander goes down on the saddle, drills three cores and comes back up dusty."
+			}
+		}
+	},
+	"psyche_deep_claim": {
+		"name": "Psyche, the eastern claim",
+		"kind": "prospect",
+		"visibility": "rumour",
+		"description": "An unclaimed patch on Psyche's far side where the old Psyche mission's magnetometer saw something odd. The claimants say it is nothing. They have not been to look.",
+		"location": {
+			"type": "orbit",
+			"parent": "psyche",
+			"elements": {
+				"a_m": 170000.0,
+				"e": 0.0,
+				"i_deg": 60.0,
+				"node_deg": 120.0,
+				"peri_deg": 0.0,
+				"m0_deg": 0.0
+			}
+		},
+		"activities": {
+			"mine": {
+				"name": "Set up the rig and mine",
+				"needs": [
+					"lander",
+					"mining"
+				],
+				"days": 10.0,
+				"risk": 0.2,
+				"yields": {
+					"platinum_metals": [
+						0.4,
+						1.2
+					],
+					"refined_metals": [
+						10,
+						20
+					]
+				},
+				"text": "Ten days of drilling. The magnetometer was right: a pocket of platinum-group metal ten metres down."
+			}
+		}
+	},
+	"phobos_survey": {
+		"name": "Phobos",
+		"kind": "survey",
+		"visibility": "known",
+		"description": "Mars' inner moon, 22 km of rubble spiralling slowly in. The Accord wants to know whether it is worth mining before it falls.",
+		"location": {
+			"type": "orbit",
+			"parent": "phobos",
+			"elements": {
+				"a_m": 25000.0,
+				"e": 0.0,
+				"i_deg": 30.0,
+				"node_deg": 0.0,
+				"peri_deg": 0.0,
+				"m0_deg": 0.0
+			}
+		},
+		"activities": {
+			"survey": {
+				"name": "Survey from orbit",
+				"needs": [
+					"survey"
+				],
+				"days": 4.0,
+				"risk": 0.0,
+				"credits": 22000,
+				"rep": {
+					"Mars Accord": 6
+				},
+				"text": "Four days of passes over the grooves. The data goes to the Accord as you finish."
+			},
+			"prospect": {
+				"name": "Land at Stickney",
+				"needs": [
+					"lander"
+				],
+				"days": 2.0,
+				"risk": 0.12,
+				"yields": {
+					"water_ice": [
+						5,
+						15
+					],
+					"refined_metals": [
+						4,
+						10
+					]
+				},
+				"text": "Down into Stickney crater, where the shadowed walls hold ice."
+			}
+		}
+	},
+	"hektor_survey": {
+		"name": "Hektor",
+		"kind": "survey",
+		"visibility": "known",
+		"description": "The largest of Jupiter's Trojans: two lobes, 225 km end to end, and almost unknown. Whoever surveys it first sets the claims map for the whole neighbourhood.",
+		"location": {
+			"type": "orbit",
+			"parent": "hektor",
+			"elements": {
+				"a_m": 250000.0,
+				"e": 0.0,
+				"i_deg": 20.0,
+				"node_deg": 0.0,
+				"peri_deg": 0.0,
+				"m0_deg": 0.0
+			}
+		},
+		"activities": {
+			"survey": {
+				"name": "Survey both lobes",
+				"needs": [
+					"survey"
+				],
+				"days": 10.0,
+				"risk": 0.0,
+				"credits": 90000,
+				"rep": {
+					"The Commons": 10,
+					"Belt Assembly": 4
+				},
+				"text": "Ten days mapping the neck between the lobes. The Commons buys the map at once; the Belt Assembly pays to see it."
+			}
+		}
+	}
+}

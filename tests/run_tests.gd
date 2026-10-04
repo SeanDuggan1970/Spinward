@@ -18,6 +18,8 @@ const Interplanetary := preload("res://sim/interplanetary.gd")
 const Contracts := preload("res://sim/contracts.gd")
 const ContractSystemScript := preload("res://sim/systems/contract_system.gd")
 const Perks := preload("res://sim/perks.gd")
+const SiteSystemScript := preload("res://sim/systems/site_system.gd")
+const EconomySystemScript := preload("res://sim/systems/economy_system.gd")
 
 const AU := 1.495978707e11
 const DAY := 86400.0
@@ -60,6 +62,7 @@ func _initialize() -> void:
 	test_refits()
 	test_contracts()
 	test_project_pitches()
+	test_sites()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -926,3 +929,43 @@ func test_project_pitches() -> void:
 	var credits := s.credits
 	sim.apply({"type": "dock"})
 	check(s.credits == credits, "No tug fee for a backer at the Kernel")
+
+
+func test_sites() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	check(SiteSystemScript.knows(s, "ishikawa_maru") and not SiteSystemScript.knows(s, "hermes_probe"), "Some sites are known from the start, others only by rumour")
+	check(String(sim.apply({"type": "depart", "to": "hermes_probe"})).begins_with("you don't know"), "Cannot fly to a site you have not heard of")
+	# Fly to the derelict: no docking, you arrive on site.
+	check(sim.apply({"type": "depart", "to": "ishikawa_maru"}) == "", "Depart for the derelict Ishikawa Maru")
+	sim.state.time_scale = 1000.0
+	sim.advance_game_time(float(s.location.get("arrive_t", s.time_s)) - s.time_s + 10.0)
+	check(s.location.get("status") == "on_site" and s.location.get("place") == "ishikawa_maru", "Arrive on site at the derelict")
+	check(SiteSystemScript.blocked(s, d, "eros_survey", "survey") != "", "Cannot work a site you are not at")
+	var cargo0 := ShipStats.cargo_t(s.ship)
+	check(sim.apply({"type": "site_work", "activity": "salvage"}) == "", "Begin stripping the wreck")
+	check(String(sim.apply({"type": "depart", "to": "kibo_ring"})).begins_with("still at work"), "No leaving mid-job")
+	sim.advance_game_time(2.0 * DAY)
+	check(ShipStats.cargo_t(s.ship) > cargo0 and s.sites["work"].is_empty(), "Salvage lands in the hold (%.1f t)" % (ShipStats.cargo_t(s.ship) - cargo0))
+	check(String(sim.apply({"type": "site_work", "activity": "salvage"})) == "already done", "A wreck can only be stripped once")
+	# Out of fuel on site: the tanker still comes.
+	s.ship["fuel_t"] = 0.0
+	check(EconomySystemScript.emergency_available(s, d) and sim.apply({"type": "emergency_refuel"}) == "", "The emergency tanker reaches a site")
+	# Kit: surveys need a survey pod.
+	s.location = {"status": "on_site", "place": "eros_survey"}
+	check(SiteSystemScript.blocked(s, d, "eros_survey", "survey") == "needs a survey pod", "A survey needs a survey pod")
+	s.ship["modules"]["avionics.0"] = "survey_pod"
+	var credits := s.credits
+	check(sim.apply({"type": "site_work", "activity": "survey"}) == "", "With a pod, survey Eros")
+	sim.advance_game_time(7.0 * DAY)
+	check(s.credits > credits and Contracts.rep_of(s, "Belt Assembly") > 0.0, "Survey data sold by radio, and the Belt Assembly takes note")
+	# Rumours reveal sites.
+	var gossip := fresh()
+	gossip.data.contracts["rumour"]["chance"] = 0.0
+	gossip.data.contracts["rumour"]["site_chance"] = 1.0
+	gossip.state.credits = 1.0e6
+	gossip.apply({"type": "buy_tip", "broker": "maisie_tran"})
+	check(not gossip.state.tips.is_empty() and gossip.state.tips[-1].has("site") and SiteSystemScript.knows(gossip.state, gossip.state.tips[-1]["site"]), "A broker's tip puts a site on your chart")
+	var saved := SaveIO.from_text(SaveIO.to_text(s))
+	check(saved.sites == s.sites, "Sites are saved")

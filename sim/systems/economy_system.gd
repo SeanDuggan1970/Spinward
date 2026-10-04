@@ -165,10 +165,10 @@ func _refuel(command: Dictionary) -> String:
 ## pay, it still brings a rescue load on credit (your balance goes negative), so the
 ## game can never soft-lock; priced so planning ahead is always better.
 static func emergency_available(state, data) -> bool:
-	if state.location.get("status") != "docked":
+	if not state.location.get("status") in ["docked", "on_site"]:
 		return false
 	var place: String = state.location["place"]
-	if not "refuel" in data.places[place].get("services", []):
+	if not "refuel" in data.locations[place].get("services", []):
 		return true
 	return state.credits < Market.buy_price(state, data, place, "propellant", 1.0)
 
@@ -176,7 +176,7 @@ static func emergency_available(state, data) -> bool:
 func _emergency_refuel(command: Dictionary) -> String:
 	var s = sim().state
 	var data = sim().data
-	if s.location.get("status") != "docked":
+	if not s.location.get("status") in ["docked", "on_site"]:
 		return "not docked"
 	if not emergency_available(s, data):
 		return "refuel normally here"

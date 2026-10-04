@@ -115,6 +115,7 @@ func _buy_tip(command: Dictionary) -> String:
 	var tip := _make_tip(id, broker)
 	if not tip.is_empty():
 		_maybe_rumour(tip)
+		_maybe_site(tip)
 	s.rng_state = _rng.state
 	if tip.is_empty():
 		return "%s has nothing worth selling right now" % broker["name"]
@@ -124,6 +125,20 @@ func _buy_tip(command: Dictionary) -> String:
 	s.tips.append(tip)
 	sim().emit("tip_bought", {"tip": tip["id"], "broker": id, "credits": -price})
 	return ""
+
+
+## And sometimes a broker knows where something is: a derelict, an unclaimed patch.
+func _maybe_site(tip: Dictionary) -> void:
+	var s = sim().state
+	var data = sim().data
+	if tip.has("rumour") or s.sites.is_empty() or _rng.randf() >= float(data.contracts.get("rumour", {}).get("site_chance", 0.0)):
+		return
+	var unknown: Array = data.sites.keys().filter(func(id): return data.sites[id].get("visibility", "known") == "rumour" and not id in s.sites["known"])
+	if unknown.is_empty():
+		return
+	var site: String = unknown[_rng.randi() % unknown.size()]
+	s.sites["known"].append(site)
+	tip["site"] = site
 
 
 ## Brokers hear things besides prices: sometimes a tip comes with word of a job

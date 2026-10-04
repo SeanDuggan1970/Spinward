@@ -29,7 +29,7 @@ const MOON_HANDOFF_R := 2.5e7
 ## Where the gravity-flown part of a trip starts or ends for a place, in the Earth
 ## frame: [position, velocity]. Lagrange stations hand off at the station itself.
 static func hand_off(data, eph, place: String, t: float) -> Array:
-	var loc: Dictionary = data.places[place]["location"]
+	var loc: Dictionary = data.locations[place]["location"]
 	if loc["type"] == "orbit":
 		var parent: String = loc["parent"]
 		var mu := float(data.bodies[parent]["gm"])
@@ -83,7 +83,7 @@ static func prepare(ship: Dictionary, data, eph, from_place: String, to_place: S
 
 
 static func _moon_anchored(data, place: String) -> bool:
-	var loc: Dictionary = data.places[place]["location"]
+	var loc: Dictionary = data.locations[place]["location"]
 	return loc["type"] == "orbit" and loc["parent"] == "moon"
 
 
@@ -179,7 +179,7 @@ static func _option(job: Dictionary, kind: String, res: Dictionary, tf: float, a
 ## to plan; the quick plan is the route.
 static func is_orbital_hop(data, eph, a: String, b: String, t: float) -> bool:
 	for place in [a, b]:
-		var loc: Dictionary = data.places[place]["location"]
+		var loc: Dictionary = data.locations[place]["location"]
 		if loc["type"] != "orbit" or loc["parent"] != "earth" or V.length(eph.relative(place, "earth", t)) >= EARTH_HANDOFF_R:
 			return false
 	return true

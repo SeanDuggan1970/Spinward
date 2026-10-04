@@ -26,6 +26,8 @@ const QUICKSAVE := "user://quicksave.json"
 var sim: Sim
 var _mode := ""
 var _screen: Node
+## A 3D scene behind the current screen (on site).
+var _backdrop: Node3D
 var _top: Label
 var _notices: VBoxContainer
 var _layer: Control
@@ -77,6 +79,9 @@ func _ready() -> void:
 			visible = false
 			get_tree().root.add_child.call_deferred(load("res://view/art_gallery.gd").new(sim.data, a.trim_prefix("--art=")))
 			return
+		if a.begins_with("--site="):
+			_site_tour.call_deferred(a.trim_prefix("--site="))
+			return
 		if a.begins_with("--voyage="):
 			_voyage_tour.call_deferred(a.trim_prefix("--voyage="))
 			return
@@ -126,11 +131,13 @@ func _process(delta: float) -> void:
 	var where := ""
 	match s.location.get("status"):
 		"docked":
-			where = "Docked at " + sim.data.places[s.location["place"]]["name"]
+			where = "Docked at " + sim.data.locations[s.location["place"]]["name"]
 		"transit":
-			where = "En route to " + sim.data.places[s.location["to"]]["name"]
+			where = "En route to " + sim.data.locations[s.location["to"]]["name"]
 		"approach":
-			where = "Approaching " + sim.data.places[s.location["place"]]["name"]
+			where = "Approaching " + sim.data.locations[s.location["place"]]["name"]
+		"on_site":
+			where = "On site: " + sim.data.locations[s.location["place"]]["name"]
 	_top.text = "SPINWARD   %s UTC   ×%d%s   %s   %s" % [
 		s.date_string().replace("T", " ").substr(0, 16), int(s.time_scale), "  PAUSED" if s.paused else "",
 		UI.money(s.credits), where]
@@ -235,6 +242,25 @@ func _handle_events() -> void:
 				var line := Comms.copilot(sim, "copilot_near" if e["type"] == "periapsis_near" else "copilot_pass", float(d["alt"]), float(d.get("in_s", 0.0)))
 				notice(line, UI.AMBER)
 				comms.append("%s  %s" % [_clock(e["time_s"]), line])
+			"arrived_site":
+				notice("On site at %s. See what there is to do." % sim.data.sites[d["place"]]["name"], UI.AMBER)
+			"site_work_started":
+				notice("Work begins: %s of it. Speed up time; the crew will call." % UI.duration(float(d["days"]) * 86400.0), UI.AMBER)
+				refresh = true
+			"site_work_done":
+				var got := []
+				for good in d["got"]:
+					got.append("%.1f t %s" % [d["got"][good], String(sim.data.goods[good]["name"]).to_lower()])
+				var line := "Done at %s%s." % [sim.data.sites[d["site"]]["name"], " (it went badly)" if d["went_wrong"] else ""]
+				if not got.is_empty():
+					line += " Aboard: " + ", ".join(got) + "."
+				if float(d["credits"]) > 0.0:
+					line += " Paid %s." % UI.money(float(d["credits"]))
+				if float(d["lost_t"]) > 0.05:
+					line += " %.1f t left behind: no room." % d["lost_t"]
+				notice(line, UI.WARN if d["went_wrong"] else UI.GOOD)
+				comms.append("%s  %s" % [_clock(e["time_s"]), line])
+				refresh = true
 			"arrived":
 				notice("Arrived at %s. Take her in, or press T for the tug." % sim.data.places[d["place"]]["name"], UI.AMBER)
 			"docked":
@@ -242,7 +268,7 @@ func _handle_events() -> void:
 					notice("The tug brought you in on credit. You owe %s; sell cargo to clear it." % UI.money(-sim.state.credits), UI.WARN)
 				else:
 					notice("Docked at %s%s" % [sim.data.places[d["place"]]["name"], "  (hand-flown, no fee)" if d["manual"] else ""], UI.GOOD)
-	if refresh and _screen is StationScreen:
+	if refresh and _screen is StationScreen and is_instance_valid(_screen):
 		_screen.refresh()
 
 
@@ -274,8 +300,17 @@ func _sync_mode() -> void:
 	_mode = mode
 	if _screen:
 		_screen.queue_free()
+	if _backdrop:
+		_backdrop.queue_free()
+		_backdrop = null
 	match mode:
 		"docked":
+			_screen = StationScreen.new(sim, comms)
+			_layer.add_child(_screen)
+		"on_site":
+			# The site in 3D behind, the site screen (station screen in site mode) on top.
+			_backdrop = load("res://view/site_view.gd").new(sim)
+			_layer.add_child(_backdrop)
 			_screen = StationScreen.new(sim, comms)
 			_layer.add_child(_screen)
 		"transit":
@@ -487,6 +522,32 @@ func _tour(dir: String) -> void:
 	for _i in 10:
 		await get_tree().process_frame
 	_shot(dir + "/6-flight-chase.png")
+	get_tree().quit()
+
+
+## Windowed: on site at the derelict Ishikawa Maru and at Eros, before and during work.
+func _site_tour(dir: String) -> void:
+	DirAccess.make_dir_recursive_absolute(dir)
+	var s = sim.state
+	s.ship["modules"]["avionics.0"] = "survey_pod"
+	s.ship["modules"]["cargo.1"] = "lander_bay"
+	for site in ["ishikawa_maru", "eros_survey"]:
+		s.location = {"status": "on_site", "place": site}
+		_sync_mode()
+		for _i in 60:
+			await get_tree().process_frame
+		_shot("%s/%s.png" % [dir, site])
+		var act: String = sim.data.sites[site]["activities"].keys()[0]
+		sim.apply({"type": "site_work", "activity": act})
+		sim.advance_game_time(0.4 * float(sim.data.sites[site]["activities"][act]["days"]) * 86400.0)
+		_handle_events()
+		(_screen as StationScreen).refresh()
+		for _i in 20:
+			await get_tree().process_frame
+		_shot("%s/%s-working.png" % [dir, site])
+		sim.advance_game_time(float(sim.data.sites[site]["activities"][act]["days"]) * 86400.0)
+		_handle_events()
+		_mode = ""
 	get_tree().quit()
 
 

@@ -52,7 +52,7 @@ static func _frame(data, a: String, b: String) -> String:
 
 
 static func _chain(data, place: String) -> Array:
-	var loc: Dictionary = data.places[place]["location"]
+	var loc: Dictionary = data.locations[place]["location"]
 	var body: String = loc["parent"] if loc["type"] == "orbit" else loc["system"][0]
 	var chain := []
 	while body != "":
@@ -64,7 +64,7 @@ static func _chain(data, place: String) -> Array:
 ## The spiral out of (or into) a place's gravity wells: {dv, body}, where body is the
 ## world whose solar orbit the transfer starts (ends) on.
 static func well(data, eph, place: String, t: float) -> Dictionary:
-	var loc: Dictionary = data.places[place]["location"]
+	var loc: Dictionary = data.locations[place]["location"]
 	var dv := 0.0
 	var body: String
 	if loc["type"] == "orbit":
@@ -207,7 +207,7 @@ static func quick(ship: Dictionary, data, eph, from_place: String, to_place: Str
 		samples.append([t1 + dt, st[0], st[1], [0.0, 0.0, 0.0]])
 	var arrive := t + float(pick["duration_s"])
 	var fuel_t := float(pick["fuel_t"])
-	var dest_refuels: bool = "refuel" in data.places[to_place].get("services", [])
+	var dest_refuels: bool = "refuel" in data.locations[to_place].get("services", [])
 	var days := (arrive - t) / DAY
 	result.merge({
 		"distance_m": V.distance(pick["r_a"], pick["r_b"]), "burn_s": tof, "duration_s": arrive - t, "fuel_t": fuel_t,

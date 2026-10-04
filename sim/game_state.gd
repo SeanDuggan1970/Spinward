@@ -46,6 +46,8 @@ var tip_seq: int = 0
 var contracts: Dictionary = {}
 ## Standing with each operator: {operator: score}. Tiers in data/contracts.json.
 var reputation: Dictionary = {}
+## Sites: {known: [id], worked: {site: [activity]}, work: {site, activity, start_t, end_t}}.
+var sites: Dictionary = {}
 ## Perks earned by backing projects (sim/perks.gd).
 var perks: Dictionary = {}
 ## When this game began (projects reveal so many days in).
@@ -86,6 +88,7 @@ func to_dict() -> Dictionary:
 		"contracts": contracts.duplicate(true),
 		"reputation": reputation.duplicate(true),
 		"perks": perks.duplicate(true),
+		"sites": sites.duplicate(true),
 		"started_t": started_t,
 	}
 
@@ -114,4 +117,5 @@ func load_dict(d: Dictionary) -> void:
 	contracts = d.get("contracts", {}).duplicate(true)
 	reputation = d.get("reputation", {}).duplicate(true)
 	perks = d.get("perks", {}).duplicate(true)
+	sites = d.get("sites", {}).duplicate(true)
 	started_t = float(d.get("started_t", time_s))

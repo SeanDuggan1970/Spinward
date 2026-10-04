@@ -399,6 +399,22 @@ Sean's direction (2026-10-04). It goes beyond trade into opportunities, refits a
    - **Approaches:** a Reliable+ pilot docking may be sought out, with an opener and a better-paid, tighter job.
    - **Rumours:** a bought tip sometimes carries word of a real job at another port that nobody else has heard of.
 
+   **Sites** (done; `data/sites.json`, `sim/systems/site_system.gd`, site mode of the station screen over `view/site_view.gd`). Somewhere to go that is not a port: no market, no fuel, no docking. You arrive on site and work.
+   - **Kinds of work:**
+     - salvage a derelict
+     - survey from orbit (needs a survey pod)
+     - land and core (needs the lander)
+     - mine (lander and rig)
+   - **Work** takes days of game time and can go badly: about a third of the yield, and a bad landing burns propellant. Yields go into the hold as room allows, and the rest is left behind. Survey data is sold by radio, with standing for whoever wanted it.
+   - **Visibility:** some sites are on the chart from the start; others come by rumour (a broker's tip can put one on your chart) or later by story.
+   - **First sites:**
+     - the Ishikawa Maru, a lost lunar tanker
+     - Hermes-7, a dead probe four lunar distances out, wanted by the Compact
+     - surveys of Eros, Phobos and Hektor
+     - an unclaimed platinum prospect on Psyche
+   - **Places and locations:** `data.locations` merges ports and sites for everything that only needs a position. Ports stay in `data.places`.
+   - **Safety:** the emergency tanker reaches sites too, so running dry out there is costly but never a soft-lock.
+
    Still to come:
    - **Courier contracts:** a package, a passenger or a party, with a deadline. Some are pickups: go and get something or someone and take it on somewhere else. They weigh little but demand a direct, light, fast trip, so less or no other cargo.
    - survey, salvage, prospecting and mining claims

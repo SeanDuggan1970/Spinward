@@ -27,10 +27,15 @@ func tick(_game_dt: float) -> void:
 	_flyby_moments(s)
 	if s.location.get("status") == "transit" and s.time_s >= float(s.location["arrive_t"]):
 		var place: String = s.location["to"]
-		s.location = {"status": "approach", "place": place}
 		s.stats["trips"] += 1
 		s.time_scale = float(sim().data.balance["time"]["arrival_scale"])
-		sim().emit("arrived", {"place": place})
+		if sim().data.sites.has(place):
+			# No port, no docking: you match orbit and you are there.
+			s.location = {"status": "on_site", "place": place}
+			sim().emit("arrived_site", {"place": place})
+		else:
+			s.location = {"status": "approach", "place": place}
+			sim().emit("arrived", {"place": place})
 
 
 ## Flyby drama: slow time for the run-in to periapsis, then for the pass itself,
@@ -63,13 +68,17 @@ func _flyby_moments(s) -> void:
 
 func _depart(command: Dictionary) -> String:
 	var s = sim().state
-	if s.location.get("status") != "docked":
+	if not s.location.get("status") in ["docked", "on_site"]:
 		return "not docked"
+	if not s.sites.get("work", {}).is_empty():
+		return "still at work here"
 	var to: String = command.get("to", "")
-	if not sim().data.places.has(to):
+	if not sim().data.locations.has(to):
 		return "unknown destination"
+	if sim().data.sites.has(to) and not to in s.sites.get("known", []):
+		return "you don't know where that is"
 	if not Perks.place_open(s, sim().data, to):
-		return "%s is not open yet" % sim().data.places[to]["name"]
+		return "%s is not open yet" % sim().data.locations[to]["name"]
 	var here: String = s.location["place"]
 	if command.has("route"):
 		return _depart_route(here, to, String(command["route"]), float(command.get("plan_t", s.time_s)))

@@ -15,6 +15,8 @@ static func line(sim, tip: Dictionary) -> String:
 		"price": "%d" % int(round(float(tip["price"]))),
 		"broker": broker.get("name", "?"),
 	})
+	if tip.has("site"):
+		text += "  And for free, one for your chart: %s. Nobody's been out to look." % sim.data.sites[tip["site"]]["name"]
 	if tip.has("rumour"):
 		var r: Dictionary = tip["rumour"]
 		text += "  And between us: there's a %s job going begging at %s, paying about %s. Ask at the dock office." % [

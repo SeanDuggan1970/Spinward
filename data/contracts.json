@@ -162,7 +162,8 @@
 	},
 	"rumour": {
 		"chance": 0.35,
-		"pay_mult": 1.5
+		"pay_mult": 1.5,
+		"site_chance": 0.3
 	},
 	"reputation_tiers": [
 		[

@@ -86,8 +86,8 @@ func _markers(r: Dictionary, dash_top: float) -> void:
 	var cam: Camera3D = view.camera
 	var loc: Dictionary = sim.state.location
 	var marks := [
-		[r["dest_dir"], sim.data.places[loc["to"]]["name"].to_upper(), UI.AMBER, true],
-		[r["origin_dir"], "FROM " + sim.data.places[loc["from"]]["name"], UI.DIM, false],
+		[r["dest_dir"], sim.data.locations[loc["to"]]["name"].to_upper(), UI.AMBER, true],
+		[r["origin_dir"], "FROM " + sim.data.locations[loc["from"]]["name"], UI.DIM, false],
 		[r["earth_dir"], "EARTH", Color("7fb0e0"), false],
 		[r["moon_dir"], "MOON", Color("c9c4b6"), false],
 	]

@@ -14,6 +14,12 @@ var npcs: Dictionary = {}
 var projects: Dictionary = {}
 var projects_reserve_fraction := 0.4
 var brokers: Dictionary = {}
+## Sites: places to go that are not ports (data/sites.json): derelicts, surveys,
+## prospects. No market or docking; you arrive on site and work.
+var sites: Dictionary = {}
+## Ports and sites together, for anything that only needs where something is
+## (ephemeris, navigation, planners, travel).
+var locations: Dictionary = {}
 ## Courier contracts and reputation tiers (data/contracts.json).
 var contracts: Dictionary = {}
 ## Paint schemes for the view (data/liveries.json); the sim never reads them.
@@ -40,6 +46,9 @@ func load_from(root: String) -> void:
 	projects_reserve_fraction = float(projects.get("reserve_fraction", 0.4))
 	projects.erase("reserve_fraction")
 	contracts = read_json(root + "/contracts.json")
+	sites = read_json(root + "/sites.json") if FileAccess.file_exists(root + "/sites.json") else {}
+	locations = places.duplicate()
+	locations.merge(sites)
 	if FileAccess.file_exists(root + "/liveries.json"):
 		liveries = read_json(root + "/liveries.json")
 	var broker_file := read_json(root + "/brokers.json")
@@ -209,6 +218,23 @@ func validate() -> Array[String]:
 		problems.append("balance.start.place is not a place")
 	if not ships.has(start.get("ship", "")):
 		problems.append("balance.start.ship is not a ship")
+	# Sites: their own names, real bodies, known abilities and goods.
+	for id in sites:
+		var site: Dictionary = sites[id]
+		if places.has(id):
+			problems.append("site %s: shares an id with a port" % id)
+		var where: Dictionary = site.get("location", {})
+		for body in ([where.get("parent")] if where.get("type") == "orbit" else where.get("system", [])):
+			if not bodies.has(body):
+				problems.append("site %s: unknown body %s" % [id, body])
+		for act_id in site.get("activities", {}):
+			var act: Dictionary = site["activities"][act_id]
+			for need in act.get("needs", []):
+				if not need in ["survey", "lander", "mining"]:
+					problems.append("site %s: activity %s needs unknown ability %s" % [id, act_id, need])
+			for good in act.get("yields", {}):
+				if not goods.has(good):
+					problems.append("site %s: activity %s yields unknown good %s" % [id, act_id, good])
 	# Contracts: reference ships must be buildable.
 	for range_name in contracts.get("reference_ships", {}):
 		var spec: Dictionary = contracts["reference_ships"][range_name]

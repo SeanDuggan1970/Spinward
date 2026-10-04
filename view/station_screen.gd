@@ -17,6 +17,7 @@ const Comms := preload("res://view/comms.gd")
 const Contracts := preload("res://sim/contracts.gd")
 const ContractSystem := preload("res://sim/systems/contract_system.gd")
 const Perks := preload("res://sim/perks.gd")
+const SiteSystem := preload("res://sim/systems/site_system.gd")
 const DAY := 86400.0
 
 var sim
@@ -77,15 +78,16 @@ func send(command: Dictionary) -> void:
 
 
 func refresh() -> void:
-	if _tabs == null or sim.state.location.get("status") != "docked":
+	if _tabs == null or not sim.state.location.get("status") in ["docked", "on_site"]:
 		return
 	var place_id: String = sim.state.location["place"]
-	var place: Dictionary = sim.data.places[place_id]
+	var on_site: bool = sim.data.sites.has(place_id)
+	var place: Dictionary = sim.data.locations[place_id]
 	var keep_tab := _tab_index
 	for c in _header.get_children():
 		c.queue_free()
 	_header.add_child(UI.label(place["name"].to_upper(), UI.AMBER, 26))
-	var about := UI.label("%s  ·  %s" % [place["operator"], place["description"]], UI.DIM, 14)
+	var about := UI.label("%s  ·  %s" % [place.get("operator", "On site, no port"), place["description"]], UI.DIM, 14)
 	# Wrap, or a long description sets the minimum width of the whole screen.
 	about.autowrap_mode = TextServer.AUTOWRAP_WORD
 	about.custom_minimum_size = Vector2(200, 0)
@@ -93,14 +95,18 @@ func refresh() -> void:
 	for c in _tabs.get_children():
 		_tabs.remove_child(c)
 		c.queue_free()
-	_tabs.add_child(_market_tab(place_id))
-	_tabs.add_child(_departures_tab(place_id))
-	_tabs.add_child(_contracts_tab(place_id))
-	_tabs.add_child(_traffic_tab(place_id))
-	_tabs.add_child(_projects_tab(place_id))
-	_tabs.add_child(_tips_tab(place_id))
-	if "shipyard" in place.get("services", []):
-		_tabs.add_child(_shipyard_tab())
+	if on_site:
+		_tabs.add_child(_site_tab(place_id))
+		_tabs.add_child(_departures_tab(place_id))
+	else:
+		_tabs.add_child(_market_tab(place_id))
+		_tabs.add_child(_departures_tab(place_id))
+		_tabs.add_child(_contracts_tab(place_id))
+		_tabs.add_child(_traffic_tab(place_id))
+		_tabs.add_child(_projects_tab(place_id))
+		_tabs.add_child(_tips_tab(place_id))
+		if "shipyard" in place.get("services", []):
+			_tabs.add_child(_shipyard_tab())
 	_tab_index = mini(keep_tab, _tabs.get_tab_count() - 1)
 	_tabs.current_tab = _tab_index
 	for c in _side.get_children():
@@ -214,9 +220,12 @@ func _departures_tab(place_id: String) -> Control:
 	var dests: Array = d.places.keys().filter(func(to): return to != place_id and Perks.place_open(s, d, to))
 	var local: Array = dests.filter(func(to): return Navigation.frame_body(d, place_id, to) != "sun")
 	var far: Array = dests.filter(func(to): return Navigation.frame_body(d, place_id, to) == "sun")
-	for to in local + far:
+	var spots: Array = d.sites.keys().filter(func(to): return to != place_id and SiteSystem.knows(s, to))
+	for to in local + far + spots:
 		if to == (far[0] if not far.is_empty() else ""):
 			parts[1].add_child(UI.label("ACROSS THE SYSTEM  ·  months, not days: tanks, larder and patience", UI.HAZARD, 13))
+		if to == (spots[0] if not spots.is_empty() else ""):
+			parts[1].add_child(UI.label("POINTS OF INTEREST  ·  no port, no fuel: you go, you work, you come back", UI.HAZARD, 13))
 		var plan: Dictionary = _quick(place_id, to)
 		var p := UI.panel("")
 		var row := HBoxContainer.new()
@@ -225,7 +234,7 @@ func _departures_tab(place_id: String) -> Control:
 		var info := VBoxContainer.new()
 		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(info)
-		info.add_child(UI.label(d.places[to]["name"], UI.AMBER, 17))
+		info.add_child(UI.label(d.locations[to]["name"], UI.AMBER, 17))
 		if plan.has("distance_m"):
 			info.add_child(UI.label("%s   ·   quick estimate %s, %.2f t" % [UI.km(plan["distance_m"]), UI.duration(plan["duration_s"]), plan["fuel_t"]]))
 		var notes := []
@@ -249,6 +258,55 @@ func _departures_tab(place_id: String) -> Control:
 		side.custom_minimum_size = Vector2(150, 0)
 		row.add_child(side)
 		_route_controls(place_id, to, plan, p[1], side)
+		parts[1].add_child(p[0])
+	return parts[0]
+
+
+## On site: what there is to do here, what it needs, how long it takes, and what it
+## might yield. Work passes game time; speed it up with time compression.
+func _site_tab(site_id: String) -> Control:
+	var parts := _scroll("Site")
+	var s = sim.state
+	var d = sim.data
+	var site: Dictionary = d.sites[site_id]
+	var work: Dictionary = s.sites.get("work", {})
+	if not work.is_empty():
+		var act: Dictionary = site["activities"][work["activity"]]
+		var p := UI.panel("At work: " + act["name"])
+		var span: float = float(work["end_t"]) - float(work["start_t"])
+		var bar := ProgressBar.new()
+		bar.max_value = 1.0
+		bar.value = clampf((s.time_s - float(work["start_t"])) / maxf(span, 1.0), 0.0, 1.0)
+		bar.show_percentage = false
+		bar.custom_minimum_size = Vector2(0, 10)
+		p[1].add_child(bar)
+		p[1].add_child(UI.label("%s to go. Speed time up with ] ; the crew will call when it is done." % UI.duration(maxf(0.0, float(work["end_t"]) - s.time_s)), UI.AMBER, 13))
+		parts[1].add_child(p[0])
+	for act_id in site.get("activities", {}):
+		var act: Dictionary = site["activities"][act_id]
+		var p := UI.panel(act["name"])
+		var bits := ["%s of work" % UI.duration(float(act["days"]) * DAY)]
+		if float(act.get("risk", 0.0)) > 0.0:
+			bits.append("%d%% chance it goes badly" % int(round(float(act["risk"]) * 100.0)))
+		var needs: Array = act.get("needs", [])
+		if not needs.is_empty():
+			bits.append("needs " + ", ".join(needs.map(func(n): return {"survey": "a survey pod", "lander": "a lander", "mining": "a mining rig"}.get(n, n))))
+		p[1].add_child(UI.label("  ·  ".join(bits), UI.DIM, 13))
+		var gains := []
+		for good in act.get("yields", {}):
+			var r: Array = act["yields"][good]
+			gains.append("%s %.1f-%.1f t" % [String(d.goods[good]["name"]).to_lower(), float(r[0]), float(r[1])])
+		if float(act.get("credits", 0.0)) > 0.0:
+			gains.append("about %s on completion" % UI.money(float(act["credits"])))
+		if not gains.is_empty():
+			p[1].add_child(UI.label("Expect: " + ", ".join(gains), UI.TEXT, 13))
+		var why := SiteSystem.blocked(s, d, site_id, act_id)
+		var row := HBoxContainer.new()
+		var hint := UI.label("" if why == "" else why.capitalize(), UI.WARN if why != "" and why != "already done" else UI.DIM, 12)
+		hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(hint)
+		row.add_child(UI.button("Begin", send.bind({"type": "site_work", "activity": act_id}), why == ""))
+		p[1].add_child(row)
 		parts[1].add_child(p[0])
 	return parts[0]
 
@@ -360,6 +418,11 @@ func _intel(from: String, to: String) -> Array:
 	var s = sim.state
 	var d = sim.data
 	var out := []
+	if d.sites.has(to):
+		var jobs: Array = d.sites[to].get("activities", {}).values().map(func(a): return a["name"])
+		return [["%s: %s" % [String(d.sites[to].get("kind", "site")).capitalize(), ", ".join(jobs)], UI.DIM]]
+	if not d.places.has(from):
+		return out
 	var known: Dictionary = s.knowledge.get(to, {})
 	if known.is_empty():
 		out.append(["No price board on file: you have never been there.", UI.DIM])
@@ -556,7 +619,7 @@ func _ship_panel(place_id: String) -> Control:
 	v.add_child(UI.label("Accel   %.2f milli-g" % (ShipStats.accel_mps2(s.ship, d) / 9.80665 * 1000.0)))
 	var heat := ShipStats.heat_ratio(s.ship, d)
 	v.add_child(UI.label("Heat    %d%% of radiator capacity%s" % [int(heat * 100.0), "  (drive throttled)" if heat > 1.0 else ""], UI.WARN if heat > 1.0 else UI.TEXT))
-	var services: Array = d.places[place_id].get("services", [])
+	var services: Array = d.locations[place_id].get("services", [])
 	if "refuel" in services:
 		var need := minf(fuel_cap - float(s.ship["fuel_t"]), Market.stock(s, place_id, "propellant"))
 		var cost := Market.buy_cost(s, d, place_id, "propellant", need) if need > 0.01 else 0.0
