@@ -46,6 +46,10 @@ var tip_seq: int = 0
 var contracts: Dictionary = {}
 ## Standing with each operator: {operator: score}. Tiers in data/contracts.json.
 var reputation: Dictionary = {}
+## Perks earned by backing projects (sim/perks.gd).
+var perks: Dictionary = {}
+## When this game began (projects reveal so many days in).
+var started_t: float = 0.0
 
 
 static func from_unix(unix_seconds: float) -> float:
@@ -81,6 +85,8 @@ func to_dict() -> Dictionary:
 		"tip_seq": tip_seq,
 		"contracts": contracts.duplicate(true),
 		"reputation": reputation.duplicate(true),
+		"perks": perks.duplicate(true),
+		"started_t": started_t,
 	}
 
 
@@ -107,3 +113,5 @@ func load_dict(d: Dictionary) -> void:
 	tip_seq = int(d.get("tip_seq", 0))
 	contracts = d.get("contracts", {}).duplicate(true)
 	reputation = d.get("reputation", {}).duplicate(true)
+	perks = d.get("perks", {}).duplicate(true)
+	started_t = float(d.get("started_t", time_s))

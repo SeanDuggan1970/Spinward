@@ -140,8 +140,21 @@ func validate() -> Array[String]:
 				if not (places[leg["at"]]["market"].has(good) and places[leg["to"]]["market"].has(good)):
 					problems.append("fleet %s leg %d: %s must be traded at both ends" % [fleet_id, i, good])
 	var features_seen := {}
+	const PERKS := ["free_docking", "fuel_discount", "yard_discount", "standing", "promise"]
+	for id in places:
+		var builder: String = places[id].get("opens_with", "")
+		if builder != "" and not projects.has(builder):
+			problems.append("place %s: opens with unknown project %s" % [id, builder])
 	for id in projects:
 		var project: Dictionary = projects[id]
+		for perk in project.get("perks", []):
+			if not perk.get("kind", "") in PERKS:
+				problems.append("project %s: unknown perk kind %s" % [id, perk.get("kind", "")])
+			if perk.has("place") and not places.has(perk["place"]):
+				problems.append("project %s: perk at unknown place %s" % [id, perk["place"]])
+		var after: Array = project.get("reveal", {}).get("after_stage", [])
+		if not after.is_empty() and not projects.has(after[0]):
+			problems.append("project %s: revealed after unknown project %s" % [id, after[0]])
 		var place: String = project.get("place", "")
 		if not places.has(place):
 			problems.append("project %s: unknown place %s" % [id, place])

@@ -2,6 +2,7 @@
 extends "res://sim/systems/system.gd"
 
 const ShipStats := preload("res://sim/ship_stats.gd")
+const Perks := preload("res://sim/perks.gd")
 
 
 func setup(owner) -> void:
@@ -69,7 +70,7 @@ func _install(command: Dictionary) -> String:
 	var refund := 0.0
 	if old_id != "":
 		refund = float(data.modules[old_id]["price"]) * float(data.balance["shipyard"]["resale_fraction"])
-	var cost := float(module["price"]) - refund
+	var cost := float(module["price"]) * Perks.yard_mult(s, s.location["place"]) - refund
 	if cost > s.credits + 1e-6:
 		return "not enough credits"
 	var trial: Dictionary = s.ship.duplicate(true)

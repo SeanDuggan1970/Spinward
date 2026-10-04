@@ -17,6 +17,7 @@ const LightTime := preload("res://sim/light_time.gd")
 const Interplanetary := preload("res://sim/interplanetary.gd")
 const Contracts := preload("res://sim/contracts.gd")
 const ContractSystemScript := preload("res://sim/systems/contract_system.gd")
+const Perks := preload("res://sim/perks.gd")
 
 const AU := 1.495978707e11
 const DAY := 86400.0
@@ -58,6 +59,7 @@ func _initialize() -> void:
 	test_interplanetary()
 	test_refits()
 	test_contracts()
+	test_project_pitches()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -893,3 +895,34 @@ func test_contracts() -> void:
 	# Contracts and standing survive a save.
 	var saved := SaveIO.from_text(SaveIO.to_text(sim.state))
 	check(saved.contracts == sim.state.contracts and saved.reputation == sim.state.reputation, "Contracts and reputation are saved")
+
+
+func test_project_pitches() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	check(ProjectSystem.open_to_player(s, d, "island_one") and not ProjectSystem.open_to_player(s, d, "ares_greenhouses"), "Some projects are there from the start; others come later")
+	check(not ProjectSystem.open_to_player(s, d, "hektor_reach"), "Hektor Reach waits for Island One's first stage")
+	sim.advance_game_time(31 * DAY)
+	check(ProjectSystem.open_to_player(s, d, "ares_greenhouses"), "The Tharsis greenhouses are announced after a month")
+	# Invitation only: the science ring asks in pilots the Compact's science office knows.
+	check(not ProjectSystem.open_to_player(s, d, "valhalla_deep_ring"), "The Valhalla ring is closed to strangers")
+	s.reputation["Terran Compact Science"] = 25.0
+	sim.advance_game_time(2 * 3600.0)
+	check(ProjectSystem.open_to_player(s, d, "valhalla_deep_ring"), "A reliable pilot is invited in")
+	# A place built by a project is closed until it is finished.
+	s.location = {"status": "docked", "place": "kernel_l5"}
+	check(String(sim.apply({"type": "depart", "to": "hektor_reach"})).ends_with("not open yet"), "Cannot fly to Hektor Reach before it is built")
+	s.projects["hektor_reach"]["done"] = true
+	check(Perks.place_open(s, d, "hektor_reach"), "Hektor Reach opens when finished")
+	# Perks: backing Island One earns free docking at the Kernel and cheaper fuel there.
+	s.projects["island_one"]["player_total_t"] = 50.0
+	var proj := ProjectSystem.new()
+	proj.setup(sim)
+	proj._award_perks("island_one", s.time_s)
+	check(Perks.free_docking(s, "kernel_l5") and absf(Perks.fuel_mult(s, "kernel_l5") - 0.8) < 1e-9, "Backers dock free and refuel cheaper at the Kernel")
+	check(Contracts.rep_of(s, "Kernel Settlers") >= 8.0, "Backing builds standing with the settlers")
+	s.location = {"status": "approach", "place": "kernel_l5"}
+	var credits := s.credits
+	sim.apply({"type": "dock"})
+	check(s.credits == credits, "No tug fee for a backer at the Kernel")

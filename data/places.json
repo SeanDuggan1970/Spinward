@@ -551,7 +551,8 @@
 			"medical": 6,
 			"habitat_modules": 20,
 			"propellant": 200,
-			"oxygen": 80
+			"oxygen": 80,
+			"volatiles": 40
 		},
 		"produces": {
 			"deuterium": 0.3,
@@ -738,7 +739,9 @@
 			"medical": 8,
 			"electronics": 20,
 			"machine_parts": 60,
-			"oxygen": 80
+			"oxygen": 80,
+			"refined_metals": 60,
+			"habitat_modules": 15
 		},
 		"produces": {
 			"water_ice": 18
@@ -863,5 +866,76 @@
 			"oxygen": 0.8
 		},
 		"recipes": []
+	},
+	"hektor_reach": {
+		"name": "Hektor Reach",
+		"operator": "The Commons",
+		"opens_with": "hektor_reach",
+		"description": "The first port among Jupiter's Trojans, driven out from L5 and parked in orbit around Hektor, a 225 km double-lobed asteroid. Fuel, a yard, and a long view of Jupiter from sixty degrees ahead of it.",
+		"location": {
+			"type": "orbit",
+			"parent": "hektor",
+			"elements": {
+				"a_m": 192500.0,
+				"e": 0.0,
+				"i_deg": 0.0,
+				"node_deg": 0.0,
+				"peri_deg": 0.0,
+				"m0_deg": 0.0
+			}
+		},
+		"station": {
+			"hub_radius_m": 14,
+			"hub_length_m": 90,
+			"ring_radius_m": 95,
+			"ring_tube_m": 9,
+			"spokes": 4,
+			"spin_rpm": 2.6,
+			"colour": "grey"
+		},
+		"services": [
+			"market",
+			"refuel",
+			"shipyard"
+		],
+		"shipyard_stock": [
+			"tank_l",
+			"hab_extended",
+			"lander_bay",
+			"mining_rig",
+			"survey_pod",
+			"radiator_array"
+		],
+		"market": {
+			"water_ice": 300,
+			"propellant": 300,
+			"refined_metals": 150,
+			"food": 60,
+			"medical": 5,
+			"machine_parts": 40,
+			"electronics": 10,
+			"volatiles": 80
+		},
+		"produces": {
+			"refined_metals": 4,
+			"volatiles": 3
+		},
+		"consumes": {
+			"food": 2.5,
+			"medical": 0.3,
+			"machine_parts": 2,
+			"electronics": 0.6,
+			"water_ice": 3
+		},
+		"recipes": [
+			{
+				"inputs": {
+					"water_ice": 3
+				},
+				"outputs": {
+					"propellant": 2
+				}
+			}
+		]
 	}
 }

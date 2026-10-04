@@ -67,7 +67,7 @@ static func make_offer(data, eph, state, rng: RandomNumberGenerator, place: Stri
 	var spec: Dictionary = data.contracts["kinds"][kind]
 	var t: float = state.time_s
 	var long_haul: bool = spec.get("range", "local") == "long_haul"
-	var everywhere: Array = data.places.keys().filter(func(p): return p != place)
+	var everywhere: Array = data.places.keys().filter(func(p): return p != place and preload("res://sim/perks.gd").place_open(state, data, p))
 	# Long hauls go between worlds; local jobs stay in the issuing port's neighbourhood.
 	# A port alone at its world (Mars, Ceres...) has no neighbours: all its work is long haul.
 	var local: Array = everywhere.filter(func(p): return Navigation.frame_body(data, place, p) != "sun")
@@ -81,7 +81,7 @@ static func make_offer(data, eph, state, rng: RandomNumberGenerator, place: Stri
 	var to: String = others[rng.randi() % others.size()]
 	if kind == "pickup":
 		pickup = to
-		var onward: Array = data.places.keys().filter(func(p): return p != pickup and p != place and (Navigation.frame_body(data, pickup, p) == "sun") == long_haul)
+		var onward: Array = everywhere.filter(func(p): return p != pickup and (Navigation.frame_body(data, pickup, p) == "sun") == long_haul)
 		if onward.is_empty():
 			return {}
 		to = onward[rng.randi() % onward.size()]

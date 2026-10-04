@@ -255,7 +255,7 @@ func _process(dt: float) -> void:
 		m["label"].modulate = UI.AMBER if place == loc["to"] else Color(UI.TEXT, 0.8)
 		# Across the Sun's domain the stations crowd onto their worlds: label only
 		# where you are going and where you came from.
-		m["label"].visible = not _solar or place == loc["to"] or place == loc["from"]
+		m["label"].visible = (not _solar or place == loc["to"] or place == loc["from"]) and preload("res://sim/perks.gd").place_open(sim.state, sim.data, place)
 		m["marker"].visible = m["label"].visible
 	_update_npcs(t, cam_dist)
 	for body in _planets:

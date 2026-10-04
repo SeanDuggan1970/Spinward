@@ -6,16 +6,26 @@
 ## player's share is the net tonnage of needed goods they imported into that market
 ## while the stage was open (sold there minus bought there, from the economy system's
 ## stats), so buying and selling back at the same market earns no credit.
+##
+## Projects pitch for backers (data "pitch"), reward hauled tonnage with perks
+## (sim/perks.gd), and are not all there from the start: some are revealed later
+## ("reveal"), and some only invite pilots the backer knows ("invite"); until then a
+## project neither draws on its market nor credits the player.
 extends "res://sim/systems/system.gd"
+
+const Perks := preload("res://sim/perks.gd")
 
 
 func start_game() -> void:
 	var s = sim().state
 	s.projects = {}
 	for id in sim().data.projects:
-		s.projects[id] = {"stage": 0, "delivered": {}, "player_t": 0.0, "player_total_t": 0.0, "done": false, "seen": {}}
+		s.projects[id] = {"stage": 0, "delivered": {}, "player_t": 0.0, "player_total_t": 0.0, "done": false, "seen": {}, "revealed": false, "invited": false}
 	s.place_mods = {}
+	s.perks = {}
 	s.project_t = s.time_s
+	s.started_t = s.time_s
+	_reveal_due(s.time_s)
 
 
 func tick(_game_dt: float) -> void:
@@ -27,12 +37,92 @@ func tick(_game_dt: float) -> void:
 			var seen := {}
 			for good in sim().data.projects[id]["stages"][0]["needs"]:
 				seen[good] = _net_imported(s, sim().data.projects[id]["place"], good)
-			s.projects[id] = {"stage": 0, "delivered": {}, "player_t": 0.0, "player_total_t": 0.0, "done": false, "seen": seen}
+			s.projects[id] = {"stage": 0, "delivered": {}, "player_t": 0.0, "player_total_t": 0.0, "done": false, "seen": seen, "revealed": false, "invited": false}
 	var step := float(sim().data.balance["economy"]["step_hours"]) * 3600.0
 	while s.project_t + step <= s.time_s:
 		s.project_t += step
+		_reveal_due(s.project_t)
 		for id in sim().data.projects:
-			_advance(id, step / 86400.0, s.project_t)
+			if s.projects[id].get("revealed", true):
+				_advance(id, step / 86400.0, s.project_t)
+
+
+## Announce projects whose time has come, and ask in the pilots a backer knows.
+func _reveal_due(t: float) -> void:
+	var s = sim().state
+	var data = sim().data
+	for id in data.projects:
+		var project: Dictionary = data.projects[id]
+		var p: Dictionary = s.projects[id]
+		if not p.get("revealed", true):
+			var reveal: Dictionary = project.get("reveal", {})
+			var ok := t - float(s.started_t) >= float(reveal.get("after_days", 0.0)) * 86400.0
+			var after: Array = reveal.get("after_stage", [])
+			if not after.is_empty():
+				var other: Dictionary = s.projects.get(after[0], {})
+				ok = ok and (other.get("done", false) or int(other.get("stage", 0)) >= int(after[1]))
+			if ok:
+				p["revealed"] = true
+				_open_stage(id)
+				# What is there from the start needs no announcement.
+				if not project.has("invite") and t > float(s.started_t) + 3600.0:
+					sim().emit("project_announced", {"project": id}, t)
+		if p.get("revealed", true) and not p.get("invited", false):
+			var invite: Dictionary = project.get("invite", {})
+			if invite.is_empty() or float(s.reputation.get(invite["operator"], 0.0)) >= float(invite["min_rep"]):
+				p["invited"] = true
+				if not invite.is_empty():
+					sim().emit("project_invite", {"project": id, "operator": invite["operator"]}, t)
+
+
+## Can the player see (and back) a project now?
+static func open_to_player(state, data, id: String) -> bool:
+	var p: Dictionary = state.projects.get(id, {})
+	return p.get("revealed", true) and (p.get("invited", true) or not data.projects[id].has("invite"))
+
+
+func _open_stage(id: String) -> void:
+	var s = sim().state
+	var p: Dictionary = s.projects[id]
+	p["seen"] = {}
+	var project: Dictionary = sim().data.projects[id]
+	for good in project["stages"][int(p["stage"])]["needs"]:
+		p["seen"][good] = _net_imported(s, project["place"], good)
+
+
+## Perks earned by the player's tonnage over the whole build.
+func _award_perks(id: String, t: float) -> void:
+	var s = sim().state
+	var project: Dictionary = sim().data.projects[id]
+	var p: Dictionary = s.projects[id]
+	var earned: Array = s.perks.get("_earned", [])
+	var perks: Array = project.get("perks", [])
+	for i in perks.size():
+		var perk: Dictionary = perks[i]
+		var key := "%s/%d" % [id, i]
+		if key in earned or float(p["player_total_t"]) < float(perk["min_t"]):
+			continue
+		earned.append(key)
+		match perk["kind"]:
+			"free_docking":
+				_set_perk(perk["place"], "free_docking", true)
+			"fuel_discount", "yard_discount":
+				_set_perk(perk["place"], perk["kind"], maxf(float(Perks.at(s, perk["place"], perk["kind"], 0.0)), float(perk["value"])))
+			"standing":
+				s.reputation[perk["operator"]] = float(s.reputation.get(perk["operator"], 0.0)) + float(perk["value"])
+			"promise":
+				var promises: Array = s.perks.get("_promises", [])
+				promises.append(perk["text"])
+				s.perks["_promises"] = promises
+		sim().emit("perk_earned", {"project": id, "text": perk["text"]}, t)
+	s.perks["_earned"] = earned
+
+
+func _set_perk(place: String, kind: String, value) -> void:
+	var s = sim().state
+	var at: Dictionary = s.perks.get(place, {})
+	at[kind] = value
+	s.perks[place] = at
 
 
 ## Fraction complete in [0, 1], counting partial progress through the current stage.
@@ -72,9 +162,10 @@ func _advance(id: String, days: float, t: float) -> void:
 		var net := _net_imported(s, place, good)
 		var high := float(p["seen"].get(good, 0.0))
 		if net > high:
-			if remaining > 0.0:
+			if remaining > 0.0 and open_to_player(s, data, id):
 				p["player_t"] += minf(net - high, remaining)
 				p["player_total_t"] += minf(net - high, remaining)
+				_award_perks(id, t)
 			p["seen"][good] = net
 		if remaining <= 1e-6:
 			continue

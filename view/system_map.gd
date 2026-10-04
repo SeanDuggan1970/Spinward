@@ -79,6 +79,8 @@ func _draw() -> void:
 			draw_string(_font, at + Vector2(r + 4, -r), sim.data.bodies[body]["name"], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, UI.DIM)
 
 	for place in sim.data.places:
+		if not preload("res://sim/perks.gd").place_open(s, sim.data, place):
+			continue
 		# Each map shows its own neighbourhood: cislunar ports on the Earth map; at
 		# solar scale only the trip's ends (the rest sit on their worlds).
 		if not solar and V.length(eph.relative(place, frame, t)) > 2.0e9:

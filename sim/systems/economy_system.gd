@@ -2,6 +2,7 @@
 extends "res://sim/systems/system.gd"
 
 const Market := preload("res://sim/market.gd")
+const Perks := preload("res://sim/perks.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
 
 
@@ -145,11 +146,13 @@ func _refuel(command: Dictionary) -> String:
 	var space := ShipStats.fuel_capacity_t(s.ship, sim().data) - float(s.ship["fuel_t"])
 	var tonnes := space if command.get("fill", false) else minf(float(command.get("tonnes", 0.0)), space)
 	tonnes = minf(tonnes, Market.stock(s, place, "propellant"))
-	# Exact cost of what can be afforded, priced on the tonnes actually bought.
-	tonnes = Market.affordable_tonnes(s, sim().data, place, "propellant", s.credits, tonnes)
+	# Exact cost of what can be afforded, priced on the tonnes actually bought, less any
+	# backer's discount (fuel into the tanks cannot be resold).
+	var mult := Perks.fuel_mult(s, place)
+	tonnes = Market.affordable_tonnes(s, sim().data, place, "propellant", s.credits / maxf(mult, 0.01), tonnes)
 	if tonnes <= 1e-6:
 		return "tanks full" if space <= 1e-6 else "cannot refuel"
-	var cost := Market.buy_cost(s, sim().data, place, "propellant", tonnes)
+	var cost := Market.buy_cost(s, sim().data, place, "propellant", tonnes) * mult
 	s.credits -= cost
 	s.markets[place]["propellant"] -= tonnes
 	s.ship["fuel_t"] += tonnes

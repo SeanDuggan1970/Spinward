@@ -403,10 +403,18 @@ Sean's direction (2026-10-04). It goes beyond trade into opportunities, refits a
    - **Courier contracts:** a package, a passenger or a party, with a deadline. Some are pickups: go and get something or someone and take it on somewhere else. They weigh little but demand a direct, light, fast trip, so less or no other cargo.
    - survey, salvage, prospecting and mining claims
    - derelicts
-5. **Projects that pitch.**
-   - **The pitch:** each megaproject makes its case: what it is for, and what backers get. That might be docking or landing rights, discounts, a berth or a base, or a new station moving out to deeper space.
-   - **Choosing:** players pick which to back.
-   - **Visibility:** not all are visible at the start. Some spin up later, and some are offered only to known pilots.
+5. **Projects that pitch** (done). Each megaproject makes its case: why, the plan, and what is on offer. Perks are earned by hauled tonnage over the whole build (`sim/perks.gd`):
+   - free docking
+   - fuel and yard discounts. These go only on what can't be resold, so no arbitrage loop.
+   - standing with the backer
+   - promises (a berth, first claim on survey work) for later systems to honour
+
+   Not all projects are there at the start:
+   - **Tharsis greenhouses** (Mars Accord): announced after 30 days.
+   - **Hektor Reach** (The Commons): announced once Island One's frame is closed. It is built at L5, then driven out to Hektor in Jupiter's leading Trojans. It opens a new port when finished, and until then that port is closed to everyone.
+   - **Valhalla science ring:** invitation only. Terran Compact Science asks in pilots it counts as Reliable.
+
+   Projects compete for the same hauling, so which to back is a real choice.
 6. **Powers in the background.** These are inspired by Iain M. Banks' Culture: benevolent minds who intervene quietly, Contact and Special Circumstances, the informal Interesting Times Gang, Outside Context Problems. The analogues are original, not Banks' names.
    - **The minds' circle:** an informal circle of Commons minds who steer events.
    - **Cut-outs:** human go-betweens who approach a pilot with favours.

@@ -135,7 +135,7 @@ func _maybe_rumour(tip: Dictionary) -> void:
 	if s.contracts.is_empty() or _rng.randf() >= float(rc.get("chance", 0.0)):
 		return
 	var here: String = s.location["place"]
-	var ports: Array = data.places.keys().filter(func(p): return p != here)
+	var ports: Array = data.places.keys().filter(func(p): return p != here and preload("res://sim/perks.gd").place_open(s, data, p))
 	var place := ""
 	var kind := ""
 	var offer := {}
@@ -163,7 +163,7 @@ func _make_tip(id: String, broker: Dictionary) -> Dictionary:
 	var data = sim().data
 	var here: String = s.location["place"]
 	var coverage: Array = data.places.keys() if broker["coverage"] is String else broker["coverage"]
-	var places := coverage.filter(func(p): return p != here and data.places.has(p))
+	var places := coverage.filter(func(p): return p != here and data.places.has(p) and preload("res://sim/perks.gd").place_open(s, data, p))
 	if places.is_empty():
 		return {}
 	var tip := {"broker": id, "t": s.time_s, "expires_t": s.time_s + float(data.brokers_meta["tip_ttl_days"]) * DAY,

@@ -4,6 +4,7 @@ extends "res://sim/systems/system.gd"
 const Navigation := preload("res://sim/navigation.gd")
 const V := preload("res://sim/v3.gd")
 const RoutePlanner := preload("res://sim/route_planner.gd")
+const Perks := preload("res://sim/perks.gd")
 
 const PERI_WARN_S := 2.0 * 3600.0
 const PERI_CLOSE_S := 600.0
@@ -67,6 +68,8 @@ func _depart(command: Dictionary) -> String:
 	var to: String = command.get("to", "")
 	if not sim().data.places.has(to):
 		return "unknown destination"
+	if not Perks.place_open(s, sim().data, to):
+		return "%s is not open yet" % sim().data.places[to]["name"]
 	var here: String = s.location["place"]
 	if command.has("route"):
 		return _depart_route(here, to, String(command["route"]), float(command.get("plan_t", s.time_s)))
@@ -97,7 +100,7 @@ func _dock(command: Dictionary) -> String:
 	if not manual:
 		# The tug always comes; if you cannot pay, the fee goes on your account
 		# (credits go negative) so a pilot can never be stuck outside a port.
-		var fee := float(sim().data.balance["docking"]["auto_dock_fee"])
+		var fee := 0.0 if Perks.free_docking(s, s.location["place"]) else float(sim().data.balance["docking"]["auto_dock_fee"])
 		on_credit = s.credits < fee
 		s.credits -= fee
 	s.stats["manual_docks" if manual else "auto_docks"] += 1

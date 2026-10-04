@@ -189,6 +189,18 @@ func _handle_events() -> void:
 				else:
 					notice("Took on %.2f t propellant for %s" % [d["tonnes"], UI.money(-d["credits"])])
 				refresh = true
+			"project_announced":
+				var pj: Dictionary = sim.data.projects[d["project"]]
+				notice("NEWS: %s announce %s at %s. They want backers: see Projects." % [pj.get("backer", "Builders"), pj["name"], sim.data.places[pj["place"]]["name"]], UI.AMBER)
+				comms.append("%s  NEWS  %s announced at %s." % [_clock(e["time_s"]), pj["name"], sim.data.places[pj["place"]]["name"]])
+				refresh = true
+			"project_invite":
+				var pi: Dictionary = sim.data.projects[d["project"]]
+				notice("A private message from %s: you are invited to back %s. See Projects." % [d["operator"], pi["name"]], UI.AMBER)
+				refresh = true
+			"perk_earned":
+				notice("Backer's reward from %s: %s." % [sim.data.projects[d["project"]]["name"], d["text"]], UI.GOOD)
+				refresh = true
 			"contract_accepted":
 				notice("Job taken: %s due at %s. Pays %s." % ["collection" if d["pickup"] != "" else "delivery", sim.data.places[d["to"]]["name"], UI.money(float(d["reward"]))], UI.AMBER)
 				refresh = true

@@ -16,6 +16,7 @@ const SystemMap := preload("res://view/system_map.gd")
 const Comms := preload("res://view/comms.gd")
 const Contracts := preload("res://sim/contracts.gd")
 const ContractSystem := preload("res://sim/systems/contract_system.gd")
+const Perks := preload("res://sim/perks.gd")
 const DAY := 86400.0
 
 var sim
@@ -209,10 +210,14 @@ func _departures_tab(place_id: String) -> Control:
 	var s = sim.state
 	var d = sim.data
 	parts[1].add_child(UI.label("Plot routes and your co-pilot flies trial courses under real Earth and Moon gravity: Express burns hard, Economy lets gravity do the work, lunar flybys are for the view (and occasionally the fuel). Prices elsewhere are what you last saw there, or what you have been told: buy tips on the Tip Line.", UI.DIM, 13))
-	for to in d.places:
-		if to == place_id:
-			continue
-		var plan: Dictionary = Navigation.plan(s.ship, d, sim.ephemeris, place_id, to, s.time_s)
+	# Local destinations first, then the long hauls across the Sun's domain.
+	var dests: Array = d.places.keys().filter(func(to): return to != place_id and Perks.place_open(s, d, to))
+	var local: Array = dests.filter(func(to): return Navigation.frame_body(d, place_id, to) != "sun")
+	var far: Array = dests.filter(func(to): return Navigation.frame_body(d, place_id, to) == "sun")
+	for to in local + far:
+		if to == (far[0] if not far.is_empty() else ""):
+			parts[1].add_child(UI.label("ACROSS THE SYSTEM  ·  months, not days: tanks, larder and patience", UI.HAZARD, 13))
+		var plan: Dictionary = _quick(place_id, to)
 		var p := UI.panel("")
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 16)
@@ -416,6 +421,19 @@ func _plan_t(to: String) -> float:
 
 
 var _last_plan_t: Dictionary = {}
+## Quick plans for the departures board, per destination and hour (interplanetary
+## estimates take tens of milliseconds each, and the board redraws often).
+var _quick_cache: Dictionary = {}
+
+
+func _quick(place_id: String, to: String) -> Dictionary:
+	var s = sim.state
+	var key := "%s>%s|%d|%.3f|%.3f" % [place_id, to, int(s.time_s / 3600.0), ShipStats.total_mass_t(s.ship, sim.data), float(s.ship["fuel_t"])]
+	if not _quick_cache.has(key):
+		if _quick_cache.size() > 64:
+			_quick_cache.clear()
+		_quick_cache[key] = Navigation.plan(s.ship, sim.data, sim.ephemeris, place_id, to, s.time_s)
+	return _quick_cache[key]
 
 
 func _plot(place_id: String, to: String) -> void:
@@ -623,15 +641,32 @@ func _projects_tab(place_id: String) -> Control:
 	for id in d.projects:
 		var project: Dictionary = d.projects[id]
 		var st: Dictionary = s.projects.get(id, {})
-		if st.is_empty():
+		if st.is_empty() or not ProjectSystem.open_to_player(s, d, id):
 			continue
 		var here: bool = project["place"] == place_id
-		var p := UI.panel(project["name"] + ("   (here)" if here else "   at " + d.places[project["place"]]["name"]))
+		var title: String = project["name"] + ("   (here)" if here else "   at " + d.places[project["place"]]["name"])
+		if project.has("invite"):
+			title += "   ·   by invitation"
+		var p := UI.panel(title)
 		var v: VBoxContainer = p[1]
 		var desc := UI.label(project["description"], UI.DIM, 12)
 		desc.autowrap_mode = TextServer.AUTOWRAP_WORD
 		desc.custom_minimum_size = Vector2(200, 0)
 		v.add_child(desc)
+		# The pitch: why back it, what they plan, what backers get.
+		var pitch: Dictionary = project.get("pitch", {})
+		for line in [["Why", pitch.get("why", "")], ["Plan", pitch.get("plan", "")], ["On offer", pitch.get("offer", "")]]:
+			if line[1] != "":
+				var l := UI.label("%s:  %s" % line, UI.TEXT, 12)
+				l.autowrap_mode = TextServer.AUTOWRAP_WORD
+				l.custom_minimum_size = Vector2(200, 0)
+				v.add_child(l)
+		var earned: Array = s.perks.get("_earned", [])
+		var perks: Array = project.get("perks", [])
+		for i in perks.size():
+			var perk: Dictionary = perks[i]
+			var got: bool = ("%s/%d" % [id, i]) in earned
+			v.add_child(UI.label("      %s  %s  (haul %d t)" % ["[x]" if got else "[ ]", perk["text"], int(perk["min_t"])], UI.GOOD if got else UI.DIM, 12))
 		var total := ProjectSystem.progress(s, d, id)
 		var bar := ProgressBar.new()
 		bar.max_value = 1.0
