@@ -15,6 +15,9 @@
 ##   mind_works       Landauer Deep: the minds' cold core, radiators and a second core going up
 ##   starshade        Valhalla's flower-shaped starshade, lined up with a distant telescope
 ##   sail_yard        Clarke Exchange's sail yard, and the Lightfoot sails once it is built
+##   stanford_torus   the Tsiolkovsky Wheel going up beside Trojan Yards: a 1.8 km Stanford torus
+## Solid ones register colliders on the parent (meta "colliders": {spheres, tori}) so
+## a pilot who flies into one hits it.
 extends RefCounted
 
 const Kit := preload("res://view/flight/kit.gd")
@@ -49,7 +52,21 @@ static func build(parent: Node3D, features: Array, dirs: Dictionary, station: Di
 				anims.append_array(_starshade(parent))
 			"sail_yard":
 				anims.append_array(_sail_yard(parent, dirs, float(progress.get("sail_yard", 0.0))))
+			"stanford_torus":
+				anims.append_array(_stanford_torus(parent, dirs, float(progress.get("stanford_torus", 0.0))))
 	return anims
+
+
+## Register something solid with the flight scene, if it is listening.
+static func _solid_sphere(parent: Node3D, at: Vector3, r: float) -> void:
+	if parent.has_meta("colliders"):
+		parent.get_meta("colliders")["spheres"].append({"pos": at, "r": r})
+
+
+## A ring about its node's local Z: `R` to the tube's centre, tube radius `r`.
+static func _solid_torus(parent: Node3D, xform: Transform3D, ring_r: float, tube_r: float) -> void:
+	if parent.has_meta("colliders"):
+		parent.get_meta("colliders")["tori"].append({"xform": xform, "R": ring_r, "r": tube_r})
 
 
 static func animate(anims: Array, t: float) -> void:
@@ -248,6 +265,7 @@ static func _bernal(parent: Node3D, dirs: Dictionary, p: float = 0.0) -> Array:
 	var root := Node3D.new()
 	root.position = centre
 	parent.add_child(root)
+	_solid_sphere(parent, centre, radius)
 	var frame_f := clampf(0.4 + p / 0.25 * 0.6, 0.4, 1.0)
 	var skin_f := clampf((p - 0.25) / 0.25, 0.0, 1.0)
 	var alive := p >= 0.5
@@ -421,6 +439,7 @@ static func _captured_rock(parent: Node3D, station: Dictionary) -> Array:
 	var radius := 190.0
 	var body := rock(radius, Vector3(1.45, 0.95, 1.1), 2058)
 	body.position = centre
+	_solid_sphere(parent, centre, radius * 1.15)
 	body.rotation = Vector3(0.3, 0.7, 0.2)
 	parent.add_child(body)
 	var steel := Kit.mat("steel")
@@ -689,3 +708,80 @@ static func _sail_yard(parent: Node3D, dirs: Dictionary, p: float) -> Array:
 			sparks.append(spark)
 		anims.append({"kind": "flicker", "nodes": sparks})
 	return anims
+
+
+# --- The Tsiolkovsky Wheel: a Stanford torus going up at L4 -----------------------------
+
+## The 1975 NASA-Stanford design: a ring 1.8 km across with a 130 m tube, six spokes
+## to a central hub, turning once a minute for a gee at the rim, and a great mirror
+## held still over the hub to send sunlight in. Seen from Trojan Yards, 12 km off.
+## Stages (project tsiolkovsky_wheel): hub and spokes -> the ring tube in sections ->
+## regolith shielding (it darkens) -> mirrors, air and people (lit, and turning).
+static func _stanford_torus(parent: Node3D, dirs: Dictionary, p: float) -> Array:
+	var sun: Vector3 = dirs.get("sun", Vector3.UP)
+	var centre := Vector3(-6000.0, 1600.0, -10500.0)
+	var root := _facing(sun, centre)
+	parent.add_child(root)
+	var rotor := Node3D.new()
+	root.add_child(rotor)
+	var ring_r := 900.0
+	var tube := 65.0
+	var frame := _lit(Color("9aa0a6"), 0.3, 0.6, 0.5)
+	var skin := _lit(Color("d9d4c7") if p < 0.5 else Color("8f877c"), 0.15, 0.2, 0.8)
+	var hub_f := clampf(p / 0.25, 0.25, 1.0)
+	var tube_f := clampf((p - 0.25) / 0.25, 0.0, 1.0)
+	var alive := p >= 0.75
+	var done := p >= 1.0
+	rotor.add_child(Kit.cylinder(60.0, 240.0 * hub_f, frame, Vector3.ZERO, 32))
+	for i in 6:
+		var a := TAU * float(i) / 6.0
+		var holder := Node3D.new()
+		holder.rotation.z = a
+		var reach := (ring_r - 60.0) * hub_f
+		var spoke := Kit.cylinder(12.0, reach, frame, Vector3(60.0 + reach * 0.5, 0, 0), 12)
+		spoke.rotation = Vector3(0, 0, PI * 0.5)
+		holder.add_child(spoke)
+		rotor.add_child(holder)
+	# The ring frame closes first; the tube goes on section by section.
+	rotor.add_child(Kit.torus(ring_r, 6.0, frame, Vector3.ZERO, 192))
+	var sections := 48
+	for i in int(round(float(sections) * tube_f)):
+		var a := TAU * (float(i) + 0.5) / float(sections)
+		var seg := Kit.cylinder(tube, 2.0 * ring_r * sin(PI / float(sections)) * 1.02, skin, Vector3.ZERO, 20)
+		var holder := Node3D.new()
+		holder.rotation.z = a
+		seg.position = Vector3(ring_r, 0, 0)
+		seg.rotation = Vector3.ZERO
+		holder.add_child(seg)
+		rotor.add_child(holder)
+	if alive:
+		# Windows along the tube's sunward face, lit from the valley floors inside.
+		var glow := Kit.glow(Color("cfe4c0") if done else Color("8fa080"), 1.2 if done else 0.5)
+		for i in 96:
+			var a := TAU * float(i) / 96.0
+			rotor.add_child(Kit.box(Vector3(40.0, 40.0, 4.0), glow, Vector3(cos(a) * ring_r, sin(a) * ring_r, -tube * 0.95)))
+		# The mirror over the hub, held still at 45 degrees to bring sunlight in.
+		var mirror := Node3D.new()
+		mirror.position = Vector3(0, 0, -700.0)
+		mirror.rotation = Vector3(PI * 0.25, 0, 0)
+		mirror.add_child(Kit.cylinder(450.0, 3.0, _lit(Color("b8c4d0"), 0.5, 0.95, 0.08), Vector3.ZERO, 48))
+		root.add_child(mirror)
+	var anims := []
+	if done:
+		anims.append({"kind": "spin", "node": rotor, "rate": TAU / 60.0})
+	else:
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 1975
+		var sparks := []
+		for i in 30:
+			var a := rng.randf() * TAU
+			var spark := Kit.sphere(10.0, Kit.glow(Color("cfe8ff"), 6.0), Vector3(cos(a) * ring_r, sin(a) * ring_r, rng.randf_range(-tube, tube)))
+			spark.set_meta("seed", rng.randf())
+			rotor.add_child(spark)
+			sparks.append(spark)
+		anims.append({"kind": "flicker", "nodes": sparks})
+	if tube_f > 0.0:
+		_solid_torus(parent, root.transform, ring_r, tube)
+	_solid_sphere(parent, centre, 70.0)
+	return anims
+

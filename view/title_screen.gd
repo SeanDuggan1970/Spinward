@@ -279,16 +279,24 @@ func _build_saturn() -> void:
 
 ## A low run over the Moon's craters; Earth hangs on the horizon ahead.
 func _build_lunar() -> void:
-	_where = "A low pass  ·  the Moon"
+	_where = "The Moon  ·  under the Selene Ring"
 	_light(Vector3(0.9, 0.18, -0.2), 1.6)
 	var moon := _body("moon", 220000.0, Vector3(0.0, -220000.0 - 900.0, 0.0))
 	# Fine enough that the horizon a few km off stays round.
 	(moon.mesh as SphereMesh).radial_segments = 1024
 	(moon.mesh as SphereMesh).rings = 512
+	# Over the equator, the pole off to the side: the Selene Ring rises ahead from the
+	# horizon and arcs overhead. The Moon turns about its pole beneath us.
+	var turn := Node3D.new()
+	turn.position = moon.position
+	_stage.add_child(turn)
+	moon.reparent(turn, false)
+	moon.position = Vector3.ZERO
+	moon.basis = Basis(Vector3.FORWARD, PI * 0.5 - 0.06)
 	_body("earth", 5200.0, Vector3(-9000.0, 5200.0, -120000.0), 0.004)
 	_update = func(dt: float) -> void:
 		# Turn the Moon beneath us rather than fly a ship tens of km: same view, safer floats.
-		moon.rotation.x += dt * 0.0016
+		turn.rotation.x += dt * 0.0016
 		var pos := Vector3(sin(clock * 0.3) * 6.0, sin(clock * 0.45) * 2.0, -60.0)
 		_fly(pos, Vector3(0.0, -0.02, -1.0), clock > 9.0, dt)
 		camera.position = Vector3(18.0 + sin(clock * 0.1) * 4.0, 9.0, 4.0)

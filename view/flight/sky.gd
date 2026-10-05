@@ -183,10 +183,14 @@ static func dress_body(mesh: MeshInstance3D, data, body: String, to_viewer: Vect
 	for spec in b.get("plumes", []):
 		_plume(mesh, spec, radius, view_local, hint_local, sun_dir, rng)
 	for spec in b.get("structures", []):
-		if spec.get("kind", "") == "elevator":
-			var p := float(progress.get(spec.get("project", ""), 1.0)) if spec.has("project") else 1.0
-			if p > 0.0:
+		var p := float(progress.get(spec.get("project", ""), 1.0)) if spec.has("project") else 1.0
+		if p <= 0.0:
+			continue
+		match spec.get("kind", ""):
+			"elevator":
 				_elevator(mesh, spec, radius, view_local, hint_local, p, rng)
+			"orbital_ring":
+				_orbital_ring(mesh, spec, radius, p)
 
 
 ## A point on the unit sphere (mesh-local, +Y the pole) for a site: lat/lon in degrees,
@@ -371,3 +375,49 @@ static func _elevator(mesh: MeshInstance3D, spec: Dictionary, radius: float, vie
 		for i in int(spec.get("climbers", 3)):
 			holder.add_child(_ball(radius * 0.008, _glow(Color("fff0c0"), 4.0), Vector3(0, radius * lerpf(1.05, top, rng.randf()), 0)))
 		holder.add_child(_ball(radius * 0.01, _glow(Color("ff3a2a"), 3.0), Vector3(0, radius * 1.002, 0)))
+
+
+## An orbital ring round the equator: a bright thread at radius_r, built in arcs
+## (the first arc, then closed), then tethers let down to the ground with lit stations
+## where they land. Drawn at least a pixel or so thick from where it is seen.
+static func _orbital_ring(mesh: MeshInstance3D, spec: Dictionary, radius: float, p: float) -> void:
+	var rr := float(spec.get("radius_r", 1.05)) * radius
+	# Tens of metres thick, but drawn a pixel or so wide from wherever it is seen: from
+	# afar that is the body's distance; skimming the surface, the ring's own.
+	var seen_from := maxf(absf(mesh.position.length() - rr), rr * 0.02)
+	var w := maxf(radius * 0.00006, seen_from * 0.0035)
+	var mat := _glow(Color("e8e2d2"), 1.1)
+	var arc := clampf(p * 2.0, 0.08, 1.0) if p < 2.0 / 3.0 else 1.0
+	var pieces := 180
+	for i in int(ceil(float(pieces) * arc)):
+		var a := TAU * (float(i) + 0.5) / float(pieces)
+		var seg := MeshInstance3D.new()
+		var bm := BoxMesh.new()
+		bm.size = Vector3(w, w, 2.0 * rr * sin(PI / float(pieces)) * 1.05)
+		seg.mesh = bm
+		seg.material_override = mat
+		seg.position = Vector3(cos(a), 0.0, sin(a)) * rr
+		seg.basis = Basis(Vector3.UP, -a)
+		mesh.add_child(seg)
+	if arc < 1.0:
+		var tip := TAU * arc
+		mesh.add_child(_ball(w * 3.0, _glow(Color("40ff60"), 4.0), Vector3(cos(tip), 0.0, sin(tip)) * rr))
+	if p >= 2.0 / 3.0:
+		var tethers := int(spec.get("tethers", 12))
+		var down := clampf((p - 2.0 / 3.0) * 3.0, 0.0, 1.0)
+		for k in tethers:
+			var a := TAU * float(k) / float(tethers)
+			var d := Vector3(cos(a), 0.0, sin(a))
+			var length := (rr - radius) * down
+			var tether := MeshInstance3D.new()
+			var tm := BoxMesh.new()
+			tm.size = Vector3(w * 0.6, length, w * 0.6)
+			tether.mesh = tm
+			tether.material_override = mat
+			tether.position = d * (rr - length * 0.5)
+			tether.basis = _up_basis(d)
+			mesh.add_child(tether)
+			mesh.add_child(_ball(w * 1.6, _glow(Color("ffdca0"), 3.0), d * rr))
+			if down >= 1.0:
+				mesh.add_child(_ball(w * 2.0, _glow(Color("ffdca0"), 2.0), d * radius * 1.001))
+

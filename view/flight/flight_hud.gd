@@ -208,6 +208,7 @@ func _draw_left_panel(rect: Rect2) -> void:
 		["ALIGN", "%.1f° / %d°" % [r["align"], int(d["max_angle_deg"])], r["ok_align"]],
 		["ROLL KEY", "%.1f° / %d°" % [rad_to_deg(r["roll_err"]), int(d["max_roll_error_deg"])], r["ok_roll"]],
 		["LATERAL", "%.1f m" % r["lateral"], r["lateral"] < 3.0],
+		["HULL", "LOST" if flight.wrecked else "%d%%" % int(round(preload("res://sim/systems/damage_system.gd").integrity(flight.sim.state.ship) * 100.0)), not flight.wrecked and preload("res://sim/systems/damage_system.gd").integrity(flight.sim.state.ship) > 0.7],
 	]
 	for row in rows:
 		_lamp(Vector2(x + 6, y - 4), row[2])

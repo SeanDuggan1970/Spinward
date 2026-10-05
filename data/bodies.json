@@ -91,7 +91,16 @@
 		"kind": "moon",
 		"look": {
 			"shader": "rock"
-		}
+		},
+		"structures": [
+			{
+				"kind": "orbital_ring",
+				"name": "the Selene Ring",
+				"radius_r": 1.03,
+				"tethers": 12,
+				"project": "selene_ring"
+			}
+		]
 	},
 	"mars": {
 		"name": "Mars",
@@ -882,5 +891,6 @@
 		}
 	},
 	"_note_plumes": "'plumes' (view-only): kind jets | umbrella | geyser, lat/lon in degrees (lon 'limb' puts it on the limb as seen), sizes in body radii, jets = how many, spread_deg = how far around the site they scatter. 'structures': space elevators (top_r = the synchronous anchor, counter_r = the counterweight, both in radii; 'project' grows it with that megaproject).",
-	"_note_flattening": "'flattening': polar over equatorial radius, for the fast-spinning giants (view-only)."
+	"_note_flattening": "'flattening': polar over equatorial radius, for the fast-spinning giants (view-only).",
+	"_note_orbital_ring": "'orbital_ring': a ring round the equator at radius_r body radii, moving faster than orbit inside a stationary sheath, with tethers to the ground; built in arcs with its project."
 }

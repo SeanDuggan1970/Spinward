@@ -94,6 +94,9 @@ func _ready() -> void:
 		if a.begins_with("--flyby="):
 			_flyby_tour.call_deferred(a.trim_prefix("--flyby="))
 			return
+		if a.begins_with("--crash="):
+			_crash_tour.call_deferred(a.trim_prefix("--crash="))
+			return
 		if a.begins_with("--ride="):
 			_ride_tour.call_deferred(a.trim_prefix("--ride="))
 			return
@@ -213,6 +216,25 @@ func _handle_events() -> void:
 					notice("Tanker drone delivered %.2f t on credit. You owe %s." % [d["tonnes"], UI.money(-sim.state.credits)], UI.WARN)
 				else:
 					notice("Took on %.2f t propellant for %s" % [d["tonnes"], UI.money(-d["credits"])])
+				refresh = true
+			"impact":
+				var bits := ["Impact at %.1f m/s: %s %s" % [d["speed"], d["module"], "wrecked" if d["amount"] >= 1.0 else "damaged (%d%%)" % int(round(d["amount"] * 100.0))]]
+				if d["fuel_lost"] > 0.01:
+					bits.append("%.2f t propellant vented" % d["fuel_lost"])
+				var lost := 0.0
+				for g in d["spilled"]:
+					lost += float(d["spilled"][g])
+				if lost > 0.01:
+					bits.append("%.1f t cargo spilled" % lost)
+				bits.append("keel %d%%" % int(round(d["integrity"] * 100.0)))
+				notice(". ".join(bits) + ".", UI.WARN)
+			"ship_lost":
+				notice("The keel has failed. Abandon ship! The lifeboat is away; %s's tug is on its way." % sim.data.places[d["place"]]["name"], UI.WARN)
+			"rescued":
+				notice("The tug brought the lifeboat into %s. The insurance pool has found you a Mule; the excess was %s." % [sim.data.places[d["place"]]["name"], UI.money(float(sim.data.balance["damage"]["insurance_excess"]))], UI.AMBER)
+				refresh = true
+			"repaired":
+				notice(("Repaired at the yard for %s." if d["full"] else "Patched up for %s: a yard will do the rest.") % UI.money(-float(d["credits"])), UI.GOOD)
 				refresh = true
 			"elevator_departed":
 				var line: Dictionary = sim.data.places[d["line"]]["elevator"]
@@ -342,6 +364,10 @@ func _sync_mode() -> void:
 	var mode: String = sim.state.location.get("status", "docked")
 	if mode == _mode:
 		return
+	if mode == "lifeboat" and _screen is FlightScene:
+		# Keep watching the wreck until the tug brings the lifeboat in.
+		_mode = mode
+		return
 	_mode = mode
 	preload("res://view/flight/sky.gd").set_eclipse(Vector3.UP)
 	if _screen:
@@ -363,7 +389,7 @@ func _sync_mode() -> void:
 		"transit":
 			_screen = MapScreen.new(sim)
 			_layer.add_child(_screen)
-		"approach":
+		"approach", "lifeboat":
 			# 3D renders in the root viewport underneath all 2D; its HUD sits in this layer.
 			_screen = FlightScene.new(sim)
 			_layer.add_child(_screen)
@@ -762,6 +788,59 @@ func _gallery(dir: String) -> void:
 			for _i in 60:
 				await get_tree().process_frame
 			_shot("%s/%s-%s.png" % [dir, place, pass_name])
+	get_tree().quit()
+
+
+## Windowed: at Psyche Claims, nudge into a rock at 5 m/s (damage, sparks), then hit
+## the station at 16 m/s (the wreck and the lifeboat), shooting each.
+func _crash_tour(dir: String) -> void:
+	DirAccess.make_dir_recursive_absolute(dir)
+	sim.state.location = {"status": "approach", "place": "psyche_claims"}
+	_mode = ""
+	_sync_mode()
+	for _i in 10:
+		await get_tree().process_frame
+	var flight: FlightScene = _screen
+	flight.view_mode = "chase"
+	var rock: Dictionary = flight._rocks[0]
+	for r in flight._rocks:
+		if float(r["r"]) > 6.0 and float(r["r"]) < 20.0:
+			rock = r
+			break
+	# Line up a few radii off the rock, nose on, and drift in.
+	var at: Vector3 = rock["node"].position
+	var toward := Vector3(0.3, 0.2, 1.0).normalized()
+	flight.ship_node.position = at + toward * (float(rock["r"]) + flight.ship_radius + 14.0)
+	flight.ship_node.look_at(at, Vector3.UP)
+	flight.velocity = -toward * 5.0
+	rock["vel"] = Vector3.ZERO
+	for _i in 200:
+		await get_tree().physics_frame
+		if flight.bumps > 0:
+			break
+	for _i in 4:
+		await get_tree().process_frame
+	_shot("%s/1-rock-impact.png" % dir)
+	for _i in 40:
+		await get_tree().process_frame
+	_shot("%s/2-after.png" % dir)
+	# Into the station's ring, hard.
+	var rr: float = flight.station["ring_radius"]
+	flight.ship_node.position = Vector3(rr, 0, 60.0)
+	flight.ship_node.look_at(Vector3(rr, 0, 0), Vector3.UP)
+	flight.velocity = Vector3(0, 0, -16.0)
+	flight.ang_vel = Vector3.ZERO
+	for _i in 300:
+		await get_tree().physics_frame
+		if flight.wrecked:
+			break
+	for _i in 12:
+		await get_tree().process_frame
+	_shot("%s/3-wreck.png" % dir)
+	for _i in 90:
+		await get_tree().process_frame
+	_shot("%s/4-wreck-later.png" % dir)
+	print("CRASH wrecked=%s status=%s" % [flight.wrecked, sim.state.location.get("status", "?")])
 	get_tree().quit()
 
 

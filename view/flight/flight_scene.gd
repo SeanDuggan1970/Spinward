@@ -18,6 +18,7 @@ const SkyKit := preload("res://view/flight/sky.gd")
 const Autopilot := preload("res://view/flight/autopilot.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
 const ProjectSystem := preload("res://sim/systems/project_system.gd")
+const DamageSystem := preload("res://sim/systems/damage_system.gd")
 
 const ASSIST_MODES := ["full", "assisted", "manual"]
 const SKY_DISTANCE := 60000.0
@@ -81,6 +82,20 @@ var control_override: Dictionary = {}
 ## Live readouts for the HUD.
 var readout := {}
 
+## Drifting rocks on this approach: [{node, r, vel, spin, mass_t}].
+var _rocks: Array = []
+## Fixed obstacles from the set pieces: spheres [{pos, r}] and rings [{xform, R, r}].
+var _obstacles: Dictionary = {"spheres": [], "tori": []}
+## Short-lived effects: sparks, venting, the wreck [{node, until, vel, spin, grow}].
+var _fx: Array = []
+var _shake := 0.0
+var _last_hit := -10.0
+var _warned_until := 0.0
+var ship_length := 30.0
+## The keel has gone: the wreck plays out and the lifeboat takes over.
+var wrecked := false
+var _wreck_cam := Vector3.ZERO
+
 
 func _init(owner_sim) -> void:
 	sim = owner_sim
@@ -102,6 +117,7 @@ func _ready() -> void:
 	ship_node = model["node"]
 	nose_z = model["nose_z"]
 	ship_radius = model["radius"]
+	ship_length = float(model.get("length", 30.0))
 	_drive_plume = ship_node.find_child("DrivePlume", true, false)
 	_rig = model["rig"]
 	add_child(ship_node)
@@ -123,7 +139,9 @@ func _ready() -> void:
 	var progress := {}
 	for id in sim.data.projects:
 		progress[sim.data.projects[id].get("feature", id)] = ProjectSystem.progress(sim.state, sim.data, id)
+	set_meta("colliders", _obstacles)
 	_set_pieces = SetPieces.build(self, sim.data.places[place_id].get("features", []), body_dirs, station, progress)
+	_spawn_hazards()
 	_spawn_work_craft()
 	_sync_traffic()
 	hud = load("res://view/flight/flight_hud.gd").new(self)
@@ -235,6 +253,12 @@ func _request_tug() -> void:
 func _physics_process(dt: float) -> void:
 	if docked or sim.state.paused:
 		return
+	if wrecked:
+		clock += dt
+		_move_rocks(dt)
+		camera.global_position = _wreck_cam
+		camera.look_at(ship_node.position, Vector3.UP)
+		return
 	clock += dt
 	spin_angle = fposmod(spin_angle + spin_rate * dt, TAU)
 	station["rotor"].rotation.z = spin_angle
@@ -249,10 +273,21 @@ func _physics_process(dt: float) -> void:
 	# Docking: the pilot owns the roll, so the panels do what one hinge can; the dish
 	# holds on the station's traffic control.
 	ShipRig.aim(_rig, ship_node.global_basis, body_dirs["sun"], -ship_node.global_position, dt)
+	_move_rocks(dt)
 	_fly(dt)
 	_collide()
+	_collide_world()
+	if wrecked:
+		return
+	var ahead := _time_to_rock()
+	readout["rock_s"] = ahead
+	if ahead < 6.0 and clock > _warned_until:
+		_warned_until = clock + 3.0
+		flash("PROXIMITY  ·  rock on your course, %.1f s" % ahead, UI.WARN, 2.0)
 	_check_docking()
 	_update_camera(dt)
+	if _shake > 0.0:
+		camera.global_position += Vector3(randf_range(-1, 1), randf_range(-1, 1), randf_range(-1, 1)) * _shake * 0.25
 
 
 func _input_axis(pos: Key, neg: Key) -> float:
@@ -375,14 +410,17 @@ func _collide() -> void:
 			_bounce(normal, depth)
 
 
-func _bounce(normal: Vector3, depth: float) -> void:
+func _bounce(normal: Vector3, depth: float, harmless: bool = false) -> void:
 	ship_node.position += normal * depth
 	var vn := velocity.dot(normal)
 	if vn < 0.0:
 		velocity -= normal * vn * (1.0 + float(tune_flight["bump_restitution"]))
 		ang_vel *= 0.5
-		bumps += 1
-		flash("CONTACT  %.1f m/s" % -vn, UI.WARN, 2.0)
+		if harmless:
+			bumps += 1
+			flash("CONTACT  %.1f m/s" % -vn, UI.WARN, 2.0)
+		else:
+			_hit(-vn, 1.0, ship_node.position - normal * ship_radius)
 
 
 func _check_docking() -> void:
@@ -401,7 +439,7 @@ func _check_docking() -> void:
 		reasons.append("not keyed to the slot")
 	refusals += 1
 	flash("Capture refused: " + ", ".join(reasons), UI.WARN, 3.0)
-	_bounce(Vector3(0, 0, 1), 0.5)
+	_bounce(Vector3(0, 0, 1), 0.5, true)
 
 
 func scanner_range() -> float:
@@ -417,6 +455,8 @@ func contacts() -> Array:
 			out.append({"pos": entry["ship"].global_position, "colour": SystemMap.fleet_colour(sim, entry["npc"]), "kind": "ship"})
 	for w in _work_craft:
 		out.append({"pos": w["node"].global_position, "colour": UI.HAZARD, "kind": "pod"})
+	for rock in _rocks:
+		out.append({"pos": rock["node"].global_position, "colour": UI.DIM, "kind": "rock"})
 	return out
 
 
@@ -500,7 +540,7 @@ func _sync_traffic() -> void:
 			holder.add_child(node)
 			holder.add_child(Kit.box(Vector3(model["radius"] + 6.0, 0.6, 0.6), Kit.mat("steel"), Vector3(station["hub_radius"] + (model["radius"] + 6.0) * 0.5, 0, node.position.z)))
 			station["rotor"].add_child(holder)
-			_traffic[id] = {"node": holder, "ship": node, "mode": "berth", "npc": w["npc"], "rig": model["rig"]}
+			_traffic[id] = {"node": holder, "ship": node, "mode": "berth", "npc": w["npc"], "rig": model["rig"], "radius": float(model["radius"])}
 		else:
 			# A bright running light so distant traffic reads as a moving star.
 			node.add_child(Kit.sphere(2.5, Kit.glow(Color("ffe0a0"), 4.0), Vector3(0, 3.0, 0)))
@@ -508,7 +548,7 @@ func _sync_traffic() -> void:
 			# Outbound, the dish swings to wherever the ship is bound.
 			var bound: String = npc["location"].get("to", place_id)
 			var dest_dir := _dir_to(sim.ephemeris.position(bound, sim.state.time_s), sim.ephemeris.position(place_id, sim.state.time_s)) if bound != place_id else Vector3.FORWARD
-			_traffic[id] = {"node": node, "ship": node, "mode": w["mode"], "npc": w["npc"], "rig": model["rig"], "dest_dir": dest_dir}
+			_traffic[id] = {"node": node, "ship": node, "mode": w["mode"], "npc": w["npc"], "rig": model["rig"], "dest_dir": dest_dir, "radius": float(model["radius"])}
 		changed = true
 	if changed or _blinkers.is_empty():
 		_blinkers = Kit.collect_blinkers(self)
@@ -615,3 +655,221 @@ func guidance() -> Dictionary:
 	else:
 		text = "Good. Hold it there. Capture under %.1f m/s." % limit
 	return {"text": text, "offset_local": offset_local, "advised": advised, "along": along}
+
+
+# --- Collisions: rocks, ships, structures, damage and the wreck ------------------------
+
+## Drifting rocks on this approach (data/places.json "hazards"), deterministic per port:
+## mostly small, a few big, the corridor in to the port kept clear.
+func _spawn_hazards() -> void:
+	var hz: Dictionary = sim.data.places[place_id].get("hazards", {})
+	if hz.is_empty():
+		return
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(place_id + "rocks")
+	var looks := {
+		"metal": {"highland_colour": Color("6e6a64"), "mare_colour": Color("4e4b47")},
+		"ice": {"highland_colour": Color("d8dee4"), "mare_colour": Color("aab6c2")},
+		"rubble": {},
+	}
+	var look: Dictionary = looks.get(hz.get("look", "rubble"), {})
+	var sizes: Array = hz["radius_m"]
+	var field: Array = hz["field_m"]
+	for i in int(hz["rocks"]):
+		var r := lerpf(float(sizes[0]), float(sizes[1]), pow(rng.randf(), 2.5))
+		var pos := Vector3.ZERO
+		for _try in 30:
+			pos = Vector3(rng.randf_range(-1.0, 1.0), rng.randf_range(-1.0, 1.0), rng.randf_range(-1.0, 1.0)).normalized() * rng.randf_range(float(field[0]), float(field[1]))
+			if not (pos.z > -200.0 and Vector2(pos.x, pos.y).length() < 160.0 + r):
+				break
+		var stretch := Vector3(rng.randf_range(1.0, 1.6), rng.randf_range(0.7, 1.1), 1.0)
+		var node := SetPieces.rock(r, stretch, 3000 + i, look)
+		node.position = pos
+		node.rotation = Vector3(rng.randf() * TAU, rng.randf() * TAU, 0.0)
+		add_child(node)
+		var drift := Vector3(rng.randf_range(-1.0, 1.0), rng.randf_range(-1.0, 1.0), rng.randf_range(-1.0, 1.0)).normalized() * float(hz.get("drift_mps", 0.05)) * rng.randf()
+		_rocks.append({"node": node, "r": r * (stretch.x + stretch.y + stretch.z) / 3.0, "vel": drift,
+			"spin": Vector3(rng.randf_range(-1, 1), rng.randf_range(-1, 1), rng.randf_range(-1, 1)) * 0.05,
+			"mass_t": 2.4 * 4.18879 * r * r * r})
+
+
+func _move_rocks(dt: float) -> void:
+	for rock in _rocks:
+		var node: Node3D = rock["node"]
+		node.position += rock["vel"] * dt
+		node.rotation += rock["spin"] * dt
+	for f in _fx.duplicate():
+		var node: Node3D = f["node"]
+		if not is_instance_valid(node) or clock > float(f["until"]):
+			if is_instance_valid(node):
+				node.queue_free()
+			_fx.erase(f)
+			continue
+		node.position += f.get("vel", Vector3.ZERO) * dt
+		node.rotation += f.get("spin", Vector3.ZERO) * dt
+		node.scale *= 1.0 + float(f.get("grow", 0.0)) * dt
+	_shake = maxf(0.0, _shake - dt * 1.5)
+
+
+## Everything solid out here that isn't the station: [{pos, r, vel, mass_t, rock}]. A
+## mass of 0 means immovable (structures, and ships and pods on their own business).
+func _bodies_nearby(p: Vector3, reach: float) -> Array:
+	var out := []
+	for rock in _rocks:
+		var c: Vector3 = rock["node"].position
+		if c.distance_to(p) < float(rock["r"]) + reach:
+			out.append({"pos": c, "r": rock["r"], "vel": rock["vel"], "mass_t": rock["mass_t"], "rock": rock})
+	for id in _traffic:
+		var entry: Dictionary = _traffic[id]
+		if is_instance_valid(entry["ship"]):
+			var c: Vector3 = entry["ship"].global_position
+			var r := float(entry.get("radius", 15.0))
+			if c.distance_to(p) < r + reach:
+				out.append({"pos": c, "r": r, "vel": Vector3.ZERO, "mass_t": 0.0, "what": "ship"})
+	for w in _work_craft:
+		var c: Vector3 = w["node"].global_position
+		if c.distance_to(p) < 3.0 + reach:
+			out.append({"pos": c, "r": 3.0, "vel": Vector3.ZERO, "mass_t": 0.0, "what": "pod"})
+	for sp in _obstacles["spheres"]:
+		if Vector3(sp["pos"]).distance_to(p) < float(sp["r"]) + reach:
+			out.append({"pos": sp["pos"], "r": sp["r"], "vel": Vector3.ZERO, "mass_t": 0.0})
+	return out
+
+
+func _collide_world() -> void:
+	var probes := [[ship_node.position, ship_radius], [_nose(), 1.5]]
+	for probe in probes:
+		var p: Vector3 = probe[0]
+		var r: float = probe[1]
+		for b in _bodies_nearby(p, r):
+			var d: Vector3 = p - b["pos"]
+			var dist := d.length()
+			var reach: float = float(b["r"]) + r
+			if dist < reach:
+				var n := d / dist if dist > 1e-4 else Vector3.UP
+				_contact(n, reach - dist, b["vel"], float(b["mass_t"]), b["pos"] + n * float(b["r"]), b.get("rock"))
+		for torus in _obstacles["tori"]:
+			var xf: Transform3D = torus["xform"]
+			var q := xf.affine_inverse() * p
+			var rxy := Vector2(q.x, q.y).length()
+			var radial := Vector3(q.x, q.y, 0.0).normalized() if rxy > 1e-4 else Vector3.RIGHT
+			var w := Vector2(rxy - float(torus["R"]), q.z)
+			var reach := float(torus["r"]) + r
+			if w.length() < reach:
+				var wn := w.normalized() if w.length() > 1e-4 else Vector2.RIGHT
+				var n := (xf.basis * (radial * wn.x + Vector3(0, 0, wn.y))).normalized()
+				_contact(n, reach - w.length(), Vector3.ZERO, 0.0, p - n * r, null)
+
+
+## Push apart, trade momentum, and take the knock. `other_mass_t` 0 is immovable.
+func _contact(normal: Vector3, depth: float, other_vel: Vector3, other_mass_t: float, point: Vector3, rock) -> void:
+	ship_node.position += normal * depth
+	var vn := (velocity - other_vel).dot(normal)
+	if vn >= 0.0:
+		return
+	var m_ship := ShipStats.total_mass_t(sim.state.ship, sim.data)
+	var inv_s := 1.0 / maxf(m_ship, 0.1)
+	var inv_o := 0.0 if other_mass_t <= 0.0 else 1.0 / other_mass_t
+	var e := float(tune_flight["bump_restitution"])
+	var j := -(1.0 + e) * vn / (inv_s + inv_o)
+	velocity += normal * j * inv_s
+	if rock != null:
+		rock["vel"] -= normal * j * inv_o
+		rock["spin"] += Vector3(randf_range(-1, 1), randf_range(-1, 1), randf_range(-1, 1)) * minf(-vn * 0.02, 0.5)
+	# A hard knock sets you tumbling.
+	ang_vel += Vector3(randf_range(-1, 1), randf_range(-1, 1), randf_range(-1, 1)) * minf(-vn * 0.04, 1.2)
+	_hit(-vn, inv_s / (inv_s + inv_o), point)
+	if rock != null and float(rock["r"]) < 10.0 and -vn > 3.0:
+		_shatter(rock, normal)
+
+
+## Report an impact to the sim (it decides what broke), and show it.
+func _hit(speed: float, share: float, point: Vector3) -> void:
+	var safe := float(sim.data.balance["damage"]["safe_mps"])
+	if speed <= safe:
+		bumps += 1
+		flash("CONTACT  %.1f m/s" % speed, UI.WARN, 2.0)
+		return
+	if clock - _last_hit < 0.3:
+		return
+	_last_hit = clock
+	var lp := ship_node.global_transform.affine_inverse() * point
+	var f := clampf((lp.z - nose_z) / maxf(ship_length, 1.0), 0.0, 1.0)
+	var zone := "mid"
+	if absf(lp.x) > ship_radius * 0.55 and absf(lp.x) > absf(lp.y):
+		zone = "side"
+	elif f < 0.25:
+		zone = "nose"
+	elif f > 0.7:
+		zone = "tail"
+	sim.apply({"type": "impact", "speed": speed, "share": share, "zone": zone, "seed": int(clock * 1000.0) + bumps})
+	bumps += 1
+	_shake = minf(1.0, speed / 6.0)
+	for k in int(clampf(speed * 3.0, 4.0, 24.0)):
+		var spark := Kit.sphere(0.12, Kit.glow(Color("ffd890"), 6.0), point)
+		add_child(spark)
+		_fx.append({"node": spark, "until": clock + randf_range(0.4, 1.4), "vel": Vector3(randf_range(-1, 1), randf_range(-1, 1), randf_range(-1, 1)) * speed * 1.5 + velocity})
+	if zone == "tail":
+		# Venting: a breached tank puffing propellant.
+		var vent := Kit.sphere(1.0, Kit.glow(Color(0.85, 0.9, 1.0, 1.0), 1.5), point)
+		add_child(vent)
+		_fx.append({"node": vent, "until": clock + 3.0, "grow": 1.2, "vel": (point - ship_node.position).normalized() * 3.0 + velocity})
+	flash("IMPACT  %.1f m/s   ·   hull %d%%" % [speed, int(round(DamageSystem.integrity(sim.state.ship) * 100.0))], UI.WARN, 3.0)
+	if sim.state.location.get("status") == "lifeboat":
+		_wreck()
+
+
+## A small rock hit hard enough breaks up.
+func _shatter(rock: Dictionary, normal: Vector3) -> void:
+	var node: Node3D = rock["node"]
+	var r := float(rock["r"])
+	for k in 4:
+		var piece := SetPieces.rock(r * 0.45, Vector3(1.2, 0.9, 1.0), 7000 + k + int(r * 100.0))
+		piece.position = node.position + Vector3(randf_range(-1, 1), randf_range(-1, 1), randf_range(-1, 1)) * r * 0.5
+		add_child(piece)
+		_rocks.append({"node": piece, "r": r * 0.45, "vel": rock["vel"] + (Vector3(randf_range(-1, 1), randf_range(-1, 1), randf_range(-1, 1)) - normal).normalized() * randf_range(0.5, 2.0),
+			"spin": Vector3(randf_range(-1, 1), randf_range(-1, 1), randf_range(-1, 1)) * 0.6, "mass_t": float(rock["mass_t"]) * 0.09})
+	_rocks.erase(rock)
+	node.queue_free()
+
+
+## The keel has gone. A flash, the pieces, and the lifeboat away; the sim brings it in.
+func _wreck() -> void:
+	if wrecked:
+		return
+	wrecked = true
+	var at := ship_node.position
+	var boom := Kit.sphere(ship_radius * 0.5, Kit.glow(Color("fff0c8"), 8.0), at)
+	add_child(boom)
+	_fx.append({"node": boom, "until": clock + 0.9, "grow": 3.0})
+	var fire := Kit.sphere(ship_radius * 0.7, Kit.glow(Color("ff9040"), 3.0), at)
+	add_child(fire)
+	_fx.append({"node": fire, "until": clock + 2.2, "grow": 1.6})
+	for k in 18:
+		var piece := Kit.box(Vector3(randf_range(0.5, 3.0), randf_range(0.3, 1.5), randf_range(0.5, 4.0)), Kit.mat(["grey", "dark", "steel", "foil"][k % 4]), at)
+		add_child(piece)
+		_fx.append({"node": piece, "until": clock + 60.0, "vel": velocity + Vector3(randf_range(-1, 1), randf_range(-1, 1), randf_range(-1, 1)).normalized() * randf_range(2.0, 12.0),
+			"spin": Vector3(randf_range(-2, 2), randf_range(-2, 2), randf_range(-2, 2))})
+	var pod := Kit.sphere(1.2, Kit.mat("orange"), at)
+	pod.add_child(Kit.beacon(Color("ff3a2a"), Vector3(0, 1.3, 0), 0.3, 0.8))
+	add_child(pod)
+	_fx.append({"node": pod, "until": clock + 600.0, "vel": velocity * 0.5 + (Vector3(0, 0, 1) - at.normalized() * 0.2).normalized() * 4.0})
+	ship_node.visible = false
+	_wreck_cam = at + Vector3(0, ship_radius * 4.0, ship_radius * 10.0)
+	flash("KEEL FAILURE  ·  ABANDON SHIP  ·  the lifeboat is away", UI.WARN, 20.0)
+
+
+## Seconds to the nearest rock on our present course, if it is close (INF if none).
+func _time_to_rock() -> float:
+	var best := INF
+	for rock in _rocks:
+		var d: Vector3 = rock["node"].position - ship_node.position
+		var rel: Vector3 = velocity - rock["vel"]
+		var closing := d.dot(rel)
+		if closing <= 0.0 or d.length() > 2000.0:
+			continue
+		var t := closing / maxf(rel.length_squared(), 1e-6)
+		var miss := (d - rel * t).length()
+		if miss < float(rock["r"]) + ship_radius * 1.5:
+			best = minf(best, t)
+	return best

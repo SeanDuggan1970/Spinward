@@ -66,10 +66,16 @@ static func accel_mps2(ship: Dictionary, data, extra_mass_t: float = 0.0) -> flo
 	return thrust_n(ship, data) / ((total_mass_t(ship, data) + extra_mass_t) * 1000.0)
 
 
+## Summed over the modules, each counting for what is left of it after damage
+## (ship["damage"][slot], 0 sound to 1 wrecked): a holed tank holds less, a hit drive
+## pushes less. Heat is what a drive makes, so damage doesn't reduce it.
 static func _sum(ship: Dictionary, data, key: String) -> float:
 	var total := 0.0
-	for m in modules_of(ship, data):
-		total += float(m.get(key, 0.0))
+	var damage: Dictionary = ship.get("damage", {})
+	for slot in ship.get("modules", {}):
+		var m: Dictionary = data.modules[ship["modules"][slot]]
+		var left := 1.0 if key == "heat_mw" else 1.0 - clampf(float(damage.get(slot, 0.0)), 0.0, 1.0)
+		total += float(m.get(key, 0.0)) * left
 	return total
 
 
@@ -83,7 +89,7 @@ static func life_support_days(ship: Dictionary, data) -> float:
 
 
 static func berths(ship: Dictionary, data) -> int:
-	return int(_sum(ship, data, "berths"))
+	return int(round(_sum(ship, data, "berths")))
 
 
 static func has_docking_computer(ship: Dictionary, data) -> bool:

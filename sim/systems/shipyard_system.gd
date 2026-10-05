@@ -75,6 +75,8 @@ func _install(command: Dictionary) -> String:
 		return "not enough credits"
 	var trial: Dictionary = s.ship.duplicate(true)
 	trial["modules"][slot] = module_id
+	if trial.has("damage"):
+		trial["damage"].erase(slot)
 	if ShipStats.cargo_t(trial) > ShipStats.cargo_capacity_t(trial, data) + 1e-9:
 		return "sell some cargo first"
 	trial["fuel_t"] = minf(float(trial["fuel_t"]), ShipStats.fuel_capacity_t(trial, data))

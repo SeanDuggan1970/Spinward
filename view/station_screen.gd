@@ -11,6 +11,7 @@ const ShipyardSystem := preload("res://sim/systems/shipyard_system.gd")
 const EconomySystem := preload("res://sim/systems/economy_system.gd")
 const ProjectSystem := preload("res://sim/systems/project_system.gd")
 const ElevatorSystem := preload("res://sim/systems/elevator_system.gd")
+const DamageSystem := preload("res://sim/systems/damage_system.gd")
 const TipsText := preload("res://view/tips_text.gd")
 const TravelSystem := preload("res://sim/systems/travel_system.gd")
 const SystemMap := preload("res://view/system_map.gd")
@@ -678,6 +679,15 @@ func _ship_panel(place_id: String) -> Control:
 	v.add_child(UI.label("Accel   %.2f milli-g" % (ShipStats.accel_mps2(s.ship, d) / 9.80665 * 1000.0)))
 	var heat := ShipStats.heat_ratio(s.ship, d)
 	v.add_child(UI.label("Heat    %d%% of radiator capacity%s" % [int(heat * 100.0), "  (drive throttled)" if heat > 1.0 else ""], UI.WARN if heat > 1.0 else UI.TEXT))
+	var hull := DamageSystem.integrity(s.ship)
+	v.add_child(UI.label("Keel    %d%%" % int(round(hull * 100.0)), UI.GOOD if hull > 0.99 else (UI.TEXT if hull > 0.7 else UI.WARN)))
+	for slot in s.ship.get("damage", {}):
+		if slot != "keel" and float(s.ship["damage"][slot]) > 0.005:
+			v.add_child(UI.label("  %s  %d%% damaged" % [d.modules[s.ship["modules"][slot]]["name"], int(round(float(s.ship["damage"][slot]) * 100.0))], UI.WARN, 13))
+	var repair := DamageSystem.repair_cost(s, d)
+	if repair > 0.5 and not d.places[place_id].has("foot_of"):
+		var at_yard: bool = "shipyard" in d.places[place_id].get("services", [])
+		v.add_child(UI.button(("Repair  (%s)" if at_yard else "Patch up  (%s)") % UI.money(repair), send.bind({"type": "repair"}), repair <= s.credits))
 	var services: Array = d.locations[place_id].get("services", [])
 	if "refuel" in services:
 		var need := minf(fuel_cap - float(s.ship["fuel_t"]), Market.stock(s, place_id, "propellant"))

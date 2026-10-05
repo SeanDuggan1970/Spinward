@@ -77,8 +77,29 @@ static func station(geom: Dictionary, name: String = "", livery: Dictionary = {}
 		rotor.add_child(Kit.cylinder(rh + 0.08, lh * 0.12, accent_mat, Vector3(0, 0, lh * 0.1), 28))
 		rotor.add_child(Kit.hazard_band(rh + 0.05, 2.5, Vector3(0, 0, lh * 0.5 - 2.0), 24))
 		rotor.add_child(Kit.hazard_band(rh + 0.05, 2.5, Vector3(0, 0, -lh * 0.5 + 2.0), 24))
-		rotor.add_child(Kit.torus(rr, rt, hull_mat, Vector3.ZERO, 72))
+		var stanford: bool = geom.get("type", "wheel") == "stanford"
+		rotor.add_child(Kit.torus(rr, rt, hull_mat, Vector3.ZERO, 256 if stanford else 72))
 		var spokes := int(geom.get("spokes", 4))
+		if stanford:
+			# A Stanford torus: tube spokes 24 m across, a band of lit windows facing the
+			# hub's mirror, and the mirror itself, held still behind the hub at 45 degrees.
+			for i in spokes:
+				var holder := Node3D.new()
+				holder.rotation.z = TAU * float(i) / float(spokes)
+				var length := rr - rh - rt * 0.8
+				var tube := Kit.cylinder(12.0, length, steel, Vector3(rh + length * 0.5, 0, 0), 16)
+				tube.rotation = Vector3(0, 0, PI * 0.5)
+				holder.add_child(tube)
+				rotor.add_child(holder)
+			for i in 120:
+				var a := TAU * float(i) / 120.0
+				rotor.add_child(Kit.box(Vector3(30.0, 30.0, 2.0), Kit.glow(Color("cfe4c0"), 1.2), Vector3(cos(a) * rr, sin(a) * rr, -rt * 0.96)))
+			var mirror := Node3D.new()
+			mirror.position = Vector3(0, 0, -lh * 0.5 - 520.0)
+			mirror.rotation = Vector3(PI * 0.25, 0, 0)
+			mirror.add_child(Kit.cylinder(420.0, 3.0, Kit.glass(0.1), Vector3.ZERO, 48))
+			root.add_child(mirror)
+			spokes = 0
 		for i in spokes:
 			var a := TAU * float(i) / float(spokes)
 			var spoke := Kit.truss(rr - rh - rt * 0.6, 3.0, steel)

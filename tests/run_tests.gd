@@ -21,6 +21,7 @@ const Perks := preload("res://sim/perks.gd")
 const SiteSystemScript := preload("res://sim/systems/site_system.gd")
 const EconomySystemScript := preload("res://sim/systems/economy_system.gd")
 const NpcSystem := preload("res://sim/systems/npc_system.gd")
+const DamageSystem := preload("res://sim/systems/damage_system.gd")
 
 const AU := 1.495978707e11
 const DAY := 86400.0
@@ -69,6 +70,7 @@ func _initialize() -> void:
 	test_spaceline()
 	test_minds_and_sails()
 	test_elevators()
+	test_damage()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -341,9 +343,11 @@ func test_projects() -> void:
 	var s3 := sim3.state
 	var stages: Array = d.projects["luna_line_2"]["stages"]
 	s3.projects["luna_line_2"]["stage"] = stages.size() - 1
-	for good in stages[-1]["needs"]:
-		s3.markets["halo_depot"][good] = 1000.0
-	sim3.advance_game_time(60 * DAY)
+	# Kept supplied: traders strip any glut for the other builds about the system.
+	for _k in 6:
+		for good in stages[-1]["needs"]:
+			s3.markets["halo_depot"][good] = 1000.0
+		sim3.advance_game_time(10 * DAY)
 	check(s3.projects["luna_line_2"]["done"], "Luna Line 2 completes when supplied")
 	check(float(s3.place_mods.get("halo_depot", {}).get("produces_mult", 1.0)) == 2.0, "Completion doubles Halo Depot output")
 	var events := sim3.take_events().map(func(e): return e["type"])
@@ -1182,3 +1186,51 @@ func test_elevators() -> void:
 				climbed = climbed or npc["location"]["frame"] == "moon"
 	check(climbed, "Climbers ride the Luna Line between the depot and the town")
 	check(s.npcs.filter(func(n): return n["fleet"] == "luna_climbers").all(func(n): return float(n["ship"]["fuel_t"]) == 0.0), "Climbers burn no propellant")
+
+
+## Collisions: a gentle bump is free; a hard one breaks what it hits (a drive pushes
+## less, a holed tank vents, a broken pod spills) and strains the keel; yards repair,
+## other ports patch; a broken keel is a lost ship, a lifeboat and an insurance hull.
+func test_damage() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	s.location = {"status": "approach", "place": "kibo_ring"}
+	sim.apply({"type": "impact", "speed": 0.5, "share": 1.0, "zone": "tail", "seed": 0})
+	check(s.ship.get("damage", {}).is_empty(), "A gentle bump does no harm")
+	var thrust := ShipStats.thrust_n(s.ship, d)
+	sim.apply({"type": "impact", "speed": 5.0, "share": 1.0, "zone": "tail", "seed": 1})
+	var tail_hit: Array = s.ship["damage"].keys().filter(func(k): return k != "keel")
+	check(tail_hit.size() == 1 and String(tail_hit[0]).split(".")[0] in ["tank", "drive"], "A knock on the tail hits a tank or a drive")
+	check(DamageSystem.integrity(s.ship) < 1.0, "and strains the keel")
+	if String(tail_hit[0]).begins_with("drive"):
+		check(ShipStats.thrust_n(s.ship, d) < thrust, "A damaged drive pushes less")
+	else:
+		check(ShipStats.fuel_capacity_t(s.ship, d) < 3.0 and float(s.ship["fuel_t"]) <= ShipStats.fuel_capacity_t(s.ship, d) + 1e-9, "A holed tank holds less, and vents the rest")
+	s.ship["cargo"] = {"water_ice": ShipStats.cargo_capacity_t(s.ship, d)}
+	sim.apply({"type": "impact", "speed": 6.0, "share": 1.0, "zone": "mid", "seed": 2})
+	check(ShipStats.cargo_t(s.ship) < 19.99, "A broken pod spills cargo")
+	s.location = {"status": "docked", "place": "halo_depot"}
+	s.credits = 1.0e6
+	check(sim.apply({"type": "repair"}) == "", "You can patch up at a port without a yard")
+	check(s.ship["damage"].values().all(func(v): return float(v) <= float(d.balance["damage"]["patch_max"]) + 1e-9), "A patch only takes off the worst of it")
+	s.location = {"status": "docked", "place": "kibo_ring"}
+	check(sim.apply({"type": "repair"}) == "" and s.ship.get("damage", {}).is_empty(), "A yard puts everything right")
+	# The keel goes.
+	s.location = {"status": "approach", "place": "kibo_ring"}
+	s.contracts["active"].append({"id": 999, "state": "carried", "client": "Terran Compact", "to": "halo_depot", "item": "a parcel", "pickup": "", "deadline_t": s.time_s + 30.0 * DAY, "window_s": 30.0 * DAY, "reward": 100.0, "mass_t": 0.1, "passengers": 0, "rep": 1.0})
+	var credits := s.credits
+	sim.apply({"type": "impact", "speed": 14.0, "share": 1.0, "zone": "mid", "seed": 3})
+	check(s.location.get("status") == "lifeboat", "A wrecked keel is a lost ship: into the lifeboat")
+	check(s.ship["hull"] == d.balance["start"]["ship"] and s.ship.get("damage", {}).is_empty(), "The insurance pool finds you a stock hull")
+	check(absf(credits - s.credits - float(d.balance["damage"]["insurance_excess"])) < 1e-6, "less the excess")
+	check(not s.contracts["active"].any(func(j): return int(j["id"]) == 999), "Carried jobs go down with the ship")
+	sim.advance_game_time(float(d.balance["damage"]["lifeboat_s"]) + 1.0)
+	check(s.location.get("status") == "docked" and s.location.get("place") == "kibo_ring", "The tug brings the lifeboat in")
+	# The Wheel and the Ring exist, closed until built.
+	check(not Perks.place_open(s, d, "tsiolkovsky_wheel"), "The Tsiolkovsky Wheel opens only when it is built")
+	var wheel := sim.ephemeris.position("tsiolkovsky_wheel", s.time_s)
+	var yards := sim.ephemeris.position("trojan_yards", s.time_s)
+	var off: Array = d.places["tsiolkovsky_wheel"]["location"]["offset_km"]
+	check(absf(V.distance(wheel, yards) - 1000.0 * Vector3(off[0], off[1], off[2]).length()) < 50.0, "The Wheel stands off Trojan Yards where its data says")
+	check(d.bodies["moon"]["structures"].any(func(st): return st["kind"] == "orbital_ring"), "The Moon can have a ring")

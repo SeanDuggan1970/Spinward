@@ -672,5 +672,142 @@
 				"produces_mult": 2.0
 			}
 		}
+	},
+	"tsiolkovsky_wheel": {
+		"name": "The Tsiolkovsky Wheel",
+		"backer": "Terran Compact",
+		"place": "trojan_yards",
+		"description": "A Stanford torus at L4: a ring 1.8 km across and 130 m thick, home for ten thousand, turning once a minute.",
+		"pitch": {
+			"why": "Kalpana One proved people can live in orbit. The Wheel is where they raise children, run farms and grow old: a town, not a posting.",
+			"plan": "Hub and spokes, then the ring tube in sections, then regolith shielding packed round it, then the mirrors, air and soil. Trojan Yards builds it; the robots weld; the settlers argue about street names.",
+			"offer": "Backers dock free at the Wheel, get the Compact's standing, and a flat on the rim with Earth in the window."
+		},
+		"draw_t_per_day": 3.0,
+		"feature": "stanford_torus",
+		"stages": [
+			{
+				"name": "Hub and spokes",
+				"needs": {
+					"refined_metals": 80,
+					"machine_parts": 40
+				}
+			},
+			{
+				"name": "The ring tube",
+				"needs": {
+					"refined_metals": 100,
+					"habitat_modules": 60
+				}
+			},
+			{
+				"name": "Regolith shielding",
+				"needs": {
+					"regolith": 400
+				}
+			},
+			{
+				"name": "Mirrors, air, soil and the first ten thousand",
+				"needs": {
+					"oxygen": 60,
+					"food": 40,
+					"electronics": 8
+				}
+			}
+		],
+		"reveal": {
+			"after_days": 15
+		},
+		"perks": [
+			{
+				"min_t": 10,
+				"kind": "free_docking",
+				"place": "tsiolkovsky_wheel",
+				"text": "Free docking at the Tsiolkovsky Wheel"
+			},
+			{
+				"min_t": 40,
+				"kind": "standing",
+				"operator": "Terran Compact",
+				"value": 8,
+				"text": "The Compact counts you among the Wheel's builders"
+			},
+			{
+				"min_t": 120,
+				"kind": "promise",
+				"text": "A flat on the rim with Earth in the window"
+			}
+		],
+		"effects": {
+			"trojan_yards": {
+				"produces_mult": 1.2
+			}
+		}
+	},
+	"selene_ring": {
+		"name": "The Selene Ring",
+		"backer": "Luna Cooperative",
+		"place": "shackleton_port",
+		"description": "An orbital ring round the Moon's equator, 52 km up: a cable moving faster than orbit inside a sheath that stands still, with tethers to the ground.",
+		"pitch": {
+			"why": "An elevator touches the Moon in one place. A ring touches it everywhere: freight up and down from anywhere on the equator, launched by magnets instead of rockets.",
+			"plan": "Spin the first arc, close the ring, then let the tethers down to the surface stations. The Moon has no air to fight, so it can sit lower than any ring ever could round Earth.",
+			"offer": "Backers get the Cooperative's fuel at a fifth off at Shackleton, its standing, and a launch slot on the ring's first mass driver."
+		},
+		"draw_t_per_day": 2.5,
+		"stages": [
+			{
+				"name": "The first arc",
+				"needs": {
+					"machine_parts": 50,
+					"regolith": 200
+				}
+			},
+			{
+				"name": "The ring closed",
+				"needs": {
+					"machine_parts": 60,
+					"electronics": 10,
+					"regolith": 250
+				}
+			},
+			{
+				"name": "Tethers to the ground",
+				"needs": {
+					"water_ice": 150,
+					"machine_parts": 30,
+					"medical": 2
+				}
+			}
+		],
+		"reveal": {
+			"after_days": 100
+		},
+		"perks": [
+			{
+				"min_t": 10,
+				"kind": "fuel_discount",
+				"place": "shackleton_port",
+				"value": 0.2,
+				"text": "20% off fuel at Shackleton Port"
+			},
+			{
+				"min_t": 40,
+				"kind": "standing",
+				"operator": "Luna Cooperative",
+				"value": 10,
+				"text": "The Cooperative counts you as one of the Ring's builders"
+			},
+			{
+				"min_t": 100,
+				"kind": "promise",
+				"text": "A launch slot on the Ring's first mass driver"
+			}
+		],
+		"effects": {
+			"shackleton_port": {
+				"produces_mult": 1.6
+			}
+		}
 	}
 }

@@ -26,6 +26,8 @@ The system is rich and getting richer. The **Spaceline** news feed (a tab at eve
 - **Landauer Deep:** a station at Iapetus that AI minds built for themselves, after the Belt votes them persons.
 - **Discoveries:** new finds that leave a port richer for good.
 
+Fly carefully: ships collide with stations, other ships and drifting rocks. Hits break the module they land on, strain the keel and can wreck the ship (the lifeboat and insurance get you home). The Tsiolkovsky Wheel, a Stanford torus, goes up at L4, and an orbital ring can be built round the Moon.
+
 You can ride the space elevators down to towns on the Moon, Ceres and (once it is built) Mars, with your cargo, and trade there. Your ship waits at the port above. Saturn's rings follow Cassini's measurements, and planets cast real shadows on rings, moons and ships.
 
 There are cryovolcano plumes at Enceladus, Io's Pele, the Piazzi Stalk elevator on Ceres, and a starshade at Valhalla.

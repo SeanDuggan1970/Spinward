@@ -75,7 +75,17 @@ func _place_position(place: Dictionary, t: float) -> Array:
 			var parent: String = where["parent"]
 			return V.add(position(parent, t), kepler(where["elements"], float(bodies[parent]["gm"]), t))
 		"lagrange":
-			return lagrange_point(where["system"][0], where["system"][1], where["point"], t)
+			var at := lagrange_point(where["system"][0], where["system"][1], where["point"], t)
+			if where.has("offset_km"):
+				# Along the primary-secondary line, across it in the orbit plane, and out of it.
+				var o: Array = where["offset_km"]
+				var p0 := position(where["system"][0], t)
+				var rel := V.sub(position(where["system"][1], t), p0)
+				var u := V.normalized(rel)
+				var h := V.normalized(V.cross(rel, V.sub(velocity(where["system"][1], t), velocity(where["system"][0], t))))
+				var w := V.cross(h, u)
+				at = V.add(at, V.scale(V.add(V.add(V.scale(u, float(o[0])), V.scale(w, float(o[1]))), V.scale(h, float(o[2]))), 1000.0))
+			return at
 		"surface":
 			return surface_point(where, t)
 	assert(false, "Unknown place location type")

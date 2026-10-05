@@ -63,13 +63,13 @@ The system should feel like a place where big things are being built. Each tier 
 | Landauer Deep (the minds' cold core) | Iapetus | 2 | **In** (port + project) | The Sufficiency's home; electronics and parts |
 | Starshade | Valhalla | 2 | **In** (set piece) | Exoplanet science; lore |
 | Solar sail freighters | Clarke to Mars | 2 | **In** (project builds the fleet) | Propellant-free bulk freight, slowly |
-| Stanford torus | L4/L5 | 2 | Planned | A completed habitat; big food and passenger market |
+| Stanford torus (the Tsiolkovsky Wheel) | L4, 12 km from Trojan Yards | 2 | **In** (project, then a port) | A town of 10,000; a big food market |
+| Orbital ring (the Selene Ring) | Lunar equator, 52 km up | 3 | **In** (project, built in arcs) | Shackleton output x1.6 |
 | Earth–Mars cycler (Aldrin cycler) | Earth–Mars | 2 | Planned | A moving station you catch on its schedule |
 | Space farms | Kernel, Belt | 2–3 | Partly in (Kernel food) | Food chain away from Earth |
 | Lofstrom loop (launch loop) | Earth equator | 2 | Planned (backdrop) | Cheaper Earth-to-orbit freight |
 | Asteroid colonies / hollowed-rock habitats | Belt | 3 | Planned | **The player's own base** |
 | O'Neill cylinder | Player base, L5 later | 3–4 | Planned | End-game home; grows in stages |
-| Orbital ring (lunar) | Moon | 4 | Maybe | Late lunar industry |
 | Solar shades, statites | Venus, Sun–Earth L1 | 4+ | Maybe | Terraforming hints, story beats |
 | McKendree cylinder, Bishop ring | — | Far future | Out of scope | Lore and dreams only |
 | Dyson swarms, Matrioshka brains, stellar engines | — | Far future | Out of scope | "What the Commons dream about" |
@@ -574,6 +574,40 @@ Sean: the rings were "very unrealistic and downright ugly"; the planet should ca
   - **Ships and stations:** they read a global occluder (`SkyKit.set_eclipse`). The sky copy shades the origin exactly when the real body would, so a station on Earth's night side goes dark, apart from its lights and a little planetshine.
   - **Title shots:** they set their own eclipses.
 - **Fix:** notices no longer leave a freed lambda behind when they are pushed out early.
+
+## A torus, a ring, and collisions (Oct 2026)
+
+Sean's direction (2026-10-05): add a Stanford torus and an orbital ring; ships collide with asteroids and other objects, with realistic damage and destruction.
+
+- **The Tsiolkovsky Wheel** (project `tsiolkovsky_wheel` at Trojan Yards, from day 15):
+  - **The design:** the 1975 NASA-Stanford study. A ring 1.8 km across with a 130 m tube, six spokes, a hub, and a mirror held still at 45 degrees. It turns once a minute for a gee at the rim.
+  - **Building it:** you watch it go up 12 km from the yards: hub and spokes, the tube in 48 sections, regolith shielding (it darkens), then lights and spin.
+  - **When finished:** it opens as a port (a "stanford" station model, docked at the hub) with a big food and people market.
+  - **Its position:** the location type `lagrange` takes `offset_km` in the turning frame.
+- **The Selene Ring** (project `selene_ring` at Shackleton Port, from day 100):
+  - **What it is:** an orbital ring 52 km above the Moon's equator (`bodies.json` structure `orbital_ring`).
+  - **Building it:** it goes up in arcs, the growing end lit; once closed, twelve tethers come down to lit ground stations.
+  - **Drawing it:** it is drawn at least a pixel or so thick, based on the distance to the ring itself rather than to the Moon.
+  - **On the title screen:** the low lunar run flies over the equator with the ring arcing up from the horizon.
+- **Collisions** (`sim/systems/damage_system.gd`, `balance.json` "damage"; flight scene):
+  - **What you can hit:** the station (as before), NPC ships, work pods, the big set pieces (Trojan's captured rock, Island One, the Wheel's ring), and drifting rock fields on some approaches. The fields are at Psyche Claims, Hektor Reach, Trojan Yards and Piazzi (`places.json` "hazards"); the approach corridor is kept clear, and rocks show on the scanner.
+  - **Momentum:** contacts trade real momentum. Rocks are pushed and set spinning, small ones shatter when hit hard, and you tumble.
+  - **The physics:** above 0.8 m/s, the energy your ship absorbs per kilogram (0.5 v^2 times your share of the reduced mass) over 50 J/kg is the damage to the module hit. The module is chosen by where the blow landed:
+    - the nose: command pod or avionics
+    - the middle: cargo bays
+    - the tail: tanks or drives
+    - the flanks: radiators
+  - **The keel:** a third of each hit, plus whatever a wrecked module can't absorb, goes into the keel. A 5 m/s knock costs a few per cent; 10 m/s badly damages a module and takes about 30% of the keel; 14 m/s into a station is a lost ship.
+  - **Effects:** damage takes its share of what each module gives (`ShipStats._sum`):
+    - drives push less
+    - holed tanks vent what they can't hold, and broken pods spill cargo
+    - radiators reject less, and habs keep you alive for less long
+  - **Repairs:** shipyards repair everything; other ports patch the worst back to 25% damage, at a premium.
+  - **Destruction:** a flash, debris, and the lifeboat away.
+    - The port's tug brings it in after 25 s.
+    - The insurance pool finds you a stock Mule for a 3,000 cr excess.
+    - Cargo and carried jobs go down with the ship; story favours are offered again.
+- **HUD and capture:** the HUD has a HULL row and a proximity alert for rocks on your course. `--crash=<dir>` shoots a rock strike and a wreck.
 
 ## Milestones
 

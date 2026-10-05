@@ -274,6 +274,28 @@
 				"headline": "Landauer Deep wakes its second core",
 				"body": "The second core at Landauer Deep is awake and, by its own account, 'still getting its bearings'. The Sufficiency has sent a thank-you note to every hauler who helped. Each one is different. Several are poems."
 			}
+		},
+		"tsiolkovsky_wheel": {
+			"announce": {
+				"dateline": "L4",
+				"headline": "A wheel for ten thousand at L4",
+				"body": "Today, Earth Standard Time, the Terran Compact announced the Tsiolkovsky Wheel: a Stanford torus 1.8 km across, to be built beside Trojan Yards, turning once a minute for a full gee. 'A town, not a posting,' said the Compact. Backers and haulers wanted: see Projects."
+			},
+			"complete": {
+				"headline": "The Tsiolkovsky Wheel turns",
+				"body": "The Tsiolkovsky Wheel is spun up, lit and breathing, and open to visitors at L4. Its first school opened this morning. The children were, the teachers report, unimpressed by the view within a week."
+			}
+		},
+		"selene_ring": {
+			"announce": {
+				"dateline": "The Moon",
+				"headline": "The Cooperative will put a ring round the Moon",
+				"body": "Today, Earth Standard Time, the Luna Cooperative announced the Selene Ring: an orbital ring 52 km above the Moon's equator, a cable running faster than orbit inside a sheath that stands still, with tethers to the ground. 'An elevator touches the Moon in one place,' they said. 'A ring touches it everywhere.' Backers wanted: see Projects."
+			},
+			"complete": {
+				"headline": "The Moon has a ring",
+				"body": "The last tether of the Selene Ring reached the ground at Mare Smythii this morning. The Moon is now, officially, a ringed world. Earth's night side can see it as a thin bright line."
+			}
 		}
 	}
 }

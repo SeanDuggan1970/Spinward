@@ -200,7 +200,7 @@
 	"shackleton_port": {
 		"name": "Shackleton Port",
 		"operator": "Luna Cooperative",
-		"description": "Polar orbit port above Shackleton crater. Surface crews and their AI rovers lift ice, regolith and helium-3 to it.",
+		"description": "Polar orbit port above Shackleton crater. Surface crews and their AI rovers lift ice, regolith and helium-3 to it. Below, if the Cooperative has its way, a ring will one day girdle the Moon.",
 		"location": {
 			"type": "orbit",
 			"parent": "moon",
@@ -350,8 +350,23 @@
 			}
 		],
 		"features": [
-			"captured_rock"
-		]
+			"captured_rock",
+			"stanford_torus"
+		],
+		"hazards": {
+			"rocks": 18,
+			"radius_m": [
+				1.0,
+				12.0
+			],
+			"field_m": [
+				250.0,
+				2500.0
+			],
+			"drift_mps": 0.1,
+			"look": "rubble",
+			"note": "spoil from the captured rock"
+		}
 	},
 	"kernel_l5": {
 		"name": "The Kernel",
@@ -691,6 +706,20 @@
 			"fare": 80,
 			"fare_per_t": 12,
 			"via": "A tender takes you across to the Stalk's anchor, 1,190 km out from Ceres' centre, then it is an afternoon down the ribbon."
+		},
+		"hazards": {
+			"rocks": 10,
+			"radius_m": [
+				1.0,
+				8.0
+			],
+			"field_m": [
+				400.0,
+				3000.0
+			],
+			"drift_mps": 0.04,
+			"look": "ice",
+			"note": "ice chunks off the Stalk's loading yard"
 		}
 	},
 	"psyche_claims": {
@@ -741,7 +770,21 @@
 			"medical": 0.2,
 			"water_ice": 3
 		},
-		"recipes": []
+		"recipes": [],
+		"hazards": {
+			"rocks": 36,
+			"radius_m": [
+				1.5,
+				26.0
+			],
+			"field_m": [
+				250.0,
+				4000.0
+			],
+			"drift_mps": 0.08,
+			"look": "metal",
+			"note": "tailings from the smelters, drifting"
+		}
 	},
 	"valhalla_station": {
 		"name": "Valhalla Station",
@@ -979,7 +1022,21 @@
 					"propellant": 2
 				}
 			}
-		]
+		],
+		"hazards": {
+			"rocks": 28,
+			"radius_m": [
+				2.0,
+				40.0
+			],
+			"field_m": [
+				300.0,
+				5000.0
+			],
+			"drift_mps": 0.05,
+			"look": "rubble",
+			"note": "rubble shed by Hektor's two lobes"
+		}
 	},
 	"landauer_deep": {
 		"name": "Landauer Deep",
@@ -1165,6 +1222,63 @@
 			"electronics": 0.4,
 			"medical": 0.15,
 			"habitat_modules": 0.3
+		},
+		"recipes": []
+	},
+	"tsiolkovsky_wheel": {
+		"name": "Tsiolkovsky Wheel",
+		"operator": "Terran Compact",
+		"opens_with": "tsiolkovsky_wheel",
+		"description": "A Stanford torus 1.8 km across, built at L4, 12 km from Trojan Yards: ten thousand people in a ring 130 m thick, turning once a minute for a full gee at the rim, with sunlight brought in by a great mirror over the hub. Farms, schools, a university and a waiting list. Named for the schoolteacher who saw it first.",
+		"location": {
+			"type": "lagrange",
+			"system": [
+				"earth",
+				"moon"
+			],
+			"point": "L4",
+			"offset_km": [
+				12.0,
+				0.0,
+				2.0
+			]
+		},
+		"station": {
+			"type": "stanford",
+			"hub_radius_m": 60,
+			"hub_length_m": 240,
+			"ring_radius_m": 900,
+			"ring_tube_m": 65,
+			"spokes": 6,
+			"spin_rpm": 1.0,
+			"colour": "offwhite",
+			"port_radius_m": 10
+		},
+		"services": [
+			"market",
+			"refuel"
+		],
+		"market": {
+			"food": 200,
+			"medical": 14,
+			"electronics": 30,
+			"water_ice": 160,
+			"oxygen": 100,
+			"machine_parts": 40,
+			"habitat_modules": 20,
+			"propellant": 80
+		},
+		"produces": {
+			"food": 6.0,
+			"electronics": 1.0,
+			"medical": 0.3
+		},
+		"consumes": {
+			"water_ice": 6.0,
+			"oxygen": 3.0,
+			"machine_parts": 1.0,
+			"habitat_modules": 0.3,
+			"propellant": 2.0
 		},
 		"recipes": []
 	}
