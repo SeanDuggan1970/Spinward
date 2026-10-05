@@ -98,6 +98,9 @@ func _ready() -> void:
 		if a.begins_with("--shipcam="):
 			_shipcam_tour.call_deferred(a.trim_prefix("--shipcam="))
 			return
+		if a.begins_with("--promo-ship="):
+			_promo_ship.call_deferred(a.trim_prefix("--promo-ship="), true)
+			return
 		if a.begins_with("--promo="):
 			_promo.call_deferred(a.trim_prefix("--promo="))
 			return
@@ -994,10 +997,78 @@ func _promo(dir: String) -> void:
 	_handle_events()
 	_sync_mode()
 	sim.advance_game_time(20.0 * 3600.0)
+	(_screen as MapScreen).set_view("map")
 	for _i in 30:
 		await get_tree().process_frame
 	_shot("%s/play-map.png" % dir)
+	await _promo_ship(dir, false)
 	get_tree().quit()
+
+
+## Store-page stills from the ship view: Kibo Ring to Halo Depot, then a deep
+## freighter across Saturn's system from Titan to Enceladus. The director's set-ups
+## without the overlay, and one with it.
+func _promo_ship(dir: String, quit_after: bool) -> void:
+	DirAccess.make_dir_recursive_absolute(dir)
+	_notices.visible = false
+	var trips := [
+		["kibo_ring", "halo_depot", "", [[0.002, ["station", "plume"]], [0.25, ["dolly", "world"]], [0.93, ["world", "longlens", "orbit"]]]],
+		["huygens_port", "plume_watch", "deep_freighter", [[0.003, ["station", "chase"]], [0.3, ["world", "longlens", "rim", "flyby"]], [0.6, ["world", "dolly", "orbit"]], [0.95, ["world", "longlens"]]]],
+	]
+	for trip in trips:
+		if trip[2] != "":
+			var hull: Dictionary = sim.data.ships[trip[2]]
+			sim.state.ship["hull"] = trip[2]
+			sim.state.ship["modules"] = hull["modules"].duplicate()
+			sim.state.ship["damage"] = {}
+			sim.state.ship["fuel_t"] = preload("res://sim/ship_stats.gd").fuel_capacity_t(sim.state.ship, sim.data)
+		sim.state.ship["cargo"] = {}
+		sim.state.location = {"status": "docked", "place": trip[0]}
+		_mode = ""
+		_sync_mode()
+		var err: String = sim.apply({"type": "depart", "to": trip[1]})
+		if err != "":
+			print("PROMO_SHIP_FAIL %s -> %s: %s" % [trip[0], trip[1], err])
+			continue
+		_handle_events()
+		_sync_mode()
+		var loc: Dictionary = sim.state.location
+		for moment in trip[3]:
+			sim.state.time_s = lerpf(float(loc["depart_t"]), float(loc["arrive_t"]), float(moment[0]))
+			var map: MapScreen = _screen
+			map.set_view("ship")
+			for _i in 10:
+				await get_tree().process_frame
+			var view = map._view
+			for shot in moment[1]:
+				view.mode = "director"
+				view._target_body = view._hero_body()
+				if shot in ["world", "longlens"] and view._target_body == "":
+					continue
+				if shot == "longlens" and view._angular(view._target_body) > deg_to_rad(18.0):
+					continue
+				if shot == "station" and view._nearest_station() == "":
+					continue
+				view.shot = shot
+				view.shot_label = shot.to_upper()
+				view.shot_clock = view.SHOT_S * 0.5
+				view._fade.color.a = 0.0
+				map._overlay.visible = false
+				_bar.visible = false
+				_ticker.visible = false
+				for _i in 8:
+					await get_tree().process_frame
+				_shot("%s/ship-%s-%s-%d-%s.png" % [dir, trip[0], trip[1], int(float(moment[0]) * 100.0), shot])
+		# One with the overlay, as you would play it.
+		var map2: MapScreen = _screen
+		map2._overlay.visible = true
+		_bar.visible = true
+		_ticker.visible = true
+		for _i in 8:
+			await get_tree().process_frame
+		_shot("%s/ship-hud-%s-%s.png" % [dir, trip[0], trip[1]])
+	if quit_after:
+		get_tree().quit()
 
 
 ## Windowed: at Psyche Claims, nudge into a rock at 5 m/s (damage, sparks), then hit

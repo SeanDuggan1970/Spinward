@@ -3,8 +3,10 @@
     godot --path . --resolution 1920x1080 -- --promo=<shots>
     python tools/make_itch_images.py <shots> [out=build/itch]
 
+(--promo-ship=<shots> re-shoots just the ship-view stills into the same folder.)
+
 Writes cover.png (630x500, itch's cover size) and cover@2x.png, banner.png
-(1920x480, for the page header), and the numbered 1920x1080 screenshots, with the
+(1920x480, for the page header), and 19 numbered 1920x1080 screenshots, with the
 title lettered in the game's own font (Consolas) and amber.
 """
 import os, sys
@@ -88,23 +90,32 @@ banner = Image.composite(Image.new("RGB", banner.size, (0, 0, 0)), banner, fade.
 logo(banner, 600, 130, 104, "Real orbits  ·  real ships  ·  a hopeful future")
 banner.save(os.path.join(out, "banner.png"))
 
-# Screenshots, in page order: what it looks like, then what you do.
+# Screenshots, in page order: what it looks like, then what you do. The ship view
+# (in transit, the director's set-ups) is woven through.
 picks = [
     ("cine-jovian-70.png", "jupiter-callisto"),
+    ("ship-huygens_port-plume_watch-30-longlens.png", "ship-view-saturn-long-lens"),
     ("play-cockpit-tsiolkovsky_wheel.png", "docking-at-a-stanford-torus"),
     ("cine-enceladus-35.png", "enceladus-plumes"),
+    ("ship-huygens_port-plume_watch-60-dolly.png", "ship-view-deep-freighter"),
     ("play-cockpit-kibo_ring.png", "kibo-ring-night-side"),
+    ("ship-kibo_ring-halo_depot-0-plume.png", "ship-view-burn-over-earth"),
     ("cine-mars-70.png", "mars-and-the-pavonis-line"),
+    ("ship-huygens_port-plume_watch-60-world.png", "ship-view-saturn"),
     ("play-ride-luna-line.png", "riding-the-luna-line"),
     ("play-chase-landauer_deep.png", "landauer-deep-iapetus"),
+    ("ship-kibo_ring-halo_depot-0-station.png", "ship-view-leaving-kibo-ring"),
     ("cine-lunar-70.png", "under-the-selene-ring"),
+    ("ship-huygens_port-plume_watch-30-flyby.png", "ship-view-fly-past"),
     ("play-map.png", "plotted-transfer"),
     ("play-station-projects.png", "projects-and-pitches"),
     ("play-station-spaceline.png", "the-spaceline-news"),
-    ("play-chase-kernel_l5.png", "island-one-at-l5"),
     ("cine-sail-35.png", "lightfoot-solar-sail"),
     ("controls.png", "controls"),
 ]
+for old in os.listdir(out):
+    if old[:2].isdigit() and old[2] == "-" and old.endswith(".png"):
+        os.remove(os.path.join(out, old))
 for i, (name, label) in enumerate(picks, 1):
     shot(name).save(os.path.join(out, "%02d-%s.png" % (i, label)))
 print("wrote", out)
