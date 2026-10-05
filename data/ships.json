@@ -162,5 +162,19 @@
 		"look": {
 			"cargo_layout": "pair"
 		}
+	},
+	"climber": {
+		"name": "Elevator climber",
+		"description": "A cab and two containers that ride the ribbon on traction wheels. It goes up and down, and nowhere else.",
+		"spine": "mule_spine",
+		"modules": {
+			"command.0": "drone_core",
+			"cargo.0": "cargo_pod_l",
+			"cargo.1": "cargo_pod_l",
+			"drive.0": "climber_cab"
+		},
+		"look": {
+			"cargo_layout": "pair"
+		}
 	}
 }

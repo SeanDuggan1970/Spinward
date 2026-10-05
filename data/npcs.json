@@ -550,6 +550,118 @@
 				60,
 				140
 			]
+		},
+		"luna_climbers": {
+			"operator": "Luna Cooperative",
+			"hull": "climber",
+			"behaviour": "route",
+			"count": 2,
+			"elevator": true,
+			"names": [
+				"Climber 14",
+				"Slow Descent"
+			],
+			"route": [
+				{
+					"at": "halo_depot",
+					"buy": [
+						"food",
+						"machine_parts",
+						"electronics"
+					],
+					"to": "line_foot"
+				},
+				{
+					"at": "line_foot",
+					"buy": [
+						"regolith",
+						"refined_metals",
+						"oxygen"
+					],
+					"to": "halo_depot"
+				}
+			],
+			"fill": 0.5,
+			"dwell_hours": [
+				6,
+				20
+			]
+		},
+		"stalk_climbers": {
+			"operator": "Belt Assembly",
+			"hull": "climber",
+			"behaviour": "route",
+			"count": 2,
+			"elevator": true,
+			"names": [
+				"Stalk 3",
+				"Stalk 9"
+			],
+			"route": [
+				{
+					"at": "piazzi_station",
+					"buy": [
+						"food",
+						"medical",
+						"machine_parts"
+					],
+					"to": "stalk_foot"
+				},
+				{
+					"at": "stalk_foot",
+					"buy": [
+						"water_ice",
+						"volatiles"
+					],
+					"to": "piazzi_station"
+				}
+			],
+			"fill": 0.5,
+			"dwell_hours": [
+				4,
+				12
+			]
+		},
+		"pavonis_climbers": {
+			"operator": "Mars Accord",
+			"hull": "climber",
+			"behaviour": "route",
+			"count": 2,
+			"elevator": true,
+			"names": [
+				"Tharsis Lift",
+				"Olympus Patience"
+			],
+			"commission_project": "pavonis_line",
+			"commission_days": [
+				0,
+				10
+			],
+			"route": [
+				{
+					"at": "ares_ring",
+					"buy": [
+						"machine_parts",
+						"electronics",
+						"medical"
+					],
+					"to": "pavonis_foot"
+				},
+				{
+					"at": "pavonis_foot",
+					"buy": [
+						"food",
+						"deuterium",
+						"water_ice"
+					],
+					"to": "ares_ring"
+				}
+			],
+			"fill": 0.5,
+			"dwell_hours": [
+				12,
+				40
+			]
 		}
 	},
 	"chatter": {
@@ -616,6 +728,11 @@
 			"{ship}, {operator}: sail set for {to}. See you in half a year.",
 			"{ship} unfurling. Clarke, thank you for the push. Next stop {to}.",
 			"{ship} is under sail for {to}, carrying {cargo}. No hurry."
+		],
+		"climb_depart": [
+			"{ship}, {operator}: on the ribbon from {from}, bound for {to} with {cargo}.",
+			"{ship} clamped on and climbing. {to} in a while. Nobody hurry.",
+			"{ship} away from {from} for {to}. Wheels warm, ribbon clean."
 		]
 	}
 }

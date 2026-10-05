@@ -42,7 +42,7 @@ func tick(_game_dt: float) -> void:
 	if s.location.get("status") == "docked":
 		if c["last_dock"] != s.location["place"]:
 			_on_docked()
-		elif s.time_s >= float(c["next_t"].get(s.location["place"], 0.0)):
+		elif s.time_s >= float(c["next_t"].get(s.location["place"], 0.0)) and not sim().data.places[s.location["place"]].has("foot_of"):
 			_with_rng(func(): _refresh_board(s.location["place"]))
 	else:
 		c["last_dock"] = ""
@@ -69,6 +69,8 @@ func _on_docked() -> void:
 			_collect(job)
 		elif job["state"] == "carried" and job["to"] == place:
 			_deliver(job)
+	if sim().data.places[place].has("foot_of"):
+		return
 	_with_rng(func():
 		_refresh_board(place)
 		_maybe_approach(place))

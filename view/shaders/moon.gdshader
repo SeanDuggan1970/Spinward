@@ -30,12 +30,21 @@ uniform float bright_spots = 0.0;
 // Surface grain (regolith, rubble) cells per body radius; shows only close up.
 uniform float grain_per_radius = 5200.0;
 
+#include "res://view/shaders/eclipse.gdshaderinc"
+
+// World direction towards the Sun, and the body whose shadow may fall on this one
+// (xyz centre in world space, w radius; w 0 for none): Saturn eclipsing Enceladus.
+uniform vec3 sun_dir = vec3(1.0, 0.0, 0.0);
+uniform vec4 occluder = vec4(0.0);
+
 varying vec3 dir;
 varying vec3 obj_normal;
+varying vec3 world_pos;
 
 void vertex() {
 	dir = VERTEX;
 	obj_normal = NORMAL;
+	world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 }
 
 // One layer of craters, `cells` cells across the unit sphere's radius. Only the 2x2x2
@@ -194,7 +203,7 @@ void fragment() {
 		float cap = smoothstep(ice_caps, ice_caps + 0.03, abs(p.y) + (sw_fbm(p * 8.0 + seed, 4) - 0.5) * 0.06);
 		albedo = mix(albedo, vec3(0.92, 0.92, 0.95), cap);
 	}
-	ALBEDO = clamp(albedo * (1.0 + bright), 0.0, 1.0);
+	ALBEDO = clamp(albedo * (1.0 + bright), 0.0, 1.0) * mix(0.02, 1.0, sw_sunlit(world_pos, normalize(sun_dir), occluder));
 	ROUGHNESS = 1.0;
 	vec3 g = grad - p * dot(grad, p);
 	vec3 n_obj = normalize(normalize(obj_normal) - g * relief);

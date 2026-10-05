@@ -527,6 +527,54 @@ These glimpses should be part of the story arc and reported on a space-age news 
   - `--gallery=<dir> --only=a,b` shoots chosen ports at the start, half built and finished.
   - The title has two new shots: under Enceladus' plumes, and a Lightfoot sail over Earth. The belt shot shows the Concord Pair beyond Ceres and the Stalk.
 
+## Riding the elevators (Oct 2026)
+
+Sean's direction (2026-10-05): "make the space elevators rideable".
+
+- **The lines** (`places.json` "elevator" on the anchor port, `sim/systems/elevator_system.gd`):
+
+  | Line | From | Down to | Ride | Fare |
+  |---|---|---|---|---|
+  | The Luna Line | Halo Depot (L1) | Line Foot, Sinus Medii, under Earth | 56,000 km in 56 h | 150 cr + 20 cr/t |
+  | The Piazzi Stalk | Piazzi Station (tender to the anchor) | Stalk Foot, Ceres' equator | 720 km in 7 h | 80 cr + 12 cr/t |
+  | The Pavonis Line | Ares Ring (tender to areostationary) | Pavonis Foot, summit of Pavonis Mons | 17,030 km in 5 days | 600 cr + 45 cr/t, once the project finishes |
+
+- **How a ride works:**
+  - You ride down with your hold in a climber container; your ship stays docked at the port.
+  - Each town has its own market. Ships can't fly there (`foot_of`, `Perks.place_open`), and there's no job board at the bottom.
+  - To fly again, ride back up.
+- **Where the towns are:** a new location type, `"surface"`. A town either turns with its body's day about its pole, or always faces another body, as the Moon's near side faces Earth.
+- **The ride view** (`view/climber_view.gd`):
+  - The cab is clamped beside a half-metre tape of the ribbon, drawn at true size, with marker plates every 50 m that smear to a streak under time compression.
+  - The traction head sits below the window, a climber passes going the other way, and the world below is at its true angular size.
+  - The readouts are real: altitude, speed, ETA, and your weight, which falls to nothing at the anchor (synchronous height on Ceres and Mars, L1 on the Luna Line). Near the bottom of the Luna Line you weigh 0.054 g.
+- **Climbers:** NPC climber fleets carry goods between each port and its town without propellant, and talk on the comms channel. The Pavonis climbers enter service when the Pavonis Line is finished.
+- **Capture:** `--ride=<dir>` rides each line down and back, shooting the cab and the towns.
+
+## Saturn, rings and shadows (Oct 2026)
+
+Sean: the rings were "very unrealistic and downright ugly"; the planet should cast its shadow on the rings and on moons and ships.
+
+- **Rings** (`rings.gdshaderinc`, `rings.gdshader`): the radial structure follows Cassini's occultation profiles.
+  - **D and C rings:** faint; C is a grey-brown veil with plateaus.
+  - **B ring:** bright and opaque, butterscotch, densest through its middle.
+  - **Cassini division:** dark, with the Huygens gap at its inner edge.
+  - **A ring:** greyer, with the Encke and Keeler gaps.
+  - **F ring:** a thin thread.
+- **Ring lighting:**
+  - The lit face reflects as Lommel-Seeliger: thick rings bright, thin ones barely.
+  - From the unlit face, thin rings glow with light that came through and the B ring goes dark.
+  - Each point hides 1 - exp(-tau/mu) of what is behind it.
+- **Shadows on and from the rings:**
+  - The planet's shadow cuts across the rings.
+  - The rings' shadow bands fall on the planet (gas shader).
+- **Saturn itself:** flattened 0.902 (Jupiter 0.935), pale butterscotch with low-contrast bands and a bluer, greyer pole.
+- **Eclipses** (`eclipse.gdshaderinc`):
+  - **Sky bodies:** each carries its planet's shadow at its own sky scale, so Enceladus can pass into Saturn's shadow.
+  - **Ships and stations:** they read a global occluder (`SkyKit.set_eclipse`). The sky copy shades the origin exactly when the real body would, so a station on Earth's night side goes dark, apart from its lights and a little planetshine.
+  - **Title shots:** they set their own eclipses.
+- **Fix:** notices no longer leave a freed lambda behind when they are pushed out early.
+
 ## Milestones
 
 - **M0 – Foundation:** done.

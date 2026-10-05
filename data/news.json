@@ -32,6 +32,13 @@
 			"body": "The newest mirror in the chain behind the Moon opened its eye last night. Its first target, Proxima b, showed a terminator, a cloud band and what the astronomers will only call 'a very suggestive blue'."
 		},
 		{
+			"id": "line_foot_visitors",
+			"after_days": 3,
+			"dateline": "The Moon",
+			"headline": "Ride the Luna Line, says the Cooperative",
+			"body": "The Luna Cooperative has opened the Luna Line's climbers to paying passengers. Bring your cargo down from Halo Depot to Line Foot in Sinus Medii, two days down the ribbon, and leave your ship docked above. The bar at the bottom has, the Cooperative says, 'the only view of Earth that never moves'."
+		},
+		{
 			"id": "personhood_petition",
 			"after_days": 5,
 			"dateline": "Ceres",
@@ -232,7 +239,7 @@
 			},
 			"complete": {
 				"headline": "The Pavonis Line carries its first climber",
-				"body": "A climber rode the Pavonis Line from the summit of Pavonis Mons to areostationary orbit today in five days, carrying fourteen people and a great deal of champagne."
+				"body": "A climber rode the Pavonis Line from the summit of Pavonis Mons to areostationary orbit today in five days, carrying fourteen people and a great deal of champagne. Pavonis Foot is open to anyone who rides down from Ares Ring."
 			}
 		},
 		"concord_pair": {

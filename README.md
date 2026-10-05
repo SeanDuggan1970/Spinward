@@ -26,6 +26,8 @@ The system is rich and getting richer. The **Spaceline** news feed (a tab at eve
 - **Landauer Deep:** a station at Iapetus that AI minds built for themselves, after the Belt votes them persons.
 - **Discoveries:** new finds that leave a port richer for good.
 
+You can ride the space elevators down to towns on the Moon, Ceres and (once it is built) Mars, with your cargo, and trade there. Your ship waits at the port above. Saturn's rings follow Cassini's measurements, and planets cast real shadows on rings, moons and ships.
+
 There are cryovolcano plumes at Enceladus, Io's Pele, the Piazzi Stalk elevator on Ceres, and a starshade at Valhalla.
 
 The whole solar system is there, on orbits fitted to JPL Horizons: the planets, the big moons, the main asteroids, and Pluto out to Sedna. There are new ports at Mars, Ceres, Psyche, Callisto, Titan and Enceladus. Getting there takes a refit (tanks in the cargo bays) and patience: Mars is about 50 days away for a Mule, and the outer worlds need better drives and more life support than a starter ship has. Voyages climb out of each gravity well on a spiral, cross the Sun's domain on a guided burn-and-coast arc, and spiral down at the far end, with time compression up to x1,000,000.

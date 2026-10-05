@@ -79,18 +79,22 @@ static func body_mesh(data, body: String, radius: float) -> MeshInstance3D:
 	sphere.rings = 32
 	mi.mesh = sphere
 	mi.material_override = body_material(body, look, float(b.get("radius_m", 0.0)))
-	if b.has("pole_ra_deg"):
-		mi.basis = pole_basis(float(b["pole_ra_deg"]), float(b["pole_dec_deg"]))
+	var pole := pole_basis(float(b["pole_ra_deg"]), float(b["pole_dec_deg"])) if b.has("pole_ra_deg") else Basis.IDENTITY
+	# Fast-spinning giants bulge: Saturn is a tenth wider than it is tall.
+	mi.basis = pole * Basis.from_scale(Vector3(1.0, float(b.get("flattening", 1.0)), 1.0))
 	if float(look.get("rings", 0.0)) > 0.0:
 		var ring := MeshInstance3D.new()
+		ring.name = "Rings"
 		var plane := PlaneMesh.new()
-		plane.size = Vector2(4.6, 4.6)
+		plane.size = Vector2(4.7, 4.7)
 		ring.mesh = plane
 		var rm := ShaderMaterial.new()
 		rm.shader = load("res://view/shaders/rings.gdshader")
 		ring.material_override = rm
 		ring.scale = Vector3.ONE * radius
+		ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		mi.add_child(ring)
+		(mi.material_override as ShaderMaterial).set_shader_parameter("ring_shadow", 1.0)
 	return mi
 
 
@@ -112,10 +116,28 @@ static func update_body(mesh: MeshInstance3D, sun_dir: Vector3, t: float) -> voi
 	if m == null:
 		return
 	m.set_shader_parameter("sun_dir", sun_dir)
+	var rings := mesh.get_node_or_null("Rings") as MeshInstance3D
+	if rings:
+		(rings.material_override as ShaderMaterial).set_shader_parameter("sun_dir", sun_dir)
 	var day := float(m.get_meta("day_s", 86164.1))
 	if day != 0.0:
 		# The phase is arbitrary (no real geography to line up).
 		m.set_shader_parameter("spin", fposmod(t / day, 1.0) * TAU)
+
+
+## The shadow one body casts on another: `occluder_at` and `radius` in the scene
+## where `mesh` is drawn (bodies on the sky shell each have their own scale).
+static func set_occluder(mesh: MeshInstance3D, occluder_at: Vector3, radius: float) -> void:
+	var m := mesh.material_override as ShaderMaterial
+	if m:
+		m.set_shader_parameter("occluder", Vector4(occluder_at.x, occluder_at.y, occluder_at.z, radius))
+
+
+## Ships and stations in this scene: the Sun's direction and the body whose shadow
+## they can be in (radius 0 for none). Every 3D scene sets it, or clears it.
+static func set_eclipse(sun_dir: Vector3, occluder_at: Vector3 = Vector3.ZERO, radius: float = 0.0) -> void:
+	RenderingServer.global_shader_parameter_set("sw_sun", sun_dir.normalized())
+	RenderingServer.global_shader_parameter_set("sw_occluder", Vector4(occluder_at.x, occluder_at.y, occluder_at.z, radius))
 
 
 ## Bodies worth drawing from `here` (sim position): anything at least `min_deg`

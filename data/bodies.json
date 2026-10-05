@@ -341,7 +341,8 @@
 			"bands": 14.0,
 			"turbulence": 0.7,
 			"storm": 1.0
-		}
+		},
+		"flattening": 0.935
 	},
 	"io": {
 		"name": "Io",
@@ -510,13 +511,16 @@
 		},
 		"look": {
 			"shader": "gas",
-			"colour_a": "#efe2bf",
-			"colour_b": "#d2b47c",
-			"colour_c": "#b8955e",
-			"bands": 18.0,
-			"turbulence": 0.35,
-			"rings": 1.0
-		}
+			"colour_a": "#e6d6ae",
+			"colour_b": "#d6bd88",
+			"colour_c": "#c4a774",
+			"bands": 24.0,
+			"turbulence": 0.22,
+			"rings": 1.0,
+			"polar_colour": "#a7ab9c",
+			"polar_lat": 0.78
+		},
+		"flattening": 0.902
 	},
 	"enceladus": {
 		"name": "Enceladus",
@@ -877,5 +881,6 @@
 			"basin_flooding": 0.0
 		}
 	},
-	"_note_plumes": "'plumes' (view-only): kind jets | umbrella | geyser, lat/lon in degrees (lon 'limb' puts it on the limb as seen), sizes in body radii, jets = how many, spread_deg = how far around the site they scatter. 'structures': space elevators (top_r = the synchronous anchor, counter_r = the counterweight, both in radii; 'project' grows it with that megaproject)."
+	"_note_plumes": "'plumes' (view-only): kind jets | umbrella | geyser, lat/lon in degrees (lon 'limb' puts it on the limb as seen), sizes in body radii, jets = how many, spread_deg = how far around the site they scatter. 'structures': space elevators (top_r = the synchronous anchor, counter_r = the counterweight, both in radii; 'project' grows it with that megaproject).",
+	"_note_flattening": "'flattening': polar over equatorial radius, for the fast-spinning giants (view-only)."
 }

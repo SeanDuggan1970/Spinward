@@ -8,22 +8,22 @@ Run: 180 game days, upgrades on, greedy single-good trader, always auto-docks (p
 
 | Seed | End credits | Trips | First upgrade (game day) |
 |---|---|---|---|
-| 1 | 140479 | 60 | 26.3 |
-| 2 | 146646 | 58 | 10.0 |
-| 3 | 106369 | 63 | 8.8 |
-| 4 | 50177 | 57 | 13.7 |
-| 5 | 104768 | 62 | 22.6 |
-| **mean / median** | **109688** | | **13.7** |
+| 1 | 148196 | 62 | 29.1 |
+| 2 | 147321 | 61 | 14.0 |
+| 3 | 42127 | 64 | 8.8 |
+| 4 | 28603 | 60 | 14.2 |
+| 5 | 130620 | 63 | 27.0 |
+| **mean / median** | **99373** | | **14.2** |
 
 ## Outcome (seed 1)
 
 | Measure | Value |
 |---|---|
 | Start credits | 10000 |
-| End credits | 140479 |
-| Net worth gain per game day | 724 |
-| Trips | 60 |
-| Average trip | 3.00 game days |
+| End credits | 148196 |
+| Net worth gain per game day | 767 |
+| Trips | 62 |
+| Average trip | 2.90 game days |
 | Cargo capacity at end | 40 t |
 
 ## Credits over time
@@ -31,75 +31,72 @@ Run: 180 game days, upgrades on, greedy single-good trader, always auto-docks (p
 | Day | Credits |
 |---|---|
 | 0 | 10000 |
-| 13 | 18313 |
-| 20 | 45303 |
-| 33 | 33647 |
-| 42 | 37653 |
-| 50 | 44468 |
-| 61 | 22594 |
-| 72 | 38188 |
-| 80 | 23105 |
-| 90 | 50213 |
-| 100 | 32915 |
-| 111 | 36143 |
-| 122 | 60817 |
-| 132 | 71251 |
-| 143 | 80421 |
-| 150 | 84925 |
-| 160 | 106743 |
-| 171 | 119486 |
-| 181 | 140479 |
+| 12 | 31961 |
+| 23 | 50191 |
+| 30 | 32151 |
+| 42 | 52795 |
+| 52 | 41827 |
+| 60 | 25916 |
+| 71 | 37291 |
+| 83 | 38772 |
+| 93 | 33605 |
+| 102 | 42761 |
+| 112 | 52151 |
+| 121 | 66667 |
+| 134 | 69766 |
+| 141 | 81366 |
+| 150 | 104494 |
+| 162 | 109998 |
+| 170 | 131562 |
+| 180 | 148196 |
 
 ## Milestones
 
-- Day 26.3: fitted 20 t cargo container at Trojan Yards (credits 30157)
-- Day 58.5: fitted 20 t cargo container at Kibo Ring (credits 30817)
-- Day 72.3: fitted 6 t propellant tank at Kibo Ring (credits 22688)
-- Day 90.5: fitted 3 MW radiator wing at Trojan Yards (credits 40213)
-- Day 90.5: fitted 3 MW radiator wing at Trojan Yards (credits 30213)
+- Day 29.1: fitted 20 t cargo container at Kibo Ring (credits 27553)
+- Day 42.8: fitted 20 t cargo container at Trojan Yards (credits 26795)
+- Day 52.2: fitted 6 t propellant tank at Kibo Ring (credits 26327)
+- Day 56.4: fitted 3 MW radiator wing at Trojan Yards (credits 32060)
+- Day 56.4: fitted 3 MW radiator wing at Trojan Yards (credits 22060)
 
 ## Routes the bot used
 
 | Route (good) | Legs | Total profit | Profit per leg | Profit per game day |
 |---|---|---|---|---|
-| Kalpana One → The Kernel (Medical supplies) | 5 | 44033 | 8806 | 2672 |
-| Kibo Ring → Kalpana One (Food) | 3 | 29291 | 9763 | 13342 |
-| Kibo Ring → Clarke Exchange (Food) | 3 | 20051 | 6683 | 3832 |
-| Kalpana One → Trojan Yards (Electronics) | 1 | 19585 | 19585 | 5051 |
-| Clarke Exchange → Trojan Yards (Electronics) | 2 | 19371 | 9685 | 2864 |
-| Trojan Yards → Kalpana One (Habitat modules) | 2 | 19105 | 9552 | 2847 |
-| Farside Array → Trojan Yards (Electronics) | 3 | 18862 | 6287 | 1725 |
-| Trojan Yards → Farside Array (Electronics) | 4 | 18284 | 4571 | 1245 |
-| Kibo Ring → Trojan Yards (Electronics) | 2 | 12295 | 6147 | 1698 |
-| Halo Depot → Kibo Ring (Propellant) | 2 | 10186 | 5093 | 1139 |
-| Trojan Yards → Clarke Exchange (Food) | 1 | 8495 | 8495 | 1971 |
-| Shackleton Port → Trojan Yards (Electronics) | 1 | 7731 | 7731 | 2636 |
-| Farside Array → Clarke Exchange (Food) | 1 | 5870 | 5870 | 1468 |
-| Kibo Ring → Clarke Exchange (Machine parts) | 1 | 5486 | 5486 | 3593 |
-| The Kernel → Kalpana One (Machine parts) | 1 | 5359 | 5359 | 1463 |
-| Shackleton Port → Farside Array (Food) | 1 | 4186 | 4186 | 2251 |
-| Kalpana One → Clarke Exchange (Electronics) | 1 | 3820 | 3820 | 3523 |
-| Shackleton Port → Kibo Ring (Propellant) | 1 | 3311 | 3311 | 777 |
-| The Kernel → Shackleton Port (Medical supplies) | 1 | 3241 | 3241 | 1109 |
-| Kibo Ring → Kalpana One (Machine parts) | 1 | 3097 | 3097 | 4151 |
-| Farside Array → Shackleton Port (Food) | 1 | 1854 | 1854 | 1199 |
-| Clarke Exchange → Kalpana One (Food) | 1 | 1808 | 1808 | 1032 |
-| Clarke Exchange → The Kernel (Refined metals) | 1 | 1773 | 1773 | 455 |
-| The Kernel → Farside Array (Medical supplies) | 1 | 1713 | 1713 | 502 |
-| Trojan Yards → Kibo Ring (Propellant) | 1 | 1632 | 1632 | 399 |
-| Farside Array → The Kernel (Medical supplies) | 1 | 1553 | 1553 | 465 |
-| Clarke Exchange → Kibo Ring (empty) | 1 | -60 | -60 | -56 |
-| Trojan Yards → Halo Depot (empty) | 1 | -60 | -60 | -19 |
-| Trojan Yards → Farside Array (Food) | 1 | -100 | -100 | -25 |
-| The Kernel → Kibo Ring (empty) | 4 | -240 | -60 | -20 |
-| Halo Depot → Shackleton Port (Food) | 1 | -506 | -506 | -326 |
-| Kalpana One → Farside Array (Electronics) | 1 | -769 | -769 | -210 |
-| Clarke Exchange → Trojan Yards (Food) | 2 | -815 | -407 | -95 |
-| Farside Array → Halo Depot (Food) | 2 | -1718 | -859 | -407 |
-| Kalpana One → The Kernel (Machine parts) | 1 | -7285 | -7285 | -1931 |
-| Trojan Yards → Kalpana One (Electronics) | 1 | -9158 | -9158 | -2764 |
-| Trojan Yards → The Kernel (Habitat modules) | 1 | -12762 | -12762 | -2838 |
-| The Kernel → Trojan Yards (Habitat modules) | 1 | -13692 | -13692 | -3179 |
+| Kalpana One → The Kernel (Medical supplies) | 4 | 52901 | 13225 | 3995 |
+| Kibo Ring → Clarke Exchange (Food) | 4 | 42353 | 10588 | 5997 |
+| Kibo Ring → Kalpana One (Food) | 5 | 35098 | 7019 | 8176 |
+| Kalpana One → Trojan Yards (Electronics) | 2 | 21751 | 10875 | 3096 |
+| Kibo Ring → Clarke Exchange (Machine parts) | 2 | 16685 | 8342 | 5515 |
+| Trojan Yards → Halo Depot (Electronics) | 1 | 14250 | 14250 | 4043 |
+| Halo Depot → Kibo Ring (Propellant) | 2 | 11786 | 5893 | 1328 |
+| Farside Array → Halo Depot (Food) | 2 | 10753 | 5376 | 2314 |
+| Shackleton Port → Farside Array (Food) | 2 | 8225 | 4112 | 2096 |
+| The Kernel → Kalpana One (Habitat modules) | 1 | 7929 | 7929 | 2370 |
+| The Kernel → Clarke Exchange (Machine parts) | 2 | 6300 | 3150 | 804 |
+| Trojan Yards → Kalpana One (Habitat modules) | 1 | 5886 | 5886 | 1688 |
+| Kalpana One → Shackleton Port (Food) | 1 | 5504 | 5504 | 1163 |
+| Clarke Exchange → The Kernel (Machine parts) | 1 | 5483 | 5483 | 1194 |
+| Halo Depot → Clarke Exchange (Propellant) | 1 | 4070 | 4070 | 954 |
+| Trojan Yards → Halo Depot (Machine parts) | 1 | 3988 | 3988 | 1093 |
+| Clarke Exchange → Trojan Yards (Food) | 1 | 3415 | 3415 | 815 |
+| Kibo Ring → Kalpana One (Electronics) | 1 | 2962 | 2962 | 4026 |
+| Kalpana One → Clarke Exchange (Electronics) | 1 | 2824 | 2824 | 2605 |
+| Halo Depot → Farside Array (Electronics) | 1 | 2793 | 2793 | 1326 |
+| Kalpana One → The Kernel (Machine parts) | 1 | 2544 | 2544 | 688 |
+| Trojan Yards → The Kernel (Food) | 1 | 2334 | 2334 | 450 |
+| Farside Array → Trojan Yards (Food) | 1 | 1588 | 1588 | 433 |
+| Clarke Exchange → Kibo Ring (Propellant) | 1 | 1399 | 1399 | 879 |
+| Clarke Exchange → Kalpana One (Machine parts) | 1 | 1174 | 1174 | 825 |
+| The Kernel → Halo Depot (empty) | 1 | 0 | 0 | 0 |
+| Kalpana One → Kibo Ring (empty) | 2 | -120 | -60 | -107 |
+| Trojan Yards → Kalpana One (Electronics) | 1 | -282 | -282 | -85 |
+| The Kernel → Kibo Ring (empty) | 6 | -360 | -60 | -20 |
+| Clarke Exchange → Trojan Yards (Electronics) | 4 | -1102 | -275 | -76 |
+| Clarke Exchange → The Kernel (Refined metals) | 2 | -1193 | -596 | -159 |
+| Clarke Exchange → Shackleton Port (Food) | 1 | -1477 | -1477 | -328 |
+| The Kernel → Kalpana One (Machine parts) | 1 | -4219 | -4219 | -1125 |
+| Trojan Yards → Clarke Exchange (Machine parts) | 1 | -9351 | -9351 | -2136 |
+| Trojan Yards → The Kernel (Habitat modules) | 2 | -23241 | -11620 | -2365 |
 
 ## Best margin per route at start (prices at target stock)
 
@@ -112,13 +109,13 @@ Top 12 by margin as a fraction of base price.
 | Kibo Ring | Trojan Yards | Electronics | 6738 | 225% |
 | Kibo Ring | Plume Watch | Electronics | 6738 | 225% |
 | Halo Depot | The Kernel | Oxygen | 202 | 225% |
+| Kalpana One | Trojan Yards | Electronics | 6738 | 225% |
 | Shackleton Port | Clarke Exchange | Propellant | 269 | 225% |
 | Shackleton Port | Trojan Yards | Propellant | 269 | 225% |
-| Trojan Yards | The Kernel | Habitat modules | 4941 | 225% |
 | Kalpana One | Plume Watch | Electronics | 6738 | 225% |
+| Trojan Yards | The Kernel | Habitat modules | 4941 | 225% |
+| Kalpana One | Pavonis Foot | Electronics | 6738 | 225% |
 | Trojan Yards | Ares Ring | Habitat modules | 4941 | 225% |
-| Kalpana One | Trojan Yards | Electronics | 6738 | 225% |
-| Kibo Ring | Halo Depot | Food | 1347 | 225% |
 
 ## Best margin per route at the end
 
@@ -126,15 +123,15 @@ Top 12 by margin as a fraction of base price.
 
 | From | To | Good | Margin (cr/t) | Margin / base |
 |---|---|---|---|---|
-| Ares Ring | Psyche Claims | Food | 1310 | 218% |
-| Ares Ring | Farside Array | Food | 1310 | 218% |
-| Ares Ring | Halo Depot | Food | 1310 | 218% |
-| Kibo Ring | Trojan Yards | Electronics | 6543 | 218% |
-| Kibo Ring | Plume Watch | Electronics | 6543 | 218% |
+| Pavonis Foot | Line Foot | Food | 1324 | 221% |
+| Ares Ring | Psyche Claims | Food | 1311 | 219% |
+| Ares Ring | Line Foot | Food | 1311 | 219% |
+| Kibo Ring | Plume Watch | Electronics | 6517 | 217% |
 | Landauer Deep | Psyche Claims | Machine parts | 2604 | 217% |
-| Landauer Deep | Hektor Reach | Electronics | 6473 | 216% |
+| Landauer Deep | Pavonis Foot | Electronics | 6473 | 216% |
+| Landauer Deep | Ares Ring | Electronics | 6473 | 216% |
 | Landauer Deep | Plume Watch | Electronics | 6473 | 216% |
+| Landauer Deep | Piazzi Station | Electronics | 6473 | 216% |
+| Landauer Deep | Hektor Reach | Electronics | 6473 | 216% |
 | Landauer Deep | Huygens Port | Electronics | 6473 | 216% |
 | Landauer Deep | Valhalla Station | Electronics | 6473 | 216% |
-| Landauer Deep | Trojan Yards | Electronics | 6473 | 216% |
-| Landauer Deep | Ares Ring | Electronics | 6473 | 216% |

@@ -77,9 +77,13 @@ func _depart(command: Dictionary) -> String:
 		return "unknown destination"
 	if sim().data.sites.has(to) and not to in s.sites.get("known", []):
 		return "you don't know where that is"
+	var here: String = s.location["place"]
+	if sim().data.places.get(here, {}).has("foot_of"):
+		return "your ship is up at %s: ride the ribbon back first" % sim().data.places[sim().data.places[here]["foot_of"]]["name"]
+	if sim().data.locations[to].has("foot_of"):
+		return "ships can't land at %s: ride the elevator down from %s" % [sim().data.locations[to]["name"], sim().data.places[sim().data.locations[to]["foot_of"]]["name"]]
 	if not Perks.place_open(s, sim().data, to):
 		return "%s is not open yet" % sim().data.locations[to]["name"]
-	var here: String = s.location["place"]
 	if command.has("route"):
 		return _depart_route(here, to, String(command["route"]), float(command.get("plan_t", s.time_s)))
 	var route := Navigation.plan(s.ship, sim().data, sim().ephemeris, here, to, s.time_s)

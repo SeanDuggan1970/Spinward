@@ -641,7 +641,7 @@ static func _propulsion(tanks: Array, drives: Array, radiators: Array, ctx: Dict
 	plumes.name = "DrivePlume"
 	for k in count:
 		var ds := _size(drives[k][1])
-		if drives[k][1]["look"].get("shape", "") == "sail":
+		if drives[k][1]["look"].get("shape", "") in ["sail", "climber"]:
 			continue
 		plumes.add_child(Kit.sphere(ds.x * 0.3, Kit.glow(Color("8fd0ff"), 4.0), offsets[k] + Vector3(0, 0, z + ds.z * 1.45 + 0.6)))
 	n.add_child(plumes)
@@ -654,6 +654,8 @@ static func _propulsion(tanks: Array, drives: Array, radiators: Array, ctx: Dict
 static func _drive(m: Dictionary, s: Vector3, ctx: Dictionary, index: int) -> Node3D:
 	if m["look"].get("shape", "") == "sail":
 		return _sail(m, s, ctx)
+	if m["look"].get("shape", "") == "climber":
+		return _climber_drive(s, ctx)
 	var mats: Dictionary = ctx["mats"]
 	var rng: RandomNumberGenerator = ctx["rng"]
 	var n := Node3D.new()
@@ -735,6 +737,22 @@ static func _sail(m: Dictionary, s: Vector3, ctx: Dictionary) -> Node3D:
 	for k in 4:
 		var a := TAU * float(k) / 4.0 + PI * 0.25
 		n.add_child(Kit.beacon(Color("ff3a2a"), Vector3(cos(a), sin(a), 0) * span * 0.707 + Vector3(0, 0, film_z), 2.0, 2.0, float(k) * 0.25))
+	return n
+
+
+## A climber's traction head: the ribbon runs through a slot between pairs of
+## wheels, with the power pickup and its photovoltaic skirt round it.
+static func _climber_drive(s: Vector3, ctx: Dictionary) -> Node3D:
+	var mats: Dictionary = ctx["mats"]
+	var n := Node3D.new()
+	n.add_child(Kit.box(Vector3(s.x, s.y, s.z * 0.6), Kit.mat("yellow"), Vector3(0, 0, s.z * 0.3)))
+	for side in [-1.0, 1.0]:
+		for k in 3:
+			var wheel := Kit.cylinder(0.6, 0.4, mats["dark"], Vector3(side * 0.5, 0, 0.6 + 0.9 * k), 16)
+			wheel.rotation = Vector3(0, 0, PI * 0.5)
+			n.add_child(wheel)
+	n.add_child(Kit.cylinder(s.x * 0.9, 0.2, solar_cells(ctx), Vector3(0, 0, s.z * 0.65), 24))
+	n.add_child(Kit.beacon(Color("ff3a2a"), Vector3(0, s.y * 0.55, s.z * 0.3), 0.2, 1.4))
 	return n
 
 

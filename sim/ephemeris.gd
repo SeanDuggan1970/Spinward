@@ -1,7 +1,9 @@
 ## Positions of bodies and places from data, on rails (Keplerian elements).
 ## Frame: heliocentric, J2000 ecliptic, metres. Time: seconds since J2000.
-## Places are either "orbit" (elements around a parent body) or "lagrange"
-## (a point of a two-body system, solved from the circular restricted three-body model).
+## Places are "orbit" (elements around a parent body), "lagrange" (a point of a
+## two-body system, solved from the circular restricted three-body model) or "surface"
+## (a town on a body: at lat/lon, turning with its day, or always under the body it
+## faces, like the Moon's near side under Earth).
 extends RefCounted
 
 const V := preload("res://sim/v3.gd")
@@ -74,8 +76,33 @@ func _place_position(place: Dictionary, t: float) -> Array:
 			return V.add(position(parent, t), kepler(where["elements"], float(bodies[parent]["gm"]), t))
 		"lagrange":
 			return lagrange_point(where["system"][0], where["system"][1], where["point"], t)
+		"surface":
+			return surface_point(where, t)
 	assert(false, "Unknown place location type")
 	return [0.0, 0.0, 0.0]
+
+
+## A town on a body's surface (see the header). The body's equator follows its pole
+## where data gives one, otherwise the ecliptic.
+func surface_point(where: Dictionary, t: float) -> Array:
+	var parent: String = where["parent"]
+	var c := position(parent, t)
+	var r := float(bodies[parent]["radius_m"])
+	if where.has("facing"):
+		return V.add(c, V.scale(V.normalized(V.sub(position(where["facing"], t), c)), r))
+	var lat := deg_to_rad(float(where.get("lat_deg", 0.0)))
+	var lon := deg_to_rad(float(where.get("lon_deg", 0.0))) + TAU * t / float(where.get("day_s", 86400.0))
+	var pole := [0.0, 0.0, 1.0]
+	var b: Dictionary = bodies[parent]
+	if b.has("pole_ra_deg"):
+		var ra := deg_to_rad(float(b["pole_ra_deg"]))
+		var dec := deg_to_rad(float(b["pole_dec_deg"]))
+		pole = equatorial_to_ecliptic([cos(dec) * cos(ra), cos(dec) * sin(ra), sin(dec)])
+	var x := V.cross([0.0, 0.0, 1.0], pole)
+	x = V.normalized(x) if V.length(x) > 1e-6 else [1.0, 0.0, 0.0]
+	var y := V.cross(pole, x)
+	var d := V.add(V.add(V.scale(x, cos(lat) * cos(lon)), V.scale(y, cos(lat) * sin(lon))), V.scale(pole, sin(lat)))
+	return V.add(c, V.scale(d, r))
 
 
 ## Keplerian elements -> position relative to the focus.

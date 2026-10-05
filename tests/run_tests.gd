@@ -68,6 +68,7 @@ func _initialize() -> void:
 	test_outer_traffic()
 	test_spaceline()
 	test_minds_and_sails()
+	test_elevators()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -1135,3 +1136,49 @@ func test_minds_and_sails() -> void:
 		var r := V.length(V.sub(Navigation.transit_position(sailed, mid_t), sim.ephemeris.position("sun", mid_t)))
 		check(r > 1.05 * AU and r < 1.65 * AU, "Half way, the sail is out between Earth and Mars (%.2f AU)" % (r / AU))
 
+
+
+## Riding the elevators: down to the town at the foot with your cargo, your ship left
+## above; no flying from (or to) a foot; a line still being built takes nobody;
+## climbers keep the towns supplied without fuel; towns sit on their bodies.
+func test_elevators() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var eph := sim.ephemeris
+	var t := s.time_s
+	var moon_r := float(d.bodies["moon"]["radius_m"])
+	var foot := V.sub(eph.position("line_foot", t), eph.position("moon", t))
+	var to_earth := V.normalized(V.sub(eph.position("earth", t), eph.position("moon", t)))
+	check(absf(V.length(foot) - moon_r) < 1.0 and V.dot(V.normalized(foot), to_earth) > 0.999, "Line Foot sits on the Moon, under Earth")
+	var day := float(d.places["stalk_foot"]["location"]["day_s"])
+	var a := V.sub(eph.position("stalk_foot", t), eph.position("ceres", t))
+	var b := V.sub(eph.position("stalk_foot", t + day * 0.5), eph.position("ceres", t + day * 0.5))
+	check(V.distance(a, b) > 1.9 * float(d.bodies["ceres"]["radius_m"]), "Stalk Foot turns with Ceres")
+	check(not Perks.place_open(s, d, "line_foot"), "No ship can fly to a town at the foot of a ribbon")
+	s.location = {"status": "docked", "place": "halo_depot"}
+	s.ship["cargo"] = {"water_ice": 5.0}
+	var before := s.credits
+	var fare := float(d.places["halo_depot"]["elevator"]["fare"]) + 5.0 * float(d.places["halo_depot"]["elevator"]["fare_per_t"])
+	check(sim.apply({"type": "ride_elevator"}) == "", "You can ride the Luna Line down from Halo Depot")
+	check(absf(before - s.credits - fare) < 1e-6 and s.location["status"] == "elevator", "The fare is a seat plus so much a tonne")
+	sim.advance_game_time(float(d.places["halo_depot"]["elevator"]["hours"]) * 3600.0 + 60.0)
+	check(s.location.get("status") == "docked" and s.location.get("place") == "line_foot", "Two days down, you are at Line Foot")
+	check(float(s.ship["cargo"].get("water_ice", 0.0)) == 5.0, "Your hold came down with you")
+	check(sim.apply({"type": "depart", "to": "kibo_ring"}) != "", "You can't fly from the foot: your ship is up at the depot")
+	check(s.contracts["board"].get("line_foot", []).is_empty(), "No job board at the bottom of the ribbon")
+	check(sim.apply({"type": "ride_elevator"}) == "", "And you can ride back up")
+	sim.advance_game_time(float(d.places["halo_depot"]["elevator"]["hours"]) * 3600.0 + 60.0)
+	check(s.location.get("place") == "halo_depot", "Back at Halo Depot, back aboard")
+	s.location = {"status": "docked", "place": "ares_ring"}
+	check(sim.apply({"type": "ride_elevator"}).contains("still being built"), "The Pavonis Line takes nobody until it is finished")
+	# Climbers: on the ribbon between port and town, no propellant.
+	s.time_scale = 1.0e5
+	var climbed := false
+	for _k in 20:
+		sim.advance_game_time(DAY)
+		for npc in s.npcs:
+			if npc["fleet"] == "luna_climbers" and npc["location"]["status"] == "transit":
+				climbed = climbed or npc["location"]["frame"] == "moon"
+	check(climbed, "Climbers ride the Luna Line between the depot and the town")
+	check(s.npcs.filter(func(n): return n["fleet"] == "luna_climbers").all(func(n): return float(n["ship"]["fuel_t"]) == 0.0), "Climbers burn no propellant")

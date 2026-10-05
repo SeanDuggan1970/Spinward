@@ -124,7 +124,7 @@ func _ship_dict(hull: String) -> Dictionary:
 ## A random hull, in the colours and name of a fleet that flies it (or an independent).
 func _pick_hero(hull: String = "") -> void:
 	# Sails are hundreds of metres across: they get their own shot, not a chase.
-	var hulls: Array = data.ships.keys().filter(func(h): return not data.ships[h]["modules"].values().any(func(m): return data.modules[m].get("sail", false)))
+	var hulls: Array = data.ships.keys().filter(func(h): return not data.ships[h]["modules"].values().any(func(m): return data.modules[m].get("sail", false) or data.modules[m].get("climber", false)))
 	_hero_hull = hull if hull != "" else hulls[_rng.randi() % hulls.size()]
 	var fleets: Array = []
 	for id in data.npcs["fleets"]:
@@ -148,6 +148,7 @@ func _pick_hero(hull: String = "") -> void:
 
 func _light(sun_dir: Vector3, energy: float = 1.5, flood_at: Vector3 = Vector3(-30, 25, 10)) -> void:
 	_sun_dir = sun_dir.normalized()
+	SkyKit.set_eclipse(_sun_dir)
 	var sun := DirectionalLight3D.new()
 	sun.light_energy = energy
 	_stage.add_child(sun)
@@ -174,6 +175,16 @@ func _body(body: String, radius: float, at: Vector3, day_spin: float = 0.0) -> M
 	if day_spin != 0.0:
 		_spinners.append([mesh, day_spin])
 	return mesh
+
+
+## `giant`'s shadow on every other body in the shot, and on the ships if `on_ships`.
+func _shadows(giant: MeshInstance3D, on_ships: bool = true) -> void:
+	var r := (giant.mesh as SphereMesh).radius
+	for n in _stage.get_children():
+		if n is MeshInstance3D and n != giant and n.mesh is SphereMesh:
+			SkyKit.set_occluder(n, giant.position, r)
+	if on_ships:
+		SkyKit.set_eclipse(_sun_dir, giant.position, r)
 
 
 ## Place the hero, facing along `dir` and rolled to keep its panels on the Sun.
@@ -233,6 +244,7 @@ func _build_jovian() -> void:
 	_body("io", 1600.0, Vector3(30000.0, 6000.0, -150000.0))
 	_body("europa", 1300.0, Vector3(-45000.0, -9000.0, -120000.0))
 	var callisto := _body("callisto", 2400.0, Vector3(0.0, -1800.0, -5200.0))
+	_shadows(jupiter)
 	var centre := callisto.position
 	_update = func(dt: float) -> void:
 		var a := lerpf(-0.9, 0.5, clock / SHOT_S)
@@ -251,11 +263,12 @@ func _build_jovian() -> void:
 ## the camera panning to keep it in frame.
 func _build_saturn() -> void:
 	_where = "Titan  ·  Saturn"
-	_light(Vector3(0.6, 0.45, 0.65), 1.2)
+	_light(Vector3(-0.75, 0.4, 0.3), 1.3, Vector3(30, 20, 30))
 	var saturn := _body("saturn", 40000.0, Vector3(30000.0, -14000.0, -200000.0), 0.02)
-	saturn.basis = Basis(Vector3.RIGHT, 0.42) * Basis(Vector3.FORWARD, 0.25)
+	saturn.basis = Basis(Vector3.RIGHT, 0.42) * Basis(Vector3.FORWARD, 0.25) * Basis.from_scale(Vector3(1.0, float(data.bodies["saturn"].get("flattening", 1.0)), 1.0))
 	_body("titan", 2600.0, Vector3(-26000.0, 9000.0, -90000.0))
 	_body("enceladus", 300.0, Vector3(9000.0, -2500.0, -60000.0))
+	_shadows(saturn)
 	_update = func(dt: float) -> void:
 		var f := clock / SHOT_S
 		var pos := Vector3(lerpf(260.0, -320.0, f), 14.0 + 10.0 * sin(f * PI), lerpf(-180.0, -240.0, f))
@@ -329,8 +342,11 @@ func _build_belt() -> void:
 func _build_enceladus() -> void:
 	_where = "Enceladus  ·  the tiger stripes"
 	_light(Vector3(0.55, 0.3, -0.8), 1.3, Vector3(30, -10, 40))
-	_body("saturn", 30000.0, Vector3(-70000.0, 12000.0, -160000.0), 0.02)
+	var saturn := _body("saturn", 30000.0, Vector3(-70000.0, 12000.0, -160000.0), 0.02)
 	var moon := _body("enceladus", 2600.0, Vector3(1400.0, 3600.0, -11000.0))
+	_shadows(saturn, false)
+	# The ship slides through Enceladus' own shadow, under the plumes.
+	SkyKit.set_eclipse(_sun_dir, moon.position, 2600.0)
 	_update = func(dt: float) -> void:
 		var f := clock / SHOT_S
 		var pos := Vector3(lerpf(-260.0, 220.0, f), -20.0 + 10.0 * sin(f * PI), -300.0 - 60.0 * f)

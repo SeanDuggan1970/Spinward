@@ -27,6 +27,9 @@ static func yard_mult(state, place: String) -> float:
 ## Places built by a project ("opens_with") are closed until it is finished; places
 ## with "opens_after_days" open that many days into the game.
 static func place_open(state, data, place: String) -> bool:
+	# A town at the foot of an elevator is reached by its ribbon, never by ship.
+	if data.locations.get(place, {}).has("foot_of"):
+		return false
 	var days := float(data.locations.get(place, {}).get("opens_after_days", 0.0))
 	if days > 0.0 and state.time_s - float(state.started_t) < days * 86400.0:
 		return false

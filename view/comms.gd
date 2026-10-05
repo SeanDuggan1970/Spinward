@@ -25,7 +25,9 @@ static func line(sim, event: Dictionary) -> String:
 		cargo = cargo_text(sim, d["cargo"])
 		from = sim.data.places[d["from"]]["name"]
 		to = sim.data.places[d["to"]]["name"]
-		match "sail" if fleet.get("sail", false) else fleet["behaviour"]:
+		match "climb" if fleet.get("elevator", false) else ("sail" if fleet.get("sail", false) else fleet["behaviour"]):
+			"climb":
+				key = "climb_depart"
 			"sail":
 				key = "sail_depart"
 			"shuttle":

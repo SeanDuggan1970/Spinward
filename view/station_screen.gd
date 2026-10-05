@@ -10,6 +10,7 @@ const ShipStats := preload("res://sim/ship_stats.gd")
 const ShipyardSystem := preload("res://sim/systems/shipyard_system.gd")
 const EconomySystem := preload("res://sim/systems/economy_system.gd")
 const ProjectSystem := preload("res://sim/systems/project_system.gd")
+const ElevatorSystem := preload("res://sim/systems/elevator_system.gd")
 const TipsText := preload("res://view/tips_text.gd")
 const TravelSystem := preload("res://sim/systems/travel_system.gd")
 const SystemMap := preload("res://view/system_map.gd")
@@ -218,6 +219,11 @@ func _departures_tab(place_id: String) -> Control:
 	var parts := _scroll("Departures")
 	var s = sim.state
 	var d = sim.data
+	# A ribbon down to the surface (or, at the bottom, back up to your ship).
+	if not ElevatorSystem.line_here(d, place_id).is_empty():
+		parts[1].add_child(_elevator_panel(place_id))
+		if d.places[place_id].has("foot_of"):
+			return parts[0]
 	parts[1].add_child(UI.label("Plot routes and your co-pilot flies trial courses under real Earth and Moon gravity: Express burns hard, Economy lets gravity do the work, lunar flybys are for the view (and occasionally the fuel). Prices elsewhere are what you last saw there, or what you have been told: buy tips on the Tip Line.", UI.DIM, 13))
 	# Local destinations first, then the long hauls across the Sun's domain.
 	var dests: Array = d.places.keys().filter(func(to): return to != place_id and Perks.place_open(s, d, to))
@@ -263,6 +269,41 @@ func _departures_tab(place_id: String) -> Control:
 		_route_controls(place_id, to, plan, p[1], side)
 		parts[1].add_child(p[0])
 	return parts[0]
+
+
+## Riding the elevator from here: where it goes, how long, the fare for what you carry.
+func _elevator_panel(place_id: String) -> Control:
+	var d = sim.data
+	var s = sim.state
+	var here := ElevatorSystem.line_here(d, place_id)
+	var line: Dictionary = here["line"]
+	var to_name: String = d.places[here["to"]]["name"]
+	var p := UI.panel("%s  ·  %s" % [String(line["name"]).to_upper(), ("down to " + to_name) if here["down"] else ("up to " + to_name)])
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 16)
+	p[1].add_child(row)
+	var info := VBoxContainer.new()
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(info)
+	if here["down"]:
+		var town := UI.label(d.places[here["to"]]["description"], UI.DIM, 12)
+		town.autowrap_mode = TextServer.AUTOWRAP_WORD
+		town.custom_minimum_size = Vector2(200, 0)
+		info.add_child(town)
+		var via := UI.label(String(line.get("via", "")) + " Your ship stays docked here; your hold rides down with you in a climber container.", UI.TEXT, 12)
+		via.autowrap_mode = TextServer.AUTOWRAP_WORD
+		via.custom_minimum_size = Vector2(200, 0)
+		info.add_child(via)
+	else:
+		info.add_child(UI.label("Your ship is docked at %s. Your hold rides up with you." % to_name, UI.TEXT, 13))
+	var fare := ElevatorSystem.fare(d, s, place_id)
+	info.add_child(UI.label("%s ride   ·   %d km   ·   fare %s (a seat, and %d cr a tonne for the %.1f t you carry)" % [
+		UI.duration(float(line["hours"]) * 3600.0), int(line["km"]), UI.money(fare), int(line["fare_per_t"]), ShipStats.cargo_t(s.ship)]))
+	var why := ElevatorSystem.blocked(d, s, place_id)
+	if why != "":
+		info.add_child(UI.label(why.capitalize(), UI.WARN, 13))
+	row.add_child(UI.button("Ride down" if here["down"] else "Ride up", send.bind({"type": "ride_elevator"}), why == ""))
+	return p[0]
 
 
 ## On site: what there is to do here, what it needs, how long it takes, and what it

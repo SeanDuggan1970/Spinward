@@ -153,6 +153,7 @@ func _build_environment() -> void:
 	# Every world big enough to see, true to its angular size. Nearer ones sit nearer
 	# on the sky shell, so a moon passes in front of its planet, never behind.
 	var seen: Array = SkyKit.visible_bodies(sim.data, eph, here, t)
+	SkyKit.set_eclipse(sun_dir)
 	var built := {}
 	for id in sim.data.projects:
 		# Once a build is announced its first hardware is on station.
@@ -169,6 +170,19 @@ func _build_environment() -> void:
 		SkyKit.update_body(mesh, sun_dir, t)
 		SkyKit.dress_body(mesh, sim.data, body, -dir, sun_dir, built)
 		add_child(mesh)
+		# Its planet's shadow, placed at this body's own sky scale.
+		var parent: String = sim.data.bodies[body].get("parent", "sun")
+		if parent != "sun" and sim.data.bodies.has(parent):
+			var sky_k := shell / float(seen[k][3])
+			var rel := _dir_to(eph.position(parent, t), eph.position(body, t)) * V.length(V.sub(eph.position(parent, t), eph.position(body, t)))
+			SkyKit.set_occluder(mesh, mesh.position + rel * sky_k, float(sim.data.bodies[parent]["radius_m"]) * sky_k)
+		# Ships and the station are at the origin, so a body's sky copy shades them
+		# exactly when the real one does.
+		var to_body := mesh.position
+		var along := to_body.dot(sun_dir)
+		var r_sky := (mesh.mesh as SphereMesh).radius
+		if along > 0.0 and (to_body - sun_dir * along).length() < r_sky * 1.05:
+			SkyKit.set_eclipse(sun_dir, mesh.position, r_sky)
 
 
 ## Direction from `from` to `to` (sim 64-bit ecliptic) as a Godot vector, ecliptic north up.
@@ -434,7 +448,7 @@ func _sync_traffic() -> void:
 	var docked_here := {}
 	for npc in sim.state.npcs:
 		# Sails are 600 m across: they moor out at the sail park, not at a berth.
-		if sim.data.npcs["fleets"][npc["fleet"]].get("sail", false):
+		if sim.data.npcs["fleets"][npc["fleet"]].get("sail", false) or sim.data.npcs["fleets"][npc["fleet"]].get("elevator", false):
 			continue
 		if npc["location"]["status"] == "docked" and npc["location"]["place"] == place_id and preload("res://sim/systems/npc_system.gd").in_service(npc, t):
 			docked_here[npc["id"]] = true
@@ -449,7 +463,7 @@ func _sync_traffic() -> void:
 					_berths[id] = i
 					break
 	for npc in sim.state.npcs:
-		if sim.data.npcs["fleets"][npc["fleet"]].get("sail", false):
+		if sim.data.npcs["fleets"][npc["fleet"]].get("sail", false) or sim.data.npcs["fleets"][npc["fleet"]].get("elevator", false):
 			continue
 		var loc: Dictionary = npc["location"]
 		var mode := ""

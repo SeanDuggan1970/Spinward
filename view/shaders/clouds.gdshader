@@ -13,13 +13,19 @@ uniform float turbulence = 0.6;
 uniform float spin = 0.0;
 uniform float seed = 9.0;
 uniform vec3 sun_dir = vec3(1.0, 0.0, 0.0);
+// A body whose shadow may fall on this one (see eclipse.gdshaderinc).
+uniform vec4 occluder = vec4(0.0);
+
+#include "res://view/shaders/eclipse.gdshaderinc"
 
 varying vec3 dir;
 varying vec3 world_normal;
+varying vec3 world_pos;
 
 void vertex() {
 	dir = VERTEX;
 	world_normal = (MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz;
+	world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 }
 
 void fragment() {
@@ -32,9 +38,10 @@ void fragment() {
 	float lat = q.y + swirl * 0.25 * turbulence + abs(q.y) * 0.15 * sin(atan(q.z, q.x) * 2.0);
 	float b = 0.5 + 0.5 * sin(lat * bands * 3.14159);
 	vec3 col = mix(colour_b, colour_a, b) * (0.92 + 0.12 * sw_fbm(q * 9.0 + seed, 4));
-	ALBEDO = col;
+	float lit = mix(0.02, 1.0, sw_sunlit(world_pos, normalize(sun_dir), occluder));
+	ALBEDO = col * lit;
 	ROUGHNESS = 1.0;
 	float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 2.5);
 	float day = dot(normalize(world_normal), normalize(sun_dir));
-	EMISSION = colour_a * rim * smoothstep(-0.3, 0.4, day) * 0.5;
+	EMISSION = colour_a * rim * smoothstep(-0.3, 0.4, day) * 0.5 * lit;
 }

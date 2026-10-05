@@ -89,9 +89,19 @@ func validate() -> Array[String]:
 	for id in places:
 		var p: Dictionary = places[id]
 		var loc: Dictionary = p.get("location", {})
-		for body in ([loc.get("parent")] if loc.get("type") == "orbit" else loc.get("system", [])):
+		for body in ([loc.get("parent")] if loc.get("type") in ["orbit", "surface"] else loc.get("system", [])):
 			if not bodies.has(body):
 				problems.append("place %s: unknown body %s" % [id, body])
+		if p.has("elevator"):
+			var foot: String = p["elevator"].get("foot", "")
+			if not places.has(foot) or places[foot].get("foot_of", "") != id:
+				problems.append("place %s: elevator foot %s must be a place that is foot_of it" % [id, foot])
+			if not bodies.has(p["elevator"].get("body", "")):
+				problems.append("place %s: elevator on unknown body" % id)
+			if p["elevator"].has("project") and not projects.has(p["elevator"]["project"]):
+				problems.append("place %s: elevator built by unknown project" % id)
+		if p.has("foot_of") and not places.get(p["foot_of"], {}).has("elevator"):
+			problems.append("place %s: foot of %s, which has no elevator" % [id, p["foot_of"]])
 		var market: Dictionary = p.get("market", {})
 		for g in market:
 			if not goods.has(g):

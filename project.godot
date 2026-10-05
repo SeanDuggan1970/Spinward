@@ -19,3 +19,14 @@ common/physics_ticks_per_second=60
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 environment/defaults/default_clear_color=Color(0.01, 0.012, 0.025, 1)
+
+[shader_globals]
+
+sw_occluder={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+sw_sun={
+"type": "vec3",
+"value": Vector3(0, 1, 0)
+}

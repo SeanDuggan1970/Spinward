@@ -38,7 +38,7 @@ const FUEL_SAMPLES := 24
 ## The chain of bodies a place hangs from, nearest first.
 static func body_chain(data, place: String) -> Array:
 	var loc: Dictionary = data.locations[place]["location"]
-	var body: String = loc["parent"] if loc["type"] == "orbit" else loc["system"][0]
+	var body: String = loc["parent"] if loc["type"] in ["orbit", "surface"] else loc["system"][0]
 	var chain := []
 	while body != "":
 		chain.append(body)

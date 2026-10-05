@@ -57,7 +57,7 @@ static func _frame(data, a: String, b: String) -> String:
 
 static func _chain(data, place: String) -> Array:
 	var loc: Dictionary = data.locations[place]["location"]
-	var body: String = loc["parent"] if loc["type"] == "orbit" else loc["system"][0]
+	var body: String = loc["parent"] if loc["type"] in ["orbit", "surface"] else loc["system"][0]
 	var chain := []
 	while body != "":
 		chain.append(body)
@@ -77,6 +77,10 @@ static func well(data, eph, place: String, t: float) -> Dictionary:
 	if loc["type"] == "orbit":
 		body = loc["parent"]
 		dv += sqrt(float(data.bodies[body]["gm"]) / float(loc["elements"]["a_m"]))
+	elif loc["type"] == "surface":
+		# A town on the ground (reached by elevator): as deep in the well as it gets.
+		body = loc["parent"]
+		dv += sqrt(float(data.bodies[body]["gm"]) / float(data.bodies[body]["radius_m"]))
 	else:
 		# A Lagrange station co-moves with the secondary: it is that far from free.
 		body = loc["system"][0]

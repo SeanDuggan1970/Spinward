@@ -495,5 +495,22 @@
 			"span_m": 600,
 			"colour": "foil"
 		}
+	},
+	"climber_cab": {
+		"name": "Climber drive",
+		"kind": "drive",
+		"mass_t": 3.0,
+		"price": 0,
+		"climber": true,
+		"description": "Traction wheels on the ribbon, beamed or solar power, and no propellant at all.",
+		"look": {
+			"shape": "climber",
+			"size_m": [
+				4.0,
+				4.0,
+				4.0
+			],
+			"colour": "yellow"
+		}
 	}
 }

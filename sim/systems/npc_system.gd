@@ -188,7 +188,12 @@ func _depart(npc: Dictionary, t: float) -> void:
 		for good in choice["buy"]:
 			loaded["cargo"][good] = choice["buy"][good]
 		_sailing = _fleet(npc)
-		plan = _sail_plan(here, choice["to"], t) if _sailing.get("sail", false) else Navigation.plan(loaded, sim().data, sim().ephemeris, here, choice["to"], t)
+		if _sailing.get("elevator", false):
+			plan = _climb_plan(here, choice["to"], t)
+		elif _sailing.get("sail", false):
+			plan = _sail_plan(here, choice["to"], t)
+		else:
+			plan = Navigation.plan(loaded, sim().data, sim().ephemeris, here, choice["to"], t)
 		if not plan["ok"] and plan.get("reason", "").begins_with("not enough propellant"):
 			# Fleet tankers and company accounts keep their own ships fuelled; never strand an NPC.
 			npc["ship"]["fuel_t"] = ShipStats.fuel_capacity_t(npc["ship"], sim().data)
@@ -256,6 +261,27 @@ func _sail_plan(here: String, to: String, t: float) -> Dictionary:
 			[0.0, 0.0, 0.0]])
 	return {"ok": true, "frame": "sun", "fuel_t": 0.0, "arrive_t": t + tof, "burn_s": 0.0, "duration_s": tof,
 		"from_pos": eph.position(here, t), "to_pos": eph.position(to, t + tof), "distance_m": V.distance(a, b),
+		"from_vel": [0.0, 0.0, 0.0], "to_vel": [0.0, 0.0, 0.0], "samples": samples}
+
+
+## A climb up or down a ribbon between a port and its foot town: straight, steady,
+## as long as the line's ride, in the body's frame.
+func _climb_plan(here: String, to: String, t: float) -> Dictionary:
+	var data = sim().data
+	var anchor: String = here if data.places[here].has("elevator") else data.places[here]["foot_of"]
+	var line: Dictionary = data.places[anchor]["elevator"]
+	var body: String = line["body"]
+	var eph = sim().ephemeris
+	var dur := float(line["hours"]) * 3600.0 * _rng.randf_range(1.0, 1.15)
+	var a: Array = eph.relative(here, body, t)
+	var b: Array = eph.relative(to, body, t + dur)
+	var vel := V.scale(V.sub(b, a), 1.0 / dur)
+	var samples := []
+	for k in 11:
+		var f := float(k) / 10.0
+		samples.append([t + dur * f, V.lerp(a, b, f), vel, [0.0, 0.0, 0.0]])
+	return {"ok": true, "frame": body, "fuel_t": 0.0, "arrive_t": t + dur, "burn_s": 0.0, "duration_s": dur,
+		"from_pos": a, "to_pos": b, "distance_m": V.distance(a, b),
 		"from_vel": [0.0, 0.0, 0.0], "to_vel": [0.0, 0.0, 0.0], "samples": samples}
 
 

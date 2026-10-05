@@ -20,12 +20,21 @@ uniform float metallic = 0.0;
 // How panels wrap the part: 0 box faces, 1 round a cylinder's Y axis, 2 a sphere.
 uniform int mapping = 0;
 
+#include "res://view/shaders/eclipse.gdshaderinc"
+
+// The planet whose shadow ships and stations can pass into, and the Sun's direction
+// (set per scene by SkyKit.set_eclipse).
+global uniform vec4 sw_occluder;
+global uniform vec3 sw_sun;
+
 varying vec3 obj_pos;
 varying vec3 obj_normal;
+varying vec3 world_pos;
 
 void vertex() {
 	obj_pos = VERTEX;
 	obj_normal = NORMAL;
+	world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 }
 
 // Lay the panel grid on the part: wrapped round cylinders and spheres, otherwise
@@ -127,7 +136,8 @@ void fragment() {
 			rough = mix(rough, 0.45, chip);
 		}
 	}
-	ALBEDO = base;
+	// In a planet's shadow only work lights and a little planetshine reach the hull.
+	ALBEDO = base * mix(0.12, 1.0, sw_sunlit(world_pos, normalize(sw_sun), sw_occluder));
 	ROUGHNESS = rough;
 	METALLIC = metal;
 	if (finish >= 2) {

@@ -1,3 +1,5 @@
+#ifndef SW_NOISE
+#define SW_NOISE
 // Shared procedural noise for Spinward's surfaces. Hash-based, so no textures.
 
 float sw_hash13(vec3 p) {
@@ -40,3 +42,4 @@ float sw_fbm(vec3 p, int octaves) {
 	}
 	return sum;
 }
+#endif

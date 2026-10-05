@@ -94,6 +94,9 @@ func _ready() -> void:
 		if a.begins_with("--flyby="):
 			_flyby_tour.call_deferred(a.trim_prefix("--flyby="))
 			return
+		if a.begins_with("--ride="):
+			_ride_tour.call_deferred(a.trim_prefix("--ride="))
+			return
 		if a.begins_with("--gallery="):
 			_gallery.call_deferred(a.trim_prefix("--gallery="))
 			return
@@ -211,6 +214,15 @@ func _handle_events() -> void:
 				else:
 					notice("Took on %.2f t propellant for %s" % [d["tonnes"], UI.money(-d["credits"])])
 				refresh = true
+			"elevator_departed":
+				var line: Dictionary = sim.data.places[d["line"]]["elevator"]
+				notice("On %s for %s: %s. Fare %s." % [line["name"], sim.data.places[d["to"]]["name"], UI.duration(float(d["hours"]) * 3600.0), UI.money(float(d["fare"]))], UI.AMBER)
+			"elevator_arrived":
+				if d["down"]:
+					notice("At %s. Your ship waits at %s." % [sim.data.places[d["place"]]["name"], sim.data.places[sim.data.places[d["place"]]["foot_of"]]["name"]], UI.GOOD)
+				else:
+					notice("Back at %s, and back aboard." % sim.data.places[d["place"]]["name"], UI.GOOD)
+				refresh = true
 			"npc_commissioned", "project_announced":
 				# Reported by the Spaceline ("news").
 				refresh = true
@@ -322,7 +334,8 @@ func notice(text: String, colour: Color = UI.TEXT) -> void:
 	_notices.add_child(l)
 	while _notices.get_child_count() > 6:
 		_notices.get_child(0).free()
-	get_tree().create_timer(7.0).timeout.connect(func(): if is_instance_valid(l): l.queue_free())
+	# Bound to the label itself, so the connection dies with it if it is pushed out first.
+	get_tree().create_timer(7.0).timeout.connect(l.queue_free)
 
 
 func _sync_mode() -> void:
@@ -330,6 +343,7 @@ func _sync_mode() -> void:
 	if mode == _mode:
 		return
 	_mode = mode
+	preload("res://view/flight/sky.gd").set_eclipse(Vector3.UP)
 	if _screen:
 		_screen.queue_free()
 	if _backdrop:
@@ -352,6 +366,9 @@ func _sync_mode() -> void:
 		"approach":
 			# 3D renders in the root viewport underneath all 2D; its HUD sits in this layer.
 			_screen = FlightScene.new(sim)
+			_layer.add_child(_screen)
+		"elevator":
+			_screen = load("res://view/climber_view.gd").new(sim)
 			_layer.add_child(_screen)
 
 
@@ -426,6 +443,8 @@ func _smoke() -> void:
 func _dock_trial() -> void:
 	var all_ok := true
 	for place in sim.data.places:
+		if sim.data.places[place].has("foot_of"):
+			continue
 		sim.state.location = {"status": "approach", "place": place}
 		_mode = ""
 		_sync_mode()
@@ -709,7 +728,7 @@ func _gallery(dir: String) -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--only="):
 			only = Array(a.trim_prefix("--only=").split(","))
-	var ports: Array = sim.data.places.keys().filter(func(p): return only.is_empty() or p in only)
+	var ports: Array = sim.data.places.keys().filter(func(p): return (only.is_empty() or p in only) and not sim.data.places[p].has("foot_of"))
 	for place in ports:
 		sim.state.location = {"status": "approach", "place": place}
 		_mode = ""
@@ -743,6 +762,53 @@ func _gallery(dir: String) -> void:
 			for _i in 60:
 				await get_tree().process_frame
 			_shot("%s/%s-%s.png" % [dir, place, pass_name])
+	get_tree().quit()
+
+
+## Windowed: ride each elevator down, shooting the cab view on the way and the town at
+## the bottom, then ride back up.
+func _ride_tour(dir: String) -> void:
+	DirAccess.make_dir_recursive_absolute(dir)
+	for id in sim.data.projects:
+		sim.state.projects[id]["done"] = true
+	sim.state.credits = 100000.0
+	for anchor in ["halo_depot", "piazzi_station", "ares_ring"]:
+		sim.state.location = {"status": "docked", "place": anchor}
+		_mode = ""
+		_sync_mode()
+		for _i in 5:
+			await get_tree().process_frame
+		if _screen is StationScreen:
+			_screen._tab_index = 1
+			_screen.refresh()
+		for _i in 5:
+			await get_tree().process_frame
+		_shot("%s/%s-departures.png" % [dir, anchor])
+		var err: String = sim.apply({"type": "ride_elevator"})
+		if err != "":
+			print("RIDE_FAIL %s: %s" % [anchor, err])
+			continue
+		_handle_events()
+		_sync_mode()
+		var loc: Dictionary = sim.state.location
+		for f in [0.02, 0.5, 0.97]:
+			sim.state.time_s = lerpf(float(loc["depart_t"]), float(loc["arrive_t"]), f)
+			for _i in 20:
+				await get_tree().process_frame
+			_shot("%s/%s-%02d.png" % [dir, anchor, int(f * 100.0)])
+		sim.advance_game_time(float(loc["arrive_t"]) - sim.state.time_s + 1.0)
+		_handle_events()
+		_sync_mode()
+		for _i in 10:
+			await get_tree().process_frame
+		_shot("%s/%s-foot.png" % [dir, anchor])
+		if _screen is StationScreen:
+			_screen._tab_index = 1
+			_screen.refresh()
+		for _i in 5:
+			await get_tree().process_frame
+		_shot("%s/%s-foot-departures.png" % [dir, anchor])
+		print("RIDE_OK %s -> %s (%s)" % [anchor, sim.state.location.get("place", "?"), sim.state.location.get("status", "?")])
 	get_tree().quit()
 
 
