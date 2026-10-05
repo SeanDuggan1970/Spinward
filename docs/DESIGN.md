@@ -609,6 +609,24 @@ Sean's direction (2026-10-05): add a Stanford torus and an orbital ring; ships c
     - Cargo and carried jobs go down with the ship; story favours are offered again.
 - **HUD and capture:** the HUD has a HULL row and a proximity alert for rocks on your course. `--crash=<dir>` shoots a rock strike and a wreck.
 
+## The ship view in transit (Oct 2026)
+
+Sean's direction (2026-10-06): a follow camera with mouse control while the ship travels. Left alone, it should frame cinematic shots of the ship and interesting things nearby, inspiring, and show off the design.
+
+- **`view/follow_view.gd`** is the default transit view. M cycles ship, orbit, cockpit and map.
+- **The ship:** the player's ship sits at true size in its burn attitude, rolled to the Sun. The panels track the Sun, the dish holds on the destination, and the plume shows while it burns.
+- **The sky:** worlds sit on it at true angular size, dressed with plumes, elevators and rings. In a world's shadow the ship goes dark.
+- **Ports:** the ports at either end appear as models while they are within 30 km, placed at the path's own end points. Each is kept clear of the ship (behind it leaving, ahead arriving) with its docking face turned to you.
+- **Free camera:** drag with either mouse button to orbit the ship, use the wheel to zoom, or the arrow keys. Taking over starts from wherever the director had the camera.
+- **The director:** after 8 s hands-off it takes over, cutting through black every 11 s, never repeating the last set-up. Choices are weighted by the moment:
+  - a chase, a slow orbit, a fly-past, and a dolly along the hull
+  - into the Sun (backlit), and the drive while burning
+  - the hero world behind the ship: the destination if it is a decent size, else the biggest in view. A world filling the sky is framed across its limb, as a horizon.
+  - a long lens (7-9 degrees, from 20 ship-lengths back), so the world looms behind a small ship. This is only for worlds small enough to sit whole behind it.
+  - the station at either end of the trip
+- **Lighting:** a soft fill light rides with the camera, so the design reads on the night side. Sky worlds no longer receive ship shadows.
+- **Capture:** `--shipcam=<dir>` shoots every set-up at the moments it suits (leaving, burning, coasting, arriving), and tests real mouse input.
+
 ## Milestones
 
 - **M0 – Foundation:** done.

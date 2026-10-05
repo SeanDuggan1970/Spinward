@@ -95,6 +95,9 @@ func _ready() -> void:
 		if a.begins_with("--flyby="):
 			_flyby_tour.call_deferred(a.trim_prefix("--flyby="))
 			return
+		if a.begins_with("--shipcam="):
+			_shipcam_tour.call_deferred(a.trim_prefix("--shipcam="))
+			return
 		if a.begins_with("--promo="):
 			_promo.call_deferred(a.trim_prefix("--promo="))
 			return
@@ -809,6 +812,92 @@ func _gallery(dir: String) -> void:
 			for _i in 60:
 				await get_tree().process_frame
 			_shot("%s/%s-%s.png" % [dir, place, pass_name])
+	get_tree().quit()
+
+
+## Windowed: the ship view in transit, Kibo Ring to Halo Depot. Every director set-up
+## at the moment it suits (leaving the port, burning, coasting, nearing the Moon), and
+## the free camera.
+func _shipcam_tour(dir: String) -> void:
+	DirAccess.make_dir_recursive_absolute(dir)
+	_notices.visible = false
+	sim.state.location = {"status": "docked", "place": "kibo_ring"}
+	_mode = ""
+	_sync_mode()
+	var err: String = sim.apply({"type": "depart", "to": "halo_depot"})
+	if err != "":
+		print("SHIPCAM_FAIL ", err)
+		get_tree().quit()
+		return
+	_handle_events()
+	_sync_mode()
+	var loc: Dictionary = sim.state.location
+	var t0 := float(loc["depart_t"])
+	var t1 := float(loc["arrive_t"])
+	var moments := [["leaving", t0 + 120.0, ["station", "chase", "plume", "rim"]],
+		["burning", t0 + 3600.0 * 3.0, ["orbit", "flyby", "dolly", "plume", "world", "longlens"]],
+		["coasting", lerpf(t0, t1, 0.5), ["chase", "world", "longlens", "rim"]],
+		["arriving", t1 - 3600.0 * 2.0, ["world", "longlens", "orbit"]]]
+	for m in moments:
+		sim.state.time_s = float(m[1])
+		var map: MapScreen = _screen
+		map.set_view("ship")
+		for _i in 10:
+			await get_tree().process_frame
+		var view = map._view
+		for shot in m[2]:
+			view.mode = "director"
+			view._target_body = view._hero_body()
+			if shot in ["world", "longlens"] and view._target_body == "":
+				continue
+			if shot == "station" and view._nearest_station() == "":
+				continue
+			view.shot = shot
+			view.shot_label = shot.to_upper()
+			view.shot_clock = view.SHOT_S * 0.5
+			for _i in 6:
+				await get_tree().process_frame
+			_shot("%s/%s-%s.png" % [dir, m[0], shot])
+	# Real mouse input: a drag and some wheel clicks hand the camera to the pilot.
+	var view = (_screen as MapScreen)._view
+	var centre := get_viewport().get_visible_rect().size * 0.5
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	press.position = centre
+	Input.parse_input_event(press)
+	await get_tree().process_frame
+	var yaw0: float = view._yaw
+	var drag := InputEventMouseMotion.new()
+	drag.position = centre + Vector2(120, 40)
+	drag.relative = Vector2(120, 40)
+	drag.button_mask = MOUSE_BUTTON_MASK_LEFT
+	Input.parse_input_event(drag)
+	await get_tree().process_frame
+	var release := press.duplicate()
+	release.pressed = false
+	Input.parse_input_event(release)
+	var dist0: float = view._dist
+	for _k in 3:
+		var wheel := InputEventMouseButton.new()
+		wheel.button_index = MOUSE_BUTTON_WHEEL_UP
+		wheel.pressed = true
+		wheel.position = centre
+		Input.parse_input_event(wheel)
+		await get_tree().process_frame
+	print("SHIPCAM_INPUT mode=%s yaw_moved=%s zoomed_in=%s" % [view.mode, absf(view._yaw - yaw0) > 0.1, view._dist < dist0])
+	# The free camera, pulled in close and turned.
+	view._take_over()
+	view._yaw = 2.2
+	view._pitch = 0.35
+	view._dist = view._length * 1.3
+	for _i in 6:
+		await get_tree().process_frame
+	_shot("%s/free-close.png" % dir)
+	view._dist = view._length * 12.0
+	for _i in 6:
+		await get_tree().process_frame
+	_shot("%s/free-far.png" % dir)
 	get_tree().quit()
 
 

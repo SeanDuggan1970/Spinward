@@ -2,7 +2,7 @@
 // lived storm oval if `storm` > 0, and a soft haze at the limb. The mesh is turned so
 // its local +Y is the planet's pole; `spin` turns the cloud tops (radians).
 shader_type spatial;
-render_mode specular_disabled;
+render_mode specular_disabled, shadows_disabled;
 
 #include "res://view/shaders/noise.gdshaderinc"
 #include "res://view/shaders/rings.gdshaderinc"

@@ -1,5 +1,6 @@
-## In transit, three views cycled with M: the god's-eye orbit view (default), the
-## cockpit, and the flat system map. Time compression works in all of them.
+## In transit, four views cycled with M: your ship in the real sky with a free or
+## directed camera (default), the god's-eye orbit view, the cockpit, and the flat
+## system map. Time compression works in all of them.
 extends Control
 
 const UI := preload("res://view/ui/ui_kit.gd")
@@ -10,7 +11,9 @@ const TransitView := preload("res://view/transit_view.gd")
 const TransitHud := preload("res://view/transit_hud.gd")
 const OrbitView := preload("res://view/orbit_view.gd")
 const OrbitHud := preload("res://view/orbit_hud.gd")
-const VIEWS := ["orbit", "cockpit", "map"]
+const FollowView := preload("res://view/follow_view.gd")
+const FollowHud := preload("res://view/follow_hud.gd")
+const VIEWS := ["ship", "orbit", "cockpit", "map"]
 
 var sim
 var view_name := "orbit"
@@ -55,7 +58,7 @@ func _ready() -> void:
 	add_child(_legend)
 	for op in SystemMap.FLEET_COLOURS:
 		legend[1].add_child(UI.label("o  " + op, SystemMap.FLEET_COLOURS[op], 12))
-	set_view(sim.data.balance["flight"].get("transit_view", "orbit"))
+	set_view(sim.data.balance["flight"].get("transit_view", "ship"))
 
 
 func set_view(name: String) -> void:
@@ -70,6 +73,9 @@ func set_view(name: String) -> void:
 		_view = null
 		_overlay = null
 	match name:
+		"ship":
+			_view = FollowView.new(sim)
+			_overlay = FollowHud.new(sim, _view)
 		"cockpit":
 			_view = TransitView.new(sim)
 			_overlay = TransitHud.new(sim, _view)

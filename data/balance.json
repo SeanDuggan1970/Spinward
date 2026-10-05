@@ -53,7 +53,7 @@
 		"turn_accel_dps2": 70.0,
 		"assist_default": "assisted",
 		"default_view": "cockpit",
-		"transit_view": "orbit",
+		"transit_view": "ship",
 		"scanner_ranges_m": [
 			500,
 			2000,

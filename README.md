@@ -26,6 +26,8 @@ The system is rich and getting richer. The **Spaceline** news feed (a tab at eve
 - **Landauer Deep:** a station at Iapetus that AI minds built for themselves, after the Belt votes them persons.
 - **Discoveries:** new finds that leave a port richer for good.
 
+In transit the ship view shows your ship in the real sky. Drag to orbit and use the wheel to zoom, or leave it alone and a director frames cinematic shots of the ship, the worlds it passes and the ports at either end. Press **M** for the orbit view, cockpit and map.
+
 Press **F1** anywhere for the controls page (keyboard for now; remapping and gamepads later, from `data/controls.json`).
 
 Fly carefully: ships collide with stations, other ships and drifting rocks. Hits break the module they land on, strain the keel and can wreck the ship (the lifeboat and insurance get you home). The Tsiolkovsky Wheel, a Stanford torus, goes up at L4, and an orbital ring can be built round the Moon.

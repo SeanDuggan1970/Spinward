@@ -2,6 +2,7 @@
 // cloud, city lights on the night side and a thin blue limb. Procedural and seamless;
 // `spin` turns the planet (radians) and `sun_dir` (world space) lights the cities.
 shader_type spatial;
+render_mode shadows_disabled;
 
 #include "res://view/shaders/noise.gdshaderinc"
 

@@ -2,7 +2,7 @@
 // glowing limb where sunlight scatters through the upper atmosphere. Local +Y is the
 // pole; `spin` turns the cloud deck.
 shader_type spatial;
-render_mode specular_disabled;
+render_mode specular_disabled, shadows_disabled;
 
 #include "res://view/shaders/noise.gdshaderinc"
 
