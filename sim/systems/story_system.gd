@@ -1,5 +1,6 @@
-## The quiet arc (data/story.json): the Long View, an informal circle of Commons
-## minds, and what the Farside Array saw at a thousand AU.
+## The story arcs (data/story.json): the Long View, an informal circle of Commons
+## minds, and what the Farside Array saw at a thousand AU; and the Sufficiency, minds
+## who would like a home of their own.
 ##
 ## Beats run in order. A beat waits for its conditions and its port, then fires: its
 ## message goes into the player's correspondence and its actions happen (a favour
@@ -26,19 +27,23 @@ func tick(_game_dt: float) -> void:
 	if not s.location.get("status") in ["docked", "on_site"]:
 		return
 	var data = sim().data
+	# Each arc ("arc", default the Long View) runs its own beats in order, side by side.
+	var stalled := {}
 	for beat in data.story.get("beats", []):
 		var id: String = beat["id"]
-		if id in s.story["done"]:
+		var arc: String = beat.get("arc", "long_view")
+		if stalled.has(arc) or id in s.story["done"]:
 			continue
 		if not s.story["fired"].has(id):
 			if _ready_to_fire(beat):
 				_fire(beat)
-			return
+			stalled[arc] = true
+			continue
 		if _finished(beat):
 			s.story["done"].append(id)
 			sim().emit("story_beat_done", {"beat": id})
 			continue
-		return
+		stalled[arc] = true
 
 
 func _ready_to_fire(beat: Dictionary) -> bool:

@@ -113,7 +113,8 @@ func _ready() -> void:
 	ship_node.rotation = Vector3(0.05, -0.08, 0.6)
 	spin_angle = fposmod(float(sim.state.time_s) * spin_rate, TAU)
 	camera = Camera3D.new()
-	camera.far = SKY_DISTANCE * 3.0
+	# Far enough for an elevator's counterweight beyond its planet on the sky shell.
+	camera.far = SKY_DISTANCE * 6.0
 	camera.near = 0.2
 	camera.fov = 65.0
 	add_child(camera)
@@ -152,14 +153,21 @@ func _build_environment() -> void:
 	# Every world big enough to see, true to its angular size. Nearer ones sit nearer
 	# on the sky shell, so a moon passes in front of its planet, never behind.
 	var seen: Array = SkyKit.visible_bodies(sim.data, eph, here, t)
+	var built := {}
+	for id in sim.data.projects:
+		# Once a build is announced its first hardware is on station.
+		var announced: bool = sim.state.projects.get(id, {}).get("revealed", false)
+		built[id] = maxf(ProjectSystem.progress(sim.state, sim.data, id), 0.03) if announced else 0.0
 	for k in seen.size():
 		var body: String = seen[k][0]
 		var dir: Vector3 = seen[k][1]
 		body_dirs[body] = dir
 		var shell := SKY_DISTANCE * (0.55 + 0.45 * float(k) / float(maxi(1, seen.size() - 1)))
-		var mesh := SkyKit.body_mesh(sim.data, body, shell * minf(tan(float(seen[k][2])), 0.97))
+		# True angular size: a sphere of radius d*sin(a) at distance d subtends a.
+		var mesh := SkyKit.body_mesh(sim.data, body, shell * sin(float(seen[k][2])))
 		mesh.position = dir * shell
 		SkyKit.update_body(mesh, sun_dir, t)
+		SkyKit.dress_body(mesh, sim.data, body, -dir, sun_dir, built)
 		add_child(mesh)
 
 
@@ -425,6 +433,9 @@ func _sync_traffic() -> void:
 	# Moored ships keep the berth they were given; newcomers take the first free one.
 	var docked_here := {}
 	for npc in sim.state.npcs:
+		# Sails are 600 m across: they moor out at the sail park, not at a berth.
+		if sim.data.npcs["fleets"][npc["fleet"]].get("sail", false):
+			continue
 		if npc["location"]["status"] == "docked" and npc["location"]["place"] == place_id and preload("res://sim/systems/npc_system.gd").in_service(npc, t):
 			docked_here[npc["id"]] = true
 	for id in _berths.keys():
@@ -438,6 +449,8 @@ func _sync_traffic() -> void:
 					_berths[id] = i
 					break
 	for npc in sim.state.npcs:
+		if sim.data.npcs["fleets"][npc["fleet"]].get("sail", false):
+			continue
 		var loc: Dictionary = npc["location"]
 		var mode := ""
 		if _berths.has(npc["id"]):

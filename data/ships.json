@@ -148,5 +148,19 @@
 		"look": {
 			"cargo_layout": "line"
 		}
+	},
+	"sail_freighter": {
+		"name": "Sail freighter",
+		"description": "A Commons mind, two containers and a square of sunlight-catching film six hundred metres on a side. It never buys fuel and is never in a hurry.",
+		"spine": "mule_spine",
+		"modules": {
+			"command.0": "drone_core",
+			"cargo.0": "cargo_pod_m",
+			"cargo.1": "cargo_pod_m",
+			"drive.0": "solar_sail"
+		},
+		"look": {
+			"cargo_layout": "pair"
+		}
 	}
 }

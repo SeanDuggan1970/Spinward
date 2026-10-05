@@ -11,12 +11,15 @@ const Interplanetary := preload("res://sim/interplanetary.gd")
 const Perks := preload("res://sim/perks.gd")
 const Market := preload("res://sim/market.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
+const V := preload("res://sim/v3.gd")
 
 const HOUR := 3600.0
 const DAY := 86400.0
 const MAX_EVENTS_PER_TICK := 5000
 
 var _rng := RandomNumberGenerator.new()
+## The fleet of the NPC departing now (for _sail_plan).
+var _sailing: Dictionary = {}
 
 
 func start_game() -> void:
@@ -51,6 +54,11 @@ func _add_missing_ships(start: float) -> void:
 			var leg := i % maxi(1, fleet.get("route", []).size())
 			var home: String = fleet["route"][leg]["at"] if fleet.has("route") else fleet["homes"][i % fleet["homes"].size()]
 			var active_t := start + (float(schedule[i]) * DAY if i < schedule.size() else 0.0)
+			# Fleets a project builds wait for it ("commission_project"); then the schedule
+			# counts from the day it finishes.
+			var awaits: String = fleet.get("commission_project", "")
+			if awaits != "":
+				active_t = INF
 			s.npcs.append({
 				"id": id,
 				"fleet": fleet_id,
@@ -60,6 +68,7 @@ func _add_missing_ships(start: float) -> void:
 				"next_t": maxf(s.time_s, active_t) + _rng.randf_range(0.0, 24.0) * HOUR,
 				"active_t": active_t,
 				"commissioned": active_t <= start,
+				"awaits": awaits,
 				"leg": leg,
 				"trips": 0,
 			})
@@ -79,6 +88,14 @@ func tick(_game_dt: float) -> void:
 	if s.npcs.size() < _fleet_size():
 		_add_missing_ships(s.time_s)
 	for npc in s.npcs:
+		var awaits: String = npc.get("awaits", "")
+		if awaits != "" and s.projects.get(awaits, {}).get("done", false):
+			var fleet := _fleet(npc)
+			var schedule: Array = fleet.get("commission_days", [])
+			var i := int(String(npc["id"]).get_slice(".", 1))
+			npc["active_t"] = s.time_s + (float(schedule[i]) * DAY if i < schedule.size() else 0.0)
+			npc["next_t"] = float(npc["active_t"]) + _rng.randf_range(0.0, 24.0) * HOUR
+			npc["awaits"] = ""
 		if not npc.get("commissioned", true) and s.time_s >= float(npc["active_t"]):
 			npc["commissioned"] = true
 			sim().emit("npc_commissioned", {"npc": npc["id"], "place": npc["location"]["place"]}, float(npc["active_t"]))
@@ -170,7 +187,8 @@ func _depart(npc: Dictionary, t: float) -> void:
 		var loaded: Dictionary = npc["ship"].duplicate(true)
 		for good in choice["buy"]:
 			loaded["cargo"][good] = choice["buy"][good]
-		plan = Navigation.plan(loaded, sim().data, sim().ephemeris, here, choice["to"], t)
+		_sailing = _fleet(npc)
+		plan = _sail_plan(here, choice["to"], t) if _sailing.get("sail", false) else Navigation.plan(loaded, sim().data, sim().ephemeris, here, choice["to"], t)
 		if not plan["ok"] and plan.get("reason", "").begins_with("not enough propellant"):
 			# Fleet tankers and company accounts keep their own ships fuelled; never strand an NPC.
 			npc["ship"]["fuel_t"] = ShipStats.fuel_capacity_t(npc["ship"], sim().data)
@@ -202,6 +220,43 @@ func _depart(npc: Dictionary, t: float) -> void:
 				"t": t + (float(plan["arrive_t"]) - t) * 0.45, "done": false}
 			sim().emit("npc_flyby_plan", {"npc": npc["id"], "from": here, "to": choice["to"], "alt": npc["flyby"]["alt"]}, t)
 	sim().emit("npc_departed", {"npc": npc["id"], "from": here, "to": choice["to"], "cargo": npc["ship"]["cargo"].duplicate(), "arrive_t": plan["arrive_t"]}, t)
+
+
+## A sail voyage: no propellant, months long. Sunlight (and Clarke's beams at the
+## start) push the sail round a slow spiral, so the path sweeps prograde about as far
+## as orbits between the two radii would carry it, landing where the destination will
+## be. A view-side path, Sun-centred, in the shape Navigation.plan returns.
+func _sail_plan(here: String, to: String, t: float) -> Dictionary:
+	var eph = sim().ephemeris
+	var days: Array = _sailing.get("sail_days", [180, 220])
+	var tof := _rng.randf_range(float(days[0]), float(days[1])) * DAY
+	var a: Array = V.sub(eph.position(here, t), eph.position("sun", t))
+	var b: Array = V.sub(eph.position(to, t + tof), eph.position("sun", t + tof))
+	var ra := sqrt(a[0] * a[0] + a[1] * a[1])
+	var rb := sqrt(b[0] * b[0] + b[1] * b[1])
+	var tha := atan2(a[1], a[0])
+	var mu := float(sim().data.bodies["sun"]["gm"])
+	var natural := tof * 0.5 * (sqrt(mu / pow(ra, 3)) + sqrt(mu / pow(rb, 3)))
+	var sweep := fposmod(atan2(b[1], b[0]) - tha, TAU)
+	sweep += TAU * round((natural - sweep) / TAU)
+	if sweep < 0.5:
+		sweep += TAU
+	var samples := []
+	for k in 61:
+		var f := float(k) / 60.0
+		var shape := f * f * (3.0 - 2.0 * f)
+		var r := lerpf(ra, rb, shape)
+		var th := tha + sweep * f
+		var dr := (rb - ra) * 6.0 * f * (1.0 - f) / tof
+		var dth := sweep / tof
+		var sun: Array = eph.position("sun", t + tof * f)
+		samples.append([t + tof * f,
+			V.add(sun, [r * cos(th), r * sin(th), lerpf(a[2], b[2], f)]),
+			[dr * cos(th) - r * sin(th) * dth, dr * sin(th) + r * cos(th) * dth, (b[2] - a[2]) / tof],
+			[0.0, 0.0, 0.0]])
+	return {"ok": true, "frame": "sun", "fuel_t": 0.0, "arrive_t": t + tof, "burn_s": 0.0, "duration_s": tof,
+		"from_pos": eph.position(here, t), "to_pos": eph.position(to, t + tof), "distance_m": V.distance(a, b),
+		"from_vel": [0.0, 0.0, 0.0], "to_vel": [0.0, 0.0, 0.0], "samples": samples}
 
 
 ## Route and shuttle fleets fly fixed legs. They work like supply contracts: they

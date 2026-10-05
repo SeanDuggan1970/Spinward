@@ -117,7 +117,17 @@
 			"basin_flooding": 0.3,
 			"ice_caps": 0.9,
 			"ray_chance": 0.01
-		}
+		},
+		"structures": [
+			{
+				"kind": "elevator",
+				"name": "the Pavonis Line",
+				"top_r": 6.03,
+				"counter_r": 8.2,
+				"climbers": 3,
+				"project": "pavonis_line"
+			}
+		]
 	},
 	"phobos": {
 		"name": "Phobos",
@@ -184,7 +194,16 @@
 			"mare_colour": "#55524e",
 			"basin_flooding": 0.0,
 			"bright_spots": 1.0
-		}
+		},
+		"structures": [
+			{
+				"kind": "elevator",
+				"name": "the Piazzi Stalk",
+				"top_r": 2.53,
+				"counter_r": 3.7,
+				"climbers": 5
+			}
+		]
 	},
 	"vesta": {
 		"name": "Vesta",
@@ -346,7 +365,27 @@
 			"basin_flooding": 0.5,
 			"ray_chance": 0.0,
 			"largest_km": 13.0
-		}
+		},
+		"plumes": [
+			{
+				"kind": "umbrella",
+				"lat": -19,
+				"lon": "limb",
+				"height_r": 0.17,
+				"width_r": 0.34,
+				"colour": "#d6dcff",
+				"brightness": 0.9
+			},
+			{
+				"kind": "umbrella",
+				"lat": 13,
+				"lon": "limb",
+				"height_r": 0.045,
+				"width_r": 0.09,
+				"colour": "#f2e6c0",
+				"brightness": 0.8
+			}
+		]
 	},
 	"europa": {
 		"name": "Europa",
@@ -370,7 +409,20 @@
 			"basin_flooding": 0.3,
 			"largest_km": 13.0,
 			"lineae": 1.0
-		}
+		},
+		"plumes": [
+			{
+				"kind": "jets",
+				"lat": -62,
+				"lon": "limb",
+				"spread_deg": 3,
+				"jets": 3,
+				"height_r": 0.13,
+				"width_r": 0.025,
+				"colour": "#e8f2ff",
+				"brightness": 0.4
+			}
+		]
 	},
 	"ganymede": {
 		"name": "Ganymede",
@@ -488,7 +540,29 @@
 			"basin_flooding": 0.2,
 			"lineae": 1.0,
 			"lineae_colour": "#8fb0c4"
-		}
+		},
+		"plumes": [
+			{
+				"kind": "jets",
+				"lat": -90,
+				"lon": 0,
+				"spread_deg": 15,
+				"jets": 40,
+				"height_r": 1.3,
+				"width_r": 0.08,
+				"colour": "#e4f0ff",
+				"brightness": 1.0
+			},
+			{
+				"kind": "jets",
+				"lat": -90,
+				"lon": 0,
+				"height_r": 2.4,
+				"width_r": 1.2,
+				"colour": "#cfe0f4",
+				"brightness": 0.5
+			}
+		]
 	},
 	"rhea": {
 		"name": "Rhea",
@@ -674,7 +748,21 @@
 			"highland_colour": "#d9cfc6",
 			"mare_colour": "#b29a8a",
 			"basin_flooding": 0.4
-		}
+		},
+		"plumes": [
+			{
+				"kind": "geyser",
+				"lat": -50,
+				"lon": "limb",
+				"spread_deg": 25,
+				"jets": 6,
+				"height_r": 0.008,
+				"width_r": 0.003,
+				"trail_r": 0.11,
+				"colour": "#3a322c",
+				"brightness": 1.0
+			}
+		]
 	},
 	"pluto": {
 		"name": "Pluto",
@@ -788,5 +876,6 @@
 			"mare_colour": "#7d3e2c",
 			"basin_flooding": 0.0
 		}
-	}
+	},
+	"_note_plumes": "'plumes' (view-only): kind jets | umbrella | geyser, lat/lon in degrees (lon 'limb' puts it on the limb as seen), sizes in body radii, jets = how many, spread_deg = how far around the site they scatter. 'structures': space elevators (top_r = the synchronous anchor, counter_r = the counterweight, both in radii; 'project' grows it with that megaproject)."
 }

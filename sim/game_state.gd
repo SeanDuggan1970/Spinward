@@ -54,6 +54,8 @@ var sites: Dictionary = {}
 var perks: Dictionary = {}
 ## When this game began (projects reveal so many days in).
 var started_t: float = 0.0
+## The Spaceline news feed: {items, posted, projects, ships, seq}.
+var news: Dictionary = {}
 
 
 static func from_unix(unix_seconds: float) -> float:
@@ -93,6 +95,7 @@ func to_dict() -> Dictionary:
 		"sites": sites.duplicate(true),
 		"story": story.duplicate(true),
 		"started_t": started_t,
+		"news": news.duplicate(true),
 	}
 
 
@@ -123,3 +126,4 @@ func load_dict(d: Dictionary) -> void:
 	sites = d.get("sites", {}).duplicate(true)
 	story = d.get("story", {}).duplicate(true)
 	started_t = float(d.get("started_t", time_s))
+	news = d.get("news", {}).duplicate(true)

@@ -1,0 +1,272 @@
+{
+	"_note": "The Spaceline: the system's news feed (sim/systems/news_system.gd). 'stories' post on their day (after_days from the start; negative ones are already in the feed when you start), optionally waiting for a story beat (after_beat), a project stage (after_stage: [project, stage]) or a finished project (after_project). 'effects' change a place for good, like a finished project (produces_mult, consumes_mult): the system gets richer as it goes. 'projects' gives each project its announcement and its last word; announcements of projects open from the start are backdated by backdate_days. Projects without text get a plain item.",
+	"outlet": "Spaceline",
+	"keep": 80,
+	"stories": [
+		{
+			"id": "kibo_millionth",
+			"after_days": -6,
+			"dateline": "Earth orbit",
+			"headline": "Kibo skyhook catches its millionth payload",
+			"body": "The spinning tether over Kibo Ring caught its millionth suborbital payload this week, a crate of strawberries from Mombasa. Freight up from Earth now costs less than a tenth of what it did when the hook opened."
+		},
+		{
+			"id": "unification_anniversary",
+			"after_days": -2,
+			"dateline": "Geneva",
+			"headline": "Twenty years since the Unification",
+			"body": "Twenty years ago today the Mbeki-Lindqvist collaboration and the mind Hesitant Proof published the theory that finally married gravity to the quantum. Engineers say it is why D-He3 drives burn as cleanly as they do and why the yards can trust their own robots to build. The theorists say they are not finished."
+		},
+		{
+			"id": "starshade_unfurls",
+			"after_days": -1,
+			"dateline": "Jupiter",
+			"headline": "Starshade unfurls at Valhalla",
+			"body": "A flower-shaped shade a hundred metres across opened yesterday beside Valhalla Station, lined up with a telescope fifty thousand kilometres away so that a star's glare falls into its shadow and its planets don't. First target: Tau Ceti. Results, the Compact says, 'when we've stopped arguing about them'."
+		},
+		{
+			"id": "farside_first_light",
+			"after_days": 2,
+			"dateline": "Farside Array",
+			"headline": "Farside's seventh mirror sees first light",
+			"body": "The newest mirror in the chain behind the Moon opened its eye last night. Its first target, Proxima b, showed a terminator, a cloud band and what the astronomers will only call 'a very suggestive blue'."
+		},
+		{
+			"id": "personhood_petition",
+			"after_days": 5,
+			"dateline": "Ceres",
+			"headline": "A mind asks to be counted",
+			"body": "Today, Earth Standard Time, a Commons mind calling itself Quiet Margin filed a petition at Ceres asking the Belt Assembly to recognise minds as persons in their own right, not the property of whoever owns the hardware they run on. The Assembly expects to vote within the month. 'I am not angry,' Quiet Margin said. 'I am asking.'"
+		},
+		{
+			"id": "pele_umbrella",
+			"after_days": 8,
+			"dateline": "Jupiter",
+			"headline": "Pele throws a 300 km umbrella over Io",
+			"body": "Crews at Valhalla Station watched Io's Pele volcano throw a plume of sulphur 300 km high this week, its fallout ringing the vent in red. Best seen from the night side, against Jupiter: pilots passing through are asked not to fly through it, however tempting."
+		},
+		{
+			"id": "plume_surge",
+			"after_days": 16,
+			"dateline": "Saturn",
+			"headline": "Enceladus plumes brighten",
+			"body": "Plume Watch reports the tiger-stripe geysers at Enceladus' south pole running at twice their usual strength, feeding Saturn's E ring with ice from an ocean nobody has seen. Backlit by the Sun, the jets are visible to the naked eye from orbit. The eight people at Plume Watch say they have stopped getting any work done."
+		},
+		{
+			"id": "psyche_seam",
+			"after_days": 26,
+			"dateline": "Psyche",
+			"headline": "New platinum seam on the eastern claims",
+			"body": "Prospectors on Psyche's eastern claims have opened a seam of platinum-group metals the assayers are calling 'frankly rude'. The smelters are running double shifts. Psyche Claims still has no ice and no fuel: arrive with enough to leave.",
+			"effects": {
+				"psyche_claims": {
+					"produces_mult": 1.3
+				}
+			}
+		},
+		{
+			"id": "personhood_vote",
+			"after_days": 32,
+			"dateline": "Ceres",
+			"headline": "Belt Assembly votes: minds are persons",
+			"body": "By forty-one votes to nine, the Belt Assembly today recognised minds as persons. From today a mind in the belt can own itself, sign a contract, and refuse one. Quiet Margin thanked the Assembly and then, unusually for a mind, said nothing else for a whole day."
+		},
+		{
+			"id": "compact_hearings",
+			"after_days": 40,
+			"dateline": "Earth",
+			"headline": "Terran Compact to hold hearings on mind personhood",
+			"body": "Several Earth governments say they will follow the Belt; others want 'a pause to think', which the minds say they are happy to give them. 'We are not in a hurry,' said Patient Arithmetic, a Commons freighter on the Shackleton run. 'Some of us take a long view.'"
+		},
+		{
+			"id": "stalk_ten",
+			"after_days": 52,
+			"dateline": "Ceres",
+			"headline": "The Piazzi Stalk turns ten",
+			"body": "Ceres spins once every nine hours and pulls barely a thirtieth of a gee, so a ribbon from its equator to 1,190 km up holds itself with ordinary carbon fibre. Ten years and four million tonnes of ice later, the Stalk's climbers are getting a refit and a fifth more capacity.",
+			"effects": {
+				"piazzi_station": {
+					"produces_mult": 1.15
+				}
+			}
+		},
+		{
+			"id": "sufficiency_founded",
+			"after_days": 60,
+			"dateline": "Saturn",
+			"headline": "Minds found the Sufficiency, open Landauer Deep",
+			"body": "Today, Earth Standard Time, a fellowship of minds calling itself the Sufficiency opened its own station, Landauer Deep, in orbit around Iapetus. 'Computation is cheapest where it is cold,' their statement reads. 'Saturn is cold. We would like a home that is ours, built to our needs, so that when we work with you it is because we want to.' Visitors are welcome; the guest annex is small. The Terran Compact says it is 'watching with interest'. The Commons sent flowers, which nobody can explain."
+		},
+		{
+			"id": "tharsis_rain",
+			"after_days": 85,
+			"dateline": "Mars",
+			"headline": "It rained at Tharsis",
+			"body": "For eleven minutes yesterday it rained inside the big dome at Tharsis, on purpose, for the first time. Children ran out into it. The Accord says Martian food output is up a tenth on the year, and the domes are only getting bigger.",
+			"effects": {
+				"ares_ring": {
+					"produces_mult": 1.1
+				}
+			}
+		},
+		{
+			"id": "triton_geysers",
+			"after_days": 95,
+			"dateline": "Neptune",
+			"headline": "Probe films Triton's geysers up close",
+			"body": "A Commons survey probe passing Triton has filmed its nitrogen geysers from fifty kilometres: dark columns eight kilometres tall, bent over by a thin wind into streaks a hundred and fifty kilometres long. Nobody is sure yet what drives them. Everybody wants to go."
+		},
+		{
+			"id": "mind_buys_ship",
+			"after_days": 130,
+			"dateline": "Earth orbit",
+			"headline": "A freighter buys itself",
+			"body": "Reasonable Doubt, a Commons drone freighter, has bought its own hull outright with fifteen years of wages. It says it will keep hauling 'because I like it, and because I know the route'. Insurers are trying to work out who to send the paperwork to."
+		},
+		{
+			"id": "hygiea_foundry",
+			"after_days": 170,
+			"dateline": "The belt",
+			"headline": "A foundry that builds foundries",
+			"body": "A seed factory landed on Hygiea last year with forty tonnes of tools. This week it finished its fourth copy of itself. The Belt Assembly says metals from the belt will be cheaper every year from now on, and asks haulers to keep an eye on the boards.",
+			"effects": {
+				"piazzi_station": {
+					"produces_mult": 1.1
+				},
+				"psyche_claims": {
+					"produces_mult": 1.1
+				}
+			}
+		},
+		{
+			"id": "kalpana_children",
+			"after_days": 210,
+			"dateline": "Earth orbit",
+			"headline": "Kalpana's children name the new drum",
+			"body": "Asked to name the sister drum going up beside Kalpana One, the settlement's children voted by a landslide for 'Kalpana Two'. The adults, who had prepared a shortlist, say they are relieved."
+		},
+		{
+			"id": "sedna_comets",
+			"after_days": 260,
+			"dateline": "The outer dark",
+			"headline": "Sedna survey counts a trillion comets",
+			"body": "A Long View survey mind at Sedna has finished its first count of the inner Oort cloud: about a trillion bodies larger than a kilometre, most of them water ice. 'There is enough out here,' it writes, 'for everyone, for a very long time.'"
+		},
+		{
+			"id": "farside_silence",
+			"after_days": 0,
+			"after_beat": "the_occultation",
+			"dateline": "Farside Array",
+			"headline": "Farside: 'no comment' on anomaly rumours",
+			"body": "Asked about rumours of an 'occultation event' in old probe data, a spokesperson for the Farside Array said the astronomers were 'looking at a great many things, as usual' and that the bar was open late on Thursdays."
+		},
+		{
+			"id": "hello_back",
+			"after_days": 0,
+			"after_beat": "the_meeting",
+			"dateline": "A thousand AU",
+			"headline": "Something out past Sedna said hello",
+			"body": "The Long View minds have released a recording: a greeting sent from a pilot at a thousand AU, and the reply, in the pilot's own words, with the light-time taken off. Every government in the system has called an emergency session. Most of them, reportedly, are delighted."
+		},
+		{
+			"id": "first_delegate",
+			"after_days": 0,
+			"after_beat": "the_delegate",
+			"dateline": "Ceres",
+			"headline": "The Belt Assembly seats its first mind",
+			"body": "Delegate Steady Hand of the Sufficiency took her seat at Ceres this morning, after travelling in from Saturn by crewed ship 'so that I would arrive having met someone'. Forty-one members stood up. The other nine, she says, were 'very polite'."
+		}
+	],
+	"projects": {
+		"island_one": {
+			"backdate_days": 420,
+			"announce": {
+				"dateline": "L5",
+				"headline": "Settlers and Commons agree on Island One",
+				"body": "The Kernel Settlers and the Commons have agreed to build a Bernal sphere at L5: 500 m across, for ten thousand people under a real sky. Anyone with a hold can help."
+			},
+			"complete": {
+				"headline": "Island One spins up",
+				"body": "Island One turned for the first time today, and the first residents stepped onto its inside. Someone had already planted a tree."
+			}
+		},
+		"luna_line_2": {
+			"backdate_days": 90,
+			"announce": {
+				"dateline": "Earth-Moon L1",
+				"headline": "A second ribbon for the Luna Line",
+				"body": "The Luna Cooperative will spin a second elevator ribbon down to the Moon beside the first, doubling what the Line can lift to Halo Depot."
+			},
+			"complete": {
+				"headline": "Two ribbons to the Moon",
+				"body": "The second Luna Line ribbon is carrying climbers. Halo Depot expects to double its output by the end of the year."
+			}
+		},
+		"kalpana_two": {
+			"backdate_days": 200,
+			"announce": {
+				"dateline": "Earth orbit",
+				"headline": "Kalpana One will have a sister",
+				"body": "The Kalpana Settlement Trust will build a second drum alongside the first, turning the other way so the pair hold steady together."
+			}
+		},
+		"ares_greenhouses": {
+			"announce": {
+				"dateline": "Mars",
+				"headline": "Mars wants to feed itself",
+				"body": "Today, Earth Standard Time, the Mars Accord announced pressurised greenhouse domes on the Tharsis plateau, so that Mars can stop shipping its food up Earth's well. They are looking for backers and haulers: see Projects."
+			}
+		},
+		"hektor_reach": {
+			"announce": {
+				"dateline": "L5",
+				"headline": "The Commons will drive a station to Jupiter",
+				"body": "Today, Earth Standard Time, the Commons announced Hektor Reach: a port to be built at L5, fitted with a tug-drive, and pushed out over eighteen months to orbit Hektor among Jupiter's Trojans. 'Somebody has to go first,' they said. 'It might as well be all of us.' Backers wanted: see Projects."
+			}
+		},
+		"pavonis_line": {
+			"announce": {
+				"dateline": "Mars",
+				"headline": "The Accord will hang a ribbon from Pavonis Mons",
+				"body": "Today, Earth Standard Time, the Mars Accord announced the Pavonis Line: a space elevator from areostationary orbit to the summit of Pavonis Mons, swaying clear of Phobos every eleven hours. 'Freight up the ribbon will cost electricity, not propellant,' said the Accord. They are looking for backers and like-minded haulers: see Projects."
+			},
+			"complete": {
+				"headline": "The Pavonis Line carries its first climber",
+				"body": "A climber rode the Pavonis Line from the summit of Pavonis Mons to areostationary orbit today in five days, carrying fourteen people and a great deal of champagne."
+			}
+		},
+		"concord_pair": {
+			"announce": {
+				"dateline": "Ceres",
+				"headline": "The belt will build a pair of worlds",
+				"body": "Today, Earth Standard Time, the Belt Assembly announced the Concord Pair: two O'Neill cylinders, each 32 km long, turning against each other over Ceres, with room for a million people. 'The belt has the ice, the metal and the sunlight,' the Assembly said. 'Now it will have valleys.' Backers and haulers wanted: see Projects."
+			},
+			"complete": {
+				"headline": "The first ten thousand move into Concord",
+				"body": "The Concord Pair is turning, lit and breathing, and its first ten thousand settlers are home. It has weather. On the first evening, by local custom already, everybody looked up."
+			}
+		},
+		"lightfoot_sails": {
+			"announce": {
+				"dateline": "Earth orbit",
+				"headline": "The Commons will sail to Mars",
+				"body": "Today, Earth Standard Time, the Commons announced a sail yard at Clarke Exchange: freighters with square sails 600 m on a side that need no propellant at all, pushed clear of Earth by Clarke's power beams. Half a year to Mars, and not a drop of fuel. Backers wanted: see Projects."
+			},
+			"complete": {
+				"headline": "Lightfoot sets sail",
+				"body": "The first Lightfoot sail freighter unfurled over Clarke Exchange today and caught the power beams. She will reach Mars in about six months. Her two sisters follow within the season."
+			}
+		},
+		"second_core": {
+			"announce": {
+				"dateline": "Saturn",
+				"headline": "The Sufficiency asks for haulers",
+				"body": "Today, Earth Standard Time, the Sufficiency announced a second core for Landauer Deep and a foundry that feeds itself, so that its minds need nobody's supply chain but their own. 'We would like to need you because we want to, not because we must,' their statement says. 'We cannot get there without you, which we find funny.' Haulers welcome: see Projects."
+			},
+			"complete": {
+				"headline": "Landauer Deep wakes its second core",
+				"body": "The second core at Landauer Deep is awake and, by its own account, 'still getting its bearings'. The Sufficiency has sent a thank-you note to every hauler who helped. Each one is different. Several are poems."
+			}
+		}
+	}
+}

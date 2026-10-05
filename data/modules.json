@@ -477,5 +477,23 @@
 			],
 			"colour": "offwhite"
 		}
+	},
+	"solar_sail": {
+		"name": "Lightfoot sail",
+		"kind": "drive",
+		"mass_t": 2.0,
+		"price": 0,
+		"sail": true,
+		"description": "Six hundred metres of aluminised film on four booms. No propellant, ever; pushed out by sunlight and Clarke's power beams, it is slow and endlessly patient.",
+		"look": {
+			"shape": "sail",
+			"size_m": [
+				2.4,
+				2.4,
+				3.0
+			],
+			"span_m": 600,
+			"colour": "foil"
+		}
 	}
 }

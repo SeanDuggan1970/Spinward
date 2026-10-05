@@ -20,6 +20,7 @@ const ContractSystemScript := preload("res://sim/systems/contract_system.gd")
 const Perks := preload("res://sim/perks.gd")
 const SiteSystemScript := preload("res://sim/systems/site_system.gd")
 const EconomySystemScript := preload("res://sim/systems/economy_system.gd")
+const NpcSystem := preload("res://sim/systems/npc_system.gd")
 
 const AU := 1.495978707e11
 const DAY := 86400.0
@@ -65,6 +66,8 @@ func _initialize() -> void:
 	test_sites()
 	test_story_arc()
 	test_outer_traffic()
+	test_spaceline()
+	test_minds_and_sails()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -1061,3 +1064,74 @@ func test_outer_traffic() -> void:
 		if sim.data.npcs["fleets"][npc["fleet"]].has("commission_days") and s.time_s - float(npc["active_t"]) > 200.0 * DAY:
 			all_sailed = all_sailed and int(npc["trips"]) >= 1
 	check(all_sailed, "Every long-haul ship has made a voyage within months of entering service")
+
+
+## The Spaceline: a feed already running when you start, world stories on their day
+## (some making the system richer), projects announced as they are revealed.
+func test_spaceline() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var items: Array = s.news["items"]
+	var heads: Array = items.map(func(i): return i["headline"])
+	check(items.size() >= 4, "The feed has news in it on day one")
+	check(items.all(func(i): return float(i["t"]) <= s.time_s), "Nothing in the feed is from the future")
+	check(items.any(func(i): return i.get("project", "") == "island_one"), "Projects already under way were announced before you arrived")
+	check(not items.any(func(i): return i.get("project", "") == "valhalla_deep_ring"), "Invitation-only projects stay out of the papers")
+	var seen := []
+	sim.state.time_scale = 1.0e5
+	var mods_before := float(s.place_mods.get("psyche_claims", {}).get("produces_mult", 1.0))
+	for _k in 7:
+		sim.advance_game_time(10.0 * DAY)
+		for e in sim.take_events():
+			if e["type"] == "news":
+				seen.append(e["data"]["item"])
+	var posted: Array = s.news["posted"]
+	check("personhood_petition" in posted and "personhood_vote" in posted, "The personhood stories run by day 70")
+	check(not "hello_back" in posted, "Stories that wait for a story beat wait")
+	check(seen.any(func(i): return i.get("project", "") == "concord_pair" and i["kind"] == "project"), "The Concord Pair is announced in the news when it is revealed")
+	check(seen.any(func(i): return String(i["body"]).contains("Earth Standard Time")), "Announcements read like the news: today, Earth Standard Time")
+	var mods_after := float(s.place_mods.get("psyche_claims", {}).get("produces_mult", 1.0))
+	check(absf(mods_after / mods_before - 1.3) < 1e-6, "A new seam on Psyche makes the claims richer for good")
+	check(s.news["items"].size() <= int(sim.data.news["keep"]), "The feed keeps a bounded number of items")
+	var copy := SaveIO.from_text(SaveIO.to_text(s))
+	check(copy != null and copy.news["posted"] == s.news["posted"], "The feed survives a save")
+
+
+## Landauer Deep opens on its day; the Sufficiency's arc runs beside the Long View's;
+## Lightfoot's sails are commissioned when the yard is built and fly without fuel.
+func test_minds_and_sails() -> void:
+	var sim := fresh()
+	var s := sim.state
+	check(not Perks.place_open(s, sim.data, "landauer_deep"), "Landauer Deep is not open at the start")
+	sim.state.time_scale = 1.0e5
+	sim.advance_game_time(61.0 * DAY)
+	sim.take_events()
+	check(Perks.place_open(s, sim.data, "landauer_deep"), "Landauer Deep opens after sixty days")
+	check("sufficiency_founded" in s.news["posted"], "The Sufficiency's founding makes the news")
+	# Dock at Landauer Deep: the minds' arc fires though the Long View's has not begun.
+	s.location = {"status": "docked", "place": "landauer_deep"}
+	sim.advance_game_time(3600.0)
+	check(s.story["fired"].has("quiet_margin"), "Quiet Margin greets you at Landauer Deep")
+	check(not s.story["fired"].has("first_favour"), "The Long View's arc is untouched by it")
+	# The sail yard is finished: its sails enter service on their schedule.
+	var lightfoot := s.npcs.filter(func(n): return n["fleet"] == "lightfoot")
+	check(lightfoot.size() == 3 and lightfoot.all(func(n): return not NpcSystem.in_service(n, s.time_s)), "Lightfoot's sails wait for their yard")
+	s.projects["lightfoot_sails"]["done"] = true
+	s.projects["lightfoot_sails"]["stage"] = sim.data.projects["lightfoot_sails"]["stages"].size()
+	sim.advance_game_time(2.0 * DAY)
+	check(NpcSystem.in_service(lightfoot[0], s.time_s) and not NpcSystem.in_service(lightfoot[1], s.time_s), "The first sail enters service when the yard is done; her sisters follow")
+	var sailed := {}
+	for _k in 30:
+		sim.advance_game_time(2.0 * DAY)
+		var loc: Dictionary = lightfoot[0]["location"]
+		if loc["status"] == "transit" and sailed.is_empty():
+			sailed = loc.duplicate()
+	check(not sailed.is_empty() and sailed["frame"] == "sun" and sailed.get("samples") != null, "A sail freighter sets out on a Sun-centred path")
+	if not sailed.is_empty():
+		var days := (float(sailed["arrive_t"]) - float(sailed["depart_t"])) / DAY
+		check(days >= 160.0 and days <= 220.0, "A sail voyage to Mars takes about half a year (%.0f days)" % days)
+		check(float(lightfoot[0]["ship"]["fuel_t"]) == 0.0, "Sails carry no propellant and burn none")
+		var mid_t := (float(sailed["depart_t"]) + float(sailed["arrive_t"])) * 0.5
+		var r := V.length(V.sub(Navigation.transit_position(sailed, mid_t), sim.ephemeris.position("sun", mid_t)))
+		check(r > 1.05 * AU and r < 1.65 * AU, "Half way, the sail is out between Earth and Mars (%.2f AU)" % (r / AU))
+

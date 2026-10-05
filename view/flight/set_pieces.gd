@@ -11,6 +11,10 @@
 ##   bernal_frame     Island One, a Bernal sphere under construction by The Kernel
 ##   telescope_array  Farside Array's chain of megatelescope mirrors at L2
 ##   captured_rock    Trojan Yards' captured near-Earth asteroid, harnessed and mined
+##   oneill_pair      the Concord Pair over Ceres: two 32 km O'Neill cylinders, built in stages
+##   mind_works       Landauer Deep: the minds' cold core, radiators and a second core going up
+##   starshade        Valhalla's flower-shaped starshade, lined up with a distant telescope
+##   sail_yard        Clarke Exchange's sail yard, and the Lightfoot sails once it is built
 extends RefCounted
 
 const Kit := preload("res://view/flight/kit.gd")
@@ -37,6 +41,14 @@ static func build(parent: Node3D, features: Array, dirs: Dictionary, station: Di
 				anims.append_array(_telescopes(parent, dirs))
 			"captured_rock":
 				anims.append_array(_captured_rock(parent, station))
+			"oneill_pair":
+				anims.append_array(_oneill_pair(parent, dirs, float(progress.get("oneill_pair", 0.0))))
+			"mind_works":
+				anims.append_array(_mind_works(parent, dirs, float(progress.get("mind_works", 0.0))))
+			"starshade":
+				anims.append_array(_starshade(parent))
+			"sail_yard":
+				anims.append_array(_sail_yard(parent, dirs, float(progress.get("sail_yard", 0.0))))
 	return anims
 
 
@@ -435,3 +447,245 @@ static func _captured_rock(parent: Node3D, station: Dictionary) -> Array:
 	for k in 6:
 		parent.add_child(Kit.beacon(Color("ff3a2a"), centre + Vector3(cos(k * 1.05) * radius * 1.5, sin(k * 1.7) * radius * 0.9, sin(k * 1.05) * radius * 1.2), 4.0, 2.2, float(k) * 0.17))
 	return [{"kind": "flicker", "nodes": flicker}]
+
+
+# --- The Concord Pair: O'Neill cylinders over Ceres ------------------------------------
+
+## Two cylinders 8 km across and 32 km long, axes on the Sun, turning against each other
+## so the pair holds steady. Each has three land strips and three long windows, with a
+## mirror outside each window hinged at the far end to throw sunlight in. Stages
+## (project concord_pair): spines and caps -> hull and windows -> mirrors and spin-up ->
+## air, soil and settlers (the windows light up).
+static func _oneill_pair(parent: Node3D, dirs: Dictionary, p: float, distance: float = 120000.0, at: Vector3 = Vector3.ZERO) -> Array:
+	var sun: Vector3 = dirs.get("sun", Vector3.UP)
+	# Out where the pilot looks, but well clear of Ceres on the sky.
+	var avoid: Vector3 = dirs.get("ceres", Vector3.DOWN).normalized()
+	var d := Vector3(0, 0, -1)
+	var clear := deg_to_rad(72.0)
+	if d.angle_to(avoid) < clear:
+		var axis := avoid.cross(d)
+		if axis.length() < 1e-3:
+			axis = Vector3.UP
+		d = avoid.rotated(axis.normalized(), clear)
+	var root := _facing(sun, at if at != Vector3.ZERO else d * distance)
+	parent.add_child(root)
+	var r := 4000.0
+	var length := 32000.0
+	var chord := 2.0 * r * sin(PI / 12.0)
+	var frame_f := clampf(0.15 + p / 0.25 * 0.85, 0.15, 1.0)
+	var hull_f := clampf((p - 0.25) / 0.25, 0.0, 1.0)
+	var mirror_f := clampf((p - 0.5) / 0.25, 0.0, 1.0)
+	var spun := p >= 0.75
+	var done := p >= 1.0
+	var frame := _lit(Color("9aa0a6"), 0.25, 0.6, 0.5)
+	var skin := _lit(Color("d9d4c7"), 0.12, 0.2, 0.8)
+	var glass := _lit(Color("6f9a8a") if spun else Color("1a2430"), 0.9 if done else (0.35 if spun else 0.1), 0.3, 0.1)
+	var mirror := _lit(Color("aebfd4"), 0.6, 0.95, 0.08)
+	var anims := []
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 1974
+	for k in 2:
+		var rotor := Node3D.new()
+		rotor.position = Vector3((-1.0 if k == 0 else 1.0) * 6200.0, 0, 0)
+		root.add_child(rotor)
+		var hoops := int(ceil(17.0 * frame_f))
+		for i in hoops:
+			rotor.add_child(Kit.torus(r, 40.0, frame, Vector3(0, 0, length * 0.5 - length * float(i) / 16.0), 96))
+		var built := length * float(maxi(hoops - 1, 1)) / 16.0
+		for j in 6:
+			var a := TAU * float(j) / 6.0
+			rotor.add_child(Kit.box(Vector3(60.0, 60.0, built), frame, Vector3(cos(a) * r, sin(a) * r, length * 0.5 - built * 0.5)))
+		if frame_f >= 1.0:
+			for z in [-length * 0.5, length * 0.5]:
+				rotor.add_child(Kit.cylinder(r, 80.0, skin, Vector3(0, 0, z), 64))
+		# Sunward docking spindle.
+		rotor.add_child(Kit.cylinder(300.0, 1600.0, Kit.mat("grey"), Vector3(0, 0, -length * 0.5 - 800.0), 24))
+		rotor.add_child(Kit.beacon(Color("40ff60"), Vector3(0, 0, -length * 0.5 - 1650.0), 40.0, 2.0, float(k) * 0.5))
+		# Hull: twelve panels round, land and window strips in pairs, skinned from the far end.
+		if hull_f > 0.0:
+			var hull_len := length * hull_f
+			for j in 12:
+				var a := TAU * (float(j) + 0.5) / 12.0
+				var panel := Node3D.new()
+				panel.rotation.z = a - PI * 0.5
+				panel.position = Vector3(cos(a), sin(a), 0) * r * cos(PI / 12.0) + Vector3(0, 0, length * 0.5 - hull_len * 0.5)
+				panel.add_child(Kit.box(Vector3(chord, 30.0, hull_len), glass if (j / 2) % 2 == 1 else skin))
+				rotor.add_child(panel)
+		# Mirrors, one outside each window, hinged at the far end and opened sunward.
+		if mirror_f > 0.0:
+			for j in 3:
+				var a := TAU * (float(j) * 4.0 + 3.0) / 12.0
+				var hinge := Node3D.new()
+				hinge.rotation.z = a - PI * 0.5
+				hinge.position = Vector3(cos(a), sin(a), 0) * (r + 60.0) + Vector3(0, 0, length * 0.5)
+				var pivot := Node3D.new()
+				pivot.rotation.x = deg_to_rad(28.0) * mirror_f
+				var reach := length * mirror_f
+				pivot.add_child(Kit.box(Vector3(chord * 2.0, 20.0, reach), mirror, Vector3(0, 0, -reach * 0.5)))
+				hinge.add_child(pivot)
+				rotor.add_child(hinge)
+		if spun:
+			# About 0.47 rpm gives a full gee at 4 km; the pair turn opposite ways.
+			anims.append({"kind": "spin", "node": rotor, "rate": (1.0 if k == 0 else -1.0) * sqrt(9.81 / r)})
+		if not done:
+			var sparks := []
+			for i in 24:
+				var a := rng.randf() * TAU
+				var spark := Kit.sphere(30.0, Kit.glow(Color("cfe8ff"), 6.0), Vector3(cos(a) * r, sin(a) * r, length * 0.5 - built * rng.randf()))
+				spark.set_meta("seed", rng.randf())
+				rotor.add_child(spark)
+				sparks.append(spark)
+			anims.append({"kind": "flicker", "nodes": sparks})
+	return anims
+
+
+# --- Landauer Deep: built by minds, for minds -----------------------------------------
+
+## A core kept in permanent shade behind a sun-facing collector, with kilometres of
+## radiator vanes edge-on to the Sun, glowing a dull red as they dump the heat of
+## thinking. Beside it the second core goes up (project second_core), built by a swarm
+## of construction drones: frame, then shell, then its own vanes, then it wakes.
+static func _mind_works(parent: Node3D, dirs: Dictionary, p: float) -> Array:
+	var sun: Vector3 = dirs.get("sun", Vector3.UP)
+	var centre := Vector3(-3800.0, 900.0, -7600.0)
+	var root := _facing(sun, centre)
+	parent.add_child(root)
+	var collector := _lit(Color("141c30"), 0.12, 0.35, 0.3)
+	var vane := _lit(Color("7a2a18"), 0.9, 0.2, 0.7)
+	var ring := _lit(Color("9aa0a6"), 0.3, 0.6, 0.5)
+	var steel := Kit.mat("steel")
+	var anims := []
+	for c in 2:
+		var stage := 1.0 if c == 0 else p
+		if c == 1 and stage <= 0.0:
+			continue
+		var frame_f := 1.0 if c == 0 else clampf(stage * 3.0, 0.15, 1.0)
+		var shell_f := 1.0 if c == 0 else clampf((stage - 1.0 / 3.0) * 3.0, 0.0, 1.0)
+		var vanes_f := 1.0 if c == 0 else clampf((stage - 2.0 / 3.0) * 3.0, 0.0, 1.0)
+		var awake := c == 0 or stage >= 1.0
+		var core := Node3D.new()
+		core.position = Vector3.ZERO if c == 0 else Vector3(3200.0, 0, 400.0)
+		root.add_child(core)
+		# The collector shades the core and powers it.
+		if c == 0 or shell_f > 0.0:
+			core.add_child(Kit.cylinder(1200.0, 6.0, collector, Vector3(0, 0, -1700.0), 48))
+			core.add_child(Kit.torus(1200.0, 14.0, ring, Vector3(0, 0, -1696.0), 96))
+			for j in 6:
+				var spoke := Node3D.new()
+				spoke.rotation.z = TAU * float(j) / 6.0
+				spoke.add_child(Kit.box(Vector3(1200.0, 10.0, 10.0), ring, Vector3(600.0, 0, -1694.0)))
+				core.add_child(spoke)
+			core.add_child(Kit.truss(1500.0, 40.0, steel, Vector3(0, 0, -900.0)))
+		for i in int(ceil(9.0 * frame_f)):
+			core.add_child(Kit.torus(170.0, 6.0, ring, Vector3(0, 0, -450.0 + 112.5 * float(i)), 32))
+		if shell_f > 0.0:
+			core.add_child(Kit.cylinder(160.0, 900.0 * shell_f, Kit.mat("black"), Vector3(0, 0, 450.0 - 450.0 * shell_f), 32))
+		for j in int(round(8.0 * vanes_f)):
+			var holder := Node3D.new()
+			holder.rotation.z = TAU * float(j) / 8.0
+			holder.add_child(Kit.box(Vector3(2600.0, 4.0, 700.0), vane, Vector3(160.0 + 1300.0, 0, 120.0)))
+			core.add_child(holder)
+		if awake:
+			for j in 6:
+				var a := TAU * float(j) / 6.0
+				core.add_child(Kit.beacon(Color("7fb3d5"), Vector3(cos(a) * 165.0, sin(a) * 165.0, 460.0), 8.0, 4.0, float(j) / 6.0))
+		else:
+			# The construction swarm, seen as sparks of work.
+			var rng := RandomNumberGenerator.new()
+			rng.seed = 2207
+			var drones := []
+			for i in 40:
+				var a := rng.randf() * TAU
+				var spark := Kit.sphere(7.0, Kit.glow(Color("cfe8ff"), 6.0), Vector3(cos(a) * rng.randf_range(170.0, 600.0), sin(a) * rng.randf_range(170.0, 600.0), rng.randf_range(-500.0, 500.0)))
+				spark.set_meta("seed", rng.randf())
+				core.add_child(spark)
+				drones.append(spark)
+			anims.append({"kind": "flicker", "nodes": drones})
+	# They talk to the inner system by laser, very quietly.
+	var earth: Vector3 = dirs.get("earth", Vector3(0, 0, 1))
+	var beam := _facing(earth, centre + earth * 3000.0)
+	beam.add_child(Kit.cylinder(2.0, 6000.0, _haze(Color("70ff90"), 0.25)))
+	parent.add_child(beam)
+	return anims
+
+
+# --- Valhalla's starshade -------------------------------------------------------------
+
+## A flower-shaped shade a hundred metres across, flown in formation with a telescope
+## fifty thousand kilometres away so that a star's glare falls in its shadow and its
+## planets don't. The petals' shape is what keeps the shadow's edge dark.
+static func _starshade(parent: Node3D) -> Array:
+	var target := Vector3(0.35, 0.45, -0.82).normalized()
+	var root := _facing(target, Vector3(2600.0, -700.0, -3200.0))
+	parent.add_child(root)
+	var film := _lit(Color("2a2c30"), 0.25, 0.4, 0.4)
+	root.add_child(Kit.cylinder(30.0, 1.0, film, Vector3.ZERO, 40))
+	for i in 20:
+		var petal := Node3D.new()
+		petal.rotation.z = TAU * float(i) / 20.0
+		var blade := Kit.cone(0.4, 9.0, 22.0, film, Vector3.ZERO, 4)
+		blade.rotation = Vector3(0, PI * 0.5, 0)
+		blade.position = Vector3(41.0, 0, 0)
+		blade.scale = Vector3(1.0, 0.05, 1.0)
+		petal.add_child(blade)
+		root.add_child(petal)
+	root.add_child(Kit.box(Vector3(8.0, 8.0, 6.0), Kit.mat("foil"), Vector3(0, 0, 4.0)))
+	for k in 4:
+		var a := TAU * float(k) / 4.0
+		root.add_child(Kit.beacon(Color("ff3a2a"), Vector3(cos(a) * 52.0, sin(a) * 52.0, 0), 1.2, 2.0, float(k) * 0.25))
+	return []
+
+
+# --- Clarke's sail yard ---------------------------------------------------------------
+
+## A yard rolling out solar-sail freighters (project lightfoot_sails): film unrolls
+## onto a cross of booms while it is built; once finished, a Lightfoot sail stands
+## beside the yard, 600 m square and silver, with a power beam pushing on it.
+static func _sail_yard(parent: Node3D, dirs: Dictionary, p: float) -> Array:
+	var sun: Vector3 = dirs.get("sun", Vector3.UP)
+	var at := Vector3(-2600.0, -1400.0, -6500.0)
+	var yard := Node3D.new()
+	yard.position = at
+	parent.add_child(yard)
+	var steel := Kit.mat("steel")
+	yard.add_child(Kit.truss(900.0, 30.0, steel))
+	for i in 5:
+		yard.add_child(Kit.cylinder(18.0, 60.0, Kit.mat("foil"), Vector3(0, 30.0, -360.0 + 180.0 * float(i)), 16))
+	yard.add_child(Kit.beacon(Color("ff3a2a"), Vector3(0, 0, -470.0), 4.0, 2.0, 0.0))
+	yard.add_child(Kit.beacon(Color("ff3a2a"), Vector3(0, 0, 470.0), 4.0, 2.0, 0.5))
+	var film := _lit(Color("d9dde2"), 0.35, 0.95, 0.12)
+	var span := 600.0
+	var sail_at := at + Vector3(900.0, 500.0, -400.0)
+	# Turned between the Sun and the approach, so a pilot coming in sees its face lit.
+	var facing := (sun * 0.6 + (-sail_at).normalized() * 0.8).normalized()
+	var sail := _facing(facing, sail_at)
+	parent.add_child(sail)
+	var built := clampf(p, 0.0, 1.0)
+	# Booms out to the corners first, then the film unrolls down them.
+	var boom_f := clampf(0.3 + built * 1.4, 0.3, 1.0)
+	for k in 4:
+		var boom := Node3D.new()
+		boom.rotation.z = TAU * float(k) / 4.0 + PI * 0.25
+		boom.add_child(Kit.box(Vector3(span * 0.707 * boom_f, 3.0, 3.0), steel, Vector3(span * 0.354 * boom_f, 0, 0)))
+		sail.add_child(boom)
+	var film_f := 1.0 if p >= 1.0 else clampf((built - 0.5) * 2.0, 0.0, 1.0)
+	if film_f > 0.0:
+		sail.add_child(Kit.box(Vector3(span, span * film_f, 0.3), film, Vector3(0, -span * 0.5 * (1.0 - film_f), 0)))
+	sail.add_child(Kit.box(Vector3(12.0, 12.0, 16.0), Kit.mat("dark"), Vector3(0, 0, 9.0)))
+	var anims := []
+	if p >= 1.0:
+		# Clarke's beam on the sail: a faint pink column from the yard.
+		var beam := _facing(sail_at - at, at + (sail_at - at) * 0.5)
+		beam.add_child(Kit.cone(260.0, 30.0, (sail_at - at).length(), _haze(Color("ffd0e0"), 0.06), Vector3.ZERO))
+		parent.add_child(beam)
+	else:
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 1610
+		var sparks := []
+		for i in 16:
+			var spark := Kit.sphere(4.0, Kit.glow(Color("cfe8ff"), 6.0), Vector3(rng.randf_range(-span, span) * 0.4, rng.randf_range(-span, span) * 0.4, 0))
+			spark.set_meta("seed", rng.randf())
+			sail.add_child(spark)
+			sparks.append(spark)
+		anims.append({"kind": "flicker", "nodes": sparks})
+	return anims

@@ -126,7 +126,8 @@
 		},
 		"recipes": [],
 		"features": [
-			"power_arrays"
+			"power_arrays",
+			"sail_yard"
 		]
 	},
 	"halo_depot": {
@@ -505,7 +506,7 @@
 	"ares_ring": {
 		"name": "Ares Ring",
 		"operator": "Mars Accord",
-		"description": "The Mars up-port, 400 km above Arsia Mons. The settlements below ship up deuterium-rich water and the first Martian produce; they want parts, electronics and medicine more than anything. Fuel, and a yard that will fit long-haul tankage.",
+		"description": "The Mars up-port, 400 km above Arsia Mons. The settlements below ship up deuterium-rich water and the first Martian produce; they want parts, electronics and medicine more than anything. Fuel, and a yard that will fit long-haul tankage. Beyond the limb, if the Accord gets its way, a ribbon will one day hang from Pavonis Mons.",
 		"location": {
 			"type": "orbit",
 			"parent": "mars",
@@ -575,12 +576,13 @@
 					"propellant": 2
 				}
 			}
-		]
+		],
+		"features": []
 	},
 	"piazzi_station": {
 		"name": "Piazzi Station",
 		"operator": "Belt Assembly",
-		"description": "The belt's crossroads, in low orbit over Ceres. Ice, salts and ammonia come up from the bright crater fields; everything else comes a very long way in. Named for the monk who found Ceres on New Year's night, 1801.",
+		"description": "The belt's crossroads, in low orbit over Ceres. Ice, salts and ammonia come up the Piazzi Stalk, the elevator that has stood on Ceres' equator for ten years; everything else comes a very long way in. Named for the monk who found Ceres on New Year's night, 1801.",
 		"location": {
 			"type": "orbit",
 			"parent": "ceres",
@@ -655,6 +657,9 @@
 			"mining_rig",
 			"lander_bay",
 			"radiator_array"
+		],
+		"features": [
+			"oneill_pair"
 		]
 	},
 	"psyche_claims": {
@@ -773,6 +778,9 @@
 					"oxygen": 1
 				}
 			}
+		],
+		"features": [
+			"starshade"
 		]
 	},
 	"huygens_port": {
@@ -941,5 +949,74 @@
 				}
 			}
 		]
+	},
+	"landauer_deep": {
+		"name": "Landauer Deep",
+		"operator": "The Sufficiency",
+		"description": "Built by minds, for minds, in orbit around Iapetus. Computation is cheapest where it is cold, and Saturn's far moon is very cold and very quiet. Kilometres of radiator glow a dull red around a core kept in permanent shade. The guest annex is small and warm, and they apologise in advance for the silence.",
+		"location": {
+			"type": "orbit",
+			"parent": "iapetus",
+			"elements": {
+				"a_m": 1100000.0,
+				"e": 0.0,
+				"i_deg": 8.0,
+				"node_deg": 0.0,
+				"peri_deg": 0.0,
+				"m0_deg": 0.0
+			}
+		},
+		"station": {
+			"hub_radius_m": 20,
+			"hub_length_m": 150,
+			"ring_radius_m": 45,
+			"ring_tube_m": 5,
+			"spokes": 2,
+			"spin_rpm": 4.2,
+			"colour": "dark"
+		},
+		"services": [
+			"market",
+			"refuel",
+			"shipyard"
+		],
+		"shipyard_stock": [
+			"pathfinder_mk3",
+			"radiator_array",
+			"tank_l",
+			"survey_pod",
+			"docking_computer"
+		],
+		"market": {
+			"electronics": 80,
+			"machine_parts": 60,
+			"propellant": 160,
+			"water_ice": 100,
+			"deuterium": 6,
+			"helium3": 2,
+			"platinum_metals": 4,
+			"volatiles": 50,
+			"refined_metals": 80,
+			"food": 10
+		},
+		"produces": {
+			"electronics": 2.5,
+			"machine_parts": 2.0,
+			"propellant": 6.0,
+			"water_ice": 4.0
+		},
+		"consumes": {
+			"deuterium": 0.12,
+			"helium3": 0.03,
+			"platinum_metals": 0.05,
+			"volatiles": 1.5,
+			"refined_metals": 2.0,
+			"food": 0.2
+		},
+		"recipes": [],
+		"features": [
+			"mind_works"
+		],
+		"opens_after_days": 60
 	}
 }

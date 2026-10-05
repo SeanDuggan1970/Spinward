@@ -475,6 +475,81 @@
 				96,
 				200
 			]
+		},
+		"lightfoot": {
+			"operator": "The Commons",
+			"hull": "sail_freighter",
+			"behaviour": "route",
+			"count": 3,
+			"names": [
+				"Lightfoot",
+				"Small Hours",
+				"Gentle Insistence"
+			],
+			"commission_project": "lightfoot_sails",
+			"commission_days": [
+				0,
+				30,
+				60
+			],
+			"sail": true,
+			"sail_days": [
+				160,
+				220
+			],
+			"route": [
+				{
+					"at": "clarke_exchange",
+					"buy": [
+						"machine_parts",
+						"electronics"
+					],
+					"to": "ares_ring"
+				},
+				{
+					"at": "ares_ring",
+					"buy": [],
+					"to": "clarke_exchange"
+				}
+			],
+			"fill": 0.6,
+			"dwell_hours": [
+				72,
+				160
+			]
+		},
+		"sufficiency_tender": {
+			"operator": "The Sufficiency",
+			"hull": "deep_freighter",
+			"behaviour": "route",
+			"count": 1,
+			"names": [
+				"Adequate Reason"
+			],
+			"commission_days": [
+				90
+			],
+			"route": [
+				{
+					"at": "landauer_deep",
+					"buy": [
+						"propellant"
+					],
+					"to": "huygens_port"
+				},
+				{
+					"at": "huygens_port",
+					"buy": [
+						"volatiles"
+					],
+					"to": "landauer_deep"
+				}
+			],
+			"fill": 0.3,
+			"dwell_hours": [
+				60,
+				140
+			]
 		}
 	},
 	"chatter": {
@@ -536,6 +611,11 @@
 				"Co-pilot: \"{alt} KILOMETRES. We are alive. I'll be in my subroutine.\"",
 				"Co-pilot: \"Periapsis {alt} km. That crater rim was closer than the navigation tolerance. Lovely.\""
 			]
-		}
+		},
+		"sail_depart": [
+			"{ship}, {operator}: sail set for {to}. See you in half a year.",
+			"{ship} unfurling. Clarke, thank you for the push. Next stop {to}.",
+			"{ship} is under sail for {to}, carrying {cargo}. No hurry."
+		]
 	}
 }

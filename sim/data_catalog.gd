@@ -24,6 +24,8 @@ var locations: Dictionary = {}
 var story: Dictionary = {}
 ## Courier contracts and reputation tiers (data/contracts.json).
 var contracts: Dictionary = {}
+## The Spaceline news feed (data/news.json).
+var news: Dictionary = {}
 ## Paint schemes for the view (data/liveries.json); the sim never reads them.
 var liveries: Dictionary = {}
 ## tip_ttl_days, verify_tolerance.
@@ -50,6 +52,7 @@ func load_from(root: String) -> void:
 	contracts = read_json(root + "/contracts.json")
 	sites = read_json(root + "/sites.json") if FileAccess.file_exists(root + "/sites.json") else {}
 	story = read_json(root + "/story.json") if FileAccess.file_exists(root + "/story.json") else {}
+	news = read_json(root + "/news.json") if FileAccess.file_exists(root + "/news.json") else {}
 	locations = places.duplicate()
 	locations.merge(sites)
 	if FileAccess.file_exists(root + "/liveries.json"):
@@ -256,6 +259,33 @@ func validate() -> Array[String]:
 				if not modules.has(action["grant"][slot]):
 					problems.append("story %s: lends unknown module %s" % [beat["id"], action["grant"][slot]])
 		seen_beats.append(beat.get("id", ""))
+	# News: stories name real places, beats and projects.
+	var beat_ids: Array = story.get("beats", []).map(func(b): return b.get("id", ""))
+	var story_ids := {}
+	for item in news.get("stories", []):
+		var sid: String = item.get("id", "")
+		if sid == "" or story_ids.has(sid):
+			problems.append("news: story ids must be unique and present (%s)" % sid)
+		story_ids[sid] = true
+		if item.has("after_beat") and not item["after_beat"] in beat_ids:
+			problems.append("news %s: waits for unknown beat %s" % [sid, item["after_beat"]])
+		if item.has("after_project") and not projects.has(item["after_project"]):
+			problems.append("news %s: waits for unknown project %s" % [sid, item["after_project"]])
+		if item.has("after_stage") and not projects.has(item["after_stage"][0]):
+			problems.append("news %s: waits for unknown project %s" % [sid, item["after_stage"][0]])
+		for target in item.get("effects", {}):
+			if not places.has(target):
+				problems.append("news %s: effect on unknown place %s" % [sid, target])
+			for key in item["effects"][target]:
+				if not key in ["produces_mult", "consumes_mult"] or float(item["effects"][target][key]) <= 0.0:
+					problems.append("news %s: bad effect %s" % [sid, key])
+	for pid in news.get("projects", {}):
+		if not projects.has(pid):
+			problems.append("news: text for unknown project %s" % pid)
+	for fleet_id in npcs.get("fleets", {}):
+		var cp: String = npcs["fleets"][fleet_id].get("commission_project", "")
+		if cp != "" and not projects.has(cp):
+			problems.append("fleet %s: commissioned by unknown project %s" % [fleet_id, cp])
 	# Contracts: reference ships must be buildable.
 	for range_name in contracts.get("reference_ships", {}):
 		var spec: Dictionary = contracts["reference_ships"][range_name]

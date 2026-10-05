@@ -106,6 +106,7 @@ func refresh() -> void:
 		_tabs.add_child(_contracts_tab(place_id))
 		_tabs.add_child(_traffic_tab(place_id))
 		_tabs.add_child(_projects_tab(place_id))
+		_tabs.add_child(_news_tab())
 		_tabs.add_child(_tips_tab(place_id))
 		if "shipyard" in place.get("services", []):
 			_tabs.add_child(_shipyard_tab())
@@ -771,6 +772,41 @@ func _projects_tab(place_id: String) -> Control:
 		if st["done"]:
 			v.add_child(UI.label("Complete. Your haulage over the whole build: %.1f t" % st["player_total_t"], UI.GOOD, 13))
 		parts[1].add_child(p[0])
+	return parts[0]
+
+
+## The Spaceline: the system's news, newest first, in Earth Standard Time.
+func _news_tab() -> Control:
+	var parts := _scroll("Spaceline")
+	var s = sim.state
+	var d = sim.data
+	var items: Array = s.news.get("items", [])
+	parts[1].add_child(UI.label("The Spaceline: news from across the system. All times Earth Standard.", UI.DIM, 13))
+	if items.is_empty():
+		parts[1].add_child(UI.label("Nothing on the wire yet.", UI.DIM, 13))
+	for i in range(items.size() - 1, -1, -1):
+		var item: Dictionary = items[i]
+		var v := VBoxContainer.new()
+		v.add_theme_constant_override("separation", 2)
+		var stamp := Time.get_datetime_dict_from_unix_time(int(float(item["t"]) + preload("res://sim/game_state.gd").J2000_UNIX))
+		var months := ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
+		var when := "%02d %s %d  %02d:%02d EST" % [stamp["day"], months[int(stamp["month"]) - 1], stamp["year"], stamp["hour"], stamp["minute"]]
+		var dateline := String(item.get("dateline", "")).to_upper()
+		v.add_child(UI.label(when + ("   ·   " + dateline if dateline != "" else ""), UI.DIM, 11))
+		var head := UI.label(item["headline"], UI.AMBER, 15)
+		head.autowrap_mode = TextServer.AUTOWRAP_WORD
+		head.custom_minimum_size = Vector2(200, 0)
+		v.add_child(head)
+		if String(item.get("body", "")) != "":
+			var body := UI.label(item["body"], UI.TEXT, 12)
+			body.autowrap_mode = TextServer.AUTOWRAP_WORD
+			body.custom_minimum_size = Vector2(200, 0)
+			v.add_child(body)
+		var pid: String = item.get("project", "")
+		if pid != "" and d.projects.has(pid) and ProjectSystem.open_to_player(s, d, pid) and not s.projects.get(pid, {}).get("done", false):
+			v.add_child(UI.label("Backers and haulers wanted: see Projects.", UI.GOOD, 12))
+		parts[1].add_child(v)
+		parts[1].add_child(HSeparator.new())
 	return parts[0]
 
 

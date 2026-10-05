@@ -5,7 +5,10 @@
 ##   saturn        a ship crossing in front of Saturn's rings, Titan hanging off
 ##   lunar         a low run over the Moon's craters with Earth on the horizon
 ##   mars          a slow orbit round a ship at Phobos, Mars below
-##   belt          weaving between tumbling rocks off Ceres
+##   belt          weaving between tumbling rocks off Ceres, the Concord Pair beyond
+##   enceladus     under Enceladus' south pole, its plumes blazing against the Sun
+##   sail          a Lightfoot sail freighter catching sunlight over Earth
+## Bodies wear what is on them (plumes, elevators), as the system will be.
 ## Each shot flies a random hull in a real fleet's livery (the ships you will meet),
 ## with its caption. View-only: the sim is not ticking while this is up.
 ##
@@ -23,7 +26,7 @@ const SkyKit := preload("res://view/flight/sky.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
 const UI := preload("res://view/ui/ui_kit.gd")
 
-const SHOTS := ["earth_orbit", "jovian", "saturn", "lunar", "mars", "belt"]
+const SHOTS := ["earth_orbit", "jovian", "saturn", "lunar", "mars", "belt", "enceladus", "sail"]
 const SHOT_S := 18.0
 const FADE_S := 0.8
 
@@ -46,6 +49,8 @@ var _where := ""
 var _sun_dir := Vector3(-0.55, 0.35, 0.75).normalized()
 var _update: Callable
 var _spinners: Array = []
+## Set-piece animations (SetPieces.animate).
+var _anims: Array = []
 var _blinkers: Array = []
 var _overlay: Control
 var _fade: ColorRect
@@ -98,10 +103,11 @@ func next_shot() -> void:
 	_stage = Node3D.new()
 	add_child(_stage)
 	_spinners = []
+	_anims = []
 	var pool: Array = SHOTS.filter(func(s): return s != _shot)
 	_shot = force_shot if force_shot != "" else pool[_rng.randi() % pool.size()]
 	clock = 0.0
-	_pick_hero()
+	_pick_hero("sail_freighter" if _shot == "sail" else "")
 	call("_build_" + _shot)
 	_blinkers = Kit.collect_blinkers(_stage)
 
@@ -116,9 +122,10 @@ func _ship_dict(hull: String) -> Dictionary:
 
 
 ## A random hull, in the colours and name of a fleet that flies it (or an independent).
-func _pick_hero() -> void:
-	var hulls: Array = data.ships.keys()
-	_hero_hull = hulls[_rng.randi() % hulls.size()]
+func _pick_hero(hull: String = "") -> void:
+	# Sails are hundreds of metres across: they get their own shot, not a chase.
+	var hulls: Array = data.ships.keys().filter(func(h): return not data.ships[h]["modules"].values().any(func(m): return data.modules[m].get("sail", false)))
+	_hero_hull = hull if hull != "" else hulls[_rng.randi() % hulls.size()]
 	var fleets: Array = []
 	for id in data.npcs["fleets"]:
 		if data.npcs["fleets"][id]["hull"] == _hero_hull:
@@ -161,6 +168,8 @@ func _body(body: String, radius: float, at: Vector3, day_spin: float = 0.0) -> M
 	(mesh.mesh as SphereMesh).rings = 64
 	mesh.position = at
 	SkyKit.update_body(mesh, _sun_dir, 0.0)
+	# The camera works near the origin: dress the body for a viewer there.
+	SkyKit.dress_body(mesh, data, body, -at.normalized(), _sun_dir)
 	_stage.add_child(mesh)
 	if day_spin != 0.0:
 		_spinners.append([mesh, day_spin])
@@ -295,7 +304,9 @@ func _build_mars() -> void:
 func _build_belt() -> void:
 	_where = "Off Ceres  ·  the asteroid belt"
 	_light(Vector3(0.7, 0.4, 0.5), 1.1)
-	_body("ceres", 12000.0, Vector3(25000.0, -9000.0, -90000.0))
+	var ceres := _body("ceres", 12000.0, Vector3(25000.0, -9000.0, -90000.0))
+	# The Concord Pair, finished, turning in the distance.
+	_anims = SetPieces._oneill_pair(_stage, {"sun": _sun_dir, "ceres": ceres.position.normalized()}, 1.0, 0.0, Vector3(-120000.0, 6000.0, -250000.0))
 	var rocks := []
 	for k in 7:
 		var rock := SetPieces.rock(_rng.randf_range(12.0, 70.0), Vector3(_rng.randf_range(1.0, 1.6), _rng.randf_range(0.7, 1.1), 1.0), 900 + k)
@@ -313,6 +324,39 @@ func _build_belt() -> void:
 		camera.look_at(pos + Vector3(0, 0, -_hero_len), Vector3.UP)
 
 
+## Under Enceladus' south pole, the Sun just behind the moon: the tiger-stripe plumes
+## light up the way they did for Cassini, and the ship slides beneath them.
+func _build_enceladus() -> void:
+	_where = "Enceladus  ·  the tiger stripes"
+	_light(Vector3(0.55, 0.3, -0.8), 1.3, Vector3(30, -10, 40))
+	_body("saturn", 30000.0, Vector3(-70000.0, 12000.0, -160000.0), 0.02)
+	var moon := _body("enceladus", 2600.0, Vector3(1400.0, 3600.0, -11000.0))
+	_update = func(dt: float) -> void:
+		var f := clock / SHOT_S
+		var pos := Vector3(lerpf(-260.0, 220.0, f), -20.0 + 10.0 * sin(f * PI), -300.0 - 60.0 * f)
+		_fly(pos, Vector3(1.0, 0.03, -0.12), clock > 4.0 and clock < 12.0, dt)
+		camera.position = Vector3(-30.0 + 20.0 * f, -40.0, 120.0)
+		camera.look_at(pos.lerp(moon.position + Vector3(0, -3200.0, 0), 0.08), Vector3.UP)
+
+
+## A Lightfoot sail freighter over Earth: 600 m of film turning slowly to the Sun.
+func _build_sail() -> void:
+	_where = "High Earth orbit  ·  a Lightfoot sail"
+	_light(Vector3(-0.5, 0.45, 0.6), 1.5, Vector3(-200, 300, 600))
+	_body("earth", 40000.0, Vector3(-22000.0, -38000.0, -90000.0), 0.004)
+	_body("moon", 900.0, Vector3(30000.0, 9000.0, -120000.0))
+	_update = func(dt: float) -> void:
+		var f := clock / SHOT_S
+		var pos := Vector3(0.0, 0.0, -1400.0)
+		# Sail square to the Sun, backing off a little as the camera eases round.
+		_hero.position = pos
+		_hero.basis = Basis.looking_at(-_sun_dir.rotated(Vector3.UP, 0.4 + 0.15 * f), Vector3.UP)
+		if _hero_plume:
+			_hero_plume.visible = false
+		camera.position = Vector3(380.0 * sin(f * 0.8 - 0.4), 160.0 - 80.0 * f, 300.0 * f)
+		camera.look_at(pos, Vector3.UP)
+
+
 func _process(dt: float) -> void:
 	clock += dt
 	if clock >= SHOT_S:
@@ -323,6 +367,7 @@ func _process(dt: float) -> void:
 		m.set_shader_parameter("spin", clock * float(s[1]))
 	if _update.is_valid():
 		_update.call(dt)
+	SetPieces.animate(_anims, clock)
 	Kit.update_blinkers(_blinkers, clock)
 	# Cut through black: fade up at the start of a shot, down at its end.
 	var a := 0.0

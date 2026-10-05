@@ -24,8 +24,12 @@ static func yard_mult(state, place: String) -> float:
 	return 1.0 - float(at(state, place, "yard_discount", 0.0))
 
 
-## Places built by a project ("opens_with") are closed until it is finished.
+## Places built by a project ("opens_with") are closed until it is finished; places
+## with "opens_after_days" open that many days into the game.
 static func place_open(state, data, place: String) -> bool:
+	var days := float(data.locations.get(place, {}).get("opens_after_days", 0.0))
+	if days > 0.0 and state.time_s - float(state.started_t) < days * 86400.0:
+		return false
 	var builder: String = data.locations.get(place, {}).get("opens_with", "")
 	if builder == "":
 		return true

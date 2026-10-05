@@ -139,3 +139,213 @@ static func visible_bodies(data, eph, here: Array, t: float, min_deg: float = 0.
 static func dir_between(to: Array, from: Array) -> Vector3:
 	var d := [to[0] - from[0], to[1] - from[1], to[2] - from[2]]
 	return Vector3(d[0], d[2], -d[1]).normalized()
+
+
+# --- What is on a body: plumes and elevators ------------------------------------------
+
+## Dress a body's mesh (from body_mesh) with what data/bodies.json puts on it: plumes
+## (Enceladus' tiger stripes, Io's Pele, Triton's geysers) and structures (space
+## elevators). Sizes are true to the body. `to_viewer` is the world direction from the
+## body towards the camera, so "limb" sites stand where they show best, against
+## space; `sun_dir` (world, towards the Sun) lights the plumes; `progress`
+## {project: 0..1} grows structures still being built (absent means finished).
+static func dress_body(mesh: MeshInstance3D, data, body: String, to_viewer: Vector3, sun_dir: Vector3, progress: Dictionary = {}, hint: Vector3 = Vector3.UP) -> void:
+	var b: Dictionary = data.bodies[body]
+	if not (b.has("plumes") or b.has("structures")):
+		return
+	var radius := (mesh.mesh as SphereMesh).radius
+	var view_local := (mesh.basis.inverse() * to_viewer).normalized()
+	var hint_local := (mesh.basis.inverse() * hint).normalized()
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(body)
+	for spec in b.get("plumes", []):
+		_plume(mesh, spec, radius, view_local, hint_local, sun_dir, rng)
+	for spec in b.get("structures", []):
+		if spec.get("kind", "") == "elevator":
+			var p := float(progress.get(spec.get("project", ""), 1.0)) if spec.has("project") else 1.0
+			if p > 0.0:
+				_elevator(mesh, spec, radius, view_local, hint_local, p, rng)
+
+
+## A point on the unit sphere (mesh-local, +Y the pole) for a site: lat/lon in degrees,
+## or lon "limb": just on the near side of the limb as seen from the viewer, on the
+## side nearer `hint_local`.
+static func _site(spec: Dictionary, view_local: Vector3, hint_local: Vector3, near_side: float = 0.12) -> Vector3:
+	var lat := deg_to_rad(float(spec.get("lat", 0.0)))
+	var l = spec.get("lon", 0.0)
+	if l is String and l == "limb":
+		var a := cos(lat) * Vector2(view_local.x, view_local.z).length()
+		var best := Vector3(cos(lat), sin(lat), 0.0)
+		if a > 1e-4:
+			var c := clampf((near_side - sin(lat) * view_local.y) / a, -1.0, 1.0)
+			var best_dot := -INF
+			for sgn in [1.0, -1.0]:
+				var lon: float = atan2(view_local.z, view_local.x) + acos(c) * sgn
+				var p := Vector3(cos(lat) * cos(lon), sin(lat), cos(lat) * sin(lon))
+				if p.dot(hint_local) > best_dot:
+					best_dot = p.dot(hint_local)
+					best = p
+		return best
+	var lon := deg_to_rad(float(l))
+	return Vector3(cos(lat) * cos(lon), sin(lat), cos(lat) * sin(lon))
+
+
+## A basis whose +Y is `up`.
+static func _up_basis(up: Vector3) -> Basis:
+	var y := up.normalized()
+	var x := y.cross(Vector3.FORWARD if absf(y.dot(Vector3.FORWARD)) < 0.95 else Vector3.RIGHT).normalized()
+	return Basis(x, y, x.cross(y).normalized())
+
+
+## `dir` tilted by `angle` towards a random side.
+static func _tilt(dir: Vector3, angle: float, rng: RandomNumberGenerator) -> Vector3:
+	var side := _up_basis(dir).x.rotated(dir.normalized(), rng.randf() * TAU)
+	return dir.rotated(side, angle).normalized()
+
+
+static func _glow(colour: Color, energy: float) -> StandardMaterial3D:
+	var m := StandardMaterial3D.new()
+	m.albedo_color = colour
+	m.emission_enabled = true
+	m.emission = colour
+	m.emission_energy_multiplier = energy
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	return m
+
+
+static func _ball(radius: float, material: Material, at: Vector3) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	var s := SphereMesh.new()
+	s.radius = radius
+	s.height = radius * 2.0
+	s.radial_segments = 12
+	s.rings = 6
+	mi.mesh = s
+	mi.material_override = material
+	mi.position = at
+	return mi
+
+
+static func _plume(mesh: MeshInstance3D, spec: Dictionary, radius: float, view_local: Vector3, hint_local: Vector3, sun_dir: Vector3, rng: RandomNumberGenerator) -> void:
+	var kind: String = spec.get("kind", "jets")
+	var centre := _site(spec, view_local, hint_local)
+	var height := float(spec.get("height_r", 0.2)) * radius
+	var width := float(spec.get("width_r", 0.05)) * radius
+	var colour := Color(String(spec.get("colour", "#e4f0ff")))
+	if kind == "geyser":
+		# Triton's: dark columns a few km tall, then blown sideways into long streaks.
+		var dark := StandardMaterial3D.new()
+		dark.albedo_color = Color(colour, 0.55)
+		dark.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		dark.cull_mode = BaseMaterial3D.CULL_DISABLED
+		var streak := dark.duplicate() as StandardMaterial3D
+		streak.albedo_color = Color(colour, 0.28)
+		for i in int(spec.get("jets", 1)):
+			var at := _tilt(centre, rng.randf() * deg_to_rad(float(spec.get("spread_deg", 0.0))), rng)
+			var holder := Node3D.new()
+			holder.position = at * radius
+			holder.basis = _up_basis(at)
+			var col := MeshInstance3D.new()
+			var cm := CylinderMesh.new()
+			cm.top_radius = width
+			cm.bottom_radius = width * 0.6
+			cm.height = height
+			col.mesh = cm
+			col.material_override = dark
+			col.position = Vector3(0, height * 0.5, 0)
+			holder.add_child(col)
+			var trail := MeshInstance3D.new()
+			var tm := BoxMesh.new()
+			var length := float(spec.get("trail_r", 0.1)) * radius * rng.randf_range(0.6, 1.0)
+			tm.size = Vector3(length, height * 0.35, width * 3.0)
+			trail.mesh = tm
+			trail.material_override = streak
+			trail.position = Vector3(length * 0.5, height * 0.9, 0)
+			holder.add_child(trail)
+			mesh.add_child(holder)
+		return
+	var mat := ShaderMaterial.new()
+	mat.shader = load("res://view/shaders/plume.gdshader")
+	mat.set_shader_parameter("colour", colour)
+	mat.set_shader_parameter("sun_dir", sun_dir)
+	mat.set_shader_parameter("umbrella", 1.0 if kind == "umbrella" else 0.0)
+	mat.set_shader_parameter("seed", rng.randf() * 50.0)
+	var jets := int(spec.get("jets", 1)) if kind == "jets" else 1
+	# Many jets overlap; each carries a share of the plume's light.
+	mat.set_shader_parameter("brightness", float(spec.get("brightness", 1.0)) * (0.5 if jets == 1 else clampf(1.2 / sqrt(float(jets)), 0.1, 0.5)))
+	for i in jets:
+		var at := centre
+		if spec.has("spread_deg"):
+			at = _tilt(centre, sqrt(rng.randf()) * deg_to_rad(float(spec["spread_deg"])), rng)
+		var up := _tilt(at, rng.randf() * deg_to_rad(9.0), rng) if kind == "jets" else at
+		var h := height * (rng.randf_range(0.55, 1.0) if jets > 1 else 1.0)
+		var holder := Node3D.new()
+		holder.position = at * radius * 0.995
+		holder.basis = _up_basis(up)
+		var cone := CylinderMesh.new()
+		cone.top_radius = 1.0
+		cone.bottom_radius = 0.12 if kind == "umbrella" else 0.18
+		cone.height = 2.0
+		cone.cap_top = false
+		cone.cap_bottom = false
+		cone.radial_segments = 24
+		cone.rings = 6
+		var mi := MeshInstance3D.new()
+		mi.mesh = cone
+		mi.material_override = mat
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		mi.scale = Vector3(width, h * 0.5, width)
+		mi.position = Vector3(0, h * 0.5, 0)
+		holder.add_child(mi)
+		mesh.add_child(holder)
+
+
+## A space elevator: a ribbon up from the equator through the synchronous anchor to a
+## counterweight. Still being built (p < 1), it is let down from the anchor while the
+## counterweight climbs out, and the spool tip is lit; finished, climbers ride it.
+static func _elevator(mesh: MeshInstance3D, spec: Dictionary, radius: float, view_local: Vector3, hint_local: Vector3, p: float, rng: RandomNumberGenerator) -> void:
+	var at := _site({"lat": 0.0, "lon": spec.get("lon", "limb")}, view_local, hint_local, 0.2)
+	var top := float(spec.get("top_r", 3.0))
+	var cw := float(spec.get("counter_r", top * 1.4))
+	var low := 1.0
+	var high := cw
+	if p < 1.0:
+		low = top - (top - 1.0) * clampf((p - 1.0 / 3.0) * 3.0, 0.0, 1.0)
+		high = top + (cw - top) * clampf(p * 1.5, 0.08, 1.0)
+	var holder := Node3D.new()
+	holder.basis = _up_basis(at)
+	mesh.add_child(holder)
+	var ribbon := StandardMaterial3D.new()
+	ribbon.albedo_color = Color("d8d2c4")
+	ribbon.emission_enabled = true
+	ribbon.emission = Color("d8d2c4")
+	ribbon.emission_energy_multiplier = 0.6
+	# A real ribbon is a metre wide; drawn at least a pixel or so wide from where it is seen.
+	var w := maxf(radius * 0.0025, mesh.position.length() * 0.0022)
+	var line := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	bm.size = Vector3(w, radius * (high - low), w)
+	line.mesh = bm
+	line.material_override = ribbon
+	line.position = Vector3(0, radius * (low + high) * 0.5, 0)
+	holder.add_child(line)
+	var anchor := MeshInstance3D.new()
+	var am := BoxMesh.new()
+	am.size = Vector3.ONE * radius * 0.03
+	anchor.mesh = am
+	anchor.material_override = _glow(Color("f0a030"), 1.6)
+	anchor.position = Vector3(0, radius * top, 0)
+	holder.add_child(anchor)
+	var counter := MeshInstance3D.new()
+	var cmesh := BoxMesh.new()
+	cmesh.size = Vector3.ONE * radius * 0.045
+	counter.mesh = cmesh
+	counter.material_override = _glow(Color("c8c0b0"), 0.8)
+	counter.position = Vector3(0, radius * high, 0)
+	holder.add_child(counter)
+	if p < 1.0 and low > 1.0:
+		holder.add_child(_ball(radius * 0.012, _glow(Color("40ff60"), 4.0), Vector3(0, radius * low, 0)))
+	if p >= 1.0:
+		for i in int(spec.get("climbers", 3)):
+			holder.add_child(_ball(radius * 0.008, _glow(Color("fff0c0"), 4.0), Vector3(0, radius * lerpf(1.05, top, rng.randf()), 0)))
+		holder.add_child(_ball(radius * 0.01, _glow(Color("ff3a2a"), 3.0), Vector3(0, radius * 1.002, 0)))

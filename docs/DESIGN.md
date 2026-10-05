@@ -57,6 +57,12 @@ The system should feel like a place where big things are being built. Each tier 
 | Kalpana One (Globus settlement drum) | Equatorial LEO | 1 | **In** (place) | A settlement market of 3,000 people |
 | Megatelescope array | Farside Array, L2 | 1 | **In** (place + set piece) | Remote science market, no fuel |
 | Bernal sphere (Island One) | Beside The Kernel, L5 | 1–2 | **In** (set piece, under construction) | Habitat-module demand; grows over the campaign |
+| Piazzi Stalk (Ceres elevator) | Ceres equator | 2 | **In** (on the body) | Why ice and volatiles are cheap at Piazzi |
+| Pavonis Line (Mars elevator) | Pavonis Mons | 2 | **In** (project, lets down in stages) | Ares Ring output x1.5 when finished |
+| Concord Pair (O'Neill cylinders, 8 x 32 km) | Over Ceres | 2-3 | **In** (project set piece) | Piazzi's market x1.8 |
+| Landauer Deep (the minds' cold core) | Iapetus | 2 | **In** (port + project) | The Sufficiency's home; electronics and parts |
+| Starshade | Valhalla | 2 | **In** (set piece) | Exoplanet science; lore |
+| Solar sail freighters | Clarke to Mars | 2 | **In** (project builds the fleet) | Propellant-free bulk freight, slowly |
 | Stanford torus | L4/L5 | 2 | Planned | A completed habitat; big food and passenger market |
 | Earth–Mars cycler (Aldrin cycler) | Earth–Mars | 2 | Planned | A moving station you catch on its schedule |
 | Space farms | Kernel, Belt | 2–3 | Partly in (Kernel food) | Food chain away from Earth |
@@ -472,6 +478,54 @@ Sean's direction (2026-10-04). It goes beyond trade into opportunities, refits a
 - **The hero:** each shot flies a random hull in a real fleet's livery and name, and the caption says where you are.
 - **Composition:** cameras sit on the far side of the ship from the planet, so the world fills the background.
 - **Capture:** `--title=<dir>` shoots every set-up.
+
+## A rich and getting richer system (Oct 2026)
+
+Sean's direction (2026-10-05). Fill the system with:
+- moons, megastructures (some under construction), huge habitats
+- space elevators where spin and gravity allow them
+- cryovolcanoes, space telescopes, solar sails
+- a hopeful future: physics solved, construction automated
+- AI personhood, with minds who want facilities of their own
+
+These glimpses should be part of the story arc and reported on a space-age news feed: "today, Earth Standard Time, X announced… and hopes to find backers", showing up on Projects. In Sean's words: "a rich and getting richer solar system full of potential for all who are brave and crazy enough".
+
+- **The Spaceline** (`data/news.json`, `sim/systems/news_system.gd`, the Spaceline tab):
+  - **On day one:** the feed is already running, with backdated stories and the announcements of projects already under way.
+  - **World stories:** they post on their day. Some wait for a story beat (`after_beat`) or a project. Some carry `effects` that leave a place richer for good: a platinum seam on Psyche, the Stalk's refit, a self-copying foundry on Hygiea, rain at Tharsis.
+  - **Projects:** revealed projects are announced with a pitch and "see Projects"; stages and completions make the news too. Invitation-only projects stay out of the papers.
+  - **Ships:** new ships entering service are reported.
+  - **How it runs:** the feed watches state rather than other systems' events, so it also catches up on old saves.
+- **New projects:**
+  - **The Pavonis Line**, a Mars elevator let down from areostationary orbit (day 45).
+  - **The Concord Pair**, two O'Neill cylinders over Ceres (day 20).
+  - **Lightfoot sails**, a sail yard at Clarke Exchange (day 10). Finishing it commissions the Lightfoot sail fleet (`commission_project`).
+  - **Landauer Deep's second core**, from the Sufficiency (day 75).
+- **AI personhood:**
+  - **In the news:** a mind petitions the Belt Assembly (day 5), the Belt votes minds persons (day 32), the Compact holds hearings, a freighter buys itself.
+  - **Landauer Deep:** the Sufficiency opens Landauer Deep at Iapetus on day 60 (`opens_after_days`). It is cold, quiet and theirs, with a small warm annex for guests.
+  - **The Sufficiency's arc** (`story.json`, `arc: "sufficiency"`; arcs now run side by side):
+    1. Quiet Margin greets you.
+    2. Carry a sleeping mind to Ceres to take the Belt Assembly's first mind seat.
+    3. A thank-you from Delegate Steady Hand.
+- **Sails:**
+  - **The hull:** the sail freighter, a Commons mind with two containers and a 600 m square sail.
+  - **Voyages:** sail voyages are 160 to 220 days, Clarke Exchange to Ares Ring. Each is a Sun-centred spiral that sweeps about as far as orbits between the two radii would carry it, with no propellant.
+  - **At port:** sails moor at the sail park, not at berths.
+- **On the bodies** (`bodies.json` "plumes" and "structures", `SkyKit.dress_body`):
+  - **Enceladus:** tiger-stripe jets and a broad haze, forward-scattering so they blaze when backlit.
+  - **Elsewhere:** Pele and a smaller plume on Io's limb, faint Europa jets, and Triton's dark geysers with their wind-blown streaks.
+  - **Elevators:** the Piazzi Stalk on Ceres (finished), and the Pavonis Line, growing with its project.
+  - **Where they stand:** "limb" sites stand where they show against space.
+  - **In the flight view:** bodies on the sky shell now use true angular size (sin, not tan), and the camera's far plane reaches an elevator's counterweight.
+- **Set pieces:**
+  - the Concord Pair at Piazzi, 120 km out: frame, hull and windows, mirrors and spin-up, then lights
+  - Landauer Deep's mind works: a collector shading a black core, eight red-glowing radiator vanes, and the second core built by a drone swarm
+  - Valhalla's starshade
+  - Clarke's sail yard, with a sail under a power beam once finished
+- **Capture modes:**
+  - `--gallery=<dir> --only=a,b` shoots chosen ports at the start, half built and finished.
+  - The title has two new shots: under Enceladus' plumes, and a Lightfoot sail over Earth. The belt shot shows the Concord Pair beyond Ceres and the Stalk.
 
 ## Milestones
 

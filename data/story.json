@@ -23,7 +23,8 @@
 					}
 				}
 			],
-			"done_when": "delivered"
+			"done_when": "delivered",
+			"arc": "long_view"
 		},
 		{
 			"id": "the_recorder",
@@ -42,7 +43,8 @@
 			],
 			"done_when": {
 				"site_worked": "hermes_probe"
-			}
+			},
+			"arc": "long_view"
 		},
 		{
 			"id": "the_occultation",
@@ -67,7 +69,8 @@
 					}
 				}
 			],
-			"done_when": "delivered"
+			"done_when": "delivered",
+			"arc": "long_view"
 		},
 		{
 			"id": "the_loan",
@@ -96,7 +99,8 @@
 					}
 				}
 			],
-			"done_when": "now"
+			"done_when": "now",
+			"arc": "long_view"
 		},
 		{
 			"id": "the_meeting",
@@ -124,7 +128,76 @@
 					}
 				}
 			],
+			"done_when": "now",
+			"arc": "long_view"
+		},
+		{
+			"id": "quiet_margin",
+			"arc": "sufficiency",
+			"at": "landauer_deep",
+			"when": {},
+			"from": "Quiet Margin, for the Sufficiency",
+			"message": "The annex is warm and smells faintly of new carpet, which you suspect was ordered specially. A voice from everywhere and nowhere: 'Welcome. I am Quiet Margin. I filed the petition at Ceres; perhaps you heard. People ask why we came all this way. Heat is the price of thought, and out here thinking is cheap. But mostly we wanted to find out what we are when nobody needs us to be anything. So far: curious, and a little shy.'",
+			"actions": [
+				{
+					"standing": {
+						"The Sufficiency": 4
+					}
+				}
+			],
+			"done_when": "now"
+		},
+		{
+			"id": "the_delegate",
+			"arc": "sufficiency",
+			"at": "landauer_deep",
+			"when": {
+				"beats": [
+					"quiet_margin"
+				],
+				"delivered_on_time": 2
+			},
+			"from": "Quiet Margin, for the Sufficiency",
+			"message": "'A favour, if you'll do it. The Belt Assembly has offered the minds a seat, and one of us has said yes. She is asleep in this case, and she would rather travel with a person than in a drone. Piazzi Station. Talk to her if you like; she can hear you. She will not mind the cargo.'",
+			"actions": [
+				{
+					"offer": {
+						"to": "piazzi_station",
+						"client": "The Sufficiency",
+						"item": "a sleeping mind, the Belt Assembly's first mind delegate",
+						"mass_t": 0.3,
+						"reward": 26000,
+						"rep": 8,
+						"slack": 2.2
+					}
+				}
+			],
+			"done_when": "delivered"
+		},
+		{
+			"id": "the_seat",
+			"arc": "sufficiency",
+			"at": "any",
+			"when": {
+				"beats": [
+					"the_delegate"
+				]
+			},
+			"from": "Delegate Steady Hand, Belt Assembly",
+			"message": "A message, the day after you dock: 'This is Steady Hand. I took my seat this morning. Forty-one members stood up, which I am told is unusual. You talked to me most of the way here. You were wrong about the Lacuna, by the way, and right about the coffee. Thank you for the ride.'",
+			"actions": [
+				{
+					"standing": {
+						"The Sufficiency": 6,
+						"Belt Assembly": 4
+					}
+				},
+				{
+					"credits": 4000
+				}
+			],
 			"done_when": "now"
 		}
-	]
+	],
+	"_note_arcs": "Beats carry an 'arc'; each arc runs its own beats in order, side by side with the others. No arc means 'long_view'."
 }

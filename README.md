@@ -18,7 +18,15 @@ Inspired by Elite, but not a remake. See [docs/DESIGN.md](docs/DESIGN.md) for th
 - **Docking:** hand-flown at spinning stations, or call a tug for a fee.
 - **Saves:** quick save and quick load.
 
-The attract screen cuts between cinematic shots around the system (Jupiter's moons, Saturn's rings, a low lunar run, the belt). In play, the outer system's traffic builds up over the months as the Accord, the Belt Assembly and the Huygens Trust commission long-haul freighters.
+The attract screen cuts between cinematic shots around the system (Jupiter's moons, Saturn's rings, a low lunar run, the belt, Enceladus' plumes, a solar sail over Earth). In play, the outer system's traffic builds up over the months as the Accord, the Belt Assembly and the Huygens Trust commission long-haul freighters.
+
+The system is rich and getting richer. The **Spaceline** news feed (a tab at every port) reports it:
+- **Announcements:** builders announce projects "today, Earth Standard Time" and look for backers.
+- **Projects:** a space elevator for Mars, a pair of O'Neill cylinders over Ceres, solar-sail freighters, and a second core for Landauer Deep.
+- **Landauer Deep:** a station at Iapetus that AI minds built for themselves, after the Belt votes them persons.
+- **Discoveries:** new finds that leave a port richer for good.
+
+There are cryovolcano plumes at Enceladus, Io's Pele, the Piazzi Stalk elevator on Ceres, and a starshade at Valhalla.
 
 The whole solar system is there, on orbits fitted to JPL Horizons: the planets, the big moons, the main asteroids, and Pluto out to Sedna. There are new ports at Mars, Ceres, Psyche, Callisto, Titan and Enceladus. Getting there takes a refit (tanks in the cargo bays) and patience: Mars is about 50 days away for a Mule, and the outer worlds need better drives and more life support than a starter ship has. Voyages climb out of each gravity well on a spiral, cross the Sun's domain on a guided burn-and-coast arc, and spiral down at the far end, with time compression up to x1,000,000.
 

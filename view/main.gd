@@ -174,9 +174,18 @@ func _handle_events() -> void:
 				comms.append("%s  %s" % [_clock(e["time_s"]), line])
 				refresh = true
 			"project_complete":
+				# The Spaceline carries the story; private projects get a quiet word.
 				var project: Dictionary = sim.data.projects[d["project"]]
-				notice("%s is finished. The system just got a little bigger." % project["name"], UI.AMBER)
-				comms.append("%s  NEWS  %s is complete." % [_clock(e["time_s"]), project["name"]])
+				if project.has("invite"):
+					notice("%s is finished. The system just got a little bigger." % project["name"], UI.AMBER)
+				refresh = true
+			"news":
+				var item: Dictionary = d["item"]
+				var line := "SPACELINE  %s" % item["headline"]
+				notice(line + ("  (see Projects)" if item.has("project") and item["kind"] == "project" else ""), UI.AMBER)
+				comms.append("%s  %s" % [_clock(e["time_s"]), line])
+				if comms.size() > COMMS_KEEP:
+					comms.pop_front()
 				refresh = true
 			"tip_bought":
 				var tip := _tip_by_id(int(d["tip"]))
@@ -202,20 +211,8 @@ func _handle_events() -> void:
 				else:
 					notice("Took on %.2f t propellant for %s" % [d["tonnes"], UI.money(-d["credits"])])
 				refresh = true
-			"npc_commissioned":
-				var npc_c: Dictionary = {}
-				for n in sim.state.npcs:
-					if n["id"] == d["npc"]:
-						npc_c = n
-				if not npc_c.is_empty():
-					var fl: Dictionary = sim.data.npcs["fleets"][npc_c["fleet"]]
-					var line := "NEWS  %s commissions the %s, a %s, at %s." % [fl["operator"], npc_c["name"], String(sim.data.ships[fl["hull"]]["name"]).to_lower(), sim.data.places[d["place"]]["name"]]
-					comms.append("%s  %s" % [_clock(e["time_s"]), line])
-					notice(line.trim_prefix("NEWS  "), UI.AMBER)
-			"project_announced":
-				var pj: Dictionary = sim.data.projects[d["project"]]
-				notice("NEWS: %s announce %s at %s. They want backers: see Projects." % [pj.get("backer", "Builders"), pj["name"], sim.data.places[pj["place"]]["name"]], UI.AMBER)
-				comms.append("%s  NEWS  %s announced at %s." % [_clock(e["time_s"]), pj["name"], sim.data.places[pj["place"]]["name"]])
+			"npc_commissioned", "project_announced":
+				# Reported by the Spaceline ("news").
 				refresh = true
 			"project_invite":
 				var pi: Dictionary = sim.data.projects[d["project"]]
@@ -496,11 +493,17 @@ func _tour(dir: String) -> void:
 	for _i in 5:
 		await get_tree().process_frame
 	_shot(dir + "/2c-projects.png")
+	if _screen is StationScreen:
+		_screen._tab_index = 5
+		_screen.refresh()
+	for _i in 5:
+		await get_tree().process_frame
+	_shot(dir + "/2d-spaceline.png")
 	sim.apply({"type": "buy_tip", "broker": "maisie_tran"})
 	sim.apply({"type": "buy_tip", "broker": "maisie_tran"})
 	_handle_events()
 	if _screen is StationScreen:
-		_screen._tab_index = 5
+		_screen._tab_index = 6
 		_screen.refresh()
 	for _i in 5:
 		await get_tree().process_frame
@@ -701,7 +704,13 @@ func _flyby_tour(dir: String) -> void:
 func _gallery(dir: String) -> void:
 	DirAccess.make_dir_recursive_absolute(dir)
 	sim.advance_game_time(12.0 * 3600.0)
-	for place in sim.data.places:
+	# --only=a,b limits the shoot to those ports.
+	var only: Array = []
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--only="):
+			only = Array(a.trim_prefix("--only=").split(","))
+	var ports: Array = sim.data.places.keys().filter(func(p): return only.is_empty() or p in only)
+	for place in ports:
 		sim.state.location = {"status": "approach", "place": place}
 		_mode = ""
 		_sync_mode()
@@ -714,19 +723,26 @@ func _gallery(dir: String) -> void:
 		for _i in 20:
 			await get_tree().process_frame
 		_shot("%s/%s-wide.png" % [dir, place])
-	# The same approaches once every megaproject is finished.
-	for id in sim.data.projects:
-		sim.state.projects[id]["done"] = true
-		sim.state.projects[id]["stage"] = sim.data.projects[id]["stages"].size()
-	for id in sim.data.projects:
-		var place: String = sim.data.projects[id]["place"]
-		sim.state.location = {"status": "approach", "place": place}
-		_mode = ""
-		_sync_mode()
-		(_screen as FlightScene).hud.show_keys = false
-		for _i in 60:
-			await get_tree().process_frame
-		_shot("%s/%s-finished.png" % [dir, place])
+	# The same approaches with every megaproject half built, then finished.
+	for pass_name in ["building", "finished"]:
+		for id in sim.data.projects:
+			var n: int = sim.data.projects[id]["stages"].size()
+			sim.state.projects[id]["revealed"] = true
+			sim.state.projects[id]["done"] = pass_name == "finished"
+			sim.state.projects[id]["stage"] = n if pass_name == "finished" else n / 2
+			sim.state.projects[id]["delivered"] = {}
+		for id in sim.data.projects:
+			var place: String = sim.data.projects[id]["place"]
+			if not place in ports:
+				continue
+			sim.state.location = {"status": "approach", "place": place}
+			_mode = ""
+			_sync_mode()
+			(_screen as FlightScene).hud.show_keys = false
+			(_screen as FlightScene).view_mode = "beauty"
+			for _i in 60:
+				await get_tree().process_frame
+			_shot("%s/%s-%s.png" % [dir, place, pass_name])
 	get_tree().quit()
 
 

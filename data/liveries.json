@@ -81,6 +81,15 @@
 			"wear": 0.3,
 			"mismatch": 0.08,
 			"patch": "#b9b0a0"
+		},
+		"The Sufficiency": {
+			"hull": "#2b2f36",
+			"accent": "#c8d4e0",
+			"trim": "#7fb3d5",
+			"foil": "#9aa4ad",
+			"wear": 0.06,
+			"mismatch": 0.0,
+			"patch": "#2b2f36"
 		}
 	},
 	"independent": {

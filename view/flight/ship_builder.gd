@@ -634,11 +634,15 @@ static func _propulsion(tanks: Array, drives: Array, radiators: Array, ctx: Dict
 			n.add_child(strut(Vector3(0, 0, z - 0.2), off + Vector3(0, 0, z + ds.z * 0.3), 0.35, mats["steel"]))
 		drive_len = maxf(drive_len, ds.z * 1.5 + 1.0)
 		radius = maxf(radius, off.length() + ds.x * 0.6)
+		if dm["look"].get("shape", "") == "sail":
+			radius = maxf(radius, float(dm["look"].get("span_m", 300.0)) * 0.72)
 	# All the drives' plumes switch together.
 	var plumes := Node3D.new()
 	plumes.name = "DrivePlume"
 	for k in count:
 		var ds := _size(drives[k][1])
+		if drives[k][1]["look"].get("shape", "") == "sail":
+			continue
 		plumes.add_child(Kit.sphere(ds.x * 0.3, Kit.glow(Color("8fd0ff"), 4.0), offsets[k] + Vector3(0, 0, z + ds.z * 1.45 + 0.6)))
 	n.add_child(plumes)
 	radius = maxf(radius, shield_r)
@@ -648,6 +652,8 @@ static func _propulsion(tanks: Array, drives: Array, radiators: Array, ctx: Dict
 ## One drive: reactor drum, field coils, a heat-tinted magnetic nozzle, and the
 ## barnacles: pumps, pipe runs to the tanks, gas bottles, cable trays, RCS.
 static func _drive(m: Dictionary, s: Vector3, ctx: Dictionary, index: int) -> Node3D:
+	if m["look"].get("shape", "") == "sail":
+		return _sail(m, s, ctx)
 	var mats: Dictionary = ctx["mats"]
 	var rng: RandomNumberGenerator = ctx["rng"]
 	var n := Node3D.new()
@@ -695,6 +701,40 @@ static func _drive(m: Dictionary, s: Vector3, ctx: Dictionary, index: int) -> No
 		var a := TAU * float(k) / 4.0 + PI * 0.25
 		n.add_child(rcs(Vector3(cos(a), sin(a), 0) * (r + 0.4) + Vector3(0, 0, reactor_len * 0.9), Vector3(cos(a), sin(a), 0), ctx))
 	n.add_child(Kit.beacon(Color("ff3a2a"), Vector3(0, r + 0.3, 0.3), 0.18, 2.0, 0.25 * index))
+	return n
+
+
+## A solar sail on the stern: a boom hub, four booms out to the corners, and a square
+## of aluminised film hundreds of metres across, square to the keel. Sunlight does the
+## pushing, so there is no plume.
+static func _sail(m: Dictionary, s: Vector3, ctx: Dictionary) -> Node3D:
+	var mats: Dictionary = ctx["mats"]
+	var n := Node3D.new()
+	var span := float(m["look"].get("span_m", 300.0))
+	n.add_child(Kit.cylinder(s.x * 0.45, s.z, mats["dark"], Vector3(0, 0, s.z * 0.5), 12))
+	n.add_child(Kit.torus(s.x * 0.5, 0.12, mats["accent"], Vector3(0, 0, s.z * 0.3), 20))
+	var film_z := s.z + 0.5
+	var film := Kit.paint(Color("9ea4ad"), {"finish": 2, "panel_m": span / 24.0, "wear": 0.04, "mismatch": 0.0, "roughness": 0.4, "metallic": 0.8})
+	var boom_mat := Kit.paint(Color("8c9196"), {"finish": 1, "wear": 0.1, "mismatch": 0.0})
+	for k in 4:
+		var boom := Node3D.new()
+		boom.rotation.z = TAU * float(k) / 4.0 + PI * 0.25
+		boom.position = Vector3(0, 0, film_z)
+		boom.add_child(Kit.box(Vector3(span * 0.707, 2.5, 2.5), boom_mat, Vector3(span * 0.354, 0, 0)))
+		n.add_child(boom)
+	# Four quadrants, each billowed a little by the light pushing on it.
+	for k in 4:
+		var quad := Node3D.new()
+		quad.rotation.z = TAU * float(k) / 4.0
+		quad.position = Vector3(0, 0, film_z + 0.4)
+		var panel := Node3D.new()
+		panel.rotation.y = deg_to_rad(2.5)
+		panel.add_child(Kit.box(Vector3(span * 0.5, span * 0.5, 0.05), film, Vector3(span * 0.25, span * 0.25, 0)))
+		quad.add_child(panel)
+		n.add_child(quad)
+	for k in 4:
+		var a := TAU * float(k) / 4.0 + PI * 0.25
+		n.add_child(Kit.beacon(Color("ff3a2a"), Vector3(cos(a), sin(a), 0) * span * 0.707 + Vector3(0, 0, film_z), 2.0, 2.0, float(k) * 0.25))
 	return n
 
 
