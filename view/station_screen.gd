@@ -21,6 +21,8 @@ const SiteSystem := preload("res://sim/systems/site_system.gd")
 const DAY := 86400.0
 
 var sim
+## Asked to fly a landing by hand: (site, activity). The shell runs the descent.
+signal landing_requested(site: String, activity: String)
 ## Recent comms lines, owned by the game shell and shared with this screen.
 var comms: Array
 var _tabs: TabContainer
@@ -305,7 +307,11 @@ func _site_tab(site_id: String) -> Control:
 		var hint := UI.label("" if why == "" else why.capitalize(), UI.WARN if why != "" and why != "already done" else UI.DIM, 12)
 		hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(hint)
-		row.add_child(UI.button("Begin", send.bind({"type": "site_work", "activity": act_id}), why == ""))
+		if "lander" in needs:
+			row.add_child(UI.button("Fly the descent", func(): landing_requested.emit(site_id, act_id), why == ""))
+			row.add_child(UI.button("Let the co-pilot land", send.bind({"type": "site_work", "activity": act_id}), why == ""))
+		else:
+			row.add_child(UI.button("Begin", send.bind({"type": "site_work", "activity": act_id}), why == ""))
 		p[1].add_child(row)
 		parts[1].add_child(p[0])
 	return parts[0]

@@ -79,6 +79,9 @@ func _ready() -> void:
 			visible = false
 			get_tree().root.add_child.call_deferred(load("res://view/art_gallery.gd").new(sim.data, a.trim_prefix("--art=")))
 			return
+		if a.begins_with("--landing="):
+			_landing_tour.call_deferred(a.trim_prefix("--landing="))
+			return
 		if a.begins_with("--site="):
 			_site_tour.call_deferred(a.trim_prefix("--site="))
 			return
@@ -276,6 +279,21 @@ func _handle_events() -> void:
 		_screen.refresh()
 
 
+## Hand the controls over for a descent, then back to the site screen with the result.
+func _start_landing(site: String, activity: String) -> void:
+	var lander: Node3D = load("res://view/lander_scene.gd").new(sim, site)
+	_screen.visible = false
+	_layer.add_child(lander)
+	lander.finished.connect(func(landed: bool):
+		lander.queue_free()
+		if is_instance_valid(_backdrop):
+			_backdrop.camera.make_current()
+		_screen.visible = true
+		sim.apply({"type": "site_work", "activity": activity, "hand_flown": true, "landed": landed})
+		_handle_events()
+		(_screen as StationScreen).refresh())
+
+
 func _tip_by_id(id: int) -> Dictionary:
 	for tip in sim.state.tips:
 		if int(tip["id"]) == id:
@@ -316,6 +334,7 @@ func _sync_mode() -> void:
 			_backdrop = load("res://view/site_view.gd").new(sim)
 			_layer.add_child(_backdrop)
 			_screen = StationScreen.new(sim, comms)
+			_screen.landing_requested.connect(_start_landing)
 			_layer.add_child(_screen)
 		"transit":
 			_screen = MapScreen.new(sim)
@@ -526,6 +545,31 @@ func _tour(dir: String) -> void:
 	for _i in 10:
 		await get_tree().process_frame
 	_shot(dir + "/6-flight-chase.png")
+	get_tree().quit()
+
+
+## Windowed: a descent onto Eros and Psyche on autopilot, captured on the way down.
+func _landing_tour(dir: String) -> void:
+	DirAccess.make_dir_recursive_absolute(dir)
+	for _i in 3:
+		await get_tree().process_frame
+	_bar.visible = false
+	if _screen:
+		_screen.visible = false
+	for site in ["eros_survey", "psyche_deep_claim"]:
+		var lander: Node3D = load("res://view/lander_scene.gd").new(sim, site)
+		lander.autopilot = true
+		_layer.add_child(lander)
+		for _i in 240:
+			await get_tree().physics_frame
+		_shot("%s/%s-descent.png" % [dir, site])
+		while not lander.done:
+			await get_tree().physics_frame
+		for _i in 30:
+			await get_tree().process_frame
+		_shot("%s/%s-down.png" % [dir, site])
+		print("LANDING %s landed=%s fuel=%.0f" % [site, lander.landed, lander.fuel])
+		lander.queue_free()
 	get_tree().quit()
 
 

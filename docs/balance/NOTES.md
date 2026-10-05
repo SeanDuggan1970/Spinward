@@ -131,6 +131,18 @@ From Halo Depot, 2061-03-01, at full tanks.
 - The outer fit costs about 675k cr: late game.
 - **Watch:** at this launch date Saturn comes out quicker than Jupiter, because Jupiter is far round the Sun.
 
+## After the wider-system expansion (2026-10-05)
+
+- The bot now trades only its own planet's neighbourhood, like NPC traders. It is the cislunar benchmark. Left to roam it took months-long Mars runs with a stock Mule and fell to about 52k.
+- **Cislunar benchmark** (5 seeds, 180 days): mean 103k (was 95k), median first upgrade on day 14.1 (was 12.6).
+- **Not yet measured:** the outer ports, courier contracts, sites and the story, all of which the bot ignores.
+- **Rough player-facing numbers:**
+  - local courier jobs pay 2.5-15k
+  - long hauls pay 100-200k for months of travel
+  - surveys pay 22-90k
+  - the Lacuna pays 500k at the end of the arc
+- **Watch:** do long hauls and surveys out-earn cislunar trading by too much once a pilot owns a long-haul refit (about 675k)?
+
 ## Next tuning ideas
 
 1. Give Clarke Exchange and The Kernel exports: salvage or refurbished parts from GEO, and fresh food, art and people from the Kernel's farms. Then there's always something to carry home.

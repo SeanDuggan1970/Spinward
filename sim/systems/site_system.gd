@@ -66,7 +66,9 @@ static func blocked(state, data, site: String, activity: String) -> String:
 	return ""
 
 
-## {activity}
+## {activity, hand_flown?, landed?}. A landing flown by hand that touched down soft
+## goes right (and the pilot picks a better spot: a little more yield); a hard one
+## goes wrong. Otherwise the co-pilot lands, at the activity's usual risk.
 func _start_work(command: Dictionary) -> String:
 	var s = sim().state
 	var data = sim().data
@@ -77,6 +79,9 @@ func _start_work(command: Dictionary) -> String:
 		return why
 	var act: Dictionary = data.sites[site]["activities"][activity]
 	s.sites["work"] = {"site": site, "activity": activity, "start_t": s.time_s, "end_t": s.time_s + float(act["days"]) * DAY}
+	if bool(command.get("hand_flown", false)) and "lander" in act.get("needs", []):
+		s.sites["work"]["hand_flown"] = true
+		s.sites["work"]["landed"] = bool(command.get("landed", false))
 	sim().emit("site_work_started", {"site": site, "activity": activity, "days": float(act["days"])})
 	return ""
 
@@ -91,6 +96,9 @@ func _finish(work: Dictionary) -> void:
 	_rng.state = s.rng_state
 	var went_wrong := _rng.randf() < float(act.get("risk", 0.0))
 	var share := 0.35 if went_wrong else 1.0
+	if work.get("hand_flown", false):
+		went_wrong = not bool(work.get("landed", false))
+		share = 0.35 if went_wrong else 1.15
 	var got := {}
 	var lost := 0.0
 	for good in act.get("yields", {}):

@@ -28,6 +28,11 @@ Courier work runs alongside trading. Each port's board has:
 
 Deliver on time and the operators get to know you; known pilots get the better jobs, and sometimes someone comes looking for you at the dock. A tip from a broker can carry word of a job nobody else has heard about.
 
+Fit a survey pod, a lander or a mining rig and there is work beyond the ports:
+- derelicts to strip
+- asteroids and moons to survey
+- prospects to land on and core, flying the descent yourself if you like
+
 Keep delivering on time and somebody may come looking for you: a quiet go-between with a favour to ask, and friends who are very patient indeed.
 
 Three megaprojects are under way: Island One, the second Luna Line ribbon and Kalpana Two. Haul what they need, watch them grow in the sky, and see your share on the Projects tab.

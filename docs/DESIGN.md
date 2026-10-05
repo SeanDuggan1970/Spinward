@@ -442,7 +442,11 @@ Sean's direction (2026-10-04). It goes beyond trade into opportunities, refits a
      5. You go and say hello, and it says hello back, in your own words, with the light-time taken off. The outcome is left open and hopeful.
    - **How beats work:** each waits for its conditions and port, writes to your correspondence (Contracts tab), and acts: a favour job on the local board, a site revealed, modules lent, standing, credits. A favour that fails or is never taken is offered again.
    - **Deep space** (beyond 30 AU): the Sun's pull is negligible, so trips use a straight-line accelerate-coast-decelerate plan sized to the propellant aboard. Guided flight can't converge when braking takes most of the voyage, and Lambert's solver can't reach those hyperbolic speeds.
-7. **Lander:** a module plus a short guided descent and ascent for surface jobs. A fully flown lander can come later.
+7. **Lander** (done; `view/lander_scene.gd`). Any site job that needs the lander offers a choice:
+   - **Fly the descent yourself:** from about 450 m up, already falling and drifting, onto the body's real cratered surface under its real surface gravity (Eros 0.006 m/s^2, Psyche 0.13). A main engine pushes up, and small thrusters kill drift. Touch down under 2.5 m/s down and 1.5 m/s across and the job goes right, with a little more yield (you picked the spot). Harder is a bad landing: a third of the yield and burnt propellant.
+   - **Let the co-pilot land:** at the job's usual risk.
+
+   `--landing=<dir>` flies two descents on autopilot for screenshots. A fully flown ascent and surface EVA can come later.
 
 ## Milestones
 

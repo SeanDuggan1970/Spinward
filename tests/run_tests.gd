@@ -968,6 +968,20 @@ func test_sites() -> void:
 	gossip.state.credits = 1.0e6
 	gossip.apply({"type": "buy_tip", "broker": "maisie_tran"})
 	check(not gossip.state.tips.is_empty() and gossip.state.tips[-1].has("site") and SiteSystemScript.knows(gossip.state, gossip.state.tips[-1]["site"]), "A broker's tip puts a site on your chart")
+	# Hand-flown landings: soft goes right (a little more), hard goes wrong.
+	s.ship["modules"]["cargo.1"] = "lander_bay"
+	s.ship["cargo"] = {}
+	s.location = {"status": "on_site", "place": "eros_survey"}
+	check(sim.apply({"type": "site_work", "activity": "prospect", "hand_flown": true, "landed": true}) == "", "Fly the Eros landing by hand")
+	sim.advance_game_time(3.5 * DAY)
+	check(s.stats.get("site_jobs", 0) >= 3 and ShipStats.cargo_t(s.ship) > 0.0, "A soft landing brings the cores home")
+	var phobos := fresh()
+	phobos.state.ship["modules"]["cargo.1"] = "lander_bay"
+	phobos.state.location = {"status": "on_site", "place": "phobos_survey"}
+	var fuel0: float = phobos.state.ship["fuel_t"]
+	phobos.apply({"type": "site_work", "activity": "prospect", "hand_flown": true, "landed": false})
+	phobos.advance_game_time(2.5 * DAY)
+	check(phobos.state.ship["fuel_t"] < fuel0, "A hard landing goes badly and burns propellant")
 	var saved := SaveIO.from_text(SaveIO.to_text(s))
 	check(saved.sites == s.sites, "Sites are saved")
 

@@ -127,6 +127,12 @@ func cargo_value_paid() -> float:
 	return total
 
 
+## The bot trades its own planet's neighbourhood, like the NPC traders: it is the
+## benchmark for the cislunar economy, not an interplanetary planner.
+func _in_reach(here: String, to: String) -> bool:
+	return Navigation.frame_body(sim.data, here, to) != "sun" and preload("res://sim/perks.gd").place_open(sim.state, sim.data, to)
+
+
 ## Best trade from `here`: {to, good, tonnes, profit, days, rate}. good "" means reposition empty.
 func best_trade(here: String, allow_reposition: bool) -> Dictionary:
 	var s := sim.state
@@ -134,7 +140,7 @@ func best_trade(here: String, allow_reposition: bool) -> Dictionary:
 	var best := {}
 	var capacity := ShipStats.cargo_capacity_t(s.ship, d) - ShipStats.cargo_t(s.ship)
 	for to in d.places:
-		if to == here:
+		if to == here or not _in_reach(here, to):
 			continue
 		var plan := Navigation.plan(s.ship, d, sim.ephemeris, here, to, s.time_s)
 		if not plan["ok"] or plan["strand_risk"]:
@@ -166,7 +172,7 @@ func best_trade(here: String, allow_reposition: bool) -> Dictionary:
 		var target := ""
 		var target_rate := -INF
 		for to in d.places:
-			if to == here:
+			if to == here or not _in_reach(here, to):
 				continue
 			var plan := Navigation.plan(s.ship, d, sim.ephemeris, here, to, s.time_s)
 			if not plan["ok"] or plan["strand_risk"]:
