@@ -299,7 +299,7 @@ func _draw_keys(w: float) -> void:
 	var lines := ["W/S thrust   A/D strafe   R/F up/down   Shift boost   X brake",
 		"Arrows pitch/yaw   Q/E roll   Z assist   V spin match",
 		"G scanner range   C cockpit/chase   K docking computer   P pause",
-		"T tug (%d cr, on credit if you are broke)   H hide keys" % int(flight.tune_dock["auto_dock_fee"])]
+		"T tug (%d cr, on credit if you are broke)   H hide keys   F1 all controls" % int(flight.tune_dock["auto_dock_fee"])]
 	var y := 140.0
 	for l in lines:
 		draw_string(_font, Vector2(w * 0.5 - 300, y), l, HORIZONTAL_ALIGNMENT_LEFT, 600, 13, Color(UI.TEXT, 0.8))

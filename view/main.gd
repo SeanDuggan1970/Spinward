@@ -32,6 +32,7 @@ var _top: Label
 var _notices: VBoxContainer
 var _layer: Control
 var _ticker: Label
+var _controls: CanvasLayer
 var _bar: Control
 var _title: Node3D
 ## Rolling comms log (view-only), shared with the station's Traffic tab.
@@ -93,6 +94,9 @@ func _ready() -> void:
 			return
 		if a.begins_with("--flyby="):
 			_flyby_tour.call_deferred(a.trim_prefix("--flyby="))
+			return
+		if a.begins_with("--promo="):
+			_promo.call_deferred(a.trim_prefix("--promo="))
 			return
 		if a.begins_with("--crash="):
 			_crash_tour.call_deferred(a.trim_prefix("--crash="))
@@ -360,6 +364,20 @@ func notice(text: String, colour: Color = UI.TEXT) -> void:
 	get_tree().create_timer(7.0).timeout.connect(l.queue_free)
 
 
+## The controls page over whatever is showing; the game holds still while it is up.
+func show_controls() -> void:
+	if is_instance_valid(_controls):
+		return
+	_controls = load("res://view/controls_page.gd").new(sim.data)
+	_controls.was_paused = sim.state.paused
+	if not _title:
+		sim.apply({"type": "set_paused", "paused": true})
+	_controls.closed.connect(func():
+		if not _title and not _controls.was_paused:
+			sim.apply({"type": "set_paused", "paused": false}))
+	add_child(_controls)
+
+
 func _sync_mode() -> void:
 	var mode: String = sim.state.location.get("status", "docked")
 	if mode == _mode:
@@ -399,6 +417,9 @@ func _sync_mode() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F1:
+		show_controls()
+		return
 	if _title or not (event is InputEventKey and event.pressed and not event.echo):
 		return
 	match event.keycode:
@@ -788,6 +809,105 @@ func _gallery(dir: String) -> void:
 			for _i in 60:
 				await get_tree().process_frame
 			_shot("%s/%s-%s.png" % [dir, place, pass_name])
+	get_tree().quit()
+
+
+## Windowed: stills for the game's store page. Every title set-up without its
+## overlay (two moments each), then gameplay: cockpit approaches, a ribbon ride, the
+## station screen, the map in transit and a rock strike. Notices are hidden.
+func _promo(dir: String) -> void:
+	DirAccess.make_dir_recursive_absolute(dir)
+	_notices.visible = false
+	show_title()
+	_title._overlay.visible = false
+	for shot in TitleScreen.SHOTS:
+		for moment in [0.35, 0.7]:
+			_title.force_shot = shot
+			_title.next_shot()
+			for _i in 2:
+				await get_tree().process_frame
+			_title.clock = TitleScreen.SHOT_S * moment
+			for _i in 40:
+				await get_tree().process_frame
+			_shot("%s/cine-%s-%d.png" % [dir, shot, int(moment * 100.0)])
+	# The controls page, over a title shot.
+	_title.force_shot = "saturn"
+	_title.next_shot()
+	show_controls()
+	for _i in 30:
+		await get_tree().process_frame
+	_shot("%s/controls.png" % dir)
+	_controls.queue_free()
+	_title.queue_free()
+	_title = null
+	_bar.visible = true
+	_ticker.visible = true
+	# The finished system: every build complete, so the sky is full.
+	for id in sim.data.projects:
+		sim.state.projects[id]["revealed"] = true
+		sim.state.projects[id]["done"] = true
+		sim.state.projects[id]["stage"] = sim.data.projects[id]["stages"].size()
+	sim.advance_game_time(12.0 * 3600.0)
+	_handle_events()
+	for place in ["kibo_ring", "tsiolkovsky_wheel", "kernel_l5", "piazzi_station", "landauer_deep", "halo_depot"]:
+		sim.state.location = {"status": "approach", "place": place}
+		_mode = ""
+		_sync_mode()
+		for _i in 60:
+			await get_tree().process_frame
+		(_screen as FlightScene).hud.show_keys = false
+		for _i in 3:
+			await get_tree().process_frame
+		_shot("%s/play-cockpit-%s.png" % [dir, place])
+		(_screen as FlightScene).view_mode = "chase"
+		for _i in 30:
+			await get_tree().process_frame
+		_shot("%s/play-chase-%s.png" % [dir, place])
+	# Down the Luna Line.
+	sim.state.location = {"status": "docked", "place": "halo_depot"}
+	sim.state.credits = 20000.0
+	_mode = ""
+	_sync_mode()
+	sim.apply({"type": "ride_elevator"})
+	_handle_events()
+	_sync_mode()
+	var loc: Dictionary = sim.state.location
+	sim.state.time_s = lerpf(float(loc["depart_t"]), float(loc["arrive_t"]), 0.96)
+	for _i in 30:
+		await get_tree().process_frame
+	_shot("%s/play-ride-luna-line.png" % dir)
+	sim.advance_game_time(float(loc["arrive_t"]) - sim.state.time_s + 1.0)
+	_handle_events()
+	# The station screen and the news, back up at Kibo after some days of traffic.
+	sim.state.location = {"status": "docked", "place": "kibo_ring"}
+	_mode = ""
+	_sync_mode()
+	sim.advance_game_time(2.0 * 86400.0)
+	_handle_events()
+	for tab in [[0, "market"], [4, "projects"], [5, "spaceline"]]:
+		if _screen is StationScreen:
+			_screen._tab_index = tab[0]
+			_screen.refresh()
+		for _i in 6:
+			await get_tree().process_frame
+		_shot("%s/play-station-%s.png" % [dir, tab[1]])
+	# Plotted and under way: the map.
+	if _screen is StationScreen:
+		_screen._tab_index = 1
+		_screen.refresh()
+		_screen._plot("kibo_ring", "halo_depot")
+		while not (_screen as StationScreen)._plotting.is_empty():
+			await get_tree().process_frame
+		for _i in 5:
+			await get_tree().process_frame
+		_shot("%s/play-routes.png" % dir)
+	sim.apply({"type": "depart", "to": "halo_depot"})
+	_handle_events()
+	_sync_mode()
+	sim.advance_game_time(20.0 * 3600.0)
+	for _i in 30:
+		await get_tree().process_frame
+	_shot("%s/play-map.png" % dir)
 	get_tree().quit()
 
 

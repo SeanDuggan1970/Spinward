@@ -36,10 +36,26 @@ To try it locally, serve the folder (`python -m http.server 8060 --directory bui
 
 To update the build, upload the new zip in place of the old one under **Uploads**. The link stays the same.
 
+## 3. Page images
+
+Make the images, then upload them:
+
+```powershell
+.tools/godot/Godot_v4.7.2-stable_win64_console.exe --path . --resolution 1920x1080 -- --promo=build/promo
+python tools/make_itch_images.py build/promo
+```
+
+That writes `build/itch/`:
+- **`cover.png`** (630 × 500, itch's cover size; `cover@2x.png` is double size). Upload it under **Cover image**.
+- **`banner.png`** (1920 × 480). Use it under **Edit theme → Banner**.
+- **`01-…` to `14-…`** (1920 × 1080). Upload them under **Screenshots**, in that order. The cinematic shots come first, then play: docking, the elevator ride, the map, projects, the news and the controls.
+
+`--promo` also leaves the raw captures in `build/promo`: every title set-up at two moments, and cockpit and chase views at six ports.
+
 ## What a player needs to know
 
 - **Browser:** a desktop browser such as Chrome, Edge or Firefox, with a window of 1280 × 800 or larger.
 - **Loading:** the first load downloads about 40 MB.
-- **Controls:** click the game once so it has keyboard focus.
+- **Controls:** click the game once so it has keyboard focus. **F1** shows every key, anywhere in the game.
 - **Saves:** F5 quick-saves and F9 quick-loads, kept in that browser only.
 - **Route plotting:** in the browser this pauses for a second or two (single-threaded).

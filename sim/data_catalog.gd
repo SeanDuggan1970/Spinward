@@ -26,6 +26,8 @@ var story: Dictionary = {}
 var contracts: Dictionary = {}
 ## The Spaceline news feed (data/news.json).
 var news: Dictionary = {}
+## The keys, for the controls page (data/controls.json); view-only.
+var controls: Dictionary = {}
 ## Paint schemes for the view (data/liveries.json); the sim never reads them.
 var liveries: Dictionary = {}
 ## tip_ttl_days, verify_tolerance.
@@ -53,6 +55,7 @@ func load_from(root: String) -> void:
 	sites = read_json(root + "/sites.json") if FileAccess.file_exists(root + "/sites.json") else {}
 	story = read_json(root + "/story.json") if FileAccess.file_exists(root + "/story.json") else {}
 	news = read_json(root + "/news.json") if FileAccess.file_exists(root + "/news.json") else {}
+	controls = read_json(root + "/controls.json") if FileAccess.file_exists(root + "/controls.json") else {}
 	locations = places.duplicate()
 	locations.merge(sites)
 	if FileAccess.file_exists(root + "/liveries.json"):

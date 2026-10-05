@@ -63,7 +63,7 @@ func _draw() -> void:
 	var pw := _font.get_string_size(prompt, HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x
 	if blink:
 		draw_string(_font, Vector2((w - pw) * 0.5, h - 64), prompt, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, UI.GOOD)
-	var keys := ("L  load quick save      " if title.has_save else "") + "Esc  quit"
+	var keys := ("L  load quick save      " if title.has_save else "") + "F1  controls      Esc  quit"
 	var kw := _font.get_string_size(keys, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x
 	draw_string(_font, Vector2((w - kw) * 0.5, h - 38), keys, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, UI.DIM)
 	draw_string(_font, Vector2(16, h - 14), "Real orbits from JPL data  ·  in the spirit of Elite (1984)", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(UI.DIM, 0.7))

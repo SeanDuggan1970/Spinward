@@ -1,0 +1,72 @@
+{
+	"_note": "The keys, as shown on the controls page (F1). For now they are fixed in the views that read them; this file is where remapping and other control schemes will live. Each section: a name, when it applies, and [keys, what they do] rows.",
+	"sections": [
+		{
+			"name": "Anywhere",
+			"when": "in port, in flight, in transit",
+			"keys": [
+				["F1", "This page (pauses the game)"],
+				["P", "Pause"],
+				["[  /  ]", "Slow down / speed up time"],
+				["F5", "Quick save"],
+				["F9", "Quick load"],
+				["Mouse", "Menus, tabs and buttons at a port"]
+			]
+		},
+		{
+			"name": "Flying an approach",
+			"when": "from arrival to docking",
+			"keys": [
+				["W  /  S", "Thrust forward / back"],
+				["A  /  D", "Strafe left / right"],
+				["R  /  F", "Strafe up / down"],
+				["Shift", "Boost (hold)"],
+				["X", "Brake (hold)"],
+				["Arrows", "Pitch and yaw"],
+				["Q  /  E", "Roll left / right"],
+				["Z", "Flight assist: full, assisted, manual"],
+				["V", "Spin match: roll with the station"],
+				["G", "Scanner range"],
+				["C", "Cockpit or chase view"],
+				["K", "Docking computer (if fitted)"],
+				["T", "Call the tug (a fee; on credit if broke)"],
+				["H", "Show or hide the key strip"]
+			]
+		},
+		{
+			"name": "In transit",
+			"when": "between ports",
+			"keys": [
+				["M", "Orbit view, cockpit, system map"],
+				["Arrows", "Look around (cockpit)"],
+				["Z", "Telescope (cockpit)"],
+				["C", "Look ahead again (cockpit)"]
+			]
+		},
+		{
+			"name": "Landing",
+			"when": "flying the lander down to a site",
+			"keys": [
+				["W  /  Space", "Main engine (hold)"],
+				["A  /  D  or  Left / Right", "Thrusters: drift left / right"],
+				["Q  /  E  or  Up / Down", "Thrusters: drift forward / back"]
+			]
+		},
+		{
+			"name": "Riding an elevator",
+			"when": "in the climber cab",
+			"keys": [
+				["Arrows", "Look around"]
+			]
+		},
+		{
+			"name": "Title screen",
+			"when": "",
+			"keys": [
+				["Space  /  Enter", "Start"],
+				["L", "Load the quick save"],
+				["Esc", "Quit"]
+			]
+		}
+	]
+}
