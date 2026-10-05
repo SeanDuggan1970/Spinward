@@ -13,6 +13,7 @@ const Market := preload("res://sim/market.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
 
 const HOUR := 3600.0
+const DAY := 86400.0
 const MAX_EVENTS_PER_TICK := 5000
 
 var _rng := RandomNumberGenerator.new()
@@ -23,26 +24,50 @@ func start_game() -> void:
 	var data = sim().data
 	_seed_rng()
 	s.npcs = []
+	_add_missing_ships(s.time_s)
+	s.rng_state = _rng.state
+
+
+## Every ship of every fleet, commissioned on its fleet's schedule ("commission_days",
+## from `start`): until then it is fitting out, out of service and out of sight.
+## Also fills in ships added to the data after a save was made.
+func _add_missing_ships(start: float) -> void:
+	var s = sim().state
+	var data = sim().data
+	var have := {}
+	for npc in s.npcs:
+		have[npc["id"]] = true
 	for fleet_id in data.npcs["fleets"]:
 		var fleet: Dictionary = data.npcs["fleets"][fleet_id]
 		var names: Array = fleet["names"]
+		var schedule: Array = fleet.get("commission_days", [])
 		for i in int(fleet["count"]):
+			var id := "%s.%d" % [fleet_id, i]
+			if have.has(id):
+				continue
 			var hull: Dictionary = data.ships[fleet["hull"]]
 			var ship := {"hull": fleet["hull"], "modules": hull["modules"].duplicate(), "cargo": {}, "fuel_t": 0.0}
 			ship["fuel_t"] = ShipStats.fuel_capacity_t(ship, data)
 			var leg := i % maxi(1, fleet.get("route", []).size())
 			var home: String = fleet["route"][leg]["at"] if fleet.has("route") else fleet["homes"][i % fleet["homes"].size()]
+			var active_t := start + (float(schedule[i]) * DAY if i < schedule.size() else 0.0)
 			s.npcs.append({
-				"id": "%s.%d" % [fleet_id, i],
+				"id": id,
 				"fleet": fleet_id,
 				"name": names[i % names.size()],
 				"ship": ship,
 				"location": {"status": "docked", "place": home},
-				"next_t": s.time_s + _rng.randf_range(0.0, 24.0) * HOUR,
+				"next_t": maxf(s.time_s, active_t) + _rng.randf_range(0.0, 24.0) * HOUR,
+				"active_t": active_t,
+				"commissioned": active_t <= start,
 				"leg": leg,
 				"trips": 0,
 			})
-	s.rng_state = _rng.state
+
+
+## In service (not still fitting out) at time t.
+static func in_service(npc: Dictionary, t: float) -> bool:
+	return t >= float(npc.get("active_t", -INF))
 
 
 func tick(_game_dt: float) -> void:
@@ -51,6 +76,12 @@ func tick(_game_dt: float) -> void:
 		return
 	_seed_rng()
 	_rng.state = s.rng_state
+	if s.npcs.size() < _fleet_size():
+		_add_missing_ships(s.time_s)
+	for npc in s.npcs:
+		if not npc.get("commissioned", true) and s.time_s >= float(npc["active_t"]):
+			npc["commissioned"] = true
+			sim().emit("npc_commissioned", {"npc": npc["id"], "place": npc["location"]["place"]}, float(npc["active_t"]))
 	for _i in MAX_EVENTS_PER_TICK:
 		var due: Dictionary = {}
 		for npc in s.npcs:
@@ -68,6 +99,13 @@ func tick(_game_dt: float) -> void:
 		if fb is Dictionary and not fb["done"] and npc["location"]["status"] == "transit" and s.time_s >= float(fb["t"]):
 			fb["done"] = true
 			sim().emit("npc_flyby", {"npc": npc["id"], "alt": fb["alt"]}, float(fb["t"]))
+
+
+func _fleet_size() -> int:
+	var n := 0
+	for fleet_id in sim().data.npcs["fleets"]:
+		n += int(sim().data.npcs["fleets"][fleet_id]["count"])
+	return n
 
 
 func _moon_anchored(place: String) -> bool:
@@ -152,6 +190,7 @@ func _depart(npc: Dictionary, t: float) -> void:
 		"from_pos": plan["from_pos"], "to_pos": plan["to_pos"], "distance_m": plan["distance_m"],
 		"from_vel": plan["from_vel"], "to_vel": plan["to_vel"],
 		"from_rot": plan.get("from_rot"), "to_rot": plan.get("to_rot"), "rot_axis": plan.get("rot_axis"), "rot_angle": plan.get("rot_angle", 0.0),
+		"samples": plan.get("samples"),
 	}
 	npc["next_t"] = plan["arrive_t"]
 	npc.erase("flyby")

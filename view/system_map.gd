@@ -12,6 +12,7 @@ const DAY := 86400.0
 const FLEET_COLOURS := {
 	"Luna Cooperative": Color("d2702c"), "The Commons": Color("7fb8d8"), "Terran Compact": Color("d9d4c7"),
 	"Kernel Settlers": Color("b8d27f"), "Independent": Color("c9a24a"), "Kalpana Settlement Trust": Color("e0a0c8"),
+	"Mars Accord": Color("d0603a"), "Belt Assembly": Color("e0a030"), "Huygens Trust": Color("e2c08a"),
 }
 
 var sim

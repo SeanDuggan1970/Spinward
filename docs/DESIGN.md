@@ -448,6 +448,31 @@ Sean's direction (2026-10-04). It goes beyond trade into opportunities, refits a
 
    `--landing=<dir>` flies two descents on autopilot for screenshots. A fully flown ascent and surface EVA can come later.
 
+## Outer-system traffic (Oct 2026)
+
+- **Fleets:** long-haul fleets fly the deep freighter: a heavy keel, three containers, a 300-day hab, four long-haul tanks and twin Mk3 drives.
+  - **Mars Accord runners:** Ares Ring to Kibo Ring.
+  - **Belt Assembly haulers:** Ceres to Mars.
+  - **An ore ship:** Psyche Claims to Piazzi Station.
+  - **A Huygens Trust tender:** Titan to Callisto.
+- **Commissioning:** each ship has a date in `commission_days`. Before it, the ship is fitting out, out of service and out of sight. When it enters service, the comms channel and a notice carry the news.
+- **Build-up:** the outer system starts with one ship and fills in over the first half-year, to six, so it never feels busy.
+- **Paths:** NPC voyages fly the interplanetary quick plan's sampled path, so they show on the solar map and orbit view.
+- **Saves:** fleets added after a save was made are filled in on load.
+
+## The attract screen (Oct 2026)
+
+- **A shot director** (`view/title_screen.gd`): it cuts through black between six set-ups, about 18 s each, picked at random and never the same twice running:
+  - Earth orbit at Kibo Ring
+  - a chase past Callisto with Jupiter and Io behind
+  - crossing in front of Saturn's rings with Titan
+  - a low run over the Moon with Earth on the horizon
+  - holding station off Phobos with Mars below
+  - threading tumbling rocks off Ceres
+- **The hero:** each shot flies a random hull in a real fleet's livery and name, and the caption says where you are.
+- **Composition:** cameras sit on the far side of the ship from the planet, so the world fills the background.
+- **Capture:** `--title=<dir>` shoots every set-up.
+
 ## Milestones
 
 - **M0 – Foundation:** done.

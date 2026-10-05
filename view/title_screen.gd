@@ -1,8 +1,13 @@
-## Attract screen. A showcase in the spirit of the original Elite's rotating ships:
-## each hull in data/ships.json flies in out of the dark, turns slowly under a work
-## light while its caption is shown, then burns away. Behind it, Kibo Ring spins
-## against Earth's limb, the skyhook turns, work pods circle and freighters cross
-## the sky. View-only: the sim is not ticking while this is up.
+## Attract screen: a shot director. It cuts between cinematic set-ups around the
+## system, each about 18 seconds, picked at random (never the same twice running):
+##   earth_orbit   Kibo Ring against Earth's limb, a ship coming in out of the dark
+##   jovian        a chase past Callisto with Jupiter and Io behind
+##   saturn        a ship crossing in front of Saturn's rings, Titan hanging off
+##   lunar         a low run over the Moon's craters with Earth on the horizon
+##   mars          a slow orbit round a ship at Phobos, Mars below
+##   belt          weaving between tumbling rocks off Ceres
+## Each shot flies a random hull in a real fleet's livery (the ships you will meet),
+## with its caption. View-only: the sim is not ticking while this is up.
 ##
 ## Space / Enter starts, L loads the quick save, Esc quits.
 extends Node3D
@@ -12,122 +17,96 @@ signal start_requested(load_save: bool)
 const Kit := preload("res://view/flight/kit.gd")
 const Models := preload("res://view/flight/models.gd")
 const ShipRig := preload("res://view/flight/ship_rig.gd")
-## Toward the Sun, as the title's light falls.
-const SUN_DIR := Vector3(-0.55, 0.35, 0.75)
 const Livery := preload("res://view/flight/livery.gd")
 const SetPieces := preload("res://view/flight/set_pieces.gd")
 const SkyKit := preload("res://view/flight/sky.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
 const UI := preload("res://view/ui/ui_kit.gd")
 
-## Seconds per hero ship: fly in, show, burn away.
-const ARRIVE := 3.0
-const SHOW := 7.0
-const LEAVE := 2.0
-const HERO_DISTANCE := 58.0
+const SHOTS := ["earth_orbit", "jovian", "saturn", "lunar", "mars", "belt"]
+const SHOT_S := 18.0
+const FADE_S := 0.8
 
 var data
 var has_save := false
-var clock := 0.0
 var camera: Camera3D
-var _hulls: Array = []
-var _hero_index := -1
-var _hero_rig: Dictionary = {}
-var _hero_round := 0
+## Seconds into the current shot.
+var clock := 0.0
+## Set to force a shot (captures); otherwise the director picks at random.
+var force_shot := ""
+var _rng := RandomNumberGenerator.new()
+var _shot := ""
+var _stage: Node3D
 var _hero: Node3D
+var _hero_rig: Dictionary = {}
 var _hero_plume: Node3D
-var _hero_radius := 5.0
-var _station: Dictionary
-var _earth: MeshInstance3D
-var _set_pieces: Array = []
+var _hero_hull := ""
+var _hero_len := 30.0
+var _where := ""
+var _sun_dir := Vector3(-0.55, 0.35, 0.75).normalized()
+var _update: Callable
+var _spinners: Array = []
 var _blinkers: Array = []
-var _pods: Array = []
-var _traffic: Array = []
 var _overlay: Control
+var _fade: ColorRect
 
 
 func _init(catalog, save_exists: bool) -> void:
 	data = catalog
 	has_save = save_exists
-	_hulls = data.ships.keys()
+	_rng.randomize()
 
 
 func _ready() -> void:
 	add_child(SkyKit.environment())
-	var sun := DirectionalLight3D.new()
-	sun.light_energy = 1.5
-	add_child(sun)
-	sun.look_at_from_position(Vector3.ZERO, Vector3(0.55, -0.35, -0.75), Vector3.UP)
-	# A work light near the camera, so the hero ship reads even on its night side.
-	var flood := OmniLight3D.new()
-	flood.position = Vector3(-30, 25, 10)
-	flood.omni_range = 400.0
-	flood.light_energy = 1.4
-	flood.light_color = Color("ffe8c8")
-	add_child(flood)
-	# The Sun sits behind the camera, front-lighting the showcase.
-	add_child(Kit.sphere(800.0, Kit.glow(Color("fff6e0"), 6.0), Vector3(-0.55, 0.35, 0.75).normalized() * 60000.0))
-	# Earth's limb filling the lower right, the Moon high on the left.
-	_earth = Kit.sphere(14000.0, SkyKit.body_material("earth", data.bodies["earth"].get("look", {})), Vector3(9500.0, -11800.0, -17000.0))
-	(_earth.mesh as SphereMesh).radial_segments = 96
-	(_earth.mesh as SphereMesh).rings = 48
-	add_child(_earth)
-	var moon := Kit.sphere(700.0, SkyKit.body_material("moon", data.bodies["moon"].get("look", {})), Vector3(-15000.0, 7000.0, -42000.0))
-	add_child(moon)
-	SkyKit.update_body(_earth, Vector3(-0.55, 0.35, 0.75).normalized(), 0.0)
-	# Kibo Ring at three-quarter view, spinning, corridor lights stepping in.
-	_station = Models.station(data.places["kibo_ring"]["station"], data.places["kibo_ring"]["name"], Livery.for_station(data, "kibo_ring"))
-	var holder := Node3D.new()
-	holder.position = Vector3(-230.0, 60.0, -760.0)
-	holder.rotation = Vector3(0.12, 0.85, 0.0)
-	holder.add_child(_station["node"])
-	add_child(holder)
-	# The skyhook turns far off to the lower right, clear of the title lettering.
-	var hook := Node3D.new()
-	hook.position = Vector3(1800.0, -2600.0, -6500.0)
-	add_child(hook)
-	_set_pieces = SetPieces.build(hook, ["skyhook"], {"earth": Vector3(9500.0, -11800.0, -17000.0).normalized()}, _station)
-	for i in 3:
-		var pod := Models.work_pod(i == 0)
-		holder.add_child(pod)
-		_pods.append({"node": pod, "r": 70.0 + 35.0 * i, "z": -20.0 + 30.0 * i, "period": 40.0 + 15.0 * i, "phase": i * 2.1})
-	# Freighters crossing the background on loops, drives lit.
-	var traffic_hulls := ["lunar_tanker", "drone_freighter", "courier"]
-	for i in traffic_hulls.size():
-		if not data.ships.has(traffic_hulls[i]):
-			continue
-		var model := Models.ship(_ship_dict(traffic_hulls[i]), data, _livery_for(traffic_hulls[i], i))
-		var node: Node3D = model["node"]
-		node.add_child(Kit.sphere(2.0, Kit.glow(Color("ffe0a0"), 4.0), Vector3(0, 3.0, 0)))
-		add_child(node)
-		_traffic.append({"node": node, "rig": model["rig"], "from": Vector3(-1800.0 + 500.0 * i, 140.0 - 120.0 * i, -1300.0 - 500.0 * i),
-			"to": Vector3(1900.0, 260.0 - 90.0 * i, -900.0 - 650.0 * i), "period": 70.0 + 25.0 * i, "phase": 0.3 * i})
 	camera = Camera3D.new()
 	camera.fov = 50.0
-	camera.far = 200000.0
 	camera.near = 0.5
+	camera.far = 2.0e6
 	add_child(camera)
 	camera.make_current()
+	# The fade sits under the overlay, so the title never blinks out with the cut.
+	_fade = ColorRect.new()
+	_fade.color = Color(0, 0, 0, 1)
+	_fade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_fade)
 	_overlay = load("res://view/title_overlay.gd").new(self)
 	_overlay.theme = UI.make_theme()
 	add_child(_overlay)
-	_blinkers = Kit.collect_blinkers(self)
-	_next_hero()
+	next_shot()
 
 
-## A real fleet's colours and one of its names for a hull, so the showcase ships are
-## ones you will meet; hulls nobody flies go out as independents.
-func _livery_for(hull: String, i: int) -> Dictionary:
-	var fleets: Array = []
-	for id in data.npcs["fleets"]:
-		if data.npcs["fleets"][id]["hull"] == hull:
-			fleets.append(data.npcs["fleets"][id])
-	if fleets.is_empty():
-		return Livery.for_ship(data, "Independent", data.ships[hull]["name"])
-	var fleet: Dictionary = fleets[i % fleets.size()]
-	var names: Array = fleet["names"]
-	return Livery.for_ship(data, fleet["operator"], names[i % names.size()])
+func hero_info() -> Dictionary:
+	var ship := _ship_dict(_hero_hull)
+	return {
+		"name": data.ships[_hero_hull]["name"],
+		"description": data.ships[_hero_hull].get("description", ""),
+		"cargo_t": ShipStats.cargo_capacity_t(ship, data),
+		"fuel_t": ShipStats.fuel_capacity_t(ship, data),
+		"thrust_n": ShipStats.thrust_n(ship, data),
+		"mass_t": ShipStats.dry_mass_t(ship, data),
+		"where": _where,
+		"showing": clock > 2.5 and clock < SHOT_S - 2.0,
+	}
 
+
+## Cut to a new shot: a random set-up (or `force_shot`) and a random hero.
+func next_shot() -> void:
+	if _stage:
+		_stage.queue_free()
+	_stage = Node3D.new()
+	add_child(_stage)
+	_spinners = []
+	var pool: Array = SHOTS.filter(func(s): return s != _shot)
+	_shot = force_shot if force_shot != "" else pool[_rng.randi() % pool.size()]
+	clock = 0.0
+	_pick_hero()
+	call("_build_" + _shot)
+	_blinkers = Kit.collect_blinkers(_stage)
+
+
+# --- shared pieces ------------------------------------------------------------------
 
 func _ship_dict(hull: String) -> Dictionary:
 	var h: Dictionary = data.ships[hull]
@@ -136,88 +115,222 @@ func _ship_dict(hull: String) -> Dictionary:
 	return ship
 
 
-func _next_hero() -> void:
-	if _hero:
-		_hero.queue_free()
-	_hero_index = (_hero_index + 1) % _hulls.size()
-	if _hero_index == 0:
-		_hero_round += 1
-	var model := Models.ship(_ship_dict(_hulls[_hero_index]), data, _livery_for(_hulls[_hero_index], _hero_index + _hero_round))
+## A random hull, in the colours and name of a fleet that flies it (or an independent).
+func _pick_hero() -> void:
+	var hulls: Array = data.ships.keys()
+	_hero_hull = hulls[_rng.randi() % hulls.size()]
+	var fleets: Array = []
+	for id in data.npcs["fleets"]:
+		if data.npcs["fleets"][id]["hull"] == _hero_hull:
+			fleets.append(data.npcs["fleets"][id])
+	var livery: Dictionary
+	if fleets.is_empty():
+		var names := ["Mabel's Pride", "Long Shot", "Late Bloomer", "Good Enough"]
+		livery = Livery.for_ship(data, "Independent", names[_rng.randi() % names.size()])
+	else:
+		var fleet: Dictionary = fleets[_rng.randi() % fleets.size()]
+		var fleet_names: Array = fleet["names"]
+		livery = Livery.for_ship(data, fleet["operator"], fleet_names[_rng.randi() % fleet_names.size()])
+	var model := Models.ship(_ship_dict(_hero_hull), data, livery)
 	_hero = model["node"]
-	_hero_radius = model["length"] * 0.5
-	_hero_plume = _hero.find_child("DrivePlume", true, false)
 	_hero_rig = model["rig"]
-	add_child(_hero)
-	_blinkers = Kit.collect_blinkers(self)
-	clock = 0.0
+	_hero_len = float(model["length"])
+	_hero_plume = _hero.find_child("DrivePlume", true, false)
+	_stage.add_child(_hero)
 
 
-func hero_info() -> Dictionary:
-	var hull: String = _hulls[_hero_index]
-	var ship := _ship_dict(hull)
-	return {
-		"name": data.ships[hull]["name"],
-		"description": data.ships[hull].get("description", ""),
-		"cargo_t": ShipStats.cargo_capacity_t(ship, data),
-		"fuel_t": ShipStats.fuel_capacity_t(ship, data),
-		"thrust_n": ShipStats.thrust_n(ship, data),
-		"mass_t": ShipStats.dry_mass_t(ship, data),
-		"showing": clock > ARRIVE * 0.6 and clock < ARRIVE + SHOW + LEAVE * 0.3,
-	}
+func _light(sun_dir: Vector3, energy: float = 1.5, flood_at: Vector3 = Vector3(-30, 25, 10)) -> void:
+	_sun_dir = sun_dir.normalized()
+	var sun := DirectionalLight3D.new()
+	sun.light_energy = energy
+	_stage.add_child(sun)
+	sun.look_at_from_position(Vector3.ZERO, -_sun_dir, Vector3.UP if absf(_sun_dir.y) < 0.99 else Vector3.RIGHT)
+	_stage.add_child(Kit.sphere(800.0, Kit.glow(Color("fff6e0"), 6.0), _sun_dir * 60000.0))
+	# A work light by the camera, so the hero reads even on its night side.
+	var flood := OmniLight3D.new()
+	flood.position = flood_at
+	flood.omni_range = 400.0
+	flood.light_energy = 1.2
+	flood.light_color = Color("ffe8c8")
+	_stage.add_child(flood)
+
+
+func _body(body: String, radius: float, at: Vector3, day_spin: float = 0.0) -> MeshInstance3D:
+	var mesh := SkyKit.body_mesh(data, body, radius)
+	(mesh.mesh as SphereMesh).radial_segments = 128
+	(mesh.mesh as SphereMesh).rings = 64
+	mesh.position = at
+	SkyKit.update_body(mesh, _sun_dir, 0.0)
+	_stage.add_child(mesh)
+	if day_spin != 0.0:
+		_spinners.append([mesh, day_spin])
+	return mesh
+
+
+## Place the hero, facing along `dir` and rolled to keep its panels on the Sun.
+func _fly(pos: Vector3, dir: Vector3, burning: bool, dt: float) -> void:
+	_hero.position = pos
+	if dir.length() > 1e-4:
+		_hero.basis = ShipRig.roll_to_sun(dir, _sun_dir)
+	if _hero_plume:
+		_hero_plume.visible = burning
+	ShipRig.aim(_hero_rig, _hero.basis, _sun_dir, -_hero.position, dt)
+
+
+# --- the shots ------------------------------------------------------------------------
+
+## Kibo Ring against Earth's limb; the ship comes in out of the dark, turns, burns away.
+func _build_earth_orbit() -> void:
+	_where = "Low Earth orbit  ·  Kibo Ring"
+	_light(Vector3(-0.55, 0.35, 0.75))
+	_body("earth", 14000.0, Vector3(9500.0, -11800.0, -17000.0), 0.004)
+	_body("moon", 700.0, Vector3(-15000.0, 7000.0, -42000.0))
+	var station := Models.station(data.places["kibo_ring"]["station"], data.places["kibo_ring"]["name"], Livery.for_station(data, "kibo_ring"))
+	var holder := Node3D.new()
+	holder.position = Vector3(-230.0, 60.0, -760.0)
+	holder.rotation = Vector3(0.12, 0.85, 0.0)
+	holder.add_child(station["node"])
+	_stage.add_child(holder)
+	var rotor: Node3D = station["rotor"]
+	var rate := float(data.places["kibo_ring"]["station"]["spin_rpm"]) * TAU / 60.0
+	_update = func(dt: float) -> void:
+		rotor.rotation.z += rate * dt
+		var d := 58.0
+		var pos: Vector3
+		var dir := Vector3(sin(clock * 0.45 + PI * 0.75), 0.0, cos(clock * 0.45 + PI * 0.75))
+		var burning := false
+		if clock < 3.0:
+			var e := 1.0 - pow(1.0 - clock / 3.0, 3.0)
+			pos = Vector3(lerpf(160.0, 0.0, e), lerpf(40.0, 0.0, e), lerpf(-1400.0, -d, e))
+			burning = clock < 2.5
+		elif clock < SHOT_S - 3.0:
+			pos = Vector3(0, sin(clock * 0.8) * 0.6, -d)
+		else:
+			var f := (clock - SHOT_S + 3.0) / 3.0
+			pos = Vector3(f * f * 900.0, f * f * 120.0, -d - f * f * 1600.0)
+			dir = Vector3(0.5, 0.06, -0.86)
+			burning = true
+		_fly(pos, dir, burning, dt)
+		camera.position = Vector3(sin(clock * 0.13) * 1.5, 4.0 + sin(clock * 0.21) * 0.8, 0.0)
+		camera.look_at(Vector3(sin(clock * 0.07) * 4.0, 0.0, -d), Vector3.UP)
+
+
+## A chase past Callisto: the camera rides behind and above the ship as it curves
+## round the moon, Jupiter and its belts filling the back of the shot.
+func _build_jovian() -> void:
+	_where = "Callisto  ·  the Jovian system"
+	_light(Vector3(0.8, 0.3, 0.4), 1.3)
+	var jupiter := _body("jupiter", 60000.0, Vector3(-90000.0, 15000.0, -260000.0), 0.02)
+	_body("io", 1600.0, Vector3(30000.0, 6000.0, -150000.0))
+	_body("europa", 1300.0, Vector3(-45000.0, -9000.0, -120000.0))
+	var callisto := _body("callisto", 2400.0, Vector3(0.0, -1800.0, -5200.0))
+	var centre := callisto.position
+	_update = func(dt: float) -> void:
+		var a := lerpf(-0.9, 0.5, clock / SHOT_S)
+		var r := 3600.0
+		var pos := centre + Vector3(sin(a) * r, 1800.0 + 260.0 * sin(clock * 0.2), cos(a) * r)
+		var tangent := Vector3(cos(a), 0.0, -sin(a))
+		_fly(pos, tangent, clock < 6.0 or clock > 13.0, dt)
+		# Ride on the far side of the ship from Jupiter, so the giant fills the back of the shot.
+		var away := (pos - jupiter.position).normalized()
+		var side := away.cross(Vector3.UP).normalized()
+		camera.position = pos + away * _hero_len * 2.6 + Vector3(0, _hero_len * 0.5, 0) + side * _hero_len * sin(clock * 0.15) * 0.8
+		camera.look_at(pos.lerp(jupiter.position, 0.004), Vector3.UP)
+
+
+## Saturn's rings, tilted, Titan off to one side: the ship crosses in front of them,
+## the camera panning to keep it in frame.
+func _build_saturn() -> void:
+	_where = "Titan  ·  Saturn"
+	_light(Vector3(0.6, 0.45, 0.65), 1.2)
+	var saturn := _body("saturn", 40000.0, Vector3(30000.0, -14000.0, -200000.0), 0.02)
+	saturn.basis = Basis(Vector3.RIGHT, 0.42) * Basis(Vector3.FORWARD, 0.25)
+	_body("titan", 2600.0, Vector3(-26000.0, 9000.0, -90000.0))
+	_body("enceladus", 300.0, Vector3(9000.0, -2500.0, -60000.0))
+	_update = func(dt: float) -> void:
+		var f := clock / SHOT_S
+		var pos := Vector3(lerpf(260.0, -320.0, f), 14.0 + 10.0 * sin(f * PI), lerpf(-180.0, -240.0, f))
+		_fly(pos, Vector3(-1.0, 0.02, -0.1), true, dt)
+		camera.position = Vector3(0.0, 8.0, 0.0)
+		camera.look_at(pos.lerp(Vector3(0, -20, -400), 0.25), Vector3.UP)
+
+
+## A low run over the Moon's craters; Earth hangs on the horizon ahead.
+func _build_lunar() -> void:
+	_where = "A low pass  ·  the Moon"
+	_light(Vector3(0.9, 0.18, -0.2), 1.6)
+	var moon := _body("moon", 220000.0, Vector3(0.0, -220000.0 - 900.0, 0.0))
+	# Fine enough that the horizon a few km off stays round.
+	(moon.mesh as SphereMesh).radial_segments = 1024
+	(moon.mesh as SphereMesh).rings = 512
+	_body("earth", 5200.0, Vector3(-9000.0, 5200.0, -120000.0), 0.004)
+	_update = func(dt: float) -> void:
+		# Turn the Moon beneath us rather than fly a ship tens of km: same view, safer floats.
+		moon.rotation.x += dt * 0.0016
+		var pos := Vector3(sin(clock * 0.3) * 6.0, sin(clock * 0.45) * 2.0, -60.0)
+		_fly(pos, Vector3(0.0, -0.02, -1.0), clock > 9.0, dt)
+		camera.position = Vector3(18.0 + sin(clock * 0.1) * 4.0, 9.0, 4.0)
+		camera.look_at(pos + Vector3(0, 0, -30), Vector3.UP)
+
+
+## Holding station off Phobos with Mars filling the lower sky; the camera circles.
+func _build_mars() -> void:
+	_where = "Phobos  ·  Mars"
+	_light(Vector3(-0.4, 0.5, 0.75), 1.4)
+	var mars := _body("mars", 50000.0, Vector3(-20000.0, -62000.0, -60000.0), 0.01)
+	var phobos := SetPieces.rock(160.0, Vector3(1.3, 0.95, 1.05), 401, {"highland_colour": Color("6e625a"), "mare_colour": Color("574d47")})
+	phobos.position = Vector3(220.0, -40.0, -420.0)
+	_stage.add_child(phobos)
+	_update = func(dt: float) -> void:
+		phobos.rotation.y += dt * 0.01
+		var pos := Vector3(0, sin(clock * 0.5) * 0.8, -40.0)
+		_fly(pos, Vector3(-0.3, 0.0, -1.0), false, dt)
+		# Above and behind, Mars below and beyond the ship, the camera easing round.
+		var away := (pos - mars.position).normalized().rotated(Vector3.UP, sin(clock * 0.12) * 0.5)
+		camera.position = pos + away * _hero_len * 2.0
+		camera.look_at(pos.lerp(mars.position, 0.0012), Vector3.UP)
+
+
+## Off Ceres: rocks tumbling past as the ship threads between them.
+func _build_belt() -> void:
+	_where = "Off Ceres  ·  the asteroid belt"
+	_light(Vector3(0.7, 0.4, 0.5), 1.1)
+	_body("ceres", 12000.0, Vector3(25000.0, -9000.0, -90000.0))
+	var rocks := []
+	for k in 7:
+		var rock := SetPieces.rock(_rng.randf_range(12.0, 70.0), Vector3(_rng.randf_range(1.0, 1.6), _rng.randf_range(0.7, 1.1), 1.0), 900 + k)
+		rock.position = Vector3(_rng.randf_range(-300.0, 300.0), _rng.randf_range(-90.0, 90.0), -150.0 - 220.0 * k)
+		_stage.add_child(rock)
+		rocks.append([rock, Vector3(_rng.randf_range(-0.2, 0.2), _rng.randf_range(-0.2, 0.2), _rng.randf_range(-0.2, 0.2))])
+	_update = func(dt: float) -> void:
+		for r in rocks:
+			r[0].rotation += r[1] * dt
+		var z := -40.0 - clock * 85.0
+		var pos := Vector3(sin(clock * 0.35) * 40.0, sin(clock * 0.22) * 14.0, z)
+		var dir := Vector3(cos(clock * 0.35) * 14.0, cos(clock * 0.22) * 3.1, -85.0)
+		_fly(pos, dir, true, dt)
+		camera.position = pos + Vector3(_hero_len * 0.9, _hero_len * 0.4, _hero_len * 2.0)
+		camera.look_at(pos + Vector3(0, 0, -_hero_len), Vector3.UP)
 
 
 func _process(dt: float) -> void:
 	clock += dt
-	var t := Time.get_ticks_msec() / 1000.0
-	_station["rotor"].rotation.z = t * float(data.places["kibo_ring"]["station"]["spin_rpm"]) * TAU / 60.0
-	(_earth.material_override as ShaderMaterial).set_shader_parameter("spin", t * 0.004)
-	SetPieces.animate(_set_pieces, t)
-	Kit.update_blinkers(_blinkers, t)
-	for p in _pods:
-		var a: float = p["phase"] + TAU * t / float(p["period"])
-		p["node"].position = Vector3(cos(a) * p["r"], sin(a) * p["r"], p["z"])
-		p["node"].look_at(p["node"].global_position + Vector3(-sin(a), cos(a), 0.0), Vector3(0, 0, 1))
-	for tr in _traffic:
-		var f := fposmod(float(tr["phase"]) + t / float(tr["period"]), 1.0)
-		var node: Node3D = tr["node"]
-		node.position = tr["from"].lerp(tr["to"], f)
-		node.basis = ShipRig.roll_to_sun(tr["to"] - tr["from"], SUN_DIR)
-		ShipRig.aim(tr["rig"], node.basis, SUN_DIR, _earth.position - node.position, dt)
-	_animate_hero(dt)
-	# The showcase ship turns on its stand; its wings and dish keep their bearings.
-	if is_instance_valid(_hero):
-		ShipRig.aim(_hero_rig, _hero.basis, SUN_DIR, _earth.position - _hero.position, dt)
-	# A slow drift, as if the camera ship is holding station by hand.
-	camera.position = Vector3(sin(t * 0.13) * 1.5, 4.0 + sin(t * 0.21) * 0.8, 0.0)
-	camera.look_at(Vector3(sin(t * 0.07) * 4.0, 0.0, -HERO_DISTANCE), Vector3.UP)
-
-
-func _animate_hero(_dt: float) -> void:
-	var c := clock
-	var spin := c * 0.45
-	var pos: Vector3
-	if c < ARRIVE:
-		# Out of the dark, decelerating hard.
-		var f := c / ARRIVE
-		var e := 1.0 - pow(1.0 - f, 3.0)
-		pos = Vector3(lerpf(160.0, 0.0, e), lerpf(40.0, 0.0, e), lerpf(-1400.0, -HERO_DISTANCE, e))
-		if _hero_plume:
-			_hero_plume.visible = f < 0.85
-	elif c < ARRIVE + SHOW:
-		pos = Vector3(0, sin(c * 0.8) * 0.6, -HERO_DISTANCE)
-		if _hero_plume:
-			_hero_plume.visible = false
-	elif c < ARRIVE + SHOW + LEAVE:
-		# Light the drive and burn away to the right.
-		var f := (c - ARRIVE - SHOW) / LEAVE
-		pos = Vector3(f * f * 900.0, f * f * 120.0, -HERO_DISTANCE - f * f * 1600.0)
-		if _hero_plume:
-			_hero_plume.visible = true
-	else:
-		_next_hero()
+	if clock >= SHOT_S:
+		next_shot()
 		return
-	_hero.position = pos
-	_hero.rotation = Vector3(0.25 + sin(c * 0.3) * 0.08, spin + PI * 0.75, sin(c * 0.4) * 0.12)
+	for s in _spinners:
+		var m: ShaderMaterial = s[0].material_override
+		m.set_shader_parameter("spin", clock * float(s[1]))
+	if _update.is_valid():
+		_update.call(dt)
+	Kit.update_blinkers(_blinkers, clock)
+	# Cut through black: fade up at the start of a shot, down at its end.
+	var a := 0.0
+	if clock < FADE_S:
+		a = 1.0 - clock / FADE_S
+	elif clock > SHOT_S - FADE_S:
+		a = (clock - SHOT_S + FADE_S) / FADE_S
+	_fade.color.a = a
 
 
 func _unhandled_input(event: InputEvent) -> void:

@@ -425,7 +425,7 @@ func _sync_traffic() -> void:
 	# Moored ships keep the berth they were given; newcomers take the first free one.
 	var docked_here := {}
 	for npc in sim.state.npcs:
-		if npc["location"]["status"] == "docked" and npc["location"]["place"] == place_id:
+		if npc["location"]["status"] == "docked" and npc["location"]["place"] == place_id and preload("res://sim/systems/npc_system.gd").in_service(npc, t):
 			docked_here[npc["id"]] = true
 	for id in _berths.keys():
 		if not docked_here.has(id):

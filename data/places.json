@@ -615,7 +615,9 @@
 			"medical": 6,
 			"electronics": 10,
 			"machine_parts": 40,
-			"oxygen": 60
+			"oxygen": 60,
+			"refined_metals": 120,
+			"platinum_metals": 2
 		},
 		"produces": {
 			"water_ice": 20,
@@ -625,7 +627,9 @@
 			"food": 3,
 			"medical": 0.3,
 			"electronics": 0.6,
-			"machine_parts": 2
+			"machine_parts": 2,
+			"refined_metals": 2.0,
+			"platinum_metals": 0.01
 		},
 		"recipes": [
 			{

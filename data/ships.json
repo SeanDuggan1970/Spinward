@@ -123,5 +123,30 @@
 		"look": {
 			"cargo_layout": "pair"
 		}
+	},
+	"deep_freighter": {
+		"name": "Deep freighter",
+		"description": "A heavy keel built for months between ports: three boxes of cargo, a long-duration hab, four long-haul tanks and twin Mk3 drives. Crews sign on for a year at a time.",
+		"spine": "heavy_spine",
+		"modules": {
+			"command.0": "cmd_pod_basic",
+			"cargo.0": "cargo_pod_m",
+			"cargo.1": "cargo_pod_m",
+			"cargo.2": "cargo_pod_m",
+			"cargo.3": "hab_extended",
+			"cargo.4": "tank_l",
+			"cargo.5": "tank_l",
+			"tank.0": "tank_l",
+			"tank.1": "tank_l",
+			"drive.0": "pathfinder_mk3",
+			"drive.1": "pathfinder_mk3",
+			"radiator.0": "radiator_array",
+			"radiator.1": "radiator_array",
+			"radiator.2": "radiator_array",
+			"radiator.3": "radiator_array"
+		},
+		"look": {
+			"cargo_layout": "line"
+		}
 	}
 }

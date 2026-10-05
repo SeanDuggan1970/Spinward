@@ -64,6 +64,7 @@ func _initialize() -> void:
 	test_project_pitches()
 	test_sites()
 	test_story_arc()
+	test_outer_traffic()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -286,7 +287,9 @@ func test_npcs() -> void:
 	var everyone_moved := true
 	var min_stock := INF
 	for npc in with_npcs.state.npcs:
-		everyone_moved = everyone_moved and int(npc["trips"]) >= 1
+		# Long-haul fleets (commissioned over the months) are tested separately.
+		if not d.npcs["fleets"][npc["fleet"]].has("commission_days"):
+			everyone_moved = everyone_moved and int(npc["trips"]) >= 1
 	for place in with_npcs.state.markets:
 		for good in with_npcs.state.markets[place]:
 			min_stock = minf(min_stock, with_npcs.state.markets[place][good])
@@ -1030,3 +1033,31 @@ func test_story_arc() -> void:
 	check(sim.apply({"type": "site_work", "activity": "greet"}) == "", "Go and say hello")
 	sim.advance_game_time(3.0 * DAY)
 	check("the_meeting" in s.story["done"] and s.credits >= credits + 500000.0, "It says hello back. The system is a little larger.")
+
+
+func test_outer_traffic() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var later := {}
+	for npc in s.npcs:
+		if float(npc.get("active_t", -INF)) > s.time_s:
+			later[npc["id"]] = npc
+	check(not later.is_empty() and later.has("accord_runners.1"), "Some long-haul ships are still fitting out at the start")
+	sim.state.time_scale = 1.0e5
+	var saw_long_haul := false
+	var early_move := false
+	for _day in 40:
+		sim.advance_game_time(10.0 * DAY)
+		for npc in s.npcs:
+			var loc: Dictionary = npc["location"]
+			if loc["status"] == "transit" and loc.get("frame", "") == "sun":
+				saw_long_haul = saw_long_haul or loc.get("samples") != null
+			if later.has(npc["id"]) and s.time_s < float(npc["active_t"]) and int(npc["trips"]) > 0:
+				early_move = true
+	check(saw_long_haul, "Long-haul NPCs fly Sun-centred voyages on real paths")
+	check(not early_move, "No ship sails before it is commissioned")
+	var all_sailed := true
+	for npc in s.npcs:
+		if sim.data.npcs["fleets"][npc["fleet"]].has("commission_days") and s.time_s - float(npc["active_t"]) > 200.0 * DAY:
+			all_sailed = all_sailed and int(npc["trips"]) >= 1
+	check(all_sailed, "Every long-haul ship has made a voyage within months of entering service")

@@ -1,5 +1,5 @@
 {
-	"_note": "NPC fleets. behaviour: 'trader' (chooses among the best few trades it can see), 'route' (fixed legs, buys listed goods), 'shuttle' (fixed legs, no freight). NPCs trade from the same markets as the player but never draw a stock below reserve_fraction of target. dwell_hours is a [min, max] range for time spent docked.",
+	"_note": "NPC fleets. behaviour: 'trader' (chooses among the best few trades it can see), 'route' (fixed legs, buys listed goods), 'shuttle' (fixed legs, no freight). NPCs trade from the same markets as the player but never draw a stock below reserve_fraction of target. dwell_hours is a [min, max] range for time spent docked. 'commission_days' (one per ship) staggers when each ship enters service, in days from the start, so long-haul traffic builds up as the game goes on; until then a ship is fitting out and out of sight.",
 	"reserve_fraction": 0.25,
 	"trader_choice_pool": 3,
 	"trader_min_margin": 0.05,
@@ -333,6 +333,147 @@
 			"dwell_hours": [
 				18,
 				40
+			]
+		},
+		"accord_runners": {
+			"operator": "Mars Accord",
+			"hull": "deep_freighter",
+			"behaviour": "route",
+			"count": 2,
+			"names": [
+				"Red Ledger",
+				"Tharsis Dawn"
+			],
+			"commission_days": [
+				0,
+				120
+			],
+			"route": [
+				{
+					"at": "ares_ring",
+					"buy": [
+						"deuterium",
+						"food"
+					],
+					"to": "kibo_ring"
+				},
+				{
+					"at": "kibo_ring",
+					"buy": [
+						"machine_parts",
+						"electronics",
+						"medical"
+					],
+					"to": "ares_ring"
+				}
+			],
+			"fill": 0.4,
+			"dwell_hours": [
+				48,
+				120
+			]
+		},
+		"belt_haulers": {
+			"operator": "Belt Assembly",
+			"hull": "deep_freighter",
+			"behaviour": "route",
+			"count": 2,
+			"names": [
+				"Salt and Patience",
+				"Long Odds"
+			],
+			"commission_days": [
+				30,
+				200
+			],
+			"route": [
+				{
+					"at": "piazzi_station",
+					"buy": [
+						"volatiles",
+						"water_ice"
+					],
+					"to": "ares_ring"
+				},
+				{
+					"at": "ares_ring",
+					"buy": [
+						"food"
+					],
+					"to": "piazzi_station"
+				}
+			],
+			"fill": 0.4,
+			"dwell_hours": [
+				48,
+				120
+			]
+		},
+		"psyche_ore": {
+			"operator": "Belt Assembly",
+			"hull": "deep_freighter",
+			"behaviour": "route",
+			"count": 1,
+			"names": [
+				"Iron Rose"
+			],
+			"commission_days": [
+				60
+			],
+			"route": [
+				{
+					"at": "psyche_claims",
+					"buy": [
+						"platinum_metals",
+						"refined_metals"
+					],
+					"to": "piazzi_station"
+				},
+				{
+					"at": "piazzi_station",
+					"buy": [
+						"food",
+						"oxygen",
+						"water_ice"
+					],
+					"to": "psyche_claims"
+				}
+			],
+			"fill": 0.4,
+			"dwell_hours": [
+				72,
+				160
+			]
+		},
+		"saturn_tender": {
+			"operator": "Huygens Trust",
+			"hull": "deep_freighter",
+			"behaviour": "route",
+			"count": 1,
+			"names": [
+				"Cassini's Gap"
+			],
+			"commission_days": [
+				150
+			],
+			"route": [
+				{
+					"at": "huygens_port",
+					"buy": [
+						"propellant"
+					],
+					"to": "valhalla_station"
+				},
+				{
+					"at": "valhalla_station",
+					"buy": [],
+					"to": "huygens_port"
+				}
+			],
+			"fill": 0.3,
+			"dwell_hours": [
+				96,
+				200
 			]
 		}
 	},

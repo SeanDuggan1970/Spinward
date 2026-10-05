@@ -44,6 +44,9 @@ func _draw() -> void:
 	var info: Dictionary = title.hero_info()
 	if info["showing"]:
 		var plate := Rect2(w * 0.5 - 330, h - 210, 660, 104)
+		var where: String = info.get("where", "")
+		if where != "":
+			draw_string(_font, plate.position + Vector2(4, -10), where.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(UI.TEXT, 0.85))
 		draw_rect(plate, Color(0.08, 0.09, 0.1, 0.82))
 		draw_rect(Rect2(plate.position, Vector2(plate.size.x, 3)), UI.HAZARD)
 		draw_string(_font, plate.position + Vector2(18, 30), String(info["name"]).to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, UI.AMBER)

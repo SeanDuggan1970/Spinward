@@ -670,6 +670,8 @@ func _traffic_tab(place_id: String) -> Control:
 	var inbound := []
 	for npc in s.npcs:
 		var loc: Dictionary = npc["location"]
+		if not preload("res://sim/systems/npc_system.gd").in_service(npc, s.time_s):
+			continue
 		if loc["status"] == "docked" and loc["place"] == place_id:
 			in_port.append(npc)
 		elif loc["status"] == "transit" and loc["to"] == place_id:

@@ -79,6 +79,9 @@ func _ready() -> void:
 			visible = false
 			get_tree().root.add_child.call_deferred(load("res://view/art_gallery.gd").new(sim.data, a.trim_prefix("--art=")))
 			return
+		if a.begins_with("--title="):
+			_title_tour.call_deferred(a.trim_prefix("--title="))
+			return
 		if a.begins_with("--landing="):
 			_landing_tour.call_deferred(a.trim_prefix("--landing="))
 			return
@@ -199,6 +202,16 @@ func _handle_events() -> void:
 				else:
 					notice("Took on %.2f t propellant for %s" % [d["tonnes"], UI.money(-d["credits"])])
 				refresh = true
+			"npc_commissioned":
+				var npc_c: Dictionary = {}
+				for n in sim.state.npcs:
+					if n["id"] == d["npc"]:
+						npc_c = n
+				if not npc_c.is_empty():
+					var fl: Dictionary = sim.data.npcs["fleets"][npc_c["fleet"]]
+					var line := "NEWS  %s commissions the %s, a %s, at %s." % [fl["operator"], npc_c["name"], String(sim.data.ships[fl["hull"]]["name"]).to_lower(), sim.data.places[d["place"]]["name"]]
+					comms.append("%s  %s" % [_clock(e["time_s"]), line])
+					notice(line.trim_prefix("NEWS  "), UI.AMBER)
 			"project_announced":
 				var pj: Dictionary = sim.data.projects[d["project"]]
 				notice("NEWS: %s announce %s at %s. They want backers: see Projects." % [pj.get("backer", "Builders"), pj["name"], sim.data.places[pj["place"]]["name"]], UI.AMBER)
@@ -545,6 +558,22 @@ func _tour(dir: String) -> void:
 	for _i in 10:
 		await get_tree().process_frame
 	_shot(dir + "/6-flight-chase.png")
+	get_tree().quit()
+
+
+## Windowed: every attract-screen shot, captured mid-shot.
+func _title_tour(dir: String) -> void:
+	DirAccess.make_dir_recursive_absolute(dir)
+	show_title()
+	for shot in TitleScreen.SHOTS:
+		_title.force_shot = shot
+		_title.next_shot()
+		for _i in 2:
+			await get_tree().process_frame
+		_title.clock = TitleScreen.SHOT_S * 0.45
+		for _i in 30:
+			await get_tree().process_frame
+		_shot("%s/%s.png" % [dir, shot])
 	get_tree().quit()
 
 
