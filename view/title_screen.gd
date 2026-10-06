@@ -181,6 +181,13 @@ func _body(body: String, radius: float, at: Vector3, day_spin: float = 0.0) -> M
 	return mesh
 
 
+## Light thrown back by a big world onto the hero (planetshine).
+func _shine_from(world: MeshInstance3D, colour: Color, energy: float) -> void:
+	var l := SkyKit.shine_light()
+	_stage.add_child(l)
+	SkyKit.aim_shine(l, {"dir": world.position.normalized(), "colour": colour, "energy": energy})
+
+
 ## `giant`'s shadow on every other body in the shot, and on the ships if `on_ships`.
 func _shadows(giant: MeshInstance3D, on_ships: bool = true) -> void:
 	var r := (giant.mesh as SphereMesh).radius
@@ -245,6 +252,8 @@ func _build_jovian() -> void:
 	_where = "Callisto  ·  the Jovian system"
 	_light(Vector3(0.8, 0.3, 0.4), 1.3)
 	var jupiter := _body("jupiter", 60000.0, Vector3(-90000.0, 15000.0, -260000.0), 0.02)
+	SkyKit.set_distance(jupiter, 1.88e9)
+	_shine_from(jupiter, Color("e8d4b4"), 0.35)
 	_body("io", 1600.0, Vector3(30000.0, 6000.0, -150000.0))
 	_body("europa", 1300.0, Vector3(-45000.0, -9000.0, -120000.0))
 	var callisto := _body("callisto", 2400.0, Vector3(0.0, -1800.0, -5200.0))
@@ -270,6 +279,8 @@ func _build_saturn() -> void:
 	_light(Vector3(-0.75, 0.4, 0.3), 1.3, Vector3(30, 20, 30))
 	var saturn := _body("saturn", 40000.0, Vector3(30000.0, -14000.0, -200000.0), 0.02)
 	saturn.basis = Basis(Vector3.RIGHT, 0.42) * Basis(Vector3.FORWARD, 0.25) * Basis.from_scale(Vector3(1.0, float(data.bodies["saturn"].get("flattening", 1.0)), 1.0))
+	SkyKit.set_distance(saturn, 1.22e9)
+	_shine_from(saturn, Color("ecdcb8"), 0.3)
 	_body("titan", 2600.0, Vector3(-26000.0, 9000.0, -90000.0))
 	_body("enceladus", 300.0, Vector3(9000.0, -2500.0, -60000.0))
 	_shadows(saturn)

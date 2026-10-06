@@ -25,6 +25,13 @@ static func environment() -> WorldEnvironment:
 	sky_mat.panorama = starfield()
 	sky.sky_material = sky_mat
 	env.sky = sky
+	# A gentle bloom: bright limbs, beacons and exhausts bleed a little, as through a lens.
+	env.glow_enabled = true
+	env.glow_intensity = 0.55
+	env.glow_strength = 1.0
+	env.glow_bloom = 0.02
+	env.glow_hdr_threshold = 0.95
+	env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SCREEN
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = Color("2a3340")
 	env.ambient_light_energy = 0.6
@@ -58,7 +65,7 @@ static func body_material(body: String, look: Dictionary = {}, radius_m: float =
 		m.set_shader_parameter("largest_km", minf(420.0, km * 0.6))
 		m.set_shader_parameter("grain_per_radius", maxf(400.0, km * 3.0))
 	for key in look:
-		if key == "shader":
+		if key in ["shader", "atmosphere"]:
 			continue
 		var v = look[key]
 		m.set_shader_parameter(key, Color(v) if v is String else v)
@@ -82,6 +89,23 @@ static func body_mesh(data, body: String, radius: float) -> MeshInstance3D:
 	var pole := pole_basis(float(b["pole_ra_deg"]), float(b["pole_dec_deg"])) if b.has("pole_ra_deg") else Basis.IDENTITY
 	# Fast-spinning giants bulge: Saturn is a tenth wider than it is tall.
 	mi.basis = pole * Basis.from_scale(Vector3(1.0, float(b.get("flattening", 1.0)), 1.0))
+	if look.has("atmosphere"):
+		var air: Dictionary = look["atmosphere"]
+		var shell := MeshInstance3D.new()
+		shell.name = "Atmosphere"
+		var ss := SphereMesh.new()
+		ss.radius = radius * (1.0 + float(air.get("thickness", 0.02)))
+		ss.height = ss.radius * 2.0
+		ss.radial_segments = 64
+		ss.rings = 32
+		shell.mesh = ss
+		var am := ShaderMaterial.new()
+		am.shader = load("res://view/shaders/atmosphere.gdshader")
+		am.set_shader_parameter("colour", Color(String(air.get("colour", "#6aa2ff"))))
+		am.set_shader_parameter("strength", float(air.get("strength", 0.8)))
+		shell.material_override = am
+		shell.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		mi.add_child(shell)
 	if float(look.get("rings", 0.0)) > 0.0:
 		var ring := MeshInstance3D.new()
 		ring.name = "Rings"
@@ -119,10 +143,99 @@ static func update_body(mesh: MeshInstance3D, sun_dir: Vector3, t: float) -> voi
 	var rings := mesh.get_node_or_null("Rings") as MeshInstance3D
 	if rings:
 		(rings.material_override as ShaderMaterial).set_shader_parameter("sun_dir", sun_dir)
+	var air := mesh.get_node_or_null("Atmosphere") as MeshInstance3D
+	if air:
+		(air.material_override as ShaderMaterial).set_shader_parameter("sun_dir", sun_dir)
 	var day := float(m.get_meta("day_s", 86164.1))
 	if day != 0.0:
 		# The phase is arbitrary (no real geography to line up).
 		m.set_shader_parameter("spin", fposmod(t / day, 1.0) * TAU)
+
+
+## How far away a body is, for the aerial-perspective veil: none within a thousand
+## km, rising with the log of distance to about a third by a tenth of an AU.
+static func set_distance(mesh: MeshInstance3D, metres: float) -> void:
+	var m := mesh.material_override as ShaderMaterial
+	if m:
+		m.set_shader_parameter("veil", clampf((log(maxf(metres, 1.0)) / log(10.0) - 6.0) / 4.0, 0.0, 1.0) * 0.38)
+
+
+## Light thrown back by the biggest world in view onto whatever is near the camera:
+## {dir (from the camera toward the world), colour, energy}. Its lit fraction as seen
+## from here sets how much; a giant filling the sky lights you warmly from that side.
+static func planetshine(data, seen: Array, sun_dir: Vector3) -> Dictionary:
+	var best := {}
+	var best_ang := 0.0
+	for entry in seen:
+		var ang := float(entry[2])
+		if ang > best_ang:
+			best_ang = ang
+			best = {"body": entry[0], "dir": entry[1]}
+	if best.is_empty() or best_ang < deg_to_rad(0.5):
+		return {}
+	var look: Dictionary = data.bodies[best["body"]].get("look", {})
+	var colour := Color(String(look.get("colour_a", look.get("highland_colour", "#c8c4bc"))))
+	var dir: Vector3 = best["dir"]
+	var lit := 0.5 + 0.5 * sun_dir.dot(-dir)
+	var size := clampf(best_ang / deg_to_rad(20.0), 0.0, 1.0)
+	return {"dir": dir, "colour": colour, "energy": 0.55 * pow(size, 0.8) * lit}
+
+
+## A planetshine light (see planetshine()) for a scene; update it each frame or once.
+static func shine_light() -> DirectionalLight3D:
+	var l := DirectionalLight3D.new()
+	l.name = "Planetshine"
+	l.shadow_enabled = false
+	l.light_energy = 0.0
+	return l
+
+
+static func aim_shine(light: DirectionalLight3D, shine: Dictionary) -> void:
+	if shine.is_empty():
+		light.light_energy = 0.0
+		return
+	var dir: Vector3 = shine["dir"]
+	light.light_color = shine["colour"]
+	light.light_energy = float(shine["energy"])
+	light.look_at_from_position(Vector3.ZERO, -dir, Vector3.UP if absf(dir.y) < 0.99 else Vector3.RIGHT)
+
+
+## Sunlit dust drifting by the camera: a few hundred motes in a box that moves with
+## it, so near and far read apart when the view turns.
+static func dust(extent: float = 40.0) -> CPUParticles3D:
+	var p := CPUParticles3D.new()
+	p.amount = 220
+	p.lifetime = 14.0
+	p.preprocess = 14.0
+	p.local_coords = false
+	p.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+	p.emission_box_extents = Vector3.ONE * extent
+	p.direction = Vector3(0.3, 0.1, 1.0)
+	p.spread = 180.0
+	p.initial_velocity_min = 0.05
+	p.initial_velocity_max = 0.3
+	p.gravity = Vector3.ZERO
+	p.scale_amount_min = 0.5
+	p.scale_amount_max = 1.4
+	var q := QuadMesh.new()
+	q.size = Vector2(0.06, 0.06)
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	m.albedo_color = Color(0.9, 0.86, 0.78, 0.5)
+	m.vertex_color_use_as_albedo = false
+	q.material = m
+	p.mesh = q
+	# Fade in and out over each mote's life, so none pops.
+	var fade := Gradient.new()
+	fade.set_color(0, Color(1, 1, 1, 0))
+	fade.add_point(0.2, Color(1, 1, 1, 1))
+	fade.add_point(0.8, Color(1, 1, 1, 1))
+	fade.set_color(fade.get_point_count() - 1, Color(1, 1, 1, 0))
+	p.color_ramp = fade
+	return p
 
 
 ## The shadow one body casts on another: `occluder_at` and `radius` in the scene

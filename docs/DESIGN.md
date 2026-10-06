@@ -680,6 +680,16 @@ Sean's direction (2026-10-07): the Eagle from *Space: 1999*, "a much loved desig
 - **The title** gains a touchdown shot: a Kestrel lowering onto the Moon, legs compressing and rebounding.
 - **Capture:** `--kestrel=<dir>` shoots it standing on regolith from all round.
 
+## Scale: giving the giants back their enormity (Oct 2026)
+
+Sean (2026-10-07): a ship passing in front of a gas giant has no depth cues, "this makes the planet look very small or the ship huge... even if it might be actually correct, this is a game so I want the visuals to be inspiring". Space has no haze, so the game borrows the cues the eye uses on Earth:
+- **Atmospheres** (`atmosphere.gdshader`, `look.atmosphere` on Earth, Venus, Mars, the giants and Titan): a shell above the surface glowing where the line of sight grazes it, on the sunlit side, warm at the terminator, brighter when backlit.
+- **Limb darkening** on gas giants and cloud worlds: the edge darkens through the haze, so a giant reads as a ball.
+- **Aerial perspective** (`SkyKit.set_distance`, a `veil` uniform in every body shader): the further a world is, the softer and cooler it is. None within a thousand km, about a third by a tenth of an AU. A crisp ship against a softened giant reads as near against vast.
+- **Planetshine** (`SkyKit.planetshine`): the biggest world in view lights the ship's facing side, in its colour, scaled by its size in the sky and how much of its day side faces you.
+- **Bloom:** a gentle one in every scene, on bright limbs, beacons and exhausts.
+- **Dust** (`SkyKit.dust`): sunlit motes drifting around the ship-view camera, so near and far read apart as the view turns.
+
 ## Milestones
 
 - **M0 – Foundation:** done.

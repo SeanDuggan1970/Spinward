@@ -28,6 +28,17 @@ void vertex() {
 	world_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 }
 
+// Aerial perspective, for the eye's sake: the further away, the softer and cooler
+// (0 crisp, near; SkyKit sets it from the real distance). Space has no haze, but
+// without this a giant world behind a ship reads as a small one close by.
+uniform float veil = 0.0;
+uniform vec3 veil_colour : source_color = vec3(0.62, 0.7, 0.86);
+
+vec3 sw_veiled(vec3 c) {
+	vec3 soft = mix(c, vec3(dot(c, vec3(0.3, 0.5, 0.2))), 0.35) * 0.88 + veil_colour * 0.1;
+	return mix(c, soft, veil);
+}
+
 void fragment() {
 	vec3 p = normalize(dir);
 	float cs = cos(spin);
@@ -39,7 +50,8 @@ void fragment() {
 	float b = 0.5 + 0.5 * sin(lat * bands * 3.14159);
 	vec3 col = mix(colour_b, colour_a, b) * (0.92 + 0.12 * sw_fbm(q * 9.0 + seed, 4));
 	float lit = mix(0.02, 1.0, sw_sunlit(world_pos, normalize(sun_dir), occluder));
-	ALBEDO = col * lit;
+	float facing = clamp(dot(NORMAL, VIEW), 0.0, 1.0);
+	ALBEDO = sw_veiled(col * lit * mix(0.5, 1.0, pow(facing, 0.5)));
 	ROUGHNESS = 1.0;
 	float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 2.5);
 	float day = dot(normalize(world_normal), normalize(sun_dir));

@@ -179,6 +179,9 @@ func _build_environment() -> void:
 	# on the sky shell, so a moon passes in front of its planet, never behind.
 	var seen: Array = SkyKit.visible_bodies(sim.data, eph, here, t)
 	SkyKit.set_eclipse(sun_dir)
+	var shine := SkyKit.shine_light()
+	add_child(shine)
+	SkyKit.aim_shine(shine, SkyKit.planetshine(sim.data, seen, sun_dir))
 	var built := {}
 	for id in sim.data.projects:
 		# Once a build is announced its first hardware is on station.
@@ -193,6 +196,7 @@ func _build_environment() -> void:
 		var mesh := SkyKit.body_mesh(sim.data, body, shell * sin(float(seen[k][2])))
 		mesh.position = dir * shell
 		SkyKit.update_body(mesh, sun_dir, t)
+		SkyKit.set_distance(mesh, float(seen[k][3]))
 		SkyKit.dress_body(mesh, sim.data, body, -dir, sun_dir, built)
 		add_child(mesh)
 		# Its planet's shadow, placed at this body's own sky scale.

@@ -52,7 +52,12 @@
 			"colour_a": "#e8d6a8",
 			"colour_b": "#c9ad74",
 			"bands": 3.0,
-			"turbulence": 0.6
+			"turbulence": 0.6,
+			"atmosphere": {
+				"colour": "#f2e2b0",
+				"thickness": 0.03,
+				"strength": 0.9
+			}
 		}
 	},
 	"earth": {
@@ -70,7 +75,14 @@
 		},
 		"kind": "planet",
 		"pole_ra_deg": 0.0,
-		"pole_dec_deg": 90.0
+		"pole_dec_deg": 90.0,
+		"look": {
+			"atmosphere": {
+				"colour": "#6aa2ff",
+				"thickness": 0.022,
+				"strength": 1.0
+			}
+		}
 	},
 	"moon": {
 		"name": "Moon",
@@ -125,7 +137,12 @@
 			"mare_colour": "#7a4630",
 			"basin_flooding": 0.3,
 			"ice_caps": 0.9,
-			"ray_chance": 0.01
+			"ray_chance": 0.01,
+			"atmosphere": {
+				"colour": "#e0a888",
+				"thickness": 0.012,
+				"strength": 0.45
+			}
 		},
 		"structures": [
 			{
@@ -349,7 +366,12 @@
 			"colour_c": "#8a5a3c",
 			"bands": 14.0,
 			"turbulence": 0.7,
-			"storm": 1.0
+			"storm": 1.0,
+			"atmosphere": {
+				"colour": "#f2e0c4",
+				"thickness": 0.018,
+				"strength": 0.55
+			}
 		},
 		"flattening": 0.935
 	},
@@ -527,7 +549,12 @@
 			"turbulence": 0.22,
 			"rings": 1.0,
 			"polar_colour": "#a7ab9c",
-			"polar_lat": 0.78
+			"polar_lat": 0.78,
+			"atmosphere": {
+				"colour": "#f2e6c8",
+				"thickness": 0.02,
+				"strength": 0.5
+			}
 		},
 		"flattening": 0.902
 	},
@@ -619,7 +646,12 @@
 			"colour_a": "#d6a35a",
 			"colour_b": "#b88440",
 			"bands": 2.0,
-			"turbulence": 0.2
+			"turbulence": 0.2,
+			"atmosphere": {
+				"colour": "#e8a85a",
+				"thickness": 0.07,
+				"strength": 1.0
+			}
 		}
 	},
 	"iapetus": {
@@ -667,7 +699,12 @@
 			"colour_b": "#9fd3d8",
 			"colour_c": "#8cc4cc",
 			"bands": 6.0,
-			"turbulence": 0.1
+			"turbulence": 0.1,
+			"atmosphere": {
+				"colour": "#a8e6f2",
+				"thickness": 0.03,
+				"strength": 0.7
+			}
 		}
 	},
 	"miranda": {
@@ -738,7 +775,12 @@
 			"colour_c": "#2c4aa6",
 			"bands": 8.0,
 			"turbulence": 0.4,
-			"storm": 0.6
+			"storm": 0.6,
+			"atmosphere": {
+				"colour": "#6c90ff",
+				"thickness": 0.03,
+				"strength": 0.7
+			}
 		}
 	},
 	"triton": {
@@ -892,5 +934,6 @@
 	},
 	"_note_plumes": "'plumes' (view-only): kind jets | umbrella | geyser, lat/lon in degrees (lon 'limb' puts it on the limb as seen), sizes in body radii, jets = how many, spread_deg = how far around the site they scatter. 'structures': space elevators (top_r = the synchronous anchor, counter_r = the counterweight, both in radii; 'project' grows it with that megaproject).",
 	"_note_flattening": "'flattening': polar over equatorial radius, for the fast-spinning giants (view-only).",
-	"_note_orbital_ring": "'orbital_ring': a ring round the equator at radius_r body radii, moving faster than orbit inside a stationary sheath, with tethers to the ground; built in arcs with its project."
+	"_note_orbital_ring": "'orbital_ring': a ring round the equator at radius_r body radii, moving faster than orbit inside a stationary sheath, with tethers to the ground; built in arcs with its project.",
+	"_note_atmosphere": "look.atmosphere (view-only): a glowing shell 'thickness' body radii above the surface, its limb colour and strength."
 }

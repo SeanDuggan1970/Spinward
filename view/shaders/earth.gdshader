@@ -32,6 +32,17 @@ void vertex() {
 	world_normal = (MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz;
 }
 
+// Aerial perspective, for the eye's sake: the further away, the softer and cooler
+// (0 crisp, near; SkyKit sets it from the real distance). Space has no haze, but
+// without this a giant world behind a ship reads as a small one close by.
+uniform float veil = 0.0;
+uniform vec3 veil_colour : source_color = vec3(0.62, 0.7, 0.86);
+
+vec3 sw_veiled(vec3 c) {
+	vec3 soft = mix(c, vec3(dot(c, vec3(0.3, 0.5, 0.2))), 0.35) * 0.88 + veil_colour * 0.1;
+	return mix(c, soft, veil);
+}
+
 void fragment() {
 	vec3 p = to_body(normalize(dir));
 	float footprint = length(fwidth(p));
@@ -70,7 +81,7 @@ void fragment() {
 	float band = 0.75 + 0.25 * cos(lat * 9.0);
 	float cloud = smoothstep(1.0 - cloud_cover, 1.05 - cloud_cover * 0.6, cl * band + 0.12);
 	albedo = mix(albedo, vec3(0.93), cloud * 0.92);
-	ALBEDO = albedo;
+	ALBEDO = sw_veiled(albedo);
 	float water = (1.0 - land) * (1.0 - ice) * (1.0 - cloud);
 	ROUGHNESS = mix(0.95, 0.42, water);
 	SPECULAR = mix(0.2, 0.45, water);

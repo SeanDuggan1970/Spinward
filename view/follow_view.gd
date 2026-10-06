@@ -69,6 +69,8 @@ var _dragging := false
 var _rng := RandomNumberGenerator.new()
 var _fade: ColorRect
 var _shot_seed := 0.0
+var _shine: DirectionalLight3D
+var _dust: CPUParticles3D
 ## What the current set-up looks at and from where (shot-specific state).
 var _target_body := ""
 
@@ -122,6 +124,10 @@ func _ready() -> void:
 	_fade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(_fade)
+	_shine = SkyKit.shine_light()
+	add_child(_shine)
+	_dust = SkyKit.dust(_length * 1.5 + 20.0)
+	add_child(_dust)
 	_update_world(0.0)
 	_next_shot()
 	_update_camera(0.0)
@@ -219,6 +225,7 @@ func _update_world(dt: float) -> void:
 		node.position = (seen[k][1] as Vector3) * shell
 		node.scale = Vector3.ONE * shell * sin(float(seen[k][2]))
 		SkyKit.update_body(node, _sun_dir, t)
+		SkyKit.set_distance(node, float(seen[k][3]))
 		if not _dressed.has(body):
 			_dressed[body] = true
 			SkyKit.dress_body(node, sim.data, body, -(seen[k][1] as Vector3), _sun_dir, built)
@@ -228,6 +235,7 @@ func _update_world(dt: float) -> void:
 		if along > 0.0 and (node.position - _sun_dir * along).length() < r_sky:
 			SkyKit.set_eclipse(_sun_dir, node.position, r_sky)
 	readout["seen"] = seen
+	SkyKit.aim_shine(_shine, SkyKit.planetshine(sim.data, seen, _sun_dir))
 	# Ports nearby, at their true distance and size: where the trip leaves from and
 	# arrives at (the path's own end points, so the ship starts and ends beside them).
 	var ship_rel: Array = Navigation.transit_position(loc, t)
@@ -363,6 +371,8 @@ func _update_camera(dt: float) -> void:
 		camera.fov = 50.0
 		camera.global_position = centre + off
 		camera.look_at(centre, Vector3.UP if absf(off.normalized().y) < 0.99 else Vector3.FORWARD)
+		if _dust:
+			_dust.global_position = camera.global_position
 		return
 	var f := clampf(shot_clock / SHOT_S, 0.0, 1.0)
 	var sway := sin(shot_clock * 0.4 + _shot_seed * 6.0)
@@ -441,5 +451,7 @@ func _update_camera(dt: float) -> void:
 			sky_up = Vector3.UP
 	camera.fov = fov
 	camera.global_position = pos
+	if _dust:
+		_dust.global_position = pos
 	if pos.distance_to(at) > 1e-3:
 		camera.look_at(at, sky_up if absf((at - pos).normalized().dot(sky_up)) < 0.98 else Vector3.FORWARD)

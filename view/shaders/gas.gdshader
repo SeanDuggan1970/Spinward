@@ -29,6 +29,17 @@ void vertex() {
 	dir = VERTEX;
 }
 
+// Aerial perspective, for the eye's sake: the further away, the softer and cooler
+// (0 crisp, near; SkyKit sets it from the real distance). Space has no haze, but
+// without this a giant world behind a ship reads as a small one close by.
+uniform float veil = 0.0;
+uniform vec3 veil_colour : source_color = vec3(0.62, 0.7, 0.86);
+
+vec3 sw_veiled(vec3 c) {
+	vec3 soft = mix(c, vec3(dot(c, vec3(0.3, 0.5, 0.2))), 0.35) * 0.88 + veil_colour * 0.1;
+	return mix(c, soft, veil);
+}
+
 void fragment() {
 	vec3 p = normalize(dir);
 	float cs = cos(spin);
@@ -75,7 +86,11 @@ void fragment() {
 			}
 		}
 	}
-	ALBEDO = col;
+	// Limb darkening: towards the edge you look through more haze and see higher,
+	// darker cloud; it is what makes a giant read as a ball, not a disc.
+	float facing = clamp(dot(NORMAL, VIEW), 0.0, 1.0);
+	col *= mix(0.42, 1.0, pow(facing, 0.45));
+	ALBEDO = sw_veiled(col);
 	ROUGHNESS = 1.0;
 	// Haze brightens the limb a little, even on the night side's edge.
 	float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 3.0);
