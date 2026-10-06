@@ -553,6 +553,10 @@ func _sync_traffic() -> void:
 			holder.rotation.z = a
 			node.position = Vector3(r, 0, station["hub_length"] * 0.5 - model["length"] * 0.5 - 2.0)
 			node.rotation = Vector3(0, PI, PI * 0.5)
+			# Moored: drives cold.
+			var plume := node.find_child("DrivePlume", true, false)
+			if plume:
+				plume.visible = false
 			holder.add_child(node)
 			holder.add_child(Kit.box(Vector3(model["radius"] + 6.0, 0.6, 0.6), Kit.mat("steel"), Vector3(station["hub_radius"] + (model["radius"] + 6.0) * 0.5, 0, node.position.z)))
 			station["rotor"].add_child(holder)
