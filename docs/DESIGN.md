@@ -727,6 +727,24 @@ Sean (2026-10-07): a ship passing in front of a gas giant has no depth cues, "th
 - **Bloom:** a gentle one in every scene, on bright limbs, beacons and exhausts.
 - **Dust** (`SkyKit.dust`): sunlit motes drifting around the ship-view camera, so near and far read apart as the view turns.
 
+## Ship power (Oct 2026)
+
+A ship has an electrical bus, so the SYSTEMS page shows something real instead of a placeholder. Code: `sim/power.gd` (pure functions, shared by the sim and the cockpit), `sim/systems/power_system.gd` (integrates the battery, raises events), module fields in `data/modules.json`, globals in `data/balance.json` under `power`. Units are kW and kWh.
+
+- **Supply.**
+  - **Reactor** (`reactor_kw` on the fusion drives): output while lit. Lit in transit and on approach, while a site job runs, or when ordered with the `reactor` command (`{"mode": "on" | "auto"}`). Parked on a site it is cold.
+  - **Solar** (`solar_kw` on the command section: its housekeeping wings): output at 1 AU times `1 / au²`, capped by `solar_factor_max` close to the Sun. The distance comes from the ephemeris, or from the transit path.
+  - **Shore power** (`shore_kw`): when docked, which also charges the battery.
+  - **Battery** (`battery_kwh` on the command section): the buffer.
+- **Demand** (`life_kw`, `avionics_kw`, `comms_kw`, `sensor_kw`, `mining_kw` on modules): sensors and the rig idle at `standby_frac` of their load until a job needs them. **Radiator pumps** draw `pump_kw_per_mw` per MW of heat actually rejected: the drives' `heat_mw` times `heat_frac` for the phase, capped by what the radiators can reject. A cold reactor makes no heat, so the pumps stop.
+- **Damage** works as in `ShipStats`: it cuts what a module supplies (wings, reactor, battery capacity, radiator rejection) and not what it draws, so a battered ship runs short sooner.
+- **Deficit.** Net power is supply minus draw. A deficit drains the battery; a surplus charges it. The bus state is `SHORE`, `NORM`, `CHG` (charging), `BATT` (on battery), `SHED` or `LOW`.
+- **Shedding.** Only while in deficit, by battery charge: below `shed_comms_below` comms and sensors go; below `shed_mining_below` the rig too; below `life_warn_below` life support gets its red warning (`LOW`, the POWER lamp turns red, `power_shed` level 3). Life support and avionics are never shed. A shed level is held until charge is `shed_release_margin` above its threshold. A survey or mining job whose module is shed waits for power instead of failing (`SiteSystem` pushes its end time out).
+- **The outer-system consideration.** With the reactor cold, solar alone carries a Mule's hotel load only out to about 1.6 AU. Parked at a belt or Trojan site you run on the battery: about three days at Hektor (70 h), four at Psyche. Light the reactor (starting a job does it) or plan for it.
+- **Cockpit.** SYSTEMS shows battery % and bar, bus state, net kW, and time to empty or full; the POWER annunciator is amber when the battery is running down (below `power_caution_frac` or within `power_caution_hours` of empty) or loads are shed, and red when life support is next. White is measured, green is fine. All cockpit alert thresholds (fuel, hull, heat, module damage, power) are in `balance.json` under `cockpit`.
+
+Departures from hard physics, on purpose: reactor fuel is free (the fusion burn for a few hundred kW is grams a day); a flat battery never hurts the crew (the warning and the shed loads are the consequence); battery capacity is folded into the command section's mass; the state of the bus is shown as a word rather than a bus voltage; shore power is a flat rate.
+
 ## Milestones
 
 - **M0 – Foundation:** done.

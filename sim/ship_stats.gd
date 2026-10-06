@@ -66,15 +66,21 @@ static func accel_mps2(ship: Dictionary, data, extra_mass_t: float = 0.0) -> flo
 	return thrust_n(ship, data) / ((total_mass_t(ship, data) + extra_mass_t) * 1000.0)
 
 
+## What a module makes or draws regardless of damage: a drive's heat, and the
+## electrical loads (a hit module still draws its power).
+const UNDAMAGED := ["heat_mw", "life_kw", "avionics_kw", "comms_kw", "sensor_kw", "mining_kw"]
+
+
 ## Summed over the modules, each counting for what is left of it after damage
 ## (ship["damage"][slot], 0 sound to 1 wrecked): a holed tank holds less, a hit drive
-## pushes less. Heat is what a drive makes, so damage doesn't reduce it.
+## pushes less, scorched solar wings and reactors make less power. Heat is what a
+## drive makes, so damage doesn't reduce it (see UNDAMAGED).
 static func _sum(ship: Dictionary, data, key: String) -> float:
 	var total := 0.0
 	var damage: Dictionary = ship.get("damage", {})
 	for slot in ship.get("modules", {}):
 		var m: Dictionary = data.modules[ship["modules"][slot]]
-		var left := 1.0 if key == "heat_mw" else 1.0 - clampf(float(damage.get(slot, 0.0)), 0.0, 1.0)
+		var left := 1.0 if key in UNDAMAGED else 1.0 - clampf(float(damage.get(slot, 0.0)), 0.0, 1.0)
 		total += float(m.get(key, 0.0)) * left
 	return total
 
@@ -97,3 +103,30 @@ static func has_docking_computer(ship: Dictionary, data) -> bool:
 		if m.get("docking_computer", false):
 			return true
 	return false
+
+
+## Heat the drives make (MW) and the radiators can reject (MW, after damage).
+static func heat_mw(ship: Dictionary, data) -> float:
+	return _sum(ship, data, "heat_mw")
+
+
+static func reject_mw(ship: Dictionary, data) -> float:
+	return _sum(ship, data, "reject_mw")
+
+
+## Electrical figures (kW, kWh), for sim/power.gd. Supply stats fall with damage;
+## load stats do not (UNDAMAGED).
+static func solar_kw_1au(ship: Dictionary, data) -> float:
+	return _sum(ship, data, "solar_kw")
+
+
+static func battery_kwh(ship: Dictionary, data) -> float:
+	return _sum(ship, data, "battery_kwh")
+
+
+static func reactor_kw(ship: Dictionary, data) -> float:
+	return _sum(ship, data, "reactor_kw")
+
+
+static func load_kw(ship: Dictionary, data, key: String) -> float:
+	return _sum(ship, data, key)

@@ -143,6 +143,14 @@ From Halo Depot, 2061-03-01, at full tanks.
   - the Lacuna pays 500k at the end of the arc
 - **Watch:** do long hauls and surveys out-earn cislunar trading by too much once a pilot owns a long-haul refit (about 675k)?
 
+## Ship power (Oct 2026)
+
+Re-ran the bot (`days=60 upgrade=1`, seeds 1-5) on main and on the power branch: identical output (mean 29,086 cr, median first upgrade day 28.7). Power has no price, fuel or trip-time effect. The only link to the economy is that a survey or mining job waits while its sensors or rig are shed, which needs the reactor to be broken or the battery flat, and the bot never gets there.
+
+Findings:
+- A Mule parked with a cold reactor runs a deficit beyond about 1.6 AU: -6.4 kW at Psyche (about 94 h to empty), -8.6 kW at Hektor (about 70 h). Starting a site job lights the reactor, so only parking is affected.
+- Watch: is 3-4 days of battery long enough once players wait at far sites under big time compression? If it is annoying, raise `battery_kwh` on `cmd_pod_basic` (600) or add a battery module.
+
 ## Next tuning ideas
 
 1. Give Clarke Exchange and The Kernel exports: salvage or refurbished parts from GEO, and fresh food, art and people from the Kernel's farms. Then there's always something to carry home.

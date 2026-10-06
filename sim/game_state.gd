@@ -56,6 +56,8 @@ var perks: Dictionary = {}
 var started_t: float = 0.0
 ## The Spaceline news feed: {items, posted, projects, ships, seq}.
 var news: Dictionary = {}
+## Electrical bus: {charge_kwh, shed, flat, reactor}. See sim/power.gd. Empty = full battery.
+var power: Dictionary = {}
 
 
 static func from_unix(unix_seconds: float) -> float:
@@ -96,6 +98,7 @@ func to_dict() -> Dictionary:
 		"story": story.duplicate(true),
 		"started_t": started_t,
 		"news": news.duplicate(true),
+		"power": power.duplicate(true),
 	}
 
 
@@ -127,3 +130,4 @@ func load_dict(d: Dictionary) -> void:
 	story = d.get("story", {}).duplicate(true)
 	started_t = float(d.get("started_t", time_s))
 	news = d.get("news", {}).duplicate(true)
+	power = d.get("power", {}).duplicate(true)

@@ -7,6 +7,7 @@
 extends "res://sim/systems/system.gd"
 
 const ShipStats := preload("res://sim/ship_stats.gd")
+const Power := preload("res://sim/power.gd")
 
 const DAY := 86400.0
 ## Propellant a lander burns when a landing goes wrong.
@@ -28,13 +29,22 @@ func start_game() -> void:
 			s.sites["known"].append(id)
 
 
-func tick(_game_dt: float) -> void:
+func tick(game_dt: float) -> void:
 	var s = sim().state
 	if s.sites.is_empty():
 		start_game()
 	var work: Dictionary = s.sites["work"]
-	if not work.is_empty() and s.time_s >= float(work["end_t"]):
+	if not work.is_empty() and _stalled(work):
+		# Not enough power for the rig or the sensors: the job waits (and nothing is lost).
+		work["end_t"] = float(work["end_t"]) + game_dt
+	elif not work.is_empty() and s.time_s >= float(work["end_t"]):
 		_finish(work)
+
+
+## Work that needs a module the bus cannot power right now (see Power.powered).
+func _stalled(work: Dictionary) -> bool:
+	var needs: Array = sim().data.sites[work["site"]]["activities"][work["activity"]].get("needs", [])
+	return ("mining" in needs and not Power.powered(sim().state, "mining")) or ("survey" in needs and not Power.powered(sim().state, "sensor"))
 
 
 static func knows(state, site: String) -> bool:

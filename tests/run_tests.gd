@@ -22,6 +22,8 @@ const SiteSystemScript := preload("res://sim/systems/site_system.gd")
 const EconomySystemScript := preload("res://sim/systems/economy_system.gd")
 const NpcSystem := preload("res://sim/systems/npc_system.gd")
 const DamageSystem := preload("res://sim/systems/damage_system.gd")
+const Power := preload("res://sim/power.gd")
+const CockpitPages := preload("res://view/ui/cockpit_pages.gd")
 
 const AU := 1.495978707e11
 const DAY := 86400.0
@@ -71,6 +73,11 @@ func _initialize() -> void:
 	test_minds_and_sails()
 	test_elevators()
 	test_damage()
+	test_power_budget()
+	test_power_drain_and_shedding()
+	test_power_damage()
+	test_power_saves()
+	test_cockpit_alerts()
 	test_ship_audio()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
@@ -1237,6 +1244,246 @@ func test_damage() -> void:
 	var off: Array = d.places["tsiolkovsky_wheel"]["location"]["offset_km"]
 	check(absf(V.distance(wheel, yards) - 1000.0 * Vector3(off[0], off[1], off[2]).length()) < 50.0, "The Wheel stands off Trojan Yards where its data says")
 	check(d.bodies["moon"]["structures"].any(func(st): return st["kind"] == "orbital_ring"), "The Moon can have a ring")
+
+
+## Sum of a module field over the ship's modules, straight from the data (no damage).
+func _module_sum(ship: Dictionary, d: DataCatalog, key: String) -> float:
+	var total := 0.0
+	for slot in ship["modules"]:
+		total += float(d.modules[ship["modules"][slot]].get(key, 0.0))
+	return total
+
+
+func _ctx(mode: String, au: float, lit: bool, active: Dictionary = {}) -> Dictionary:
+	return {"mode": mode, "au": au, "lit": lit, "manual": false, "active": {"sensor": bool(active.get("sensor", false)), "mining": bool(active.get("mining", false))}}
+
+
+## Park the ship on a site, away from ports, with the reactor cold.
+func _park(sim: Sim, site: String) -> void:
+	sim.state.location = {"status": "on_site", "place": site}
+	sim.state.power = {}
+
+
+## Supply and demand add up from the module data; solar falls with the square of distance.
+func test_power_budget() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var tune: Dictionary = d.balance["power"]
+	var ship := s.ship
+	var cap := _module_sum(ship, d, "battery_kwh")
+	check(cap > 0.0, "A starting ship has a battery bank (%.0f kWh)" % cap)
+	# In transit at 1 AU: reactor lit, solar wings at full output.
+	var snap := Power.snapshot(ship, d, _ctx("transit", 1.0, true), cap, 0)
+	check(absf(snap["supply"]["reactor"] - _module_sum(ship, d, "reactor_kw")) < 1e-9, "Reactor output is the drives' reactor_kw while lit")
+	check(absf(snap["supply"]["solar"] - _module_sum(ship, d, "solar_kw")) < 1e-9, "Solar is the wings' output at 1 AU")
+	check(absf(snap["supply"]["total"] - snap["supply"]["reactor"] - snap["supply"]["solar"]) < 1e-9 and snap["supply"]["shore"] == 0.0, "Supply sums reactor and solar (no shore power in flight)")
+	var heat := minf(_module_sum(ship, d, "heat_mw") * float(tune["heat_frac"]["transit"]), _module_sum(ship, d, "reject_mw"))
+	var want := _module_sum(ship, d, "life_kw") + _module_sum(ship, d, "avionics_kw") + _module_sum(ship, d, "comms_kw") + heat * float(tune["pump_kw_per_mw"])
+	check(absf(snap["demand"]["total"] - want) < 1e-9, "Demand sums life support, avionics, comms and the pumps (%.2f kW)" % want)
+	check(snap["demand"]["sensor"] == 0.0 and snap["demand"]["mining"] == 0.0, "No sensor or rig load when none is fitted")
+	check(absf(snap["net_kw"] - (snap["supply"]["total"] - want)) < 1e-9 and snap["state"] == "NORM", "Net power is supply minus demand; a full bus is normal")
+	# Pumps follow the heat being rejected.
+	var parked_pumps: float = Power.snapshot(ship, d, _ctx("approach", 1.0, true), cap, 0)["demand"]["pumps"]
+	check(parked_pumps < snap["demand"]["pumps"] and parked_pumps > 0.0, "Pumps work harder when the drive rejects more heat")
+	check(Power.snapshot(ship, d, _ctx("parked", 1.0, false), cap, 0)["demand"]["pumps"] == 0.0, "A cold reactor needs no pumps")
+	# Fitted sensors and a rig idle on standby and draw fully only while working.
+	var kit := ship.duplicate(true)
+	kit["modules"]["avionics.0"] = "survey_pod"
+	kit["modules"]["cargo.1"] = "mining_rig"
+	var idle := Power.snapshot(kit, d, _ctx("parked", 1.0, false), cap, 0)
+	var work := Power.snapshot(kit, d, _ctx("work", 1.0, true, {"sensor": true, "mining": true}), cap, 0)
+	check(absf(idle["demand"]["sensor"] - _module_sum(kit, d, "sensor_kw") * float(tune["standby_frac"])) < 1e-9, "A survey pod idles on standby")
+	check(absf(work["demand"]["sensor"] - _module_sum(kit, d, "sensor_kw")) < 1e-9 and absf(work["demand"]["mining"] - _module_sum(kit, d, "mining_kw")) < 1e-9, "and draws its full load while working")
+	# Solar falloff.
+	check(absf(Power.solar_factor(2.0, tune) - 0.25) < 1e-9 and absf(Power.solar_factor(1.0, tune) - 1.0) < 1e-9, "Solar falls with the inverse square of distance")
+	check(Power.solar_factor(0.05, tune) == float(tune["solar_factor_max"]), "and is capped close to the Sun")
+	var far := Power.snapshot(ship, d, _ctx("parked", 5.2, false), cap, 0)
+	check(absf(far["supply"]["solar"] - _module_sum(ship, d, "solar_kw") / (5.2 * 5.2)) < 1e-9, "At Jupiter's distance the wings give 1/27 of their output")
+	# Where the ship is: Earth's neighbourhood is about 1 AU; a belt site is further.
+	check(absf(Power.sun_distance_au(s, sim.ephemeris) - 1.0) < 0.05, "Docked at Earth's Moon, the Sun is about 1 AU away")
+	s.location = {"status": "on_site", "place": "hektor_survey"}
+	check(Power.sun_distance_au(s, sim.ephemeris) > 4.5, "A Jupiter Trojan is out where sunlight is thin (%.1f AU)" % Power.sun_distance_au(s, sim.ephemeris))
+	# Docked: shore power covers the bus and charges the battery.
+	var dock := Power.snapshot(ship, d, _ctx("docked", 1.0, false), 0.5 * cap, 0)
+	check(dock["state"] == "SHORE" and dock["net_kw"] > 0.0 and dock["hours_to_full"] < INF, "Docked ships run on shore power and charge")
+	# The reactor command: lit on purpose, refused if there is no reactor.
+	var cold := fresh()
+	_park(cold, "hektor_survey")
+	check(not Power.now(cold.state, cold.data, cold.ephemeris)["lit"], "Parked, the reactor is cold")
+	check(cold.apply({"type": "reactor", "mode": "on"}) == "" and Power.now(cold.state, cold.data, cold.ephemeris)["lit"], "The reactor command lights it")
+	check(cold.apply({"type": "reactor", "mode": "sideways"}) != "", "Bad reactor modes are refused")
+	cold.state.ship["modules"]["drive.0"] = "kestrel_engines"
+	check(cold.apply({"type": "reactor", "mode": "on"}) != "", "A ship with no reactor cannot light one")
+
+
+## A deficit drains the battery; comms and sensors shed first, then the rig, and life support last.
+func test_power_drain_and_shedding() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var tune: Dictionary = d.balance["power"]
+	var cap := ShipStats.battery_kwh(s.ship, d)
+	# Cold and far from the Sun, solar alone cannot carry the hotel load.
+	_park(sim, "hektor_survey")
+	var snap := Power.now(s, d, sim.ephemeris)
+	check(snap["net_kw"] < 0.0 and snap["state"] == "BATT", "Parked at Hektor with a cold reactor the bus runs on the battery")
+	check(snap["hours_to_empty"] > 24.0 and snap["hours_to_empty"] < INF, "with a day or more in hand (%.0f h)" % snap["hours_to_empty"])
+	sim.advance_game_time(10.0 * 3600.0)
+	check(absf(s.power["charge_kwh"] - (cap + snap["net_kw"] * 10.0)) < 0.01 * cap, "Ten hours of deficit drain ten hours of net power from the battery")
+	# At 1 AU the same parked ship charges.
+	var sunny := fresh()
+	sunny.state.location = {"status": "on_site", "place": "ishikawa_maru"}
+	sunny.state.power = {"charge_kwh": 0.5 * cap}
+	sunny.advance_game_time(3600.0)
+	check(sunny.state.power["charge_kwh"] > 0.5 * cap, "Parked in sunlight the wings charge the battery")
+	check(sunny.state.power["charge_kwh"] <= cap, "and never past full")
+	# Shed order, by charge fraction (pure rule, with hysteresis).
+	check(Power.shed_level(0.5, true, 0, tune) == 0, "Plenty of charge: nothing shed")
+	check(Power.shed_level(0.2, true, 0, tune) == 1 and Power.shed_level(0.1, true, 0, tune) == 2 and Power.shed_level(0.03, true, 0, tune) == 3, "Comms and sensors go first, then the rig, then life support gets its warning")
+	check(Power.shed_level(0.01, false, 0, tune) == 0, "With no deficit nothing sheds, however low the charge")
+	var margin := float(tune["shed_release_margin"])
+	check(Power.shed_level(float(tune["shed_comms_below"]) + margin * 0.5, true, 1, tune) == 1 and Power.shed_level(float(tune["shed_comms_below"]) + margin * 1.5, true, 1, tune) == 0, "Shed loads come back only after a margin of charge")
+	# What each level takes off the bus.
+	var kit := s.ship.duplicate(true)
+	kit["modules"]["avionics.0"] = "survey_pod"
+	kit["modules"]["cargo.1"] = "mining_rig"
+	var ctx := _ctx("work", 5.0, false, {"sensor": true, "mining": true})
+	var full := Power.snapshot(kit, d, ctx, 0.5 * cap, 0)
+	var l1 := Power.snapshot(kit, d, ctx, 0.2 * cap, 0)
+	var l2 := Power.snapshot(kit, d, ctx, 0.1 * cap, 0)
+	var l3 := Power.snapshot(kit, d, ctx, 0.03 * cap, 0)
+	check(full["shed"] == 0 and full["draw"]["total"] == full["demand"]["total"], "No shedding at half charge")
+	check(l1["shed"] == 1 and l1["draw"]["comms"] == 0.0 and l1["draw"]["sensor"] == 0.0 and l1["draw"]["mining"] > 0.0 and l1["state"] == "SHED", "Level 1 sheds comms and sensors only")
+	check(l2["shed"] == 2 and l2["draw"]["mining"] == 0.0 and l2["draw"]["life"] > 0.0, "Level 2 sheds the rig too; life support stays on")
+	check(l3["shed"] == 3 and l3["draw"]["life"] == l3["demand"]["life"] and l3["draw"]["avionics"] == l3["demand"]["avionics"] and l3["state"] == "LOW", "Level 3 warns on life support but does not touch it")
+	check(l3["draw"]["total"] <= l2["draw"]["total"] and l2["draw"]["total"] < l1["draw"]["total"] and l1["draw"]["total"] < full["draw"]["total"], "Each level draws less than the one before (life support is never shed, so 3 equals 2)")
+	# Run it out: the events come in order, and the warning comes before the battery is flat.
+	var drain := fresh()
+	_park(drain, "hektor_survey")
+	drain.state.power = {"charge_kwh": 0.3 * cap}
+	drain.take_events()
+	drain.advance_game_time(48.0 * 3600.0)
+	var kinds := []
+	for e in drain.take_events():
+		if e["type"] == "power_shed":
+			kinds.append(int(e["data"]["level"]))
+		elif e["type"] == "power_flat":
+			kinds.append("flat")
+	check(kinds.slice(0, 4) == [1, 2, 3, "flat"], "Loads shed in order, life-support warning before the battery is flat: %s" % [kinds])
+	check(drain.state.power["charge_kwh"] >= 0.0 and drain.state.power["flat"], "A flat battery stays at zero and is flagged")
+	# Lighting the reactor ends it: the bus recovers and the loads come back.
+	drain.apply({"type": "reactor", "mode": "on"})
+	drain.advance_game_time(3600.0)
+	check(drain.state.power["shed"] == 0 and not drain.state.power["flat"] and drain.state.power["charge_kwh"] > 0.0, "Lighting the reactor brings everything back")
+	# A shed sensor pauses a survey instead of ruining it.
+	var job := fresh()
+	job.state.ship["modules"]["avionics.0"] = "survey_pod"
+	job.state.location = {"status": "on_site", "place": "hektor_survey"}
+	job.state.sites["known"].append("hektor_survey")
+	check(job.apply({"type": "site_work", "activity": "survey"}) == "", "Start a survey at Hektor")
+	var end0: float = job.state.sites["work"]["end_t"]
+	job.state.ship["damage"] = {"drive.0": 1.0}
+	job.state.power = {"charge_kwh": 0.1 * cap}
+	job.advance_game_time(5.0 * 3600.0)
+	check(job.state.power["shed"] >= 1 and float(job.state.sites["work"]["end_t"]) > end0 + 3.0 * 3600.0, "With the sensors shed, the survey waits for power")
+	job.state.ship["damage"] = {}
+	job.advance_game_time(3600.0)
+	var end1: float = job.state.sites["work"]["end_t"]
+	job.advance_game_time(3600.0)
+	check(job.state.sites["work"]["end_t"] == end1, "and carries on once the bus recovers")
+
+
+## Damage cuts what a module supplies, not what it draws.
+func test_power_damage() -> void:
+	var sim := fresh()
+	var d := sim.data
+	var ship := sim.state.ship
+	var ctx := _ctx("transit", 1.0, true)
+	var cap := ShipStats.battery_kwh(ship, d)
+	var sound := Power.snapshot(ship, d, ctx, cap, 0)
+	var hurt := ship.duplicate(true)
+	hurt["damage"] = {"drive.0": 0.5}
+	var drive := Power.snapshot(hurt, d, ctx, cap, 0)
+	check(absf(drive["supply"]["reactor"] - 0.5 * sound["supply"]["reactor"]) < 1e-9 and drive["supply"]["solar"] == sound["supply"]["solar"], "A half-wrecked drive gives half the reactor power")
+	hurt["damage"] = {"command.0": 0.5}
+	var cmd := Power.snapshot(hurt, d, ctx, cap, 0)
+	check(absf(cmd["supply"]["solar"] - 0.5 * sound["supply"]["solar"]) < 1e-9, "Damaged solar wings give less")
+	check(absf(cmd["battery_kwh"] - 0.5 * cap) < 1e-9, "and the battery bank holds less")
+	check(cmd["demand"]["life"] == sound["demand"]["life"] and cmd["demand"]["avionics"] == sound["demand"]["avionics"], "but a damaged module still draws its load")
+	hurt["damage"] = {"radiator.0": 1.0, "radiator.1": 1.0}
+	var rad := Power.snapshot(hurt, d, ctx, cap, 0)
+	check(rad["demand"]["pumps"] == 0.0, "Wrecked radiators reject nothing, so their pumps stop")
+	hurt["damage"] = {"drive.0": 1.0, "command.0": 0.9}
+	var wreck := Power.snapshot(hurt, d, ctx, 0.5 * ShipStats.battery_kwh(hurt, d), 0)
+	check(wreck["net_kw"] < 0.0, "A ship that has lost its reactor and most of its wings runs a deficit even in flight")
+	# And through the sim: the impact command damages, the bus follows.
+	sim.state.location = {"status": "approach", "place": "kibo_ring"}
+	var before: float = Power.now(sim.state, d, sim.ephemeris)["supply"]["total"]
+	sim.apply({"type": "impact", "speed": 20.0, "share": 1.0, "zone": "nose", "seed": 0})
+	check(sim.state.location.get("status") == "lifeboat" or Power.now(sim.state, d, sim.ephemeris)["supply"]["total"] <= before, "A hard knock never adds power")
+
+
+## The bus survives a save, and old saves load with sensible defaults.
+func test_power_saves() -> void:
+	var sim := fresh()
+	var cap := ShipStats.battery_kwh(sim.state.ship, sim.data)
+	_park(sim, "hektor_survey")
+	sim.state.power = {"charge_kwh": 0.4 * cap}
+	sim.apply({"type": "reactor", "mode": "on"})
+	sim.advance_game_time(3600.0)
+	var loaded := SaveIO.from_text(SaveIO.to_text(sim.state))
+	check(loaded != null and loaded.power == sim.state.power and loaded.power.has("charge_kwh"), "Battery charge, shed level and reactor mode round-trip in a save")
+	var resumed := Sim.new()
+	resumed.load_state(loaded)
+	resumed.advance_game_time(6.0 * 3600.0)
+	sim.advance_game_time(6.0 * 3600.0)
+	check(resumed.state.to_dict() == sim.state.to_dict(), "A loaded game continues with the same power")
+	# An old save has no power block: the battery is full, the reactor on auto.
+	var old := sim.state.to_dict()
+	old.erase("power")
+	var from_old := SaveIO.from_text(JSON.stringify({"state": Marshalls.raw_to_base64(var_to_bytes(old))}))
+	check(from_old != null and from_old.power.is_empty(), "A save from before power loads, with an empty power block")
+	var snap := Power.now(from_old, sim.data, sim.ephemeris)
+	check(absf(snap["frac"] - 1.0) < 1e-9 and snap["shed"] == 0 and not snap["lit"], "and starts with a full battery, nothing shed")
+	var resumed_old := Sim.new()
+	resumed_old.load_state(from_old)
+	resumed_old.advance_game_time(3600.0)
+	check(resumed_old.state.power.has("charge_kwh") and resumed_old.state.power["charge_kwh"] <= cap, "and the power system fills the block in on the first tick")
+	# A new ship (refit, lifeboat) with a smaller bank never holds more than it can.
+	var swap := fresh()
+	swap.state.power = {"charge_kwh": 1.0e6}
+	swap.advance_game_time(3600.0)
+	check(swap.state.power["charge_kwh"] <= ShipStats.battery_kwh(swap.state.ship, swap.data) + 1e-9, "Charge is clamped to the ship's battery")
+
+
+## Cockpit alert thresholds come from data, and the POWER lamp follows the bus.
+func test_cockpit_alerts() -> void:
+	var sim := fresh()
+	var d := sim.data
+	var tune: Dictionary = d.balance["cockpit"]
+	for key in ["fuel_caution", "fuel_warning", "hull_caution", "hull_warning", "heat_caution", "heat_warning", "damage_caution", "damage_warning", "power_caution_frac", "power_caution_hours"]:
+		check(tune.has(key), "balance.json cockpit has %s" % key)
+	check(float(tune["fuel_caution"]) == 0.2 and float(tune["fuel_warning"]) == 0.05 and float(tune["hull_caution"]) == 0.7 and float(tune["hull_warning"]) == 0.4, "The thresholds keep their old values")
+	var alerts := CockpitPages.ship_alerts(sim)
+	check(alerts["POWER"] == 0 and alerts["HULL"] == 0 and alerts["FUEL LOW"] == 0, "A healthy ship shows no alerts")
+	sim.state.ship["fuel_t"] = 0.19 * ShipStats.fuel_capacity_t(sim.state.ship, d)
+	check(CockpitPages.ship_alerts(sim)["FUEL LOW"] == 1, "Fuel under 20% is a caution")
+	sim.state.ship["fuel_t"] = 0.04 * ShipStats.fuel_capacity_t(sim.state.ship, d)
+	check(CockpitPages.ship_alerts(sim)["FUEL LOW"] == 2, "and under 5% a warning")
+	sim.state.ship["damage"] = {"keel": 0.35}
+	check(CockpitPages.ship_alerts(sim)["HULL"] == 1, "A hull under 70% is a caution")
+	sim.state.ship["damage"] = {"keel": 0.65}
+	check(CockpitPages.ship_alerts(sim)["HULL"] == 2, "and under 40% a warning")
+	var cap := ShipStats.battery_kwh(sim.state.ship, d)
+	var ctx := _ctx("parked", 5.0, false)
+	var level := func(frac: float) -> int:
+		return CockpitPages.power_level(Power.snapshot(sim.state.ship, d, ctx, frac * cap, 0), tune)
+	check(level.call(0.9) == 0, "A big battery on a slow drain is not worth a lamp")
+	check(level.call(0.4) == 1, "Below half charge and discharging: POWER caution")
+	check(level.call(0.2) == 1, "Loads shed: still a caution")
+	check(level.call(0.03) == 2, "Life support next: POWER warning")
+	check(CockpitPages.power_level(Power.snapshot(sim.state.ship, d, _ctx("docked", 1.0, false), 0.1 * cap, 0), tune) == 0, "No lamp on shore power")
 
 
 ## Ship sounds (view, headless): sources on the hardware, the listener in the cabin,

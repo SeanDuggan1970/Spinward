@@ -8,14 +8,10 @@ const AV := preload("res://view/ui/avionics.gd")
 const UI := preload("res://view/ui/ui_kit.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
 const DamageSystem := preload("res://sim/systems/damage_system.gd")
+const Power := preload("res://sim/power.gd")
 
-## Display-only alert thresholds (they colour lamps; the rules live in the sim).
-const FUEL_CAUTION := 0.2
-const FUEL_WARNING := 0.05
-const HULL_CAUTION := 0.7
-const HULL_WARNING := 0.4
-const DAMAGE_CAUTION := 0.3
-const DAMAGE_WARNING := 0.7
+## Alert thresholds are data (balance.json "cockpit"): they colour lamps; the rules
+## live in the sim.
 
 ## Schematic order, nose to tail.
 const ORDER := ["command", "avionics", "hab", "passenger", "cargo", "tank", "drive"]
@@ -50,12 +46,36 @@ static func ship_alerts(sim, wrecked: bool = false) -> Dictionary:
 	for slot in ship.get("modules", {}):
 		if String(slot).begins_with("drive"):
 			worst_drive = maxf(worst_drive, DamageSystem.damage_of(ship, slot))
+	var tune: Dictionary = data.balance["cockpit"]
 	return {
-		"HULL": 2 if hull < HULL_WARNING else (1 if hull < HULL_CAUTION else 0),
-		"FUEL LOW": 2 if fuel < FUEL_WARNING else (1 if fuel < FUEL_CAUTION or cap < 1e-6 else 0),
-		"HEAT": 2 if heat > 1.5 else (1 if heat > 1.0 else 0),
-		"DRIVE": 2 if worst_drive >= DAMAGE_WARNING else (1 if worst_drive >= DAMAGE_CAUTION else 0),
+		"HULL": 2 if hull < float(tune["hull_warning"]) else (1 if hull < float(tune["hull_caution"]) else 0),
+		"FUEL LOW": 2 if fuel < float(tune["fuel_warning"]) else (1 if fuel < float(tune["fuel_caution"]) or cap < 1e-6 else 0),
+		"HEAT": _level(heat, float(tune["heat_caution"]), float(tune["heat_warning"]), true),
+		"DRIVE": _level(worst_drive, float(tune["damage_caution"]), float(tune["damage_warning"])),
+		"POWER": power_level(Power.now(sim.state, data, sim.ephemeris), tune),
 	}
+
+
+## 2 past `warn`, 1 past `caution`, else 0. `above`: strictly (heat is a ratio that
+## is fine at exactly 1.0); otherwise at or beyond (damage).
+static func _level(v: float, caution: float, warn: float, above: bool = false) -> int:
+	if above:
+		return 2 if v > warn else (1 if v > caution else 0)
+	return 2 if v >= warn else (1 if v >= caution else 0)
+
+
+## POWER lamp: red when life support is the next thing to go, amber when loads are
+## shed or the battery is running down; off on shore power or a healthy bus.
+static func power_level(snap: Dictionary, tune: Dictionary) -> int:
+	if snap["mode"] == "docked":
+		return 0
+	if int(snap["shed"]) >= 3 or snap["flat"]:
+		return 2
+	if int(snap["shed"]) >= 1:
+		return 1
+	if float(snap["net_kw"]) < 0.0 and (float(snap["frac"]) < float(tune["power_caution_frac"]) or float(snap["hours_to_empty"]) < float(tune["power_caution_hours"])):
+		return 1
+	return 0
 
 
 # --- SYSTEMS page --------------------------------------------------------------------
@@ -65,7 +85,7 @@ static func systems(g, sim, keys: Array, wrecked: bool = false) -> void:
 	var data = sim.data
 	var W: float = g.size.x
 	g.glass()
-	g.title("SYSTEMS", String(ship.get("name", "")).to_upper())
+	g.title("SYSTEMS", "%s  %.1f t" % [String(ship.get("name", "")).to_upper(), ShipStats.total_mass_t(ship, data)])
 	_schematic(g, ship, data, Rect2(10, 22, W - 20, 36), wrecked)
 	# The worst-hit module, named.
 	var worst := ""
@@ -96,11 +116,12 @@ static func systems(g, sim, keys: Array, wrecked: bool = false) -> void:
 	var thrust := ShipStats.thrust_n(ship, data)
 	var ve := ShipStats.exhaust_velocity(ship, data)
 	var burn_s := INF if thrust <= 0.0 else fuel * 1000.0 * ve / thrust
-	var fcol := AV.RED if ff < FUEL_WARNING else (AV.AMBER if ff < FUEL_CAUTION else AV.GREEN)
+	var tune: Dictionary = data.balance["cockpit"]
+	var fcol := AV.RED if ff < float(tune["fuel_warning"]) else (AV.AMBER if ff < float(tune["fuel_caution"]) else AV.GREEN)
 	g.bar(Vector2(x0, y), col_w, "PROP", ff, "%d%%" % int(round(ff * 100.0)), fcol, fuel_cap / fuel_nom if fuel_cap < fuel_nom - 1e-6 else -1.0)
 	g.text(Vector2(x0, y + 13), "%.2f t  BURN %s" % [fuel, "--" if burn_s == INF else _hm(burn_s)], 11, AV.WHITE)
 	var heat := ShipStats.heat_ratio(ship, data)
-	var hcol := AV.RED if heat > 1.5 else (AV.AMBER if heat > 1.0 else AV.GREEN)
+	var hcol := AV.RED if heat > float(tune["heat_warning"]) else (AV.AMBER if heat > float(tune["heat_caution"]) else AV.GREEN)
 	g.bar(Vector2(x0, y + 32), col_w, "RAD", minf(heat, 1.0) if heat != INF else 1.0, "--" if heat == INF else "%d%%" % int(round(heat * 100.0)), hcol)
 	var thrust_nom := nominal(ship, data, "thrust_n")
 	var tf := 0.0 if thrust_nom <= 0.0 else thrust / thrust_nom
@@ -108,18 +129,41 @@ static func systems(g, sim, keys: Array, wrecked: bool = false) -> void:
 	if heat > 1.0:
 		g.text(Vector2(x0, y + 63), "THROTTLE BACK  %d%%" % int(round(100.0 / heat)), 11, hcol)
 	var hull := 0.0 if wrecked else DamageSystem.integrity(ship)
-	var kcol := AV.RED if hull < HULL_WARNING else (AV.AMBER if hull < HULL_CAUTION else AV.GREEN)
+	var kcol := AV.RED if hull < float(tune["hull_warning"]) else (AV.AMBER if hull < float(tune["hull_caution"]) else AV.GREEN)
 	g.bar(Vector2(x1, y), col_w, "KEEL", hull, "LOST" if wrecked else "%d%%" % int(round(hull * 100.0)), kcol)
 	var cargo := ShipStats.cargo_t(ship)
 	var cargo_cap := ShipStats.cargo_capacity_t(ship, data)
 	var cargo_nom := maxf(nominal(ship, data, "cargo_t"), 1e-6)
-	g.bar(Vector2(x1, y + 18), col_w, "HOLD", cargo / cargo_nom, "%.0f/%.0f t" % [cargo, cargo_cap], AV.WHITE if cargo_cap >= cargo_nom - 1e-6 else AV.AMBER, cargo_cap / cargo_nom if cargo_cap < cargo_nom - 1e-6 else -1.0)
+	g.bar(Vector2(x1, y + 14), col_w, "HOLD", cargo / cargo_nom, "%.0f/%.0f t" % [cargo, cargo_cap], AV.WHITE if cargo_cap >= cargo_nom - 1e-6 else AV.AMBER, cargo_cap / cargo_nom if cargo_cap < cargo_nom - 1e-6 else -1.0)
+	_power(g, sim, Vector2(x1, y + 28), col_w, tune)
 	var ls := ShipStats.life_support_days(ship, data)
 	var ls_nom := nominal(ship, data, "life_support_days")
-	g.row(Vector2(x1, y + 36), "L/S", "UNCREWED" if ls == INF else "%d d" % int(ls), AV.WHITE if ls == INF or ls >= ls_nom - 0.5 else AV.AMBER)
-	g.row(Vector2(x1, y + 52), "MASS", "%.1f t" % ShipStats.total_mass_t(ship, data), AV.WHITE)
-	g.text(Vector2(x1 + col_w, y + 52), "BUS NORM", 11, AV.GREEN, 1)
+	g.row(Vector2(x1, y + 63), "L/S", "UNCREWED" if ls == INF else "%d d" % int(ls), AV.WHITE if ls == INF or ls >= ls_nom - 0.5 else AV.AMBER)
 	g.soft_keys(keys)
+
+
+## Electrical bus: battery bar, then state and net power, then time to empty or full.
+## Colours: white measured, green fine, amber loads shed or battery running down, red
+## life support is next.
+static func _power(g, sim, at: Vector2, w: float, tune: Dictionary) -> void:
+	var snap: Dictionary = Power.now(sim.state, sim.data, sim.ephemeris)
+	var level := power_level(snap, tune)
+	var col := AV.RED if level == 2 else (AV.AMBER if level == 1 else AV.GREEN)
+	var frac: float = snap["frac"]
+	g.bar(at, w, "BATT", frac, "%d%%" % int(round(frac * 100.0)), col)
+	var net: float = snap["net_kw"]
+	g.text(at + Vector2(0, 12), "BUS " + String(snap["state"]), 11, col)
+	g.text(at + Vector2(w, 12), "%+.1f kW" % net, 11, AV.WHITE, 1)
+	var when := ""
+	if snap["mode"] != "docked" and net < 0.0:
+		when = "EMPTY " + _hm(float(snap["hours_to_empty"]) * 3600.0)
+	elif net > 0.0 and frac < 0.999:
+		when = "FULL " + _hm(float(snap["hours_to_full"]) * 3600.0)
+	if int(snap["shed"]) >= 3:
+		when = "L/S RESERVE"
+	elif int(snap["shed"]) >= 1:
+		when = "SHED " + ("COMMS" if int(snap["shed"]) == 1 else "COMMS+RIG")
+	g.text(at + Vector2(0, 23), when, 11, col if int(snap["shed"]) >= 1 else AV.WHITE)
 
 
 static func _hm(s: float) -> String:
