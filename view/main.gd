@@ -154,6 +154,10 @@ func _process(delta: float) -> void:
 	_handle_events()
 	_sync_mode()
 	var s = sim.state
+	if _ambience and _ambience.playing:
+		var duck := ShipAudio.duck_for(s.time_scale)
+		_ambience.volume_db = move_toward(_ambience.volume_db, float(_ambience.get_meta("base_db", -12.0)) + duck, delta * 20.0)
+		_cabin.volume_db = move_toward(_cabin.volume_db, -24.0 + duck * 0.5, delta * 20.0)
 	var where := ""
 	match s.location.get("status"):
 		"docked":
@@ -416,6 +420,7 @@ func _sound_for(mode: String) -> void:
 		_ambience.stop()
 	elif _ambience.stream == null or _ambience.stream.resource_path != "res://assets/audio/%s.wav" % sound or not _ambience.playing:
 		_ambience.stream = load("res://assets/audio/%s.wav" % sound)
+		_ambience.set_meta("base_db", db)
 		_ambience.volume_db = db
 		_ambience.play()
 	# Inside a pressurised room (station, town, climber cab), the air moves.

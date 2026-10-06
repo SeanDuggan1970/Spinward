@@ -650,6 +650,7 @@ Sean's direction (2026-10-06):
   - knocks and crunches on impact, the alarm, the proximity beep, and the wreck
 - **Distance from the cabin** makes a source quieter (inverse distance) and duller (a low-pass that closes with distance). A deep freighter's drive is a long way back.
 - **The "Hull" bus** adds a short metallic ring and rolls off the highs.
+- **Under time compression** (Sean: "a bit of a mad cacophony"), the ship's sounds and the place ambience duck smoothly: about -11 dB at x10, -16 at x100, -21 at x1000, never below -24. Routine one-shots (jets, creaks) thin out to at most one every 0.3 x (1 + log10 scale) s. Ignition and cut-off thumps don't repeat within 4 s, though the rumble still follows the burn. Impacts, the wreck and docking always play.
 - **In transit** (`view/audio/transit_audio.gd`), a hidden copy of your ship carries the sound under every view (ship, orbit, cockpit, map). It turns to its burn attitude at the views' rate (creaks and attitude jets while it swings), burns when the plan does, and tracks the Sun and destination with its panels and dish (motors).
 - **Places:**
   - docked: the station's hum and distant clanks, with the docking clamps and pressure hiss as you come in

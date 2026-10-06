@@ -43,6 +43,12 @@ var _length := 30.0
 var _drive_at := Vector3.ZERO
 ## One-shots fired so far (jets, creaks, knocks), for tests and tuning.
 var sounds_played := 0
+## Time compression: above x1 the ship's sounds duck and thin out, or a minute of
+## burns, swings and slews squeezed into a second is a cacophony.
+var time_scale := 1.0
+var _duck_db := 0.0
+var _last_shot := -10.0
+var _last_drive_change := -10.0
 var _loops: Array = []
 
 
@@ -183,10 +189,24 @@ static func _local_of(root: Node3D, node: Node3D) -> Vector3:
 	return xform.origin
 
 
-## One-shot at a point on the ship (model frame).
-func play_at(sound: String, at: Vector3, db: float = 0.0, pitch: float = 1.0) -> void:
+## How far the ship's sounds drop at a time compression (dB): none at x1, about -11
+## at x10, -16 at x100, -21 at x1000, never below -24.
+static func duck_for(scale: float) -> float:
+	if scale <= 1.0:
+		return 0.0
+	return clampf(-6.0 - 5.0 * log(scale) / log(10.0), -24.0, 0.0)
+
+
+## One-shot at a point on the ship (model frame). Routine ones (jets, creaks) are
+## thinned out under time compression; `important` ones (impacts, the wreck) always play.
+func play_at(sound: String, at: Vector3, db: float = 0.0, pitch: float = 1.0, important: bool = false) -> void:
 	if _silent:
 		return
+	var now := Time.get_ticks_msec() / 1000.0
+	if not important and time_scale > 1.0:
+		if now - _last_shot < 0.3 * (1.0 + log(time_scale) / log(10.0)):
+			return
+	_last_shot = now
 	sounds_played += 1
 	var p: AudioStreamPlayer3D = _pool[_pool_next]
 	_pool_next = (_pool_next + 1) % _pool.size()
@@ -206,14 +226,27 @@ func play_at(sound: String, at: Vector3, db: float = 0.0, pitch: float = 1.0) ->
 func update(dt: float, state: Dictionary) -> void:
 	if _silent or dt <= 0.0:
 		return
+	time_scale = float(state.get("time_scale", 1.0))
+	_duck_db = move_toward(_duck_db, duck_for(time_scale), dt * 20.0)
+	var bus := AudioServer.get_bus_index(hull_bus())
+	AudioServer.set_bus_volume_db(bus, _duck_db)
+	_cabin.volume_db = -21.0 + _duck_db * 0.5
 	var thrust := clampf(float(state.get("thrust", 0.0)), 0.0, 1.0)
+	var now := Time.get_ticks_msec() / 1000.0
+	# Under time compression burns can flick on and off: the rumble follows, but the
+	# ignition and cut-off thumps don't repeat within a few seconds.
+	var transients := time_scale <= 1.0 or now - _last_drive_change > 4.0
 	if thrust > 0.04 and not _drive_on:
 		_drive_on = true
-		play_at("drive_ignite", _drive_at, -2.0)
+		if transients:
+			play_at("drive_ignite", _drive_at, -2.0, 1.0, true)
+			_last_drive_change = now
 		_strain += 0.35
 	elif thrust < 0.02 and _drive_on:
 		_drive_on = false
-		play_at("drive_cutoff", _drive_at, -4.0)
+		if transients:
+			play_at("drive_cutoff", _drive_at, -4.0, 1.0, true)
+			_last_drive_change = now
 		_strain += 0.25
 	_drive_level = move_toward(_drive_level, thrust if _drive_on else 0.0, dt * (0.7 if _drive_on else 1.6))
 	_drive.volume_db = linear_to_db(maxf(_drive_level, 1e-4)) + 1.0
@@ -250,9 +283,9 @@ func update(dt: float, state: Dictionary) -> void:
 		var node: Node3D = m["node"]
 		if not is_instance_valid(node):
 			continue
-		var now := float(node.get_indexed(m["prop"]))
-		var rate := absf(wrapf(now - float(m["last"]), -PI, PI)) / dt
-		m["last"] = now
+		var angle := float(node.get_indexed(m["prop"]))
+		var rate := absf(wrapf(angle - float(m["last"]), -PI, PI)) / dt
+		m["last"] = angle
 		m["level"] = lerpf(float(m["level"]), clampf(rate / 0.4, 0.0, 1.0), clampf(dt * 8.0, 0.0, 1.0))
 		var p: AudioStreamPlayer3D = m["player"]
 		p.volume_db = linear_to_db(maxf(float(m["level"]), 1e-4)) - 8.0
@@ -262,9 +295,9 @@ func update(dt: float, state: Dictionary) -> void:
 ## A collision: a knock or a crunch where it landed.
 func impact(speed: float, at: Vector3) -> void:
 	if speed < 4.0:
-		play_at("impact_light", at, clampf(-14.0 + speed * 3.0, -14.0, 0.0), randf_range(0.9, 1.1))
+		play_at("impact_light", at, clampf(-14.0 + speed * 3.0, -14.0, 0.0), randf_range(0.9, 1.1), true)
 	else:
-		play_at("impact_heavy", at, 2.0, randf_range(0.9, 1.05))
+		play_at("impact_heavy", at, 2.0, randf_range(0.9, 1.05), true)
 	_strain += 0.5
 
 
@@ -290,8 +323,8 @@ func beep() -> void:
 
 ## The end: one last boom felt through what is left, then quiet but for the alarm.
 func wreck(at: Vector3) -> void:
-	play_at("explosion", at, 4.0)
-	play_at("impact_heavy", at, 0.0, 0.8)
+	play_at("explosion", at, 4.0, 1.0, true)
+	play_at("impact_heavy", at, 0.0, 0.8, true)
 	for p in [_drive, _pump]:
 		p.stop()
 	for m in _motors:

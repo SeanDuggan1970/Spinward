@@ -1264,6 +1264,13 @@ func test_ship_audio() -> void:
 	for _k in 60:
 		audio.update(1.0 / 30.0, {"thrust": 0.0})
 	check(not audio._drive_on and audio._drive_level < 0.05, "Cut-off: the drive winds down")
+	# Time compression: everything ducks, and routine knocks thin right out.
+	check(ShipAudioScript.duck_for(1.0) == 0.0 and ShipAudioScript.duck_for(100.0) < -12.0 and ShipAudioScript.duck_for(1.0e6) >= -24.0, "Sounds duck under time compression")
+	var before: int = int(audio.sounds_played)
+	for _k in 30:
+		audio.update(1.0 / 30.0, {"spin": Vector3(0, 1, 0), "turn": 0.6, "time_scale": 1000.0})
+	var fast_shots: int = int(audio.sounds_played) - before
+	check(fast_shots <= 2, "At x1000 the jets and creaks thin to a few (%d in a second)" % fast_shots)
 	if root.get_parent():
 		root.get_parent().remove_child(root)
 	root.free()

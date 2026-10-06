@@ -72,4 +72,4 @@ func _process(dt: float) -> void:
 	ShipRig.aim(_rig, _ship.basis, sun, SkyKit.dir_between(eph.position(loc["to"], t), here), dt)
 	# Swinging round, the attitude jets fire; burning, the drive does.
 	var spin := Vector3(0, 1, 0) * (1.0 if turn > 0.05 else 0.0)
-	audio.update(dt, {"thrust": 1.0 if thrusting else 0.0, "spin": spin, "turn": turn})
+	audio.update(dt, {"thrust": 1.0 if thrusting else 0.0, "spin": spin, "turn": turn, "time_scale": s.time_scale})

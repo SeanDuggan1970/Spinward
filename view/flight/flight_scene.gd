@@ -286,7 +286,8 @@ func _physics_process(dt: float) -> void:
 	var push: Vector3 = c["thrust"]
 	audio.update(dt, {"thrust": (1.0 if c["boost"] else 0.45) if push.z < 0.0 else 0.0,
 		"move": Vector3(push.x, push.y, maxf(push.z, 0.0)) + (Vector3(0, 0, 1) if c["brake"] and velocity.length() > 0.05 else Vector3.ZERO),
-		"spin": c["stick"] + (ang_vel - _last_ang) * 4.0 if assist != "manual" else c["stick"], "turn": ang_vel.length()})
+		"spin": c["stick"] + (ang_vel - _last_ang) * 4.0 if assist != "manual" else c["stick"], "turn": ang_vel.length(),
+		"time_scale": sim.state.time_scale})
 	_last_ang = ang_vel
 	_collide()
 	_collide_world()
