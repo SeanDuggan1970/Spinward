@@ -1,6 +1,12 @@
 ## Headless balance bot. Plays the trading game through the same commands as the
 ## player and writes docs/balance/report.md.
 ##   godot --headless --path . --script res://tools/balance_bot.gd -- [days=180] [upgrade=1] [seeds=5]
+##        [out=res://docs/balance/report.md] [credits=N] [fit=slot:module,slot:module] [legs=1] [nofleets=a,b] [take=0.5]
+## out: where the report goes (use another path to keep report.md). credits: start credits.
+## fit: free module swaps before the run, e.g. fit=cargo.0:cargo_pod_m,drive.0:pathfinder_mk2
+## (to measure what a module is worth: run with and without it). legs=1: print every leg.
+## nofleets: NPC fleets (data/npcs.json ids) to leave out, to measure what they do to the player.
+## take: the share of a port's stock the bot will buy in one go (0.5: it leaves the rest for the market).
 ## Runs one game per seed (NPC choices differ per seed) and reports the spread; the
 ## detailed sections come from the first seed.
 ##
@@ -31,10 +37,13 @@ var route_profit: Dictionary = {}
 var milestones: Array = []
 var credit_curve: Array = []
 var first_upgrade_day := -1.0
+var show_legs := false
+var take_share := 0.5
+var report_path := "res://docs/balance/report.md"
 
 
 func _initialize() -> void:
-	var args := {"days": "180", "upgrade": "1"}
+	var args := {"days": "180", "upgrade": "1", "out": "res://docs/balance/report.md", "credits": "", "fit": "", "legs": "0", "nofleets": "", "take": "0.5"}
 	for a in OS.get_cmdline_user_args():
 		var kv := a.split("=")
 		if kv.size() == 2:
@@ -42,6 +51,9 @@ func _initialize() -> void:
 	var days := float(args["days"])
 	var upgrade: bool = args["upgrade"] == "1"
 	var seeds := int(args.get("seeds", "5"))
+	show_legs = args["legs"] == "1"
+	take_share = float(args["take"])
+	report_path = args["out"]
 	var runs := []
 	var detail := {}
 	for seed_value in range(1, seeds + 1):
@@ -50,7 +62,16 @@ func _initialize() -> void:
 		credit_curve = []
 		first_upgrade_day = -1.0
 		sim = Sim.new()
+		for fleet in String(args["nofleets"]).split(",", false):
+			sim.data.npcs["fleets"].erase(fleet)
 		sim.new_game(seed_value)
+		if args["credits"] != "":
+			sim.state.credits = float(args["credits"])
+		for pair in String(args["fit"]).split(",", false):
+			var kv2 := pair.split(":")
+			sim.state.ship["modules"][kv2[0]] = kv2[1]
+		if args["fit"] != "":
+			sim.state.ship["fuel_t"] = ShipStats.fuel_capacity_t(sim.state.ship, sim.data)
 		var start_matrix := route_matrix()
 		var t0 := sim.state.time_s
 		var next_sample := t0
@@ -117,6 +138,8 @@ func do_leg(upgrade: bool) -> bool:
 	route_profit[key]["legs"] += 1
 	route_profit[key]["profit"] += leg_profit
 	route_profit[key]["days"] += float(best["days"])
+	if show_legs:
+		print("LEG day=%.1f %s tonnes=%.1f profit=%d credits=%d planned=%d days=%.1f" % [day(), key, float(best["tonnes"]), int(leg_profit), int(s.credits), int(best["profit"]), float(best["days"])])
 	return true
 
 
@@ -151,7 +174,7 @@ func best_trade(here: String, allow_reposition: bool) -> Dictionary:
 		for good in d.places[here]["market"]:
 			if not Market.trades(d, to, good):
 				continue
-			var tonnes := minf(capacity, Market.stock(s, here, good) * 0.5)
+			var tonnes := minf(capacity, Market.stock(s, here, good) * take_share)
 			tonnes = minf(tonnes, (s.credits - fixed) / maxf(Market.buy_price(s, d, here, good, tonnes), 1.0))
 			if tonnes < 0.1:
 				continue
@@ -317,7 +340,7 @@ func write_report(days: float, upgrade: bool, start_matrix: Array, end_matrix: A
 		lines.append("|---|---|---|---|---|")
 		for row in pair[1].slice(0, 12):
 			lines.append("| %s | %s | %s | %d | %.0f%% |" % [row[0], row[1], row[2], int(row[3]), row[4] * 100.0])
-	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://docs/balance"))
-	var f := FileAccess.open("res://docs/balance/report.md", FileAccess.WRITE)
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(report_path.get_base_dir()))
+	var f := FileAccess.open(report_path, FileAccess.WRITE)
 	f.store_string("\n".join(lines) + "\n")
 	print("BOT_DONE mean_credits=%d median_first_upgrade=%s" % [int(total / maxf(1.0, runs.size())), "%.1f" % ups[ups.size() / 2] if not ups.is_empty() else "none"])
