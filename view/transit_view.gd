@@ -10,6 +10,7 @@ const V := preload("res://sim/v3.gd")
 const Navigation := preload("res://sim/navigation.gd")
 const Kit := preload("res://view/flight/kit.gd")
 const SkyKit := preload("res://view/flight/sky.gd")
+const FlightDeck := preload("res://view/flight/flight_deck.gd")
 
 const SKY_DISTANCE := 60000.0
 ## How fast the ship turns to its burn attitude, in radians per real second.
@@ -17,6 +18,9 @@ const TURN_RATE := 0.9
 const LOOK_RATE := 1.2
 const WIDE_FOV := 72.0
 const TELESCOPE_FOV := 6.0
+## The flight deck is built at the approach scale (eye to panel about 0.7 m); here it
+## is scaled up about the eye, which looks identical but keeps it past the near plane.
+const DECK_SCALE := 1.8
 
 var sim
 var camera: Camera3D
@@ -31,6 +35,9 @@ var look_pitch := 0.0
 var telescope := false
 ## Live values for the overlay.
 var readout: Dictionary = {}
+## The flight deck, fixed to the ship: free look turns the pilot's head inside it.
+var deck: Node3D
+var _mount: Node3D
 
 
 func _init(owner_sim) -> void:
@@ -57,6 +64,11 @@ func _ready() -> void:
 	camera.far = SKY_DISTANCE * 3.0
 	add_child(camera)
 	camera.make_current()
+	_mount = Node3D.new()
+	add_child(_mount)
+	deck = FlightDeck.new()
+	deck.scale = Vector3.ONE * DECK_SCALE
+	_mount.add_child(deck)
 	_update(0.0)
 
 
@@ -128,6 +140,11 @@ func _update(dt: float) -> void:
 	var look := Basis(Vector3.UP, look_yaw) * Basis(Vector3.RIGHT, look_pitch)
 	camera.transform = Transform3D(_basis * look, Vector3.ZERO)
 	camera.fov = lerpf(camera.fov, TELESCOPE_FOV if telescope else WIDE_FOV, clampf(dt * 6.0, 0.0, 1.0)) if dt > 0.0 else camera.fov
+	_mount.transform = Transform3D(_basis, Vector3.ZERO)
+	# Through the telescope the deck is out of the picture.
+	deck.visible = camera.fov > WIDE_FOV * 0.8
+	var vp := get_viewport().get_visible_rect().size
+	deck.fit(vp.x / maxf(vp.y, 1.0))
 
 	var v_now: Array = Navigation.transit_velocity(loc, t)
 	var speed := V.length(v_now)
