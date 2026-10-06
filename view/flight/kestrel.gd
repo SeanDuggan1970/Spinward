@@ -18,6 +18,7 @@ extends RefCounted
 const Kit := preload("res://view/flight/kit.gd")
 const Livery := preload("res://view/flight/livery.gd")
 const ShipBuilder := preload("res://view/flight/ship_builder.gd")
+const HullKit := preload("res://view/flight/hull_kit.gd")
 const EXHAUST := "res://view/shaders/exhaust.gdshader"
 
 const LENGTH := 23.0
@@ -67,9 +68,8 @@ static func build(livery: Dictionary, scale: float = 1.0, payload: String = "pas
 	cab.add_child(_prism(1.45, 2.6, 8, hull, Vector3(0, 0, 0.6)))
 	var nose := _frustum(1.45, 0.55, 1.9, 8, hull, Vector3(0, -0.12, -1.55))
 	cab.add_child(nose)
-	# The wraparound windows across the nose's upper facets.
-	# Lit from inside: the flight deck's instruments and work lights.
-	var glass := Kit.glow(Color("5a4a34"), 0.7)
+	# The wraparound windows across the nose's upper facets: framed, bolted glass
+	# (HullKit.window), the flight deck lit behind it.
 	# One pane on each upper facet of the nose (the octagon's facets are centred at
 	# 22.5 + 45k degrees), set into the slope, plus a forward pair low on the tip.
 	var r_back := 1.45
@@ -86,9 +86,12 @@ static func build(livery: Dictionary, scale: float = 1.0, payload: String = "pas
 		var r_face := lerpf(r_front, r_back, (z - tip_z) / nose_len) * cos(PI / 8.0)
 		var normal := (out - Vector3(0, 0, slope)).normalized()
 		var at := out * (r_face + 0.03) + Vector3(0, -0.12, z)
-		var pane := Kit.box(Vector3(2.0 * r_face * tan(PI / 8.0) * 0.78, 0.55, 0.04), glass)
-		cab.add_child(pane)
-		pane.look_at_from_position(at, at - normal, Vector3(0, 0, 1))
+		var holder := Node3D.new()
+		cab.add_child(holder)
+		holder.look_at_from_position(at, at - normal, Vector3(0, 0, 1))
+		var pane := HullKit.window(2.0 * r_face * tan(PI / 8.0) * 0.72, 0.5, mats, dark, 0.6, 0.25)
+		pane.basis = Basis(Vector3.RIGHT, PI * 0.5)
+		holder.add_child(pane)
 	cab.add_child(Kit.box(Vector3(2.2, 0.12, 0.12), dark, Vector3(0, 0.98, -0.85)))
 	# Hatch and docking collar on top, a neck back to the spine, aerials.
 	cab.add_child(Kit.cylinder(0.55, 0.35, steel, Vector3(0, 1.55, 0.7), 16))
@@ -113,8 +116,9 @@ static func build(livery: Dictionary, scale: float = 1.0, payload: String = "pas
 	var el := Node3D.new()
 	el.position = Vector3(0, 0.2, 0)
 	az.add_child(el)
-	el.add_child(Kit.cone(0.55, 0.08, 0.2, Kit.mat("offwhite"), Vector3(0, 0, 0.08), 16))
-	el.add_child(Kit.box(Vector3(0.05, 0.05, 0.5), steel, Vector3(0, 0, 0.3)))
+	var reflector := HullKit.reflector(0.55, mats)
+	reflector.position.z = 0.16
+	el.add_child(reflector)
 	frame.add_child(az)
 	rig["dish"] = {"az": az, "el": el}
 

@@ -8,6 +8,12 @@ The 2060s. Humanity and its AI partners are spreading into the solar system, our
 
 **Tone:** hopeful near-future. Scarcity is ending, but not evenly or without friction. The dangers are space itself and misunderstanding between people, both human and AI. Combat is the last resort.
 
+**Where knowledge stands** (Sean, 2026-10-07). The world is past the AI singularity:
+- **Largely solved:** mathematics, chemistry, materials science and most physics. Hardware shows it: transparent ceramics for windows, superconducting coils, fusion drives, automated construction.
+- **Still being explored, with great progress:** biology.
+- **Still to learn:** a great deal at the extremes of physics and chemistry. There are great mysteries left to solve, and some still to find.
+- **The universe beyond:** barely explored with anything more than telescopes. That is the frontier the game points at.
+
 ## Pillars
 
 1. **Trade → Explore → Build Home.** Each stage funds and motivates the next. The base is the ultimate goal and the biggest money sink.
@@ -236,10 +242,21 @@ Touchstone: the Eagle Transporter from *Space: 1999*, with ships that look built
 - **Function is visible.** Exposed truss spines, tanks, radiator panels, cable runs, handholds, docking collars, landing legs with dampers. If a part exists in the rules, you can see it on the model.
 - **Modular by construction.** Ships are a spine plus bolt-on modules: command pod, cargo pod, tanks, drive, radiators, drones. Upgrades physically change the silhouette. One kit of parts builds many ships, so the art and the ship data share one structure (`data/modules.json`).
 - **Ship anatomy** (`view/flight/ship_builder.gd`). Three sections along a keel truss. The cargo sits between the crew and the drive, as protection against drive trouble.
-  - **Crew section (front).**
-    - Crewed ships: a faceted cockpit nose with a framed windscreen, a docking collar on the tip, and the flight deck in the operator's band and the ship's name.
-    - Behind the deck, a hab can with portholes.
-    - Deep-space kit: a high-gain dish on a mast, a nav radar, whip aerials, star trackers, floodlights and RCS quads.
+  - **Crew section (front).** Detail parts come from `view/flight/hull_kit.gd`.
+    - **Nose and deck:** a faceted cockpit nose and a docking collar on the tip. The flight deck is in the operator's band, with the ship's name, bolted access panels on the flanks and yellow EVA handrails along the shoulders.
+    - **Windows** look like windows, not coloured patches:
+      - On the nose: three windscreen panes under a brow, a pane in each cheek, and two docking windows under the chin looking down the axis.
+      - Each pane sits back in its frame behind a black gasket, with a raised bezel bolted all round.
+      - The glass is synthetic sapphire faced over aluminium oxynitride, the transparent ceramic (`view/shaders/glass.gdshader`). It is nearly black looking straight in, mirror-bright at a grazing angle, and glints in the Sun.
+      - A lit cabin shows through it with parallax: lamps and clutter, hidden by the reveal at a slant. The windscreen carries a faint gold sun film.
+    - **The hab:** behind the deck, a pressure can with a domed aft head. It has two rows of round portholes in heavy bolted rings, some with armoured shutters closed, an EVA hatch with a status lamp, and handrails along its back and belly.
+    - **Deep-space kit:** the high-gain dish on a mast, a nav radar, whip aerials, star trackers, floodlights and RCS quads.
+    - **Dishes are real reflectors** (`HullKit.reflector`):
+      - A paraboloid at f/D 0.38, its face in white petals laid in rings, with a rolled rim.
+      - A ribbed back with a hoop, and a foil-wrapped receiver hub.
+      - Big dishes are Cassegrain: a feed horn at the vertex and a subreflector at the focus on four struts. Small ones carry a feed box at the focus on three.
+      - The steerable one sits on a turntable and yoke.
+    - **Dish size follows the job.** A ship built for deep space carries a dish about 7 m across, twice the hab's width, because a weak signal needs a big ear. Deep space means a D-He3 drive (Isp 50,000 s or more), 250 days or more of life support, or `look.deep`. Its medium-gain dish is bigger too. Everyone else carries 2–3 m.
     - Drones get a windowless octagonal bus with a sensor turret and lit "eyes".
     - Passenger cans mount right behind the crew.
   - **Cargo section (middle).** Mostly standard boxes, like shipping on Earth: 2.4 × 2.6 × 6 m, corrugated, with door frames and code panels.
@@ -249,7 +266,7 @@ Touchstone: the Eagle Transporter from *Space: 1999*, with ships that look built
     - Outsize cradles, an open bed on legs above the keel. The load is a mirror segment, a habitat hull section or netted crates.
     - The hull's `cargo_layout` sets how they sit: in a line, two abreast, or four round the keel, with latch arms out to the keel.
   - **Propulsion section (rear).**
-    - Propellant tanks clustered round the keel, with radiators on booms.
+    - Propellant tanks clustered round the keel, with radiators on booms. Cylindrical tanks are gas cylinders: 2:1 ellipsoidal heads, not flat ends, with banded girth welds and a valve boss on each pole (`HullKit.vessel`). Spheres get pole bosses too.
     - A hazard-ringed shadow shield.
     - Then the drives: one, a pair, a triangle or a square, each on its own thrust-frame strut.
     - Each drive is a reactor drum in a cage of longerons, then a magnetic nozzle. At tens of thousands of seconds of Isp no wall can hold the plasma, so a stack of superconducting coils round the throat and upper bell shapes the jet (a heavy throat coil, lighter ones aft, copper windings showing), and the bell is a heat shield and skirt.
@@ -302,6 +319,8 @@ Touchstone: the Eagle Transporter from *Space: 1999*, with ships that look built
     - city lights on the night side, clustered along coasts
     - a blue limb on the day side, with the axial tilt and a sidereal spin from game time
   - **Hulls** (`hull.gdshader`): the kit's materials are panelled plate with fine seams, the odd replacement panel or primer patch, grime streaked along the ship, and chipped edges. There are also bare-metal, crinkled-foil and corrugated-container finishes.
+    - Pressure hull (`weld`, on every livery's hull paint) shows how it was joined, close in. The long seams are butt-welded: a rippled bead, heat-tinted straw to blue on bare metal. The short seams are riveted, a row either side.
+    - A dish face lays its panels round its axis (`mapping` 3).
 - **Liveries** (`data/liveries.json`, `view/flight/livery.gd`). Each operator's ships and stations wear its colours and band. Each ship then weathers in its own way, seeded by its name, so a fleet reads as one outfit but no two hulls match.
   - Independents pick a scheme from a palette.
   - Cargo pods are whatever containers turned up.

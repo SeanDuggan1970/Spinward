@@ -77,7 +77,7 @@ static func paint(scheme: Dictionary, colour: Color, extra: Dictionary = {}) -> 
 
 static func _materials(s: Dictionary) -> Dictionary:
 	return {
-		"hull": paint(s, s["hull"]),
+		"hull": paint(s, s["hull"], {"weld": 1.0}),
 		"accent": paint(s, s["accent"], {"mismatch": 0.0}),
 		"trim": paint(s, s["trim"], {"mismatch": 0.0, "wear": minf(1.0, s["wear"] * 1.3)}),
 		"foil": paint(s, s["foil"], {"finish": 2, "roughness": 0.35, "metallic": 0.85}),

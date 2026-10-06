@@ -32,7 +32,8 @@ static func mat(name: String) -> ShaderMaterial:
 
 
 ## A hull finish. opts: finish (0 paint, 1 metal, 2 foil), wear 0-1, mismatch (share of
-## replacement panels), patch (their colour), panel_m, seed, roughness, metallic.
+## replacement panels), patch (their colour), panel_m, seed, roughness, metallic,
+## weld (0-1: welded and riveted seams close in, for pressure hull).
 static func paint(colour: Color, opts: Dictionary = {}) -> ShaderMaterial:
 	var m := ShaderMaterial.new()
 	m.shader = load(HULL_SHADER)
@@ -45,6 +46,7 @@ static func paint(colour: Color, opts: Dictionary = {}) -> ShaderMaterial:
 	m.set_shader_parameter("seed", float(opts.get("seed", 0.0)))
 	m.set_shader_parameter("roughness", float(opts.get("roughness", 0.8)))
 	m.set_shader_parameter("metallic", float(opts.get("metallic", 0.0)))
+	m.set_shader_parameter("weld", float(opts.get("weld", 0.0)))
 	return m
 
 

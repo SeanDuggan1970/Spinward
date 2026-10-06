@@ -136,6 +136,9 @@ func _ships() -> void:
 		var views := {
 			"": [Vector3(half * 1.7, half * 0.6, -half * 0.5), Vector3(0, 0, -half * 0.05)],
 			"-nose": [Vector3(10.0, 4.0, -half - 9.0), Vector3(0, 0, -half + 5.0)],
+			# Close on the crew section: the windscreen, then the hab and its dish.
+			"-screen": [Vector3(3.5, 4.0, -half - 3.5), Vector3(0, 0.5, -half + 2.5)],
+			"-hab": [Vector3(7.0, 5.0, -half + 4.0), Vector3(0, 1.5, -half + 9.0)],
 			"-drive": [Vector3(-11.0, 5.0, half + 6.0), Vector3(0, 0, half - 6.0)],
 			# Lit: off the quarter, from astern up the nozzles, and the whole jet.
 			"-burn": [Vector3(-12.0, 4.0, half + 3.0), Vector3(0, 0, half + 2.0)],

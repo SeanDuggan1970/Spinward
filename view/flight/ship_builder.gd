@@ -20,6 +20,7 @@ extends RefCounted
 
 const Kit := preload("res://view/flight/kit.gd")
 const Livery := preload("res://view/flight/livery.gd")
+const HullKit := preload("res://view/flight/hull_kit.gd")
 
 ## The standard container: across, high, long (metres). Cages carry half-length ones.
 const BOX := Vector3(2.4, 2.6, 6.0)
@@ -39,7 +40,7 @@ static func build(ship_state: Dictionary, data, livery: Dictionary) -> Dictionar
 	rng.seed = hash(String(livery.get("name", "")) + "|" + String(ship_state["hull"]))
 	var by_kind := _modules_by_kind(ship_state["modules"], data)
 	var rig := {"arrays": [], "dish": {}, "rcs": []}
-	var ctx := {"livery": livery, "mats": livery["mats"], "rng": rng, "look": look, "truss_w": truss_w, "rig": rig}
+	var ctx := {"livery": livery, "mats": livery["mats"], "rng": rng, "look": look, "truss_w": truss_w, "rig": rig, "deep": _deep(by_kind, look)}
 
 	var parts := Node3D.new()
 	var z := 0.0
@@ -80,7 +81,7 @@ static func build(ship_state: Dictionary, data, livery: Dictionary) -> Dictionar
 		keel_to = length * 0.8
 	parts.add_child(Kit.truss(keel_to - keel_from, truss_w, ctx["mats"]["steel"], Vector3(0, 0, (keel_from + keel_to) * 0.5)))
 	# Navigation lights: red port, green starboard, white strobe aft.
-	var crew_w := float(sections[0]["radius"]) if sections.size() > 1 else 2.0
+	var crew_w := float(sections[0].get("hull_r", sections[0]["radius"])) if sections.size() > 1 else 2.0
 	var crew_z := float(sections[0]["length"]) * 0.55 if sections.size() > 1 else 2.0
 	parts.add_child(Kit.beacon(Color("ff3a2a"), Vector3(-crew_w, 0, crew_z), 0.2, 1.4, 0.0))
 	parts.add_child(Kit.beacon(Color("3aff5a"), Vector3(crew_w, 0, crew_z), 0.2, 1.4, 0.0))
@@ -90,6 +91,22 @@ static func build(ship_state: Dictionary, data, livery: Dictionary) -> Dictionar
 	root.add_child(parts)
 	Kit.merge_static(root)
 	return {"node": root, "nose_z": -length * 0.5, "radius": radius, "length": length, "rig": rig}
+
+
+## Built for deep space: a D-He3 drive (Isp 50,000 s or more) or life support for 250
+## days or more, or the hull says so (look "deep"). Such ships carry a high-gain dish
+## big enough to hear Earth from Saturn.
+static func _deep(by_kind: Dictionary, look: Dictionary) -> bool:
+	if bool(look.get("deep", false)):
+		return true
+	var days := 0.0
+	for kind in by_kind:
+		for entry in by_kind[kind]:
+			var md: Dictionary = entry[1]
+			days += float(md.get("life_support_days", 0.0))
+			if kind == "drive" and float(md.get("isp_s", 0.0)) >= 50000.0:
+				return true
+	return days >= 250.0
 
 
 static func _modules_by_kind(mods: Dictionary, data) -> Dictionary:
@@ -130,44 +147,54 @@ static func rod(a: Vector3, b: Vector3, r: float, material: Material, sides: int
 	return mi
 
 
-## A dish opening along `facing`, on its own short mast from `base`.
+## A fixed dish opening along `facing`, on its own short mast from `base`
+## (HullKit.reflector: a real paraboloid with its feed).
 static func dish(base: Vector3, facing: Vector3, r: float, ctx: Dictionary) -> Node3D:
 	var mats: Dictionary = ctx["mats"]
 	var n := Node3D.new()
-	var head := base + facing.normalized() * maxf(1.0, r * 1.2)
-	n.add_child(strut(base, head, 0.12, mats["steel"]))
+	var head := base + facing.normalized() * maxf(0.6, r * 1.2)
+	n.add_child(strut(base, head, 0.06 + r * 0.06, mats["steel"]))
 	var holder := Node3D.new()
 	holder.position = head
 	var up := Vector3.UP if absf(facing.normalized().dot(Vector3.UP)) < 0.95 else Vector3.RIGHT
 	holder.basis = Basis.looking_at(-facing.normalized(), up)
-	# Built opening toward +Z: the reflector, a back frame and the feed on a tripod.
-	holder.add_child(Kit.cone(r, r * 0.15, r * 0.35, Kit.mat("offwhite"), Vector3(0, 0, r * 0.1), 16))
-	holder.add_child(Kit.box(Vector3(r * 0.5, r * 0.5, 0.2), mats["dark"], Vector3(0, 0, -r * 0.1)))
-	holder.add_child(strut(Vector3(0, 0, 0.0), Vector3(0, 0, r * 0.9), 0.06, mats["steel"]))
-	holder.add_child(Kit.box(Vector3(0.18, 0.18, 0.25), mats["dark"], Vector3(0, 0, r * 0.95)))
+	holder.add_child(HullKit.reflector(r, mats, false))
 	n.add_child(holder)
 	return n
 
 
-## The high-gain dish on an azimuth/elevation mount atop a mast at `base` (mast +Y).
-## Registers itself as the rig's dish; ship_rig.gd turns "az" about Y and "el" about X.
+## The high-gain dish on an azimuth/elevation mount atop a mast at `base` (mast +Y):
+## a turntable drum, a yoke, and the elevation axle with the reflector hung in front
+## of it. A big dish gets braces at the mast's foot. Registers itself as the rig's
+## dish; ship_rig.gd turns "az" about Y and "el" about X.
 static func steerable_dish(base: Vector3, r: float, ctx: Dictionary) -> Node3D:
 	var mats: Dictionary = ctx["mats"]
 	var n := Node3D.new()
-	var mast_top := base + Vector3(0, maxf(1.0, r * 1.1), 0)
-	n.add_child(strut(base, mast_top, 0.16, mats["steel"]))
+	var yoke_h := 0.3 + r * 0.12
+	var mast_h := maxf(1.0, r * 1.05 + 0.4 - yoke_h)
+	var mast_top := base + Vector3(0, mast_h, 0)
+	var mast_w := 0.16 + r * 0.03
+	n.add_child(strut(base, mast_top, mast_w, mats["steel"]))
+	if r > 2.0:
+		for s in [-1.0, 1.0]:
+			n.add_child(strut(base + Vector3(s * r * 0.35, 0, 0), base + Vector3(0, mast_h * 0.6, 0), mast_w * 0.5, mats["steel"]))
 	var az := Node3D.new()
 	az.position = mast_top
 	az.set_meta("no_merge", true)
-	az.add_child(Kit.box(Vector3(0.4, 0.3, 0.4), mats["dark"]))
+	var drum_r := 0.22 + r * 0.06
+	var drum := Kit.cylinder(drum_r, 0.22, mats["dark"], Vector3(0, 0.11, 0), 16)
+	drum.rotation = Vector3.ZERO
+	az.add_child(drum)
+	var arm_x := drum_r * 0.9
+	for s in [-1.0, 1.0]:
+		az.add_child(Kit.box(Vector3(0.1 + r * 0.02, yoke_h, 0.14 + r * 0.03), mats["steel"], Vector3(s * arm_x, 0.22 + yoke_h * 0.5, 0)))
 	var el := Node3D.new()
-	el.position = Vector3(0, 0.25, 0)
+	el.position = Vector3(0, 0.22 + yoke_h, 0)
 	az.add_child(el)
-	# Opening toward +Z: reflector, back frame, and the feed on its strut.
-	el.add_child(Kit.cone(r, r * 0.15, r * 0.35, Kit.mat("offwhite"), Vector3(0, 0, r * 0.15), 16))
-	el.add_child(Kit.box(Vector3(r * 0.5, r * 0.5, 0.2), mats["dark"], Vector3(0, 0, -0.05)))
-	el.add_child(strut(Vector3(0, 0, 0.0), Vector3(0, 0, r * 0.95), 0.06, mats["steel"]))
-	el.add_child(Kit.box(Vector3(0.18, 0.18, 0.25), mats["dark"], Vector3(0, 0, r)))
+	el.add_child(Kit.box(Vector3(arm_x * 2.0 + 0.16, 0.09 + r * 0.02, 0.09 + r * 0.02), mats["dark"]))
+	var reflector := HullKit.reflector(r, mats, bool(ctx.get("deep", false)))
+	reflector.position = Vector3(0, 0, maxf(0.08, r * 0.2) + r * 0.12 + 0.05)
+	el.add_child(reflector)
 	n.add_child(az)
 	ctx["rig"]["dish"] = {"az": az, "el": el}
 	return n
@@ -232,31 +259,40 @@ static func _crew(m: Dictionary, ctx: Dictionary) -> Dictionary:
 	var nose := Kit.cone(h * 0.5 * sqrt(2.0), tip * sqrt(2.0), nose_len, mats["hull"], Vector3(0, 0, nose_len * 0.5), 4)
 	nose.basis = Basis.from_scale(Vector3(w / h, 1.0, 1.0)) * Basis(Vector3.RIGHT, PI * 0.5) * Basis(Vector3.UP, PI * 0.25)
 	n.add_child(nose)
-	# Windscreen: three panes on the upper slope of the nose, and one in each cheek,
-	# dark glass in heavy frames.
+	# Windscreen: three framed panes on the upper slope of the nose under a brow that
+	# shades them, a framed pane in each cheek, and a pair of docking windows under
+	# the chin looking down the axis (HullKit.window: sapphire-faced, the deck lit
+	# behind). The windscreen carries a faint gold sun film.
 	var slope := atan((h * 0.5 - tip) / nose_len)
-	var glass := Kit.glass(0.3)
 	var frame: Material = mats["dark"]
 	var screen := Node3D.new()
-	screen.position = Vector3(0, (h * 0.5 + tip) * 0.5 + 0.03, nose_len * 0.55)
+	# Set on the skin: the nose's faces widen linearly from the tip.
+	screen.position = Vector3(0, lerpf(tip, h * 0.5, 0.55) + 0.03, nose_len * 0.55)
 	screen.basis = Basis(Vector3.RIGHT, -slope)
 	var pane_len := nose_len / cos(slope) * 0.5
 	var pane_w := w * 0.62 / 3.0
 	for k in 3:
-		screen.add_child(Kit.box(Vector3(pane_w * 0.86, 0.05, pane_len), glass, Vector3((float(k) - 1.0) * pane_w, 0, 0)))
-	screen.add_child(Kit.box(Vector3(w * 0.68, 0.09, 0.16), frame, Vector3(0, 0, -pane_len * 0.5)))
-	screen.add_child(Kit.box(Vector3(w * 0.68, 0.09, 0.16), frame, Vector3(0, 0, pane_len * 0.5)))
-	for k in 4:
-		screen.add_child(Kit.box(Vector3(0.12, 0.09, pane_len), frame, Vector3((float(k) - 1.5) * pane_w, 0, 0)))
+		var pane := HullKit.window(pane_w * 0.78, pane_len * 0.86, mats, frame, 0.6, 0.35)
+		pane.position.x = (float(k) - 1.0) * pane_w
+		screen.add_child(pane)
+	screen.add_child(Kit.box(Vector3(w * 0.7, 0.08, 0.4), mats["hull"], Vector3(0, 0.16, pane_len * 0.5 + 0.22)))
 	n.add_child(screen)
 	for side in [1.0, -1.0]:
 		var cheek := Node3D.new()
-		cheek.position = Vector3(side * ((w * 0.5 + tip * w / h) * 0.5 + 0.03), h * 0.1, nose_len * 0.6)
+		cheek.position = Vector3(side * (lerpf(tip * w / h, w * 0.5, 0.6) + 0.03), h * 0.1, nose_len * 0.6)
 		cheek.basis = Basis(Vector3.UP, side * atan((w * 0.5 - tip * w / h) / nose_len))
-		cheek.add_child(Kit.box(Vector3(0.05, h * 0.2, nose_len * 0.32), glass))
-		cheek.add_child(Kit.box(Vector3(0.08, h * 0.26, 0.12), frame, Vector3(0, 0, nose_len * 0.17)))
-		cheek.add_child(Kit.box(Vector3(0.08, h * 0.26, 0.12), frame, Vector3(0, 0, -nose_len * 0.17)))
+		var pane := HullKit.window(h * 0.2, nose_len * 0.3, mats, frame, 0.6)
+		pane.basis = Basis(Vector3.BACK, -side * PI * 0.5)
+		cheek.add_child(pane)
 		n.add_child(cheek)
+	var chin := Node3D.new()
+	chin.position = Vector3(0, -lerpf(tip, h * 0.5, 0.45) - 0.03, nose_len * 0.45)
+	chin.basis = Basis(Vector3.RIGHT, slope) * Basis(Vector3.BACK, PI)
+	for s in [-1.0, 1.0]:
+		var pane := HullKit.window(pane_w * 0.42, pane_len * 0.45, mats, frame, 0.5)
+		pane.position.x = s * pane_w * 0.42
+		chin.add_child(pane)
+	n.add_child(chin)
 	n.add_child(Kit.torus(0.9, 0.18, mats["trim"], Vector3(0, 0, -0.05), 20))
 	n.add_child(Kit.beacon(Color("fff4d6"), Vector3(w * 0.3, h * 0.25, nose_len * 0.3), 0.16))
 	n.add_child(Kit.beacon(Color("fff4d6"), Vector3(-w * 0.3, h * 0.25, nose_len * 0.3), 0.16))
@@ -270,32 +306,55 @@ static func _crew(m: Dictionary, ctx: Dictionary) -> Dictionary:
 	deck.add_child(Kit.box(Vector3(w + 0.04, 0.3, 0.3), mats["trim"], Vector3(0, h * 0.5 - 0.15, -deck_len * 0.5 + 0.15)))
 	for side in [1.0, -1.0]:
 		deck.add_child(Kit.box(Vector3(0.08, 0.08, deck_len * 0.8), Kit.mat("orange"), Vector3(side * (w * 0.5 + 0.12), -h * 0.2, 0)))
+		# Access panels high on the flanks (the name goes below), handrails along the
+		# shoulders for whoever's outside.
+		for f in [-0.32, -0.05]:
+			var panel := HullKit.access_panel(rng.randf_range(0.45, 0.7), deck_len * 0.2, mats["hull"] if rng.randf() < 0.6 else Kit.mat("grey"))
+			panel.basis = Basis(Vector3.BACK, -side * PI * 0.5)
+			panel.position = Vector3(side * w * 0.5, h * 0.28, deck_len * f)
+			deck.add_child(panel)
+		deck.add_child(HullKit.handrail(Vector3(side * w * 0.4, h * 0.5, -deck_len * 0.42), Vector3(side * w * 0.4, h * 0.5, deck_len * 0.1), Vector3.UP))
 	_name_stencils(deck, ctx["livery"], Vector3(w, h, deck_len))
 	n.add_child(deck)
-	# Crew hab: a pressure can with portholes, where they sleep, eat and argue.
+	# Crew hab: a pressure can with a domed aft head (its fore head is buried in the
+	# deck), where they sleep, eat and argue. Two rows of portholes, some shuttered;
+	# the EVA hatch to starboard; handrails along its back and belly.
 	var hab_r := minf(w, h) * 0.48
 	var hab_len := size.z * 0.9
 	var hab_z := nose_len + deck_len + hab_len * 0.5
-	n.add_child(Kit.cylinder(hab_r, hab_len, mats["hull"], Vector3(0, 0, hab_z), 16))
+	var can := HullKit.vessel(hab_r, hab_len + hab_r * 0.5, mats["hull"], mats, 24)
+	can["node"].position.z = hab_z - hab_r * 0.25
+	n.add_child(can["node"])
 	n.add_child(Kit.torus(hab_r + 0.02, 0.12, mats["steel"], Vector3(0, 0, hab_z - hab_len * 0.3), 24))
-	n.add_child(Kit.torus(hab_r + 0.02, 0.12, mats["steel"], Vector3(0, 0, hab_z + hab_len * 0.3), 24))
-	var lit := Kit.glow(Color("ffdca0"), 0.9)
-	for k in 8:
-		var a := TAU * (float(k) + 0.5) / 8.0
-		if rng.randf() < 0.75:
-			var port := Kit.box(Vector3(0.35, 0.06, 0.35), lit, Vector3(cos(a) * (hab_r + 0.01), sin(a) * (hab_r + 0.01), hab_z))
-			port.rotation.z = a - PI * 0.5
+	n.add_child(Kit.torus(hab_r + 0.02, 0.12, mats["steel"], Vector3(0, 0, hab_z + hab_len * 0.2), 24))
+	for row in [-0.12, 0.08]:
+		for deg in [40.0, 140.0, 220.0, 320.0]:
+			var a := deg_to_rad(deg)
+			var d := Vector3(cos(a), sin(a), 0.0)
+			var port := HullKit.porthole(0.2, mats, frame, rng.randf() < 0.25)
+			port.basis = Basis.looking_at(-d, Vector3.BACK)
+			port.position = d * hab_r + Vector3(0, 0, hab_z + hab_len * row)
 			n.add_child(port)
-	# Deep-space kit on the hab's back: high-gain dish, nav radar, aerials, star trackers.
+	var hatch := HullKit.hatch(0.85, 1.1, mats)
+	hatch.basis = Basis(Vector3.BACK, -PI * 0.5)
+	hatch.position = Vector3(hab_r + 0.04, 0, hab_z + hab_len * 0.27)
+	n.add_child(hatch)
+	for deg in [65.0, 115.0, 250.0, 290.0]:
+		var d := Vector3(cos(deg_to_rad(deg)), sin(deg_to_rad(deg)), 0.0)
+		n.add_child(HullKit.handrail(d * hab_r + Vector3(0, 0, hab_z - hab_len * 0.42), d * hab_r + Vector3(0, 0, hab_z + hab_len * 0.4), d))
+	# Deep-space kit on the hab's back: the high-gain dish (much bigger on a ship built
+	# to go far: a weak signal needs a big ear), nav radar, aerials, star trackers.
 	var top := Vector3(0, hab_r, hab_z)
-	n.add_child(steerable_dish(top + Vector3(0, 0, hab_len * rng.randf_range(0.0, 0.25)), rng.randf_range(1.0, 1.6), ctx))
+	var deep := bool(ctx.get("deep", false))
+	var dish_r := rng.randf_range(3.0, 3.6) if deep else rng.randf_range(1.1, 1.6)
+	n.add_child(steerable_dish(top + Vector3(0, 0, hab_len * rng.randf_range(0.0, 0.25)), dish_r, ctx))
 	# Housekeeping solar wings, for when the reactor is cold: one each side, in the
 	# same plane as the radiators aft.
 	var cells := solar_cells(ctx)
 	var wing := rng.randf_range(3.0, 4.5)
 	for side in [1.0, -1.0]:
 		n.add_child(boom_panel(Vector3(side * hab_r, 0, hab_z - hab_len * 0.15), side, 0.8, wing, minf(hab_len * 0.55, 2.4), "solar", cells, ctx))
-	n.add_child(dish(Vector3(w * 0.5, h * 0.3, deck_z), Vector3(1.0, 0.4, -0.2), 0.45, ctx))
+	n.add_child(dish(Vector3(w * 0.5, h * 0.3, deck_z), Vector3(1.0, 0.4, -0.2), 0.75 if deep else 0.45, ctx))
 	for k in rng.randi_range(2, 4):
 		var at := Vector3(rng.randf_range(-w, w) * 0.4, h * 0.5, nose_len + rng.randf_range(0.2, deck_len))
 		n.add_child(aerial(at, Vector3(rng.randf_range(-0.3, 0.3), 1.0, rng.randf_range(0.0, 0.5)), rng.randf_range(1.2, 3.0), ctx))
@@ -305,7 +364,7 @@ static func _crew(m: Dictionary, ctx: Dictionary) -> Dictionary:
 		n.add_child(Kit.box(Vector3(0.22, 0.22, 0.3), Kit.mat("black"), Vector3(side * w * 0.35, -h * 0.5 - 0.35, deck_z - 0.35)))
 	for c in [Vector2(1, 1), Vector2(-1, 1), Vector2(1, -1), Vector2(-1, -1)]:
 		n.add_child(rcs(Vector3(c.x * w * 0.5, c.y * h * 0.5, deck_z - deck_len * 0.3), Vector3(c.x, c.y, 0), ctx))
-	return {"node": n, "length": nose_len + deck_len + hab_len, "radius": maxf(w, h) * 0.6 + 0.5}
+	return {"node": n, "length": nose_len + deck_len + hab_len, "radius": maxf(maxf(w, h) * 0.6 + 0.5, hab_r + dish_r * 2.1 + 0.7), "hull_r": maxf(w, h) * 0.6 + 0.5}
 
 
 ## An uncrewed bus: an octagonal avionics drum, sensor turret, dishes; no windows.
@@ -341,26 +400,41 @@ static func _drone_bus(m: Dictionary, ctx: Dictionary) -> Dictionary:
 	return {"node": n, "length": 1.2 + l, "radius": r + 1.0}
 
 
-## A passenger can, next to the crew: rows of lit ports and a boarding hatch.
+## A passenger can, next to the crew: a pressure vessel with domed heads, rows of
+## portholes (a few shuttered by whoever's asleep behind them), a boarding hatch
+## under it and handrails along its back.
 static func _hab(m: Dictionary, ctx: Dictionary) -> Dictionary:
 	var mats: Dictionary = ctx["mats"]
+	var rng: RandomNumberGenerator = ctx["rng"]
 	var size := _size(m)
 	var r := maxf(size.x, size.y) * 0.5
 	var n := Node3D.new()
-	n.add_child(Kit.cylinder(r, size.z, mats["hull"], Vector3(0, 0, size.z * 0.5), 18))
-	n.add_child(Kit.cylinder(r + 0.03, 0.7, mats["accent"], Vector3(0, 0, size.z * 0.2), 18))
-	for f in [0.05, 0.95]:
-		n.add_child(Kit.torus(r * 0.8, 0.25, mats["steel"], Vector3(0, 0, size.z * f), 24))
-	var lit := Kit.glow(Color("ffdca0"), 1.0)
+	var can := HullKit.vessel(r, size.z, mats["hull"], mats, 24)
+	can["node"].position.z = size.z * 0.5
+	n.add_child(can["node"])
+	var barrel: float = can["barrel"]
+	var z0 := (size.z - barrel) * 0.5
+	n.add_child(Kit.cylinder(r + 0.03, 0.7, mats["accent"], Vector3(0, 0, z0 + barrel * 0.08 + 0.35), 18))
+	for f in [0.0, 1.0]:
+		n.add_child(Kit.torus(r + 0.02, 0.12, mats["steel"], Vector3(0, 0, z0 + barrel * f), 24))
+	var frame: Material = mats["dark"]
 	for row in 4:
 		for k in 10:
 			var a := TAU * float(k) / 10.0
 			if absf(sin(a)) > 0.95:
 				continue
-			var port := Kit.box(Vector3(0.3, 0.05, 0.3), lit, Vector3(cos(a) * (r + 0.01), sin(a) * (r + 0.01), size.z * (0.35 + 0.16 * row)))
-			port.rotation.z = a - PI * 0.5
+			var d := Vector3(cos(a), sin(a), 0.0)
+			var port := HullKit.porthole(0.17, mats, frame, rng.randf() < 0.15, 0.6)
+			port.basis = Basis.looking_at(-d, Vector3.BACK)
+			port.position = d * r + Vector3(0, 0, z0 + barrel * (0.3 + 0.18 * row))
 			n.add_child(port)
-	n.add_child(Kit.box(Vector3(1.2, 0.1, 1.6), Kit.mat("yellow"), Vector3(0, -r - 0.02, size.z * 0.7)))
+	var hatch := HullKit.hatch(1.1, 1.5, mats)
+	hatch.basis = Basis(Vector3.BACK, PI)
+	hatch.position = Vector3(0, -r - 0.04, z0 + barrel * 0.85)
+	n.add_child(hatch)
+	for deg in [72.0, 108.0]:
+		var d := Vector3(cos(deg_to_rad(deg)), sin(deg_to_rad(deg)), 0.0)
+		n.add_child(HullKit.handrail(d * r + Vector3(0, 0, z0 + barrel * 0.05), d * r + Vector3(0, 0, z0 + barrel * 0.95), d))
 	return {"node": n, "length": size.z, "radius": r + 0.5}
 
 
@@ -501,7 +575,7 @@ static func _lander(m: Dictionary, ctx: Dictionary) -> Dictionary:
 	lander.position = Vector3(0, bed_y + size.y * 0.55, 0)
 	var cab := Livery.paint(ctx["livery"], Kit.COLOURS["yellow"], {"wear": 0.55})
 	lander.add_child(Kit.cylinder(size.x * 0.32, size.z * 0.45, cab, Vector3(0, size.y * 0.1, 0), 8))
-	lander.add_child(Kit.box(Vector3(size.x * 0.4, 0.06, size.z * 0.12), Kit.glass(0.3), Vector3(0, size.y * 0.1 + size.x * 0.3, -size.z * 0.15)))
+	lander.add_child(Kit.box(Vector3(size.x * 0.4, 0.06, size.z * 0.12), HullKit.glass(mats, 0.5), Vector3(0, size.y * 0.1 + size.x * 0.3, -size.z * 0.15)))
 	var engine := small_bell(size.x * 0.07, size.x * 0.22, size.y * 0.3, mats["steel"], mats["black"])
 	engine.position = Vector3(0, -size.y * 0.05, 0)
 	engine.basis = Basis(Vector3.RIGHT, PI * 0.5)  # bell opening down
@@ -586,10 +660,15 @@ static func _propulsion(tanks: Array, drives: Array, radiators: Array, ctx: Dict
 		if m["look"].get("shape", "") == "sphere":
 			t.add_child(Kit.sphere(s.x * 0.5, mats["foil"]))
 			t.add_child(Kit.torus(s.x * 0.5, 0.08, mats["steel"], Vector3.ZERO, 32))
+			for f in [-1.0, 1.0]:
+				t.add_child(Kit.box(Vector3(0.35, 0.35, 0.18), mats["steel"], Vector3(0, 0, f * (s.x * 0.5 + 0.05))))
 		else:
-			t.add_child(Kit.cylinder(s.x * 0.5, s.z, mats["foil"]))
-			t.add_child(Kit.hazard_band(s.x * 0.5 + 0.02, 0.4, Vector3(0, 0, s.z * 0.4), 12))
-			t.add_child(Kit.torus(s.x * 0.5 + 0.03, 0.12, mats["accent"], Vector3(0, 0, -s.z * 0.35), 32))
+			# A gas cylinder: domed heads, not flat ends.
+			var vessel := HullKit.vessel(s.x * 0.5, s.z, mats["foil"], mats, 24)
+			t.add_child(vessel["node"])
+			var barrel: float = vessel["barrel"]
+			t.add_child(Kit.hazard_band(s.x * 0.5 + 0.02, 0.4, Vector3(0, 0, barrel * 0.36), 12))
+			t.add_child(Kit.torus(s.x * 0.5 + 0.03, 0.12, mats["accent"], Vector3(0, 0, -barrel * 0.34), 32))
 		n.add_child(t)
 		if off.length() > 0.01:
 			n.add_child(strut(Vector3(0, 0, tz + s.z * 0.5), off * 0.7 + Vector3(0, 0, tz + s.z * 0.5), 0.3, mats["steel"]))

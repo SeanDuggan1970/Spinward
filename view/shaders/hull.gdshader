@@ -3,7 +3,10 @@
 // along seams, and chipped paint showing metal at the edges. Coordinates are object
 // space in metres (projected along the dominant axis), so the pattern rides with the
 // part and keeps its scale whatever the part's size. finish: 0 paint, 1 bare metal,
-// 2 crinkled foil blanket, 3 corrugated container steel (painted).
+// 2 crinkled foil blanket, 3 corrugated container steel (painted). weld > 0 adds the
+// joins of pressure hull: the long seams butt-welded (a rippled bead, heat-tinted on
+// bare metal) and the short ones riveted. They show only close in, where a pixel is a
+// centimetre or so.
 shader_type spatial;
 
 #include "res://view/shaders/noise.gdshaderinc"
@@ -17,7 +20,9 @@ uniform float mismatch = 0.12;
 uniform float seed = 0.0;
 uniform float roughness = 0.8;
 uniform float metallic = 0.0;
-// How panels wrap the part: 0 box faces, 1 round a cylinder's Y axis, 2 a sphere.
+uniform float weld = 0.0;
+// How panels wrap the part: 0 box faces, 1 round a cylinder's Y axis, 2 a sphere,
+// 3 in rings round the Z axis (a lathed part seen end on: a dish's panels).
 uniform int mapping = 0;
 
 #include "res://view/shaders/eclipse.gdshaderinc"
@@ -41,6 +46,11 @@ void vertex() {
 // projected onto the face the surface mostly points along.
 vec2 face_uv(vec3 p, vec3 n, out float axis) {
 	vec3 a = abs(n);
+	if (mapping == 3) {
+		axis = 3.0;
+		// Petals: 24 round (each two panel widths of angle), in rings panel_m deep.
+		return vec2(atan(p.y, p.x) * panel_m * 7.639, length(p.xy));
+	}
 	if (mapping == 1 && a.y < 0.9) {
 		axis = 3.0;
 		return vec2(atan(p.z, p.x) * length(p.xz), p.y);
@@ -59,6 +69,26 @@ vec2 face_uv(vec3 p, vec3 n, out float axis) {
 	}
 	axis = 2.0;
 	return p.xy;
+}
+
+// The object-space directions face_uv's two coordinates run along at p.
+void face_tangents(vec3 p, vec3 n, float axis, out vec3 tu, out vec3 tv) {
+	if (mapping == 3) {
+		tu = normalize(vec3(-p.y, p.x, 0.0) + 1e-5);
+		tv = normalize(vec3(p.x, p.y, 0.0) + 1e-5);
+	} else if (axis == 3.0) {
+		tu = normalize(vec3(-p.z, 0.0, p.x) + 1e-5);
+		tv = normalize(vec3(0.0, 1.0, 0.0) - n * n.y + 1e-5);
+	} else if (axis == 0.0) {
+		tu = vec3(0.0, 0.0, 1.0);
+		tv = vec3(0.0, 1.0, 0.0);
+	} else if (axis == 1.0) {
+		tu = vec3(1.0, 0.0, 0.0);
+		tv = vec3(0.0, 0.0, 1.0);
+	} else {
+		tu = vec3(1.0, 0.0, 0.0);
+		tv = vec3(0.0, 1.0, 0.0);
+	}
 }
 
 void fragment() {
@@ -115,6 +145,33 @@ void fragment() {
 		float seam_fade = 1.0 - smoothstep(0.015, 0.06, px);
 		float seam = (1.0 - smoothstep(0.008, 0.022, d_edge)) * seam_fade;
 		base *= 1.0 - 0.35 * seam;
+		if (weld > 0.0 && finish != 3) {
+			// Across the row seam (signed, metres): a bead 4.4 cm wide, rippled where
+			// the torch walked along it. Slopes are of a bump half as high as wide.
+			float s = (f.y < 0.5 ? f.y : f.y - 1.0) * plate.y;
+			float wb = 0.022;
+			float close_in = (1.0 - smoothstep(0.006, 0.03, px)) * weld;
+			float on = 1.0 - smoothstep(wb * 0.8, wb, abs(s));
+			vec2 slope = vec2(cos(uv.x * 6.2832 / 0.016) * 0.3, -clamp(s / wb, -1.0, 1.0)) * on;
+			base *= 1.0 - 0.12 * on * close_in;
+			rough = mix(rough, 0.6, on * close_in);
+			if (finish == 1) {
+				// Heat tint: straw by the bead, blue further out.
+				float band = (1.0 - smoothstep(wb, wb * 4.0, abs(s))) * (1.0 - on);
+				vec3 tint = mix(vec3(1.06, 0.88, 0.6), vec3(0.62, 0.68, 1.02), smoothstep(wb * 1.2, wb * 3.2, abs(s)));
+				base = mix(base, base * tint, band * 0.6 * close_in);
+			}
+			// Rivets, 9 cm apart, a row either side of the short seams.
+			float sx = (f.x < 0.5 ? f.x : f.x - 1.0) * plate.x;
+			vec2 rv = vec2(abs(sx) - 0.035, mod(uv.y, 0.09) - 0.045);
+			float rivet = 1.0 - smoothstep(0.007, 0.01, length(rv));
+			slope -= vec2(rv.x * sign(sx), rv.y) / 0.01 * rivet;
+			base *= 1.0 + 0.1 * rivet * close_in;
+			vec3 tu;
+			vec3 tv;
+			face_tangents(obj_pos, n, axis, tu, tv);
+			nb += (tu * slope.x + tv * slope.y) * close_in;
+		}
 		if (finish == 3) {
 			// Ribs across the sheet: tilt the normal along the face's first axis.
 			float rib = cos(uv.x * 6.2832 / 0.28);
@@ -140,7 +197,7 @@ void fragment() {
 	ALBEDO = base * mix(0.12, 1.0, sw_sunlit(world_pos, normalize(sw_sun), sw_occluder));
 	ROUGHNESS = rough;
 	METALLIC = metal;
-	if (finish >= 2) {
+	if (finish >= 2 || weld > 0.0) {
 		vec3 nn = normalize(n - (nb - n * dot(nb, n)));
 		NORMAL = normalize((VIEW_MATRIX * MODEL_MATRIX * vec4(nn, 0.0)).xyz);
 	}
