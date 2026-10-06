@@ -830,6 +830,8 @@ func test_contracts() -> void:
 		offer = _first_offer(sim, "kibo_ring", "package")
 		if not offer.is_empty():
 			break
+		# A full board isn't topped up: clear it, so the re-roll draws a fresh one.
+		s.contracts["board"]["kibo_ring"] = []
 		s.contracts["next_t"]["kibo_ring"] = 0.0
 		sim.advance_game_time(60.0)
 	check(not offer.is_empty(), "A courier package is offered")

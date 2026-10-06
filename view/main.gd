@@ -20,6 +20,8 @@ const TitleScreen := preload("res://view/title_screen.gd")
 const TipsText := preload("res://view/tips_text.gd")
 const Autopilot := preload("res://view/flight/autopilot.gd")
 const ShipAudio := preload("res://view/audio/ship_audio.gd")
+const Livery := preload("res://view/flight/livery.gd")
+const Kit := preload("res://view/flight/kit.gd")
 const COMMS_KEEP := 40
 
 const QUICKSAVE := "user://quicksave.json"
@@ -107,6 +109,9 @@ func _ready() -> void:
 			return
 		if a.begins_with("--promo="):
 			_promo.call_deferred(a.trim_prefix("--promo="))
+			return
+		if a.begins_with("--kestrel="):
+			_kestrel_tour.call_deferred(a.trim_prefix("--kestrel="))
 			return
 		if a.begins_with("--crash="):
 			_crash_tour.call_deferred(a.trim_prefix("--crash="))
@@ -1145,6 +1150,64 @@ func _promo_ship(dir: String, quit_after: bool) -> void:
 		_shot("%s/ship-hud-%s-%s.png" % [dir, trip[0], trip[1]])
 	if quit_after:
 		_quit()
+
+
+## Windowed: the Kestrel standing on the Moon, from all round and close in on a leg.
+func _kestrel_tour(dir: String) -> void:
+	DirAccess.make_dir_recursive_absolute(dir)
+	sim.state.paused = true
+	_sync_mode()
+	_layer.visible = false
+	_bar.visible = false
+	_ticker.visible = false
+	_notices.visible = false
+	var stage := Node3D.new()
+	add_child(stage)
+	stage.add_child(preload("res://view/flight/sky.gd").environment())
+	var sun := DirectionalLight3D.new()
+	sun.light_energy = 1.6
+	sun.shadow_enabled = true
+	sun.directional_shadow_max_distance = 120.0
+	sun.shadow_normal_bias = 3.0
+	sun.shadow_bias = 0.2
+	stage.add_child(sun)
+	sun.look_at_from_position(Vector3.ZERO, Vector3(0.55, -0.5, 0.65), Vector3.UP)
+	# A patch of regolith (a flat plane takes shadows cleanly; the whole Moon doesn't).
+	var ground := MeshInstance3D.new()
+	var plane := PlaneMesh.new()
+	plane.size = Vector2(3000, 3000)
+	ground.mesh = plane
+	ground.material_override = Kit.paint(Color("8a8780"), {"wear": 0.6, "mismatch": 0.2, "panel_m": 40.0, "roughness": 1.0})
+	stage.add_child(ground)
+	var Kestrel = load("res://view/flight/kestrel.gd")
+	var model: Dictionary = Kestrel.build(Livery.for_ship(sim.data, "Terran Compact", "Sinus Medii"))
+	var craft: Node3D = model["node"]
+	craft.position = Vector3(0, -float(model["foot_y"]), 0)
+	stage.add_child(craft)
+	var cam := Camera3D.new()
+	cam.fov = 45.0
+	cam.near = 0.2
+	cam.far = 4.0e6
+	stage.add_child(cam)
+	cam.make_current()
+	var views := [["front-quarter", Vector3(-16, 6, -22), Vector3(0, 1.5, -2)], ["side", Vector3(-30, 4, 0), Vector3(0, 1.0, 0)],
+		["rear-quarter", Vector3(18, 7, 20), Vector3(0, 1.5, 3)], ["low", Vector3(-9, 0.6, -14), Vector3(0, 1.5, 0)],
+		["above", Vector3(-10, 26, -12), Vector3(0, 0, 0)], ["leg", Vector3(-7.5, 0.4, -9.0), Vector3(-4.6, -1.0, -4.6)]]
+	for v in views:
+		cam.position = v[1]
+		cam.look_at(v[2], Vector3.UP)
+		for _i in 8:
+			await get_tree().process_frame
+		_shot("%s/kestrel-%s.png" % [dir, v[0]])
+	# Landing: legs compressed, lift thrusters lit.
+	Kestrel.compress(model["legs"], [0.35, 0.35, 0.35, 0.35])
+	model["lift"].visible = true
+	cam.position = Vector3(-16, 2, -16)
+	cam.look_at(Vector3(0, 1.0, 0), Vector3.UP)
+	for _i in 8:
+		await get_tree().process_frame
+	_shot("%s/kestrel-landing.png" % dir)
+	_quit()
 
 
 ## Windowed: at Psyche Claims, nudge into a rock at 5 m/s (damage, sparks), then hit

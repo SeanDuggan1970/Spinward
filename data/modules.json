@@ -512,5 +512,110 @@
 			],
 			"colour": "yellow"
 		}
+	},
+	"kestrel_frame": {
+		"name": "Kestrel spine frame",
+		"kind": "spine",
+		"mass_t": 7.0,
+		"price": 0,
+		"slots": {
+			"command": 1,
+			"cargo": 1,
+			"tank": 1,
+			"drive": 1,
+			"gear": 1,
+			"avionics": 1
+		},
+		"look": {
+			"length_m": 23,
+			"truss_m": 1.6,
+			"layout": "frame"
+		}
+	},
+	"kestrel_cmd": {
+		"name": "Kestrel command module",
+		"kind": "command",
+		"mass_t": 3.0,
+		"price": 0,
+		"life_support_days": 20,
+		"look": {
+			"shape": "kestrel_nose",
+			"size_m": [
+				2.9,
+				2.9,
+				4.5
+			],
+			"colour": "offwhite"
+		}
+	},
+	"kestrel_pod": {
+		"name": "Kestrel passenger pod",
+		"kind": "cargo",
+		"mass_t": 3.5,
+		"price": 0,
+		"cargo_t": 8,
+		"berths": 12,
+		"look": {
+			"shape": "kestrel_pod",
+			"size_m": [
+				2.7,
+				2.1,
+				9.4
+			],
+			"colour": "offwhite"
+		}
+	},
+	"kestrel_tanks": {
+		"name": "Kestrel propellant spheres",
+		"kind": "tank",
+		"mass_t": 1.6,
+		"price": 0,
+		"fuel_t": 5,
+		"look": {
+			"shape": "sphere",
+			"size_m": [
+				1.3,
+				1.3,
+				1.3
+			],
+			"colour": "foil"
+		}
+	},
+	"kestrel_engines": {
+		"name": "Kestrel four-chamber main drive",
+		"kind": "drive",
+		"mass_t": 4.0,
+		"price": 0,
+		"thrust_n": 2400,
+		"isp_s": 12000,
+		"heat_mw": 0.0,
+		"look": {
+			"shape": "drive",
+			"size_m": [
+				2.4,
+				2.4,
+				2.4
+			],
+			"colour": "grey",
+			"coils": 1
+		},
+		"description": "Four short-burn chambers on a common thrust frame: hard work on a hop, with no reactor to cool."
+	},
+	"kestrel_gear": {
+		"name": "Kestrel landing gear and lift thrusters",
+		"kind": "gear",
+		"mass_t": 3.0,
+		"price": 0,
+		"lander": true,
+		"description": "Four sprung legs with footpads, and a lift thruster in each leg pod: set down on anything airless that will take the weight.",
+		"look": {
+			"shape": "kestrel_gear",
+			"size_m": [
+				5.5,
+				3.2,
+				9.2
+			],
+			"colour": "offwhite"
+		}
 	}
 }

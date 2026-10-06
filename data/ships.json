@@ -176,5 +176,22 @@
 		"look": {
 			"cargo_layout": "pair"
 		}
+	},
+	"kestrel": {
+		"name": "Kestrel-class surface transporter",
+		"description": "An open spine with a command module forward, four sprung legs with lift thrusters, a passenger pod slung beneath and four main engines aft. It lands on anything airless that will take its weight; the crews love it.",
+		"spine": "kestrel_frame",
+		"modules": {
+			"command.0": "kestrel_cmd",
+			"cargo.0": "kestrel_pod",
+			"tank.0": "kestrel_tanks",
+			"drive.0": "kestrel_engines",
+			"gear.0": "kestrel_gear",
+			"avionics.0": "docking_computer"
+		},
+		"look": {
+			"layout": "frame",
+			"payload": "passenger"
+		}
 	}
 }

@@ -662,6 +662,36 @@
 				12,
 				40
 			]
+		},
+		"luna_kestrels": {
+			"operator": "Luna Cooperative",
+			"hull": "kestrel",
+			"behaviour": "route",
+			"count": 2,
+			"names": [
+				"Sinus Medii",
+				"Long Shadow"
+			],
+			"route": [
+				{
+					"at": "shackleton_port",
+					"buy": [
+						"food",
+						"medical"
+					],
+					"to": "farside_array"
+				},
+				{
+					"at": "farside_array",
+					"buy": [],
+					"to": "shackleton_port"
+				}
+			],
+			"fill": 0.6,
+			"dwell_hours": [
+				6,
+				30
+			]
 		}
 	},
 	"chatter": {
