@@ -144,6 +144,79 @@ static func torus(radius: float, tube: float, material: Material, at: Vector3 = 
 	return mi
 
 
+## A surface of revolution about Z, for bells, coil housings and anything else turned
+## on a lathe. `strips` is an Array of PackedVector2Array profiles, each point
+## (radius, z); a strip is smooth along its length, and a new strip starting where the
+## last ended makes a hard edge (a lip, a flange). A profile's front faces the right of
+## its direction of travel in the (radius, z) plane: walking aft (+z) along an outer
+## wall faces outward, walking forward along an inner wall faces the axis. So a closed
+## profile, outer wall aft then inner wall forward, is a solid shell with real
+## thickness. UV.x runs round (0 to 1), UV.y is the profile's z, in metres.
+static func lathe(strips: Array, material: Material, sides: int = 24, at: Vector3 = Vector3.ZERO) -> MeshInstance3D:
+	var verts := PackedVector3Array()
+	var norms := PackedVector3Array()
+	var uvs := PackedVector2Array()
+	var idx := PackedInt32Array()
+	var ring := []
+	for k in sides + 1:
+		var a := TAU * float(k) / float(sides)
+		ring.append(Vector2(cos(a), sin(a)))
+	for strip in strips:
+		var p: PackedVector2Array = strip
+		var count := p.size()
+		if count < 2:
+			continue
+		# Profile normals: each segment's, averaged where segments meet.
+		var seg_n := []
+		for i in count - 1:
+			var t := (p[i + 1] - p[i]).normalized()
+			seg_n.append(Vector2(t.y, -t.x))
+		var base := verts.size()
+		for i in count:
+			var a: Vector2 = seg_n[maxi(i - 1, 0)]
+			var b: Vector2 = seg_n[mini(i, count - 2)]
+			var nn := (a + b).normalized() if (a + b).length() > 1e-4 else b
+			for k in sides + 1:
+				var c: Vector2 = ring[k]
+				verts.append(Vector3(p[i].x * c.x, p[i].x * c.y, p[i].y))
+				norms.append(Vector3(nn.x * c.x, nn.x * c.y, nn.y).normalized())
+				uvs.append(Vector2(float(k) / float(sides), p[i].y))
+		# Wind every quad the same way; which way follows from the profile's direction
+		# (Godot's front faces wind clockwise seen from the front).
+		var flip := false
+		for i in count - 1:
+			var v0 := verts[base + i * (sides + 1)]
+			var v1 := verts[base + (i + 1) * (sides + 1)]
+			var v2 := verts[base + (i + 1) * (sides + 1) + 1]
+			var v3 := verts[base + i * (sides + 1) + 1]
+			var face := (v1 - v0).cross(v2 - v0) + (v2 - v0).cross(v3 - v0)
+			if face.length_squared() > 1e-12:
+				flip = face.dot(norms[base + i * (sides + 1)] + norms[base + (i + 1) * (sides + 1)]) > 0.0
+				break
+		for i in count - 1:
+			for k in sides:
+				var i0 := base + i * (sides + 1) + k
+				var i1 := i0 + sides + 1
+				if flip:
+					idx.append_array([i0, i1 + 1, i1, i0, i0 + 1, i1 + 1])
+				else:
+					idx.append_array([i0, i1, i1 + 1, i0, i1 + 1, i0 + 1])
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = verts
+	arrays[Mesh.ARRAY_NORMAL] = norms
+	arrays[Mesh.ARRAY_TEX_UV] = uvs
+	arrays[Mesh.ARRAY_INDEX] = idx
+	var mesh := ArrayMesh.new()
+	if not verts.is_empty():
+		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	var mi := MeshInstance3D.new()
+	mi.mesh = mesh
+	mi.material_override = material
+	mi.position = at
+	return mi
+
+
 ## Open square truss along Z: four longerons with cross frames.
 static func truss(length: float, width: float, material: Material, at: Vector3 = Vector3.ZERO) -> Node3D:
 	var n := Node3D.new()

@@ -1,5 +1,6 @@
 ## Art check (`--art=<dir>`): planet and moon surfaces under a few sun angles and
-## ranges, then one ship from every fleet (and the player's) in its livery, close up.
+## ranges, then one ship from every fleet (and the player's) in its livery, close up,
+## cold and then with its drives lit (-burn, -tail up the nozzles, -jet the whole plume).
 ## View-only; no sim state is touched.
 extends Node3D
 
@@ -136,8 +137,14 @@ func _ships() -> void:
 			"": [Vector3(half * 1.7, half * 0.6, -half * 0.5), Vector3(0, 0, -half * 0.05)],
 			"-nose": [Vector3(10.0, 4.0, -half - 9.0), Vector3(0, 0, -half + 5.0)],
 			"-drive": [Vector3(-11.0, 5.0, half + 6.0), Vector3(0, 0, half - 6.0)],
+			# Lit: off the quarter, from astern up the nozzles, and the whole jet.
+			"-burn": [Vector3(-12.0, 4.0, half + 3.0), Vector3(0, 0, half + 2.0)],
+			"-tail": [Vector3(2.5, 2.0, half + 16.0), Vector3(0, 0, half - 4.0)],
+			"-jet": [Vector3(half * 2.2 + 30.0, half * 0.4 + 8.0, half + 25.0), Vector3(0, 0, half + 18.0)],
 		}
 		for v in views:
+			if plume:
+				plume.visible = v in ["-burn", "-tail", "-jet"]
 			_camera.look_at_from_position(views[v][0], views[v][1], Vector3.UP)
 			for _i in 4:
 				await get_tree().process_frame

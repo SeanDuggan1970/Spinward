@@ -3,10 +3,15 @@
 ##   cargo     standard containers (or bulk hoppers, or an outsize cradle) in the
 ##             middle, so the payload sits between the crew and any drive trouble
 ##   drive     propellant tanks, a shadow shield, then one or more drives crusted
-##             with pumps, pipe runs and bottles
+##             with pumps, pipe runs and bottles, each ending in a magnetic nozzle: a
+##             hollow lathed bell inside a coil stack (_nozzle_hardware)
 ## Layout follows the hull's data (ships.json "look") and modules (modules.json
 ## "look"); the small hardware is seeded by the ship's name, so sister ships differ.
 ## Static parts are merged per material at the end to keep draw calls down.
+##
+## The node named DrivePlume holds what a lit drive shows (_plume): a volumetric
+## plasma jet, the bell's walls glowing with heat, and a light on the stern. Views
+## show it while the drive burns and hide it otherwise; set_throttle dims it.
 ##
 ## Moving parts are returned as a rig for view/flight/ship_rig.gd: every panel (solar
 ## and radiator) hangs on a boom along the ship's X axis, all in one plane, and turns
@@ -493,8 +498,9 @@ static func _lander(m: Dictionary, ctx: Dictionary) -> Dictionary:
 	var cab := Livery.paint(ctx["livery"], Kit.COLOURS["yellow"], {"wear": 0.55})
 	lander.add_child(Kit.cylinder(size.x * 0.32, size.z * 0.45, cab, Vector3(0, size.y * 0.1, 0), 8))
 	lander.add_child(Kit.box(Vector3(size.x * 0.4, 0.06, size.z * 0.12), Kit.glass(0.3), Vector3(0, size.y * 0.1 + size.x * 0.3, -size.z * 0.15)))
-	var engine := Kit.cone(size.x * 0.22, size.x * 0.12, size.y * 0.3, mats["steel"], Vector3(0, -size.y * 0.2, 0), 10)
-	engine.basis = Basis(Vector3.RIGHT, PI)  # wide bell down
+	var engine := small_bell(size.x * 0.07, size.x * 0.22, size.y * 0.3, mats["steel"], mats["black"])
+	engine.position = Vector3(0, -size.y * 0.05, 0)
+	engine.basis = Basis(Vector3.RIGHT, PI * 0.5)  # bell opening down
 	lander.add_child(engine)
 	for k in 4:
 		var a := TAU * float(k) / 4.0 + PI * 0.25
@@ -636,20 +642,36 @@ static func _propulsion(tanks: Array, drives: Array, radiators: Array, ctx: Dict
 		radius = maxf(radius, off.length() + ds.x * 0.6)
 		if dm["look"].get("shape", "") == "sail":
 			radius = maxf(radius, float(dm["look"].get("span_m", 300.0)) * 0.72)
-	# All the drives' plumes switch together.
+	# All the drives' plumes switch together: jets, hot walls and one stern light.
 	var plumes := Node3D.new()
 	plumes.name = "DrivePlume"
+	var lit := 0
+	var stern := Vector3.ZERO
 	for k in count:
-		var ds := _size(drives[k][1])
-		if drives[k][1]["look"].get("shape", "") in ["sail", "climber"]:
+		var dm: Dictionary = drives[k][1]
+		var ds := _size(dm)
+		if dm["look"].get("shape", "") in ["sail", "climber"]:
 			continue
-		plumes.add_child(Kit.sphere(ds.x * 0.3, Kit.glow(Color("8fd0ff"), 4.0), offsets[k] + Vector3(0, 0, z + ds.z * 1.45 + 0.6)))
+		plumes.add_child(_plume(dm, ds, offsets[k] + Vector3(0, 0, z), float(ctx["livery"].get("seed", 0.0)) + 3.7 * k))
+		stern += offsets[k] + Vector3(0, 0, z + float(_nozzle(dm, ds)["z_e"]))
+		lit += 1
+	if lit > 0:
+		# The plasma lights the stern a little: the lip, the thrust frame, the radiators.
+		var glow := OmniLight3D.new()
+		glow.light_color = Color("b8b0ff")
+		glow.light_energy = 1.2
+		glow.set_meta("energy", 1.2)
+		glow.omni_range = 6.0 + spread * 2.0 + drive_r * 3.0
+		glow.omni_attenuation = 1.5
+		glow.shadow_enabled = false
+		glow.position = stern / float(lit) + Vector3(0, 0, drive_r * 0.6)
+		plumes.add_child(glow)
 	n.add_child(plumes)
 	radius = maxf(radius, shield_r)
 	return {"node": n, "length": z + drive_len, "radius": radius, "shield": shield_z}
 
 
-## One drive: reactor drum, field coils, a heat-tinted magnetic nozzle, and the
+## One drive: reactor drum, the magnetic nozzle (_nozzle_hardware), and the
 ## barnacles: pumps, pipe runs to the tanks, gas bottles, cable trays, RCS.
 static func _drive(m: Dictionary, s: Vector3, ctx: Dictionary, index: int) -> Node3D:
 	if m["look"].get("shape", "") == "sail":
@@ -665,17 +687,14 @@ static func _drive(m: Dictionary, s: Vector3, ctx: Dictionary, index: int) -> No
 	for f in [0.2, 0.55, 0.85]:
 		n.add_child(Kit.torus(r + 0.05, 0.14, mats["dark"], Vector3(0, 0, reactor_len * f), 24))
 	n.add_child(Kit.cylinder(r + 0.06, 0.5, mats["accent"], Vector3(0, 0, reactor_len * 0.38), 14))
-	# Field coils round the throat, then the bell.
-	var coils := int(m["look"].get("coils", 2))
-	for k in coils:
-		n.add_child(Kit.torus(r * (0.75 + 0.12 * k), 0.16, Kit.paint(Color("8a5a2a"), {"finish": 1, "metallic": 0.8, "roughness": 0.4}), Vector3(0, 0, reactor_len + 0.3 + 0.45 * k), 24))
-	var bell_len := s.z * 0.7
-	n.add_child(Kit.cone(s.x * 0.68, r * 0.5, bell_len, Livery.paint(ctx["livery"], Color("4a3d32"), {"finish": 1, "metallic": 0.7, "roughness": 0.45}), Vector3(0, 0, reactor_len + bell_len * 0.5 + 0.2), 20))
-	# Thrust frame: a cage of longerons from the shield to the coil ring.
+	# The nozzle: a hollow bell turned on a lathe, its magnetic coil stack, the coolant
+	# manifold, feed lines and the gimbal rams (see _nozzle_hardware).
+	n.add_child(_nozzle_hardware(m, s, ctx, index))
+	# Thrust frame: a cage of longerons from the shield to the thrust plate.
 	for k in 6:
 		var a := TAU * float(k) / 6.0 + 0.3
 		var d := Vector3(cos(a), sin(a), 0)
-		n.add_child(strut(d * (r + 0.7) + Vector3(0, 0, -0.1), d * (r + 0.35) + Vector3(0, 0, reactor_len + 0.4), 0.16, mats["steel"]))
+		n.add_child(strut(d * (r + 0.7) + Vector3(0, 0, -0.1), d * (r + 0.12) + Vector3(0, 0, reactor_len - 0.05), 0.16, mats["steel"]))
 	n.add_child(Kit.torus(r + 0.55, 0.12, mats["steel"], Vector3(0, 0, reactor_len * 0.5), 24))
 	# Barnacles, seeded per ship and per drive.
 	for k in rng.randi_range(7, 11):
@@ -705,6 +724,284 @@ static func _drive(m: Dictionary, s: Vector3, ctx: Dictionary, index: int) -> No
 	n.add_child(Kit.beacon(Color("ff3a2a"), Vector3(0, r + 0.3, 0.3), 0.18, 2.0, 0.25 * index))
 	return n
 
+
+## A fusion drive's nozzle, in the drive's own frame (aft is +Z): where the throat
+## and lip are, their radii, the wall, and the bell's inner contour from the chamber
+## to the lip as (radius, z) points. Shared by the hardware and the plume.
+static func _nozzle(m: Dictionary, s: Vector3) -> Dictionary:
+	var reactor_len := s.z * 0.75
+	var z_t := reactor_len + 0.55
+	var z_e := reactor_len + 0.2 + s.z * 0.7
+	var rt := s.x * 0.13
+	var re := s.x * 0.66
+	var lb := z_e - z_t
+	var rc := s.x * 0.46 * 0.55
+	var c := PackedVector2Array()
+	# Convergent: straight in from the chamber, then a tight arc into the throat.
+	var up := deg_to_rad(35.0)
+	var arc_u := 1.5 * rt
+	var arc_start := Vector2(rt + arc_u * (1.0 - cos(up)), -arc_u * sin(up))
+	c.append(Vector2(rc, reactor_len - z_t))
+	c.append(Vector2(lerpf(rc, arc_start.x, 0.5), lerpf(reactor_len - z_t, arc_start.y, 0.5)))
+	for i in 5:
+		var a := -up * (1.0 - float(i) / 4.0)
+		c.append(Vector2(rt + arc_u * (1.0 - cos(a)), arc_u * sin(a)))
+	# Divergent: Rao's short arc out of the throat to the initial angle, then a
+	# parabola (a quadratic Bezier) turning to the shallow exit angle at the lip.
+	var tn := deg_to_rad(36.0)
+	var te := deg_to_rad(9.0)
+	var arc_d := 0.382 * rt
+	for i in range(1, 4):
+		var a := tn * float(i) / 3.0
+		c.append(Vector2(rt + arc_d * (1.0 - cos(a)), arc_d * sin(a)))
+	var p0 := Vector2(c[c.size() - 1].y, c[c.size() - 1].x)  # (z, r)
+	var p2 := Vector2(lb, re)
+	var z1 := (p2.y - p0.y - p2.x * tan(te) + p0.x * tan(tn)) / (tan(tn) - tan(te))
+	z1 = clampf(z1, p0.x + (lb - p0.x) * 0.1, lb * 0.9)
+	var p1 := Vector2(z1, minf(p0.y + (z1 - p0.x) * tan(tn), re))
+	for i in range(1, 17):
+		var u := float(i) / 16.0
+		var b := p0 * (1.0 - u) * (1.0 - u) + p1 * 2.0 * u * (1.0 - u) + p2 * u * u
+		c.append(Vector2(b.y, b.x))
+	# Into the drive's frame.
+	for i in c.size():
+		c[i] = Vector2(c[i].x, c[i].y + z_t)
+	return {"z_t": z_t, "z_e": z_e, "rt": rt, "re": re, "lb": lb, "reactor_len": reactor_len,
+		"wall": clampf(s.x * 0.016, 0.035, 0.08), "inner": c, "coils": int(m["look"].get("coils", 2)),
+		"joint": 0.62}
+
+
+## A profile pushed `by` metres off its own surface (positive: away from the axis).
+static func _offset(c: PackedVector2Array, by: float) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	for i in c.size():
+		var t := (c[mini(i + 1, c.size() - 1)] - c[maxi(i - 1, 0)]).normalized()
+		out.append(c[i] + Vector2(t.y, -t.x) * by)
+	return out
+
+
+## The bell's radius (inner wall) at the drive's z.
+static func _bell_r(c: PackedVector2Array, z: float) -> float:
+	for i in c.size() - 1:
+		if z <= c[i + 1].y:
+			return lerpf(c[i].x, c[i + 1].x, clampf((z - c[i].y) / maxf(c[i + 1].y - c[i].y, 1e-4), 0.0, 1.0))
+	return c[c.size() - 1].x
+
+
+## A ring of rectangular section turned on the lathe: four faces, hard edges.
+static func _ring(r_in: float, r_out: float, z0: float, z1: float) -> Array:
+	return [PackedVector2Array([Vector2(r_out, z0), Vector2(r_out, z1)]),
+		PackedVector2Array([Vector2(r_out, z1), Vector2(r_in, z1)]),
+		PackedVector2Array([Vector2(r_in, z1), Vector2(r_in, z0)]),
+		PackedVector2Array([Vector2(r_in, z0), Vector2(r_out, z0)])]
+
+
+## The bell and everything bolted round it. A D-He3 drive at tens of thousands of
+## seconds cannot hold its plasma with a wall, so the field does it: a stack of
+## superconducting coils round the throat and upper bell shapes the jet, and the
+## bell is a heat shield and a skirt. The upper bell is tube-wall, regeneratively
+## cooled, feeding a manifold at the joint; aft of that the skirt is radiation-cooled
+## and glows when the drive is lit. Two gimbal rams from the thrust plate steer it.
+static func _nozzle_hardware(m: Dictionary, s: Vector3, ctx: Dictionary, index: int) -> Node3D:
+	var mats: Dictionary = ctx["mats"]
+	var nz := _nozzle(m, s)
+	var n := Node3D.new()
+	var c: PackedVector2Array = nz["inner"]
+	var wall: float = nz["wall"]
+	var outer := _offset(c, wall)
+	var z_t: float = nz["z_t"]
+	var z_e: float = nz["z_e"]
+	var lb: float = nz["lb"]
+	var r := s.x * 0.46
+	var reactor_len: float = nz["reactor_len"]
+	var mats_n := _nozzle_mats(m, nz, ctx)
+	# The bell itself: outer wall aft, a square lip, inner wall forward to the chamber.
+	var inner_rev := c.duplicate()
+	inner_rev.reverse()
+	n.add_child(Kit.lathe([outer, PackedVector2Array([outer[outer.size() - 1], c[c.size() - 1]])], mats_n[0], 40))
+	n.add_child(Kit.lathe([inner_rev], mats_n[1], 40))
+	# Thrust plate where the bell bolts to the reactor.
+	n.add_child(Kit.lathe(_ring(c[0].x - 0.05, r + 0.15, reactor_len - 0.12, reactor_len + 0.04), mats["steel"], 28))
+	# Lip stiffener, and two stiffening bands on the skirt.
+	var lip_r := _bell_r(outer, z_e - 0.1)
+	n.add_child(Kit.lathe(_ring(lip_r - 0.01, lip_r + 0.06, z_e - 0.16, z_e), mats["steel"], 40))
+	var joint_z := z_t + lb * float(nz["joint"])
+	for f in [0.42, 0.75]:
+		var bz := lerpf(joint_z, z_e, f)
+		var br := _bell_r(outer, bz)
+		n.add_child(Kit.lathe(_ring(br - 0.01, br + 0.035, bz - 0.05, bz + 0.05), mats["steel"], 40))
+	# Magnetic coil stack: a heavy throat coil, then lighter ones down the upper bell,
+	# each a cryostat can with its winding showing in a copper band.
+	var coils: int = maxi(1, nz["coils"])
+	var copper := Kit.paint(Color("8a5a2a"), {"finish": 1, "metallic": 0.8, "roughness": 0.4})
+	var coil_rings := []
+	for k in coils:
+		var f := 0.0 if coils == 1 else float(k) / float(coils - 1)
+		var cz := z_t + lb * lerpf(-0.02, 0.5, f)
+		var cw := s.x * (0.13 if k == 0 else 0.085)
+		var r_in := _bell_r(outer, cz + cw * 0.5) + 0.12
+		var r_out := r_in + s.x * (0.13 if k == 0 else 0.07)
+		coil_rings.append([r_out, cz])
+		n.add_child(Kit.lathe(_ring(r_in, r_out, cz - cw * 0.5, cz + cw * 0.5), mats["dark"], 32))
+		n.add_child(Kit.lathe(_ring(r_out - 0.02, r_out + 0.025, cz - cw * 0.22, cz + cw * 0.22), copper, 32))
+	# Tie rods: from the thrust plate out over each coil in turn, a stepped cage.
+	for k in 6:
+		var a := TAU * float(k) / 6.0
+		var d := Vector3(cos(a), sin(a), 0)
+		var prev := d * (r * 0.95) + Vector3(0, 0, reactor_len + 0.04)
+		for ring in coil_rings:
+			var here: Vector3 = d * (float(ring[0]) + 0.05) + Vector3(0, 0, float(ring[1]))
+			n.add_child(rod(prev, here, 0.045, mats["steel"], 6))
+			prev = here
+	# Coolant: tubes forward under the coils from the manifold at the joint, and two
+	# fat propellant feeds from the drum round to the injector ring at the throat.
+	var man_r := _bell_r(outer, joint_z) + 0.1
+	n.add_child(Kit.torus(man_r, 0.075, mats["steel"], Vector3(0, 0, joint_z), 40))
+	var inj_z := lerpf(reactor_len, z_t, 0.45)
+	var inj_r := _bell_r(outer, inj_z) + 0.1
+	n.add_child(Kit.torus(inj_r, 0.07, mats["steel"], Vector3(0, 0, inj_z), 28))
+	for k in 8:
+		var a := TAU * (float(k) + 0.5) / 8.0
+		var d := Vector3(cos(a), sin(a), 0)
+		var prev := d * man_r + Vector3(0, 0, joint_z)
+		for f in [0.65, 0.35, 0.08]:
+			var pz := lerpf(z_t, joint_z, f)
+			var here := d * (_bell_r(outer, pz) + 0.07) + Vector3(0, 0, pz)
+			n.add_child(rod(prev, here, 0.03, mats["steel"], 6))
+			prev = here
+		n.add_child(rod(prev, d * inj_r + Vector3(0, 0, inj_z), 0.03, mats["steel"], 6))
+	for side in [1.0, -1.0]:
+		var d := Vector3(side * 0.94, -0.34, 0).normalized()
+		var p0 := d * (r + 0.16) + Vector3(0, 0, reactor_len * 0.55)
+		var p1 := d * (r + 0.16) + Vector3(0, 0, reactor_len - 0.25)
+		var p2 := d * (r * 0.62) + Vector3(0, 0, reactor_len + 0.12)
+		n.add_child(rod(p0, p1, 0.09, mats["steel"], 8))
+		n.add_child(rod(p1, p2, 0.09, mats["steel"], 8))
+		n.add_child(rod(p2, d * (inj_r + 0.05) + Vector3(0, 0, inj_z), 0.08, mats["steel"], 8))
+		n.add_child(Kit.box(Vector3(0.3, 0.3, 0.3), mats["dark"], p1))
+	# Gimbal rams, pitch and yaw, from clevises on the thrust plate to the last coil.
+	var last: Array = coil_rings[coil_rings.size() - 1]
+	for k in 2:
+		var a := PI * 0.25 + PI * 0.5 * float(k) + (PI if index % 2 == 1 else 0.0)
+		var d := Vector3(cos(a), sin(a), 0)
+		var anchor := d * (r + 0.32) + Vector3(0, 0, reactor_len - 0.45)
+		var tip := d * (float(last[0]) + 0.12) + Vector3(0, 0, float(last[1]))
+		n.add_child(rod(anchor, anchor.lerp(tip, 0.58), 0.11, mats["dark"], 10))
+		n.add_child(rod(anchor.lerp(tip, 0.5), tip, 0.05, mats["steel"], 8))
+		n.add_child(Kit.box(Vector3(0.26, 0.26, 0.3), mats["steel"], anchor))
+		n.add_child(Kit.box(Vector3(0.2, 0.2, 0.22), mats["steel"], tip))
+		n.add_child(Kit.box(Vector3(0.36, 0.2, 0.36), Kit.mat("black"), anchor + Vector3(0, 0, -0.3)))
+	return n
+
+
+## The bell's outer and inner finishes, one pair per ship and drive type.
+static func _nozzle_mats(m: Dictionary, nz: Dictionary, ctx: Dictionary) -> Array:
+	var key := "nozzle_mats_%s" % m["name"]
+	if ctx.has(key):
+		return ctx[key]
+	var livery: Dictionary = ctx["livery"]
+	var dark := String(m["look"].get("colour", "grey")) == "dark"
+	var out := []
+	for inner in [0.0, 1.0]:
+		var mm := ShaderMaterial.new()
+		mm.shader = load("res://view/shaders/nozzle.gdshader")
+		mm.set_shader_parameter("paint", Color("3e3a36") if dark else Color("5a4a3c"))
+		mm.set_shader_parameter("z_throat", nz["z_t"])
+		mm.set_shader_parameter("z_exit", nz["z_e"])
+		mm.set_shader_parameter("joint", nz["joint"])
+		mm.set_shader_parameter("tubes", roundf(float(nz["re"]) * 40.0))
+		mm.set_shader_parameter("girth", float(nz["re"]) * TAU)
+		mm.set_shader_parameter("inner", inner)
+		mm.set_shader_parameter("wear", float(livery.get("wear", 0.4)))
+		mm.set_shader_parameter("seed", float(livery.get("seed", 0.0)))
+		out.append(mm)
+	ctx[key] = out
+	return out
+
+
+## What a lit drive shows, under the ship's DrivePlume: the plasma jet (two raymarched
+## bounds that meet at the exit plane, view/shaders/exhaust.gdshader) and the bell's
+## walls glowing with heat (view/shaders/heat.gdshader). `at` is the drive's origin.
+static func _plume(m: Dictionary, s: Vector3, at: Vector3, seed: float) -> Node3D:
+	var nz := _nozzle(m, s)
+	var n := Node3D.new()
+	n.position = at
+	var c: PackedVector2Array = nz["inner"]
+	var z_t: float = nz["z_t"]
+	var z_e: float = nz["z_e"]
+	var lb: float = nz["lb"]
+	var rt: float = nz["rt"]
+	var re: float = nz["re"]
+	var isp := float(m.get("isp_s", 30000.0))
+	# The faster the exhaust, the tighter and longer the jet.
+	var spread := clampf(0.2 - 0.02 * log(isp / 10000.0) / log(2.0), 0.06, 0.18)
+	var plume_len := lb * 14.0
+	var exhaust := load("res://view/shaders/exhaust.gdshader")
+	var base := {"rt": rt, "re": re, "lb": lb, "spread": spread, "fade": lb * 6.0, "seed": seed, "brightness": 1.6}
+	# Inside the bell: a bound just off the inner wall, throat-relative.
+	# It starts a hand's breadth aft of the reactor's face, so looking up the throat
+	# the plasma is in front of it.
+	var inside := _offset(c, -0.04)
+	var fore := float(nz["reactor_len"]) + 0.08
+	var bound := PackedVector2Array([Vector2(0.0, fore - z_t), Vector2(_bell_r(inside, fore), fore - z_t)])
+	for p in inside:
+		if p.y > fore:
+			bound.append(Vector2(maxf(p.x, 0.01), p.y - z_t))
+	bound.append(Vector2(0.0, lb))
+	var in_mat := ShaderMaterial.new()
+	in_mat.shader = exhaust
+	for k in base:
+		in_mat.set_shader_parameter(k, base[k])
+	in_mat.set_shader_parameter("z_from", bound[0].y)
+	in_mat.set_shader_parameter("z_to", lb)
+	in_mat.set_shader_parameter("r_bound", re)
+	var inner_vol := Kit.lathe([bound], in_mat, 28, Vector3(0, 0, z_t))
+	inner_vol.set_meta("brightness", 1.6)
+	n.add_child(inner_vol)
+	# Aft of the lip: a cone wide enough to hold the jet's soft edge.
+	var w_end := re * 0.55 + plume_len * spread
+	var free := PackedVector2Array([Vector2(0.0, lb), Vector2(re * 0.97, lb), Vector2(w_end * 1.8, lb + plume_len), Vector2(0.0, lb + plume_len)])
+	var out_mat := in_mat.duplicate() as ShaderMaterial
+	out_mat.set_shader_parameter("z_from", lb)
+	out_mat.set_shader_parameter("z_to", lb + plume_len)
+	out_mat.set_shader_parameter("r_bound", w_end * 1.8)
+	var outer_vol := Kit.lathe([free], out_mat, 28, Vector3(0, 0, z_t))
+	outer_vol.set_meta("brightness", 1.6)
+	n.add_child(outer_vol)
+	# Heat: the inner wall hottest at the throat, the skirt aft of the joint.
+	var heat := load("res://view/shaders/heat.gdshader")
+	var in_skin := _offset(c, -0.012)
+	in_skin.reverse()
+	var outer_skin := PackedVector2Array()
+	var joint_z := z_t + lb * float(nz["joint"])
+	for p in _offset(c, float(nz["wall"]) + 0.012):
+		if p.y >= joint_z - 0.05:
+			outer_skin.append(p)
+	var joint := float(nz["joint"])
+	for spec in [[in_skin, -0.25, 0.0, 0.55, 0.6], [outer_skin, joint, joint + 0.12, 1.05, 0.5]]:
+		var hm := ShaderMaterial.new()
+		hm.shader = heat
+		hm.set_shader_parameter("z_throat", z_t)
+		hm.set_shader_parameter("z_exit", z_e)
+		hm.set_shader_parameter("rise", spec[1])
+		hm.set_shader_parameter("peak", spec[2])
+		hm.set_shader_parameter("end", spec[3])
+		hm.set_shader_parameter("brightness", spec[4])
+		hm.set_shader_parameter("seed", seed)
+		var skin := Kit.lathe([spec[0]], hm, 40)
+		skin.set_meta("brightness", spec[4])
+		n.add_child(skin)
+	return n
+
+
+## Throttle a ship's lit drives, 0 to 1. Views that only show and hide DrivePlume
+## needn't call this; it starts at full.
+static func set_throttle(plume: Node3D, throttle: float) -> void:
+	for node in plume.find_children("*", "", true, false):
+		if node is MeshInstance3D and node.has_meta("brightness"):
+			(node.material_override as ShaderMaterial).set_shader_parameter("brightness", float(node.get_meta("brightness")) * throttle)
+		elif node is OmniLight3D and node.has_meta("energy"):
+			node.light_energy = float(node.get_meta("energy")) * throttle
 
 ## A solar sail on the stern: a boom hub, four booms out to the corners, and a square
 ## of aluminised film hundreds of metres across, square to the keel. Sunlight does the
@@ -753,6 +1050,23 @@ static func _climber_drive(s: Vector3, ctx: Dictionary) -> Node3D:
 			n.add_child(wheel)
 	n.add_child(Kit.cylinder(s.x * 0.9, 0.2, solar_cells(ctx), Vector3(0, 0, s.z * 0.65), 24))
 	n.add_child(Kit.beacon(Color("ff3a2a"), Vector3(0, s.y * 0.55, s.z * 0.3), 0.2, 1.4))
+	return n
+
+
+## A small hollow bell for landers and work craft, throat at the origin opening
+## toward +Z: a bell-curved wall with a lip, `outside` and `inside` finishes.
+static func small_bell(rt: float, re: float, length: float, outside: Material, inside: Material) -> Node3D:
+	var c := PackedVector2Array()
+	for i in 13:
+		var u := float(i) / 12.0
+		c.append(Vector2(lerpf(rt, re, 1.0 - pow(1.0 - u, 1.8)), u * length))
+	var outer := _offset(c, maxf(0.02, re * 0.04))
+	var inner := c.duplicate()
+	inner.reverse()
+	var n := Node3D.new()
+	n.add_child(Kit.lathe([outer, PackedVector2Array([outer[outer.size() - 1], c[c.size() - 1]])], outside, 20))
+	n.add_child(Kit.lathe([inner], inside, 20))
+	n.add_child(Kit.lathe(_ring(rt * 0.6, rt * 1.6, -0.12, 0.02), outside, 16))
 	return n
 
 
