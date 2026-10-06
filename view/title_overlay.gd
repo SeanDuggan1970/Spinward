@@ -2,6 +2,7 @@
 extends Control
 
 const UI := preload("res://view/ui/ui_kit.gd")
+const Bindings := preload("res://view/bindings.gd")
 
 var title
 var _font: Font
@@ -59,11 +60,11 @@ func _draw() -> void:
 
 	# Prompts.
 	var blink := fposmod(t, 1.4) < 0.95
-	var prompt := "PRESS SPACE TO BEGIN"
+	var prompt := "PRESS %s TO BEGIN" % Bindings.hint_of("title_start").to_upper()
 	var pw := _font.get_string_size(prompt, HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x
 	if blink:
 		draw_string(_font, Vector2((w - pw) * 0.5, h - 64), prompt, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, UI.GOOD)
-	var keys := ("L  load quick save      " if title.has_save else "") + "F1  controls      Esc  quit"
+	var keys := ("%s  load quick save      " % Bindings.hint_of("title_load") if title.has_save else "") + "%s  controls      %s  quit" % [Bindings.hint_of("controls_page"), Bindings.hint_of("title_quit")]
 	var kw := _font.get_string_size(keys, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x
 	draw_string(_font, Vector2((w - kw) * 0.5, h - 38), keys, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, UI.DIM)
 	draw_string(_font, Vector2(16, h - 14), "Real orbits from JPL data  ·  in the spirit of Elite (1984)", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(UI.DIM, 0.7))

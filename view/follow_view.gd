@@ -169,8 +169,7 @@ func _take_over() -> void:
 func _process(dt: float) -> void:
 	_update_world(dt)
 	if mode == "free":
-		var keys := Vector2(float(Input.is_physical_key_pressed(KEY_LEFT)) - float(Input.is_physical_key_pressed(KEY_RIGHT)),
-			float(Input.is_physical_key_pressed(KEY_UP)) - float(Input.is_physical_key_pressed(KEY_DOWN)))
+		var keys := Vector2(Input.get_axis("transit_look_right", "transit_look_left"), Input.get_axis("transit_look_down", "transit_look_up"))
 		if keys != Vector2.ZERO:
 			_idle = 0.0
 			_yaw += keys.x * dt * 0.9

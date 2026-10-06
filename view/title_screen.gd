@@ -451,13 +451,12 @@ func _process(dt: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not (event is InputEventKey and event.pressed and not event.echo):
+	if event.is_echo():
 		return
-	match event.keycode:
-		KEY_SPACE, KEY_ENTER, KEY_KP_ENTER:
-			start_requested.emit(false)
-		KEY_L:
-			if has_save:
-				start_requested.emit(true)
-		KEY_ESCAPE:
-			get_tree().quit()
+	if event.is_action_pressed("title_start"):
+		start_requested.emit(false)
+	elif event.is_action_pressed("title_load"):
+		if has_save:
+			start_requested.emit(true)
+	elif event.is_action_pressed("title_quit"):
+		get_tree().quit()

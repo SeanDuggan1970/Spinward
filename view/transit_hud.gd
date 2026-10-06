@@ -10,6 +10,7 @@
 extends Control
 
 const UI := preload("res://view/ui/ui_kit.gd")
+const Bindings := preload("res://view/bindings.gd")
 const AV := preload("res://view/ui/avionics.gd")
 const Pages := preload("res://view/ui/cockpit_pages.gd")
 const V := preload("res://sim/v3.gd")
@@ -78,7 +79,7 @@ func _draw() -> void:
 	if quads.has("centre") and _g.begin(self, _font, quads["centre"], canvas["centre"]):
 		_page_nav(_g, r)
 	if quads.has("right") and _g.begin(self, _font, quads["right"], canvas["right"]):
-		Pages.systems(_g, sim, [["M", "VIEW", AV.GREY], ["P", "PAUSE", AV.GREY], ["F1", "KEYS", AV.GREY]])
+		Pages.systems(_g, sim, [[Bindings.key_of("transit_view"), "VIEW", AV.GREY], [Bindings.key_of("pause"), "PAUSE", AV.GREY], [Bindings.key_of("controls_page"), "KEYS", AV.GREY]])
 	if quads.has("annunciator") and _g.begin(self, _font, quads["annunciator"], canvas["annunciator"]):
 		_annunciators(_g, r)
 
@@ -145,7 +146,7 @@ func _draw_telescope(r: Dictionary) -> void:
 			var n: Vector2 = d.orthogonal() * (6.0 if i % 2 == 0 else 3.0)
 			draw_line(p - n, p + n, col, 1.0)
 	_markers(r, PackedVector2Array())
-	var text := "TELESCOPE  ×%d   Z to close   arrows to slew   C to centre" % int(round(view.WIDE_FOV / view.TELESCOPE_FOV))
+	var text := "TELESCOPE  ×%d   %s to close   %s to slew   %s to centre" % [int(round(view.WIDE_FOV / view.TELESCOPE_FOV)), Bindings.hint_of("transit_telescope"), Bindings.key_of("transit_look_left") + " " + Bindings.key_of("transit_look_right"), Bindings.hint_of("transit_centre")]
 	draw_string(_font, Vector2(c.x - 260, size.y - 80), text, HORIZONTAL_ALIGNMENT_LEFT, 520, 13, col)
 
 

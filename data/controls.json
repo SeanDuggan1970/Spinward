@@ -1,180 +1,91 @@
 {
-	"_note": "The keys, as shown on the controls page (F1). For now they are fixed in the views that read them; this file is where remapping and other control schemes will live. Each section: a name, when it applies, and [keys, what they do] rows.",
+	"_note": "Every control, by what you are doing. Each action row is an InputMap action built at startup (view/bindings.gd): \"key\" and \"pad\" list its default bindings, and the player's changes are saved in user://settings.cfg. Specs: keys by name (W, Shift, BracketLeft, KP Enter); pad buttons a b x y lb rb back start lstick rstick dpad_up dpad_down dpad_left dpad_right; pad axes lx ly rx ry lt rt with a sign (lx- is the stick pushed left). Rows with \"text\" are just notes. Two actions in the same scope (or a global one) cannot share a binding.",
+	"gamepad": {"deadzone": 0.25, "trigger_deadzone": 0.1, "capture_threshold": 0.6},
+	"reserved": {"key": ["Escape"], "pad": ["back"]},
 	"sections": [
 		{
-			"name": "Anywhere",
-			"when": "in port, in flight, in transit",
-			"keys": [
-				[
-					"F1",
-					"This page (pauses the game)"
-				],
-				[
-					"P",
-					"Pause"
-				],
-				[
-					"F2",
-					"Sound on / off"
-				],
-				[
-					"[  /  ]",
-					"Slow down / speed up time"
-				],
-				[
-					"F5",
-					"Quick save"
-				],
-				[
-					"F9",
-					"Quick load"
-				],
-				[
-					"Mouse",
-					"Menus, tabs and buttons at a port"
-				]
+			"id": "global", "name": "Anywhere", "when": "in port, in flight, in transit",
+			"rows": [
+				{"action": "controls_page", "label": "This page (pauses the game)", "key": ["F1"], "pad": ["back"]},
+				{"action": "pause", "label": "Pause", "key": ["P"], "pad": ["start"]},
+				{"action": "sound", "label": "Sound on / off", "key": ["F2"], "pad": []},
+				{"action": "time_slower", "label": "Slow down time", "key": ["BracketLeft"], "pad": []},
+				{"action": "time_faster", "label": "Speed up time", "key": ["BracketRight"], "pad": []},
+				{"action": "quick_save", "label": "Quick save", "key": ["F5"], "pad": []},
+				{"action": "quick_load", "label": "Quick load", "key": ["F9"], "pad": []},
+				{"text": "Mouse", "label": "Menus, tabs and buttons at a port"}
 			]
 		},
 		{
-			"name": "Flying an approach",
-			"when": "from arrival to docking",
-			"keys": [
-				[
-					"W  /  S",
-					"Thrust forward / back"
-				],
-				[
-					"A  /  D",
-					"Strafe left / right"
-				],
-				[
-					"R  /  F",
-					"Strafe up / down"
-				],
-				[
-					"Shift",
-					"Boost (hold)"
-				],
-				[
-					"X",
-					"Brake (hold)"
-				],
-				[
-					"Arrows",
-					"Pitch and yaw"
-				],
-				[
-					"Q  /  E",
-					"Roll left / right"
-				],
-				[
-					"Z",
-					"Flight assist: full, assisted, manual"
-				],
-				[
-					"V",
-					"Spin match: roll with the station"
-				],
-				[
-					"G",
-					"Scanner range"
-				],
-				[
-					"C",
-					"Cockpit or chase view"
-				],
-				[
-					"K",
-					"Docking computer (if fitted)"
-				],
-				[
-					"T",
-					"Call the tug (a fee; on credit if broke)"
-				],
-				[
-					"H",
-					"Show or hide the key strip"
-				]
+			"id": "flight", "name": "Flying an approach", "when": "from arrival to docking",
+			"rows": [
+				{"action": "flight_forward", "label": "Thrust forward", "key": ["W"], "pad": ["rt+"]},
+				{"action": "flight_back", "label": "Thrust back", "key": ["S"], "pad": ["lt+"]},
+				{"action": "flight_strafe_left", "label": "Strafe left", "key": ["A"], "pad": ["lx-"]},
+				{"action": "flight_strafe_right", "label": "Strafe right", "key": ["D"], "pad": ["lx+"]},
+				{"action": "flight_up", "label": "Strafe up", "key": ["R"], "pad": ["ly-"]},
+				{"action": "flight_down", "label": "Strafe down", "key": ["F"], "pad": ["ly+"]},
+				{"action": "flight_boost", "label": "Boost (hold)", "key": ["Shift"], "pad": ["a"]},
+				{"action": "flight_brake", "label": "Brake (hold)", "key": ["X"], "pad": ["b"]},
+				{"action": "flight_pitch_up", "label": "Pitch up", "key": ["Up"], "pad": ["ry-"]},
+				{"action": "flight_pitch_down", "label": "Pitch down", "key": ["Down"], "pad": ["ry+"]},
+				{"action": "flight_yaw_left", "label": "Yaw left", "key": ["Left"], "pad": ["rx-"]},
+				{"action": "flight_yaw_right", "label": "Yaw right", "key": ["Right"], "pad": ["rx+"]},
+				{"action": "flight_roll_left", "label": "Roll left", "key": ["Q"], "pad": ["lb"]},
+				{"action": "flight_roll_right", "label": "Roll right", "key": ["E"], "pad": ["rb"]},
+				{"action": "flight_assist", "label": "Flight assist: full, assisted, manual", "key": ["Z"], "pad": ["y"]},
+				{"action": "flight_spin_match", "label": "Spin match: roll with the station", "key": ["V"], "pad": ["x"]},
+				{"action": "flight_scanner", "label": "Scanner range", "key": ["G"], "pad": ["dpad_up"]},
+				{"action": "flight_view", "label": "Cockpit or chase view", "key": ["C"], "pad": ["dpad_down"]},
+				{"action": "flight_computer", "label": "Docking computer (if fitted)", "key": ["K"], "pad": ["dpad_left"]},
+				{"action": "flight_tug", "label": "Call the tug (a fee; on credit if broke)", "key": ["T"], "pad": ["lstick"]},
+				{"action": "flight_keys", "label": "Show or hide the key strip", "key": ["H"], "pad": ["dpad_right"]}
 			]
 		},
 		{
-			"name": "In transit",
-			"when": "between ports",
-			"keys": [
-				[
-					"M",
-					"Ship, orbit view, cockpit, system map"
-				],
-				[
-					"Mouse drag",
-					"Orbit the ship (ship view)"
-				],
-				[
-					"Mouse wheel",
-					"Zoom in and out (ship view)"
-				],
-				[
-					"Arrows",
-					"Orbit the ship (ship view) or look around (cockpit)"
-				],
-				[
-					"Hands off",
-					"The director frames the shots (ship view)"
-				],
-				[
-					"Z",
-					"Telescope (cockpit)"
-				],
-				[
-					"C",
-					"Look ahead again (cockpit)"
-				]
+			"id": "transit", "name": "In transit", "when": "between ports",
+			"rows": [
+				{"action": "transit_view", "label": "Ship, orbit view, cockpit, system map", "key": ["M"], "pad": ["a"]},
+				{"action": "transit_look_left", "label": "Orbit the ship or look left", "key": ["Left"], "pad": ["rx-"]},
+				{"action": "transit_look_right", "label": "Orbit the ship or look right", "key": ["Right"], "pad": ["rx+"]},
+				{"action": "transit_look_up", "label": "Orbit the ship or look up", "key": ["Up"], "pad": ["ry-"]},
+				{"action": "transit_look_down", "label": "Orbit the ship or look down", "key": ["Down"], "pad": ["ry+"]},
+				{"action": "transit_telescope", "label": "Telescope (cockpit)", "key": ["Z"], "pad": ["x"]},
+				{"action": "transit_centre", "label": "Look ahead again (cockpit)", "key": ["C"], "pad": ["y"]},
+				{"action": "transit_time_slower", "label": "Slow down time", "key": [], "pad": ["lb"]},
+				{"action": "transit_time_faster", "label": "Speed up time", "key": [], "pad": ["rb"]},
+				{"text": "Mouse drag", "label": "Orbit the ship (ship view)"},
+				{"text": "Mouse wheel", "label": "Zoom in and out (ship view)"},
+				{"text": "Hands off", "label": "The director frames the shots (ship view)"}
 			]
 		},
 		{
-			"name": "Landing",
-			"when": "flying the lander down to a site",
-			"keys": [
-				[
-					"W  /  Space",
-					"Main engine (hold)"
-				],
-				[
-					"A  /  D  or  Left / Right",
-					"Thrusters: drift left / right"
-				],
-				[
-					"Q  /  E  or  Up / Down",
-					"Thrusters: drift forward / back"
-				]
+			"id": "lander", "name": "Landing", "when": "flying the lander down to a site",
+			"rows": [
+				{"action": "lander_main", "label": "Main engine (hold)", "key": ["W", "Space"], "pad": ["rt+", "a"]},
+				{"action": "lander_left", "label": "Thrusters: drift left", "key": ["A", "Left"], "pad": ["lx-", "dpad_left"]},
+				{"action": "lander_right", "label": "Thrusters: drift right", "key": ["D", "Right"], "pad": ["lx+", "dpad_right"]},
+				{"action": "lander_forward", "label": "Thrusters: drift forward", "key": ["Q", "Up"], "pad": ["ly-", "dpad_up"]},
+				{"action": "lander_back", "label": "Thrusters: drift back", "key": ["E", "Down"], "pad": ["ly+", "dpad_down"]}
 			]
 		},
 		{
-			"name": "Riding an elevator",
-			"when": "in the climber cab",
-			"keys": [
-				[
-					"Arrows",
-					"Look around"
-				]
+			"id": "climber", "name": "Riding an elevator", "when": "in the climber cab",
+			"rows": [
+				{"action": "climber_look_left", "label": "Look left", "key": ["Left"], "pad": ["rx-"]},
+				{"action": "climber_look_right", "label": "Look right", "key": ["Right"], "pad": ["rx+"]},
+				{"action": "climber_look_up", "label": "Look up", "key": ["Up"], "pad": ["ry-"]},
+				{"action": "climber_look_down", "label": "Look down", "key": ["Down"], "pad": ["ry+"]},
+				{"action": "climber_time_slower", "label": "Slow down time", "key": [], "pad": ["lb"]},
+				{"action": "climber_time_faster", "label": "Speed up time", "key": [], "pad": ["rb"]}
 			]
 		},
 		{
-			"name": "Title screen",
-			"when": "",
-			"keys": [
-				[
-					"Space  /  Enter",
-					"Start"
-				],
-				[
-					"L",
-					"Load the quick save"
-				],
-				[
-					"Esc",
-					"Quit"
-				]
+			"id": "title", "name": "Title screen", "when": "",
+			"rows": [
+				{"action": "title_start", "label": "Start", "key": ["Space", "Enter", "KP Enter"], "pad": ["a"]},
+				{"action": "title_load", "label": "Load the quick save", "key": ["L"], "pad": ["x"]},
+				{"action": "title_quit", "label": "Quit", "key": ["Escape"], "pad": []}
 			]
 		}
 	]

@@ -244,30 +244,29 @@ func flash(text: String, colour: Color = Color.WHITE, seconds: float = 3.0) -> v
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not (event is InputEventKey and event.pressed and not event.echo) or docked:
+	if docked or event.is_echo() or not event.is_pressed():
 		return
-	match event.keycode:
-		KEY_Z:
-			assist = ASSIST_MODES[(ASSIST_MODES.find(assist) + 1) % ASSIST_MODES.size()]
-			flash("Assist: %s" % assist.to_upper(), UI.AMBER)
-		KEY_V:
-			spin_match = not spin_match
-			flash("Spin match %s" % ("ON" if spin_match else "OFF"), UI.AMBER)
-		KEY_C:
-			view_mode = "chase" if view_mode == "cockpit" else "cockpit"
-		KEY_G:
-			_scanner_index = (_scanner_index + 1) % tune_flight["scanner_ranges_m"].size()
-			flash("Scanner range %s" % UI.km(scanner_range()) if scanner_range() >= 1000.0 else "Scanner range %d m" % int(scanner_range()), UI.AMBER, 1.5)
-		KEY_H:
-			hud.show_keys = not hud.show_keys
-		KEY_T:
-			_request_tug()
-		KEY_K:
-			if ShipStats.has_docking_computer(sim.state.ship, sim.data):
-				computer = not computer
-				flash("Docking computer %s" % ("engaged: hands off" if computer else "off: you have control"), UI.AMBER)
-			else:
-				flash("No docking computer fitted (shipyards sell them)", UI.DIM)
+	if event.is_action_pressed("flight_assist"):
+		assist = ASSIST_MODES[(ASSIST_MODES.find(assist) + 1) % ASSIST_MODES.size()]
+		flash("Assist: %s" % assist.to_upper(), UI.AMBER)
+	elif event.is_action_pressed("flight_spin_match"):
+		spin_match = not spin_match
+		flash("Spin match %s" % ("ON" if spin_match else "OFF"), UI.AMBER)
+	elif event.is_action_pressed("flight_view"):
+		view_mode = "chase" if view_mode == "cockpit" else "cockpit"
+	elif event.is_action_pressed("flight_scanner"):
+		_scanner_index = (_scanner_index + 1) % tune_flight["scanner_ranges_m"].size()
+		flash("Scanner range %s" % UI.km(scanner_range()) if scanner_range() >= 1000.0 else "Scanner range %d m" % int(scanner_range()), UI.AMBER, 1.5)
+	elif event.is_action_pressed("flight_keys"):
+		hud.show_keys = not hud.show_keys
+	elif event.is_action_pressed("flight_tug"):
+		_request_tug()
+	elif event.is_action_pressed("flight_computer"):
+		if ShipStats.has_docking_computer(sim.state.ship, sim.data):
+			computer = not computer
+			flash("Docking computer %s" % ("engaged: hands off" if computer else "off: you have control"), UI.AMBER)
+		else:
+			flash("No docking computer fitted (shipyards sell them)", UI.DIM)
 
 
 func _request_tug() -> void:
@@ -338,8 +337,10 @@ func _physics_process(dt: float) -> void:
 		camera.global_position += jolt * (1.15 if view_mode == "cockpit" else 1.0)
 
 
-func _input_axis(pos: Key, neg: Key) -> float:
-	return (1.0 if Input.is_physical_key_pressed(pos) else 0.0) - (1.0 if Input.is_physical_key_pressed(neg) else 0.0)
+## A pair of actions as one axis, -1 to 1: a key is all or nothing, a stick or trigger is analog
+## (its deadzone is set in data/controls.json).
+func _input_axis(pos: String, neg: String) -> float:
+	return Input.get_action_strength(pos) - Input.get_action_strength(neg)
 
 
 func read_controls() -> Dictionary:
@@ -348,12 +349,11 @@ func read_controls() -> Dictionary:
 	if computer:
 		return Autopilot.controls(self)
 	return {
-		# Translation: W/S forward/back, A/D strafe, R/F up/down.
-		"thrust": Vector3(_input_axis(KEY_D, KEY_A), _input_axis(KEY_R, KEY_F), _input_axis(KEY_S, KEY_W)),
-		# Rotation: arrows pitch/yaw, Q/E roll.
-		"stick": Vector3(_input_axis(KEY_UP, KEY_DOWN), _input_axis(KEY_LEFT, KEY_RIGHT), _input_axis(KEY_Q, KEY_E)),
-		"boost": Input.is_physical_key_pressed(KEY_SHIFT),
-		"brake": Input.is_physical_key_pressed(KEY_X),
+		# Translation: forward/back, strafe, up/down. Rotation: pitch, yaw, roll.
+		"thrust": Vector3(_input_axis("flight_strafe_right", "flight_strafe_left"), _input_axis("flight_up", "flight_down"), _input_axis("flight_back", "flight_forward")),
+		"stick": Vector3(_input_axis("flight_pitch_up", "flight_pitch_down"), _input_axis("flight_yaw_left", "flight_yaw_right"), _input_axis("flight_roll_left", "flight_roll_right")),
+		"boost": Input.is_action_pressed("flight_boost"),
+		"brake": Input.is_action_pressed("flight_brake"),
 	}
 
 
@@ -366,7 +366,8 @@ func _fly(dt: float) -> void:
 	var thrust: Vector3 = controls["thrust"]
 	var braking: bool = controls["brake"] or (assist == "full" and thrust == Vector3.ZERO)
 	if thrust != Vector3.ZERO:
-		velocity += basis * thrust.normalized() * accel * dt
+		# Full push is a unit vector (keys on two axes still make one); a half-pushed stick is half.
+		velocity += basis * thrust.normalized() * minf(thrust.length(), 1.0) * accel * dt
 	elif braking:
 		velocity = velocity.move_toward(Vector3.ZERO, accel * dt)
 	if _drive_plume:

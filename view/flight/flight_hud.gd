@@ -13,6 +13,7 @@
 extends Control
 
 const UI := preload("res://view/ui/ui_kit.gd")
+const Bindings := preload("res://view/bindings.gd")
 const AV := preload("res://view/ui/avionics.gd")
 const Pages := preload("res://view/ui/cockpit_pages.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
@@ -110,7 +111,7 @@ func _draw() -> void:
 	if quads.has("centre") and _g.begin(self, _font, quads["centre"], canvas["centre"]):
 		_page_scanner(_g)
 	if quads.has("right") and _g.begin(self, _font, quads["right"], canvas["right"]):
-		Pages.systems(_g, flight.sim, [["T", "TUG %d cr" % int(flight.tune_dock["auto_dock_fee"]), AV.GREY], ["[ ]", "TIME", AV.GREY], ["P", "PAUSE", AV.GREY], ["F1", "KEYS", AV.GREY]], flight.wrecked)
+		Pages.systems(_g, flight.sim, [[Bindings.key_of("flight_tug"), "TUG %d cr" % int(flight.tune_dock["auto_dock_fee"]), AV.GREY], ["%s %s" % [Bindings.key_of("time_slower"), Bindings.key_of("time_faster")], "TIME", AV.GREY], [Bindings.key_of("pause"), "PAUSE", AV.GREY], [Bindings.key_of("controls_page"), "KEYS", AV.GREY]], flight.wrecked)
 	if quads.has("annunciator") and _g.begin(self, _font, quads["annunciator"], canvas["annunciator"]):
 		_annunciators(_g)
 	if show_keys:
@@ -464,10 +465,11 @@ func _annunciators(g) -> void:
 
 
 func _draw_keys(w: float) -> void:
-	var lines := ["W/S thrust   A/D strafe   R/F up/down   Shift boost   X brake",
-		"Arrows pitch/yaw   Q/E roll   Z assist   V spin match",
-		"G scanner range   C cockpit/chase   K docking computer   P pause",
-		"T tug (%d cr, on credit if you are broke)   H hide keys   F1 all controls" % int(flight.tune_dock["auto_dock_fee"])]
+	var k := Bindings.key_of
+	var lines := ["%s/%s thrust   %s/%s strafe   %s/%s up/down   %s boost   %s brake" % [k.call("flight_forward"), k.call("flight_back"), k.call("flight_strafe_left"), k.call("flight_strafe_right"), k.call("flight_up"), k.call("flight_down"), k.call("flight_boost"), k.call("flight_brake")],
+		"%s/%s pitch   %s/%s yaw   %s/%s roll   %s assist   %s spin match" % [k.call("flight_pitch_up"), k.call("flight_pitch_down"), k.call("flight_yaw_left"), k.call("flight_yaw_right"), k.call("flight_roll_left"), k.call("flight_roll_right"), k.call("flight_assist"), k.call("flight_spin_match")],
+		"%s scanner range   %s cockpit/chase   %s docking computer   %s pause" % [k.call("flight_scanner"), k.call("flight_view"), k.call("flight_computer"), k.call("pause")],
+		"%s tug (%d cr, on credit if you are broke)   %s hide keys   %s all controls" % [k.call("flight_tug"), int(flight.tune_dock["auto_dock_fee"]), k.call("flight_keys"), k.call("controls_page")]]
 	var y := 140.0
 	draw_rect(Rect2(w * 0.5 - 312, y - 16, 624, 18 * lines.size() + 8), Color(0.02, 0.03, 0.035, 0.6))
 	for l in lines:

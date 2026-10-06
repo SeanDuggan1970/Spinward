@@ -135,8 +135,8 @@ func _update(dt: float) -> void:
 		var step := minf(1.0, TURN_RATE * dt / maxf(angle, 1e-6))
 		_basis = Basis(from.slerp(to, step))
 	if dt > 0.0:
-		look_yaw += (float(Input.is_physical_key_pressed(KEY_LEFT)) - float(Input.is_physical_key_pressed(KEY_RIGHT))) * LOOK_RATE * dt * (0.1 if telescope else 1.0)
-		look_pitch = clampf(look_pitch + (float(Input.is_physical_key_pressed(KEY_UP)) - float(Input.is_physical_key_pressed(KEY_DOWN))) * LOOK_RATE * dt * (0.1 if telescope else 1.0), -1.4, 1.4)
+		look_yaw += Input.get_axis("transit_look_right", "transit_look_left") * LOOK_RATE * dt * (0.1 if telescope else 1.0)
+		look_pitch = clampf(look_pitch + Input.get_axis("transit_look_down", "transit_look_up") * LOOK_RATE * dt * (0.1 if telescope else 1.0), -1.4, 1.4)
 	var look := Basis(Vector3.UP, look_yaw) * Basis(Vector3.RIGHT, look_pitch)
 	camera.transform = Transform3D(_basis * look, Vector3.ZERO)
 	camera.fov = lerpf(camera.fov, TELESCOPE_FOV if telescope else WIDE_FOV, clampf(dt * 6.0, 0.0, 1.0)) if dt > 0.0 else camera.fov
@@ -167,11 +167,10 @@ func _update(dt: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not (event is InputEventKey and event.pressed and not event.echo):
+	if event.is_echo():
 		return
-	match event.keycode:
-		KEY_Z:
-			telescope = not telescope
-		KEY_C:
-			look_yaw = 0.0
-			look_pitch = 0.0
+	if event.is_action_pressed("transit_telescope"):
+		telescope = not telescope
+	elif event.is_action_pressed("transit_centre"):
+		look_yaw = 0.0
+		look_pitch = 0.0
