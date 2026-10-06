@@ -76,6 +76,7 @@ func _initialize() -> void:
 	test_damage_in_depth()
 	test_story_arcs_in_depth()
 	test_story_favour_after_abandon()
+	test_elevator_not_stranded_at_foot()
 	test_edge_cases()
 	test_ship_audio()
 	print("%d checks, %d failures" % [checks, failures])
@@ -1905,6 +1906,25 @@ func _first_favour_offer(s) -> Dictionary:
 			if o.get("favour", "") == "first_favour":
 				return o
 	return {}
+
+
+## A pilot who rides down with only the fare, and spends the rest at the town, must still be
+## able to get back up to their ship: nothing at the foot of a ribbon earns money.
+func test_elevator_not_stranded_at_foot() -> void:
+	var sim := fresh()
+	var s := sim.state
+	s.location = {"status": "docked", "place": "halo_depot"}
+	s.ship["cargo"] = {}
+	s.credits = 160.0
+	check(sim.apply({"type": "ride_elevator"}) == "", "Ride down with a little more than the fare")
+	sim.advance_game_time(56.0 * 3600.0 + 1.0)
+	check(s.location == {"status": "docked", "place": "line_foot"} and absf(s.credits - 10.0) < 1e-9, "At Line Foot with 10 cr")
+	check(sim.apply({"type": "ride_elevator"}) == "", "A pilot with less than the fare can still ride up to their ship")
+	check(s.location["status"] == "elevator" and not s.location["down"], "and is on the way up")
+	check(s.credits < 0.0, "the fare goes on credit, as emergency fuel does")
+	sim.advance_game_time(56.0 * 3600.0 + 1.0)
+	check(s.location == {"status": "docked", "place": "halo_depot"}, "Back at the depot")
+	check(sim.apply({"type": "ride_elevator"}) != "", "In debt, the pilot cannot ride down again")
 
 
 ## Edge cases found by reading the sim: empty holds, huge balances, saves in odd moments.
