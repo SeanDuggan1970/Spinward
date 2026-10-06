@@ -19,6 +19,7 @@ const Comms := preload("res://view/comms.gd")
 const TitleScreen := preload("res://view/title_screen.gd")
 const TipsText := preload("res://view/tips_text.gd")
 const Autopilot := preload("res://view/flight/autopilot.gd")
+const ShipAudio := preload("res://view/audio/ship_audio.gd")
 const COMMS_KEEP := 40
 
 const QUICKSAVE := "user://quicksave.json"
@@ -33,6 +34,9 @@ var _notices: VBoxContainer
 var _layer: Control
 var _ticker: Label
 var _controls: CanvasLayer
+## Where you are: the station around you when docked, the wheels on a ribbon.
+var _ambience: AudioStreamPlayer
+var _cabin: AudioStreamPlayer
 var _bar: Control
 var _title: Node3D
 ## Rolling comms log (view-only), shared with the station's Traffic tab.
@@ -250,6 +254,7 @@ func _handle_events() -> void:
 				var line: Dictionary = sim.data.places[d["line"]]["elevator"]
 				notice("On %s for %s: %s. Fare %s." % [line["name"], sim.data.places[d["to"]]["name"], UI.duration(float(d["hours"]) * 3600.0), UI.money(float(d["fare"]))], UI.AMBER)
 			"elevator_arrived":
+				play_sfx("dock_clunk", -8.0)
 				if d["down"]:
 					notice("At %s. Your ship waits at %s." % [sim.data.places[d["place"]]["name"], sim.data.places[sim.data.places[d["place"]]["foot_of"]]["name"]], UI.GOOD)
 				else:
@@ -329,6 +334,7 @@ func _handle_events() -> void:
 					notice("The tug brought you in on credit. You owe %s; sell cargo to clear it." % UI.money(-sim.state.credits), UI.WARN)
 				else:
 					notice("Docked at %s%s" % [sim.data.places[d["place"]]["name"], "  (hand-flown, no fee)" if d["manual"] else ""], UI.GOOD)
+				play_sfx("dock_clunk", -2.0)
 	if refresh and _screen is StationScreen and is_instance_valid(_screen):
 		_screen.refresh()
 
@@ -384,6 +390,66 @@ func show_controls() -> void:
 	add_child(_controls)
 
 
+## Ambience for where you are, and one-shots that outlive a scene (a docking clunk
+## as the station screen comes up).
+func _sound_for(mode: String) -> void:
+	if _ambience == null:
+		_ambience = AudioStreamPlayer.new()
+		add_child(_ambience)
+		_cabin = AudioStreamPlayer.new()
+		_cabin.stream = load("res://assets/audio/cabin_loop.wav")
+		add_child(_cabin)
+	if not ShipAudio.audible():
+		return
+	var sound := ""
+	var db := -12.0
+	match mode:
+		"docked":
+			sound = "station_loop"
+		"on_site":
+			sound = "pump_loop"
+			db = -20.0
+		"elevator":
+			sound = "climber_loop"
+			db = -9.0
+	if sound == "":
+		_ambience.stop()
+	elif _ambience.stream == null or _ambience.stream.resource_path != "res://assets/audio/%s.wav" % sound or not _ambience.playing:
+		_ambience.stream = load("res://assets/audio/%s.wav" % sound)
+		_ambience.volume_db = db
+		_ambience.play()
+	# Inside a pressurised room (station, town, climber cab), the air moves.
+	if mode in ["docked", "on_site", "elevator"]:
+		if not _cabin.playing:
+			_cabin.volume_db = -24.0
+			_cabin.play()
+	else:
+		_cabin.stop()
+
+
+## Quit, but stop every sound first and let a frame pass: a sound still playing at
+## quit leaves its playback behind.
+func _quit(code: int = 0) -> void:
+	for p in get_tree().root.find_children("*", "AudioStreamPlayer", true, false) + get_tree().root.find_children("*", "AudioStreamPlayer3D", true, false):
+		p.stop()
+		p.stream = null
+	if is_instance_valid(_screen):
+		_screen.queue_free()
+	await get_tree().process_frame
+	get_tree().quit(code)
+
+
+func play_sfx(sound: String, db: float = -4.0) -> void:
+	if not ShipAudio.audible():
+		return
+	var p := AudioStreamPlayer.new()
+	p.stream = load("res://assets/audio/%s.wav" % sound)
+	p.volume_db = db
+	add_child(p)
+	p.finished.connect(p.queue_free)
+	p.play()
+
+
 func _sync_mode() -> void:
 	var mode: String = sim.state.location.get("status", "docked")
 	if mode == _mode:
@@ -393,6 +459,7 @@ func _sync_mode() -> void:
 		_mode = mode
 		return
 	_mode = mode
+	_sound_for(mode)
 	preload("res://view/flight/sky.gd").set_eclipse(Vector3.UP)
 	if _screen:
 		_screen.queue_free()
@@ -435,6 +502,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			var scales: Array = sim.data.balance["time"]["scales"]
 			var i := scales.find(sim.state.time_scale) + (1 if event.keycode == KEY_BRACKETRIGHT else -1)
 			sim.apply({"type": "set_time_scale", "scale": scales[clampi(i, 0, scales.size() - 1)]})
+		KEY_F2:
+			var muted := not AudioServer.is_bus_mute(0)
+			AudioServer.set_bus_mute(0, muted)
+			notice("Sound off." if muted else "Sound on.", UI.DIM)
 		KEY_F5:
 			notice("Saved." if SaveIO.save(sim.state, QUICKSAVE) == OK else "Save failed.", UI.GOOD)
 		KEY_F9:
@@ -487,7 +558,7 @@ func _smoke() -> void:
 	await get_tree().process_frame
 	ok = ok and _screen is StationScreen
 	print("SMOKE_OK " if ok else "SMOKE_FAIL ", sim.state.date_string())
-	get_tree().quit(0 if ok else 1)
+	_quit(0 if ok else 1)
 
 
 ## Headless: fly the autopilot from the real approach spawn at every station, using
@@ -514,7 +585,7 @@ func _dock_trial() -> void:
 		print("DOCK_TRIAL %-16s docked=%s time=%5.0f s refusals=%d contacts=%d" % [place, ok, steps / 60.0, flight.refusals, flight.bumps])
 		sim.state.location = {"status": "docked", "place": place}
 	print("DOCK_TRIAL_OK" if all_ok else "DOCK_TRIAL_FAIL")
-	get_tree().quit(0 if all_ok else 1)
+	_quit(0 if all_ok else 1)
 
 
 ## Windowed screenshot tour for visual checks: station, map, flight.
@@ -633,7 +704,7 @@ func _tour(dir: String) -> void:
 	for _i in 10:
 		await get_tree().process_frame
 	_shot(dir + "/6-flight-chase.png")
-	get_tree().quit()
+	_quit()
 
 
 ## Windowed: every attract-screen shot, captured mid-shot.
@@ -649,7 +720,7 @@ func _title_tour(dir: String) -> void:
 		for _i in 30:
 			await get_tree().process_frame
 		_shot("%s/%s.png" % [dir, shot])
-	get_tree().quit()
+	_quit()
 
 
 ## Windowed: a descent onto Eros and Psyche on autopilot, captured on the way down.
@@ -674,7 +745,7 @@ func _landing_tour(dir: String) -> void:
 		_shot("%s/%s-down.png" % [dir, site])
 		print("LANDING %s landed=%s fuel=%.0f" % [site, lander.landed, lander.fuel])
 		lander.queue_free()
-	get_tree().quit()
+	_quit()
 
 
 ## Windowed: on site at the derelict Ishikawa Maru and at Eros, before and during work.
@@ -700,7 +771,7 @@ func _site_tour(dir: String) -> void:
 		sim.advance_game_time(float(sim.data.sites[site]["activities"][act]["days"]) * 86400.0)
 		_handle_events()
 		_mode = ""
-	get_tree().quit()
+	_quit()
 
 
 ## Windowed: refit for the long haul (tanks in the cargo bays), plot Halo Depot to Ares
@@ -721,7 +792,7 @@ func _voyage_tour(dir: String) -> void:
 	var err: String = sim.apply({"type": "depart", "to": "ares_ring", "route": options[0]["id"], "plan_t": t})
 	if err != "":
 		print("VOYAGE depart failed: ", err)
-		get_tree().quit(1)
+		_quit(1)
 		return
 	_sync_mode()
 	var loc: Dictionary = s.location
@@ -738,7 +809,7 @@ func _voyage_tour(dir: String) -> void:
 	for _i in 60:
 		await get_tree().process_frame
 	_shot(dir + "/4-approach.png")
-	get_tree().quit()
+	_quit()
 
 
 ## Windowed: plot Kibo Ring to Farside, take the lowest lunar flyby, and capture the
@@ -755,7 +826,7 @@ func _flyby_tour(dir: String) -> void:
 			pick = o
 	if pick.is_empty():
 		print("FLYBY_TOUR no flyby route")
-		get_tree().quit(1)
+		_quit(1)
 		return
 	print("FLYBY_TOUR route %s, periapsis %.0f km" % [pick["label"], float(pick["peri_alt"]) / 1000.0])
 	sim.apply({"type": "depart", "to": "farside_array", "route": pick["id"], "plan_t": t})
@@ -769,7 +840,7 @@ func _flyby_tour(dir: String) -> void:
 		for _i in 90:
 			await get_tree().process_frame
 		_shot("%s/%s.png" % [dir, shot[2]])
-	get_tree().quit()
+	_quit()
 
 
 ## Windowed: an approach at every place, cockpit and wide shots, to check set pieces.
@@ -815,7 +886,7 @@ func _gallery(dir: String) -> void:
 			for _i in 60:
 				await get_tree().process_frame
 			_shot("%s/%s-%s.png" % [dir, place, pass_name])
-	get_tree().quit()
+	_quit()
 
 
 ## Windowed: the ship view in transit, Kibo Ring to Halo Depot. Every director set-up
@@ -830,7 +901,7 @@ func _shipcam_tour(dir: String) -> void:
 	var err: String = sim.apply({"type": "depart", "to": "halo_depot"})
 	if err != "":
 		print("SHIPCAM_FAIL ", err)
-		get_tree().quit()
+		_quit()
 		return
 	_handle_events()
 	_sync_mode()
@@ -901,7 +972,7 @@ func _shipcam_tour(dir: String) -> void:
 	for _i in 6:
 		await get_tree().process_frame
 	_shot("%s/free-far.png" % dir)
-	get_tree().quit()
+	_quit()
 
 
 ## Windowed: stills for the game's store page. Every title set-up without its
@@ -1002,7 +1073,7 @@ func _promo(dir: String) -> void:
 		await get_tree().process_frame
 	_shot("%s/play-map.png" % dir)
 	await _promo_ship(dir, false)
-	get_tree().quit()
+	_quit()
 
 
 ## Store-page stills from the ship view: Kibo Ring to Halo Depot, then a deep
@@ -1068,7 +1139,7 @@ func _promo_ship(dir: String, quit_after: bool) -> void:
 			await get_tree().process_frame
 		_shot("%s/ship-hud-%s-%s.png" % [dir, trip[0], trip[1]])
 	if quit_after:
-		get_tree().quit()
+		_quit()
 
 
 ## Windowed: at Psyche Claims, nudge into a rock at 5 m/s (damage, sparks), then hit
@@ -1121,7 +1192,7 @@ func _crash_tour(dir: String) -> void:
 		await get_tree().process_frame
 	_shot("%s/4-wreck-later.png" % dir)
 	print("CRASH wrecked=%s status=%s" % [flight.wrecked, sim.state.location.get("status", "?")])
-	get_tree().quit()
+	_quit()
 
 
 ## Windowed: ride each elevator down, shooting the cab view on the way and the town at
@@ -1168,7 +1239,7 @@ func _ride_tour(dir: String) -> void:
 			await get_tree().process_frame
 		_shot("%s/%s-foot-departures.png" % [dir, anchor])
 		print("RIDE_OK %s -> %s (%s)" % [anchor, sim.state.location.get("place", "?"), sim.state.location.get("status", "?")])
-	get_tree().quit()
+	_quit()
 
 
 func _shot(path: String) -> void:

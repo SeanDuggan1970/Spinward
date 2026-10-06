@@ -19,6 +19,7 @@ const Autopilot := preload("res://view/flight/autopilot.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
 const ProjectSystem := preload("res://sim/systems/project_system.gd")
 const DamageSystem := preload("res://sim/systems/damage_system.gd")
+const ShipAudio := preload("res://view/audio/ship_audio.gd")
 
 const ASSIST_MODES := ["full", "assisted", "manual"]
 const SKY_DISTANCE := 60000.0
@@ -82,6 +83,9 @@ var control_override: Dictionary = {}
 ## Live readouts for the HUD.
 var readout := {}
 
+## The ship's sounds, heard from the crew section.
+var audio: ShipAudio
+var _last_ang := Vector3.ZERO
 ## Drifting rocks on this approach: [{node, r, vel, spin, mass_t}].
 var _rocks: Array = []
 ## Fixed obstacles from the set pieces: spheres [{pos, r}] and rings [{xform, R, r}].
@@ -121,6 +125,9 @@ func _ready() -> void:
 	_drive_plume = ship_node.find_child("DrivePlume", true, false)
 	_rig = model["rig"]
 	add_child(ship_node)
+	audio = ShipAudio.new()
+	ship_node.add_child(audio)
+	audio.setup(model)
 	# Start out on the approach axis with a deterministic offset per station.
 	var h := hash(place_id)
 	var off := float(tune_dock["spawn_offset_m"])
@@ -275,6 +282,12 @@ func _physics_process(dt: float) -> void:
 	ShipRig.aim(_rig, ship_node.global_basis, body_dirs["sun"], -ship_node.global_position, dt)
 	_move_rocks(dt)
 	_fly(dt)
+	var c := read_controls()
+	var push: Vector3 = c["thrust"]
+	audio.update(dt, {"thrust": (1.0 if c["boost"] else 0.45) if push.z < 0.0 else 0.0,
+		"move": Vector3(push.x, push.y, maxf(push.z, 0.0)) + (Vector3(0, 0, 1) if c["brake"] and velocity.length() > 0.05 else Vector3.ZERO),
+		"spin": c["stick"] + (ang_vel - _last_ang) * 4.0 if assist != "manual" else c["stick"], "turn": ang_vel.length()})
+	_last_ang = ang_vel
 	_collide()
 	_collide_world()
 	if wrecked:
@@ -284,6 +297,7 @@ func _physics_process(dt: float) -> void:
 	if ahead < 6.0 and clock > _warned_until:
 		_warned_until = clock + 3.0
 		flash("PROXIMITY  ·  rock on your course, %.1f s" % ahead, UI.WARN, 2.0)
+		audio.beep()
 	_check_docking()
 	_update_camera(dt)
 	if _shake > 0.0:
@@ -419,6 +433,7 @@ func _bounce(normal: Vector3, depth: float, harmless: bool = false) -> void:
 		if harmless:
 			bumps += 1
 			flash("CONTACT  %.1f m/s" % -vn, UI.WARN, 2.0)
+			audio.impact(-vn, Vector3(0, 0, nose_z))
 		else:
 			_hit(-vn, 1.0, ship_node.position - normal * ship_radius)
 
@@ -789,6 +804,7 @@ func _hit(speed: float, share: float, point: Vector3) -> void:
 	if speed <= safe:
 		bumps += 1
 		flash("CONTACT  %.1f m/s" % speed, UI.WARN, 2.0)
+		audio.impact(speed, ship_node.global_transform.affine_inverse() * point)
 		return
 	if clock - _last_hit < 0.3:
 		return
@@ -803,6 +819,9 @@ func _hit(speed: float, share: float, point: Vector3) -> void:
 	elif f > 0.7:
 		zone = "tail"
 	sim.apply({"type": "impact", "speed": speed, "share": share, "zone": zone, "seed": int(clock * 1000.0) + bumps})
+	audio.impact(speed, lp)
+	if DamageSystem.integrity(sim.state.ship) < 0.5:
+		audio.alarm(true)
 	bumps += 1
 	_shake = minf(1.0, speed / 6.0)
 	for k in int(clampf(speed * 3.0, 4.0, 24.0)):
@@ -854,6 +873,7 @@ func _wreck() -> void:
 	pod.add_child(Kit.beacon(Color("ff3a2a"), Vector3(0, 1.3, 0), 0.3, 0.8))
 	add_child(pod)
 	_fx.append({"node": pod, "until": clock + 600.0, "vel": velocity * 0.5 + (Vector3(0, 0, 1) - at.normalized() * 0.2).normalized() * 4.0})
+	audio.wreck(Vector3.ZERO)
 	ship_node.visible = false
 	_wreck_cam = at + Vector3(0, ship_radius * 4.0, ship_radius * 10.0)
 	flash("KEEL FAILURE  ·  ABANDON SHIP  ·  the lifeboat is away", UI.WARN, 20.0)

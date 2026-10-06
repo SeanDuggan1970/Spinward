@@ -14,6 +14,7 @@ const OrbitHud := preload("res://view/orbit_hud.gd")
 const FollowView := preload("res://view/follow_view.gd")
 const FollowHud := preload("res://view/follow_hud.gd")
 const VIEWS := ["ship", "orbit", "cockpit", "map"]
+const TransitAudio := preload("res://view/audio/transit_audio.gd")
 
 var sim
 var view_name := "orbit"
@@ -59,6 +60,7 @@ func _ready() -> void:
 	for op in SystemMap.FLEET_COLOURS:
 		legend[1].add_child(UI.label("o  " + op, SystemMap.FLEET_COLOURS[op], 12))
 	set_view(sim.data.balance["flight"].get("transit_view", "ship"))
+	add_child(TransitAudio.new(sim))
 
 
 func set_view(name: String) -> void:

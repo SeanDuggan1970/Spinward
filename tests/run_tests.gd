@@ -71,6 +71,7 @@ func _initialize() -> void:
 	test_minds_and_sails()
 	test_elevators()
 	test_damage()
+	test_ship_audio()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -1234,3 +1235,37 @@ func test_damage() -> void:
 	var off: Array = d.places["tsiolkovsky_wheel"]["location"]["offset_km"]
 	check(absf(V.distance(wheel, yards) - 1000.0 * Vector3(off[0], off[1], off[2]).length()) < 50.0, "The Wheel stands off Trojan Yards where its data says")
 	check(d.bodies["moon"]["structures"].any(func(st): return st["kind"] == "orbital_ring"), "The Moon can have a ring")
+
+
+## Ship sounds (view, headless): sources on the hardware, the listener in the cabin,
+## the drive lighting up, jets firing on a turn, motors whining as hinges move.
+func test_ship_audio() -> void:
+	var sim := fresh()
+	var Models = load("res://view/flight/models.gd")
+	var ShipAudioScript = load("res://view/audio/ship_audio.gd")
+	var model: Dictionary = Models.ship(sim.state.ship, sim.data)
+	var root: Node3D = model["node"]
+	get_root().add_child(root)
+	var audio = ShipAudioScript.new()
+	root.add_child(audio)
+	audio.setup(model)
+	check(not model["rig"]["rcs"].is_empty() and audio._jets.size() == model["rig"]["rcs"].size(), "Every jet cluster on the model has a sound")
+	check(audio._motors.size() >= model["rig"]["arrays"].size(), "Every panel hinge has a motor to hear")
+	check(audio.listener.position.z < audio._drive_at.z - 10.0, "The listener sits in the crew section, well forward of the drive")
+	for _k in 30:
+		audio.update(1.0 / 30.0, {"thrust": 1.0, "spin": Vector3(0, 1, 0), "turn": 0.6})
+	check(audio._drive_on and audio._drive_level > 0.5, "The drive lights and builds to a roar")
+	check(int(audio.sounds_played) >= 4, "A turn fires the jets and the frame creaks (%d sounds)" % int(audio.sounds_played))
+	var panel: Node3D = model["rig"]["arrays"][0]["node"]
+	for _k in 10:
+		panel.rotation.x += 0.03
+		audio.update(1.0 / 30.0, {"thrust": 1.0})
+	check(float(audio._motors[0]["level"]) > 0.3, "A turning panel's motor whines")
+	for _k in 60:
+		audio.update(1.0 / 30.0, {"thrust": 0.0})
+	check(not audio._drive_on and audio._drive_level < 0.05, "Cut-off: the drive winds down")
+	if root.get_parent():
+		root.get_parent().remove_child(root)
+	root.free()
+	# The kit caches materials in statics; let them go before the test run exits.
+	load("res://view/flight/kit.gd")._materials.clear()

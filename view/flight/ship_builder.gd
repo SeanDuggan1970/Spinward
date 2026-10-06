@@ -30,7 +30,7 @@ static func build(ship_state: Dictionary, data, livery: Dictionary) -> Dictionar
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(String(livery.get("name", "")) + "|" + String(ship_state["hull"]))
 	var by_kind := _modules_by_kind(ship_state["modules"], data)
-	var rig := {"arrays": [], "dish": {}}
+	var rig := {"arrays": [], "dish": {}, "rcs": []}
 	var ctx := {"livery": livery, "mats": livery["mats"], "rng": rng, "look": look, "truss_w": truss_w, "rig": rig}
 
 	var parts := Node3D.new()
@@ -194,6 +194,7 @@ static func solar_cells(ctx: Dictionary) -> Material:
 static func rcs(at: Vector3, outward: Vector3, ctx: Dictionary) -> Node3D:
 	var n := Node3D.new()
 	n.position = at
+	ctx["rig"]["rcs"].append({"node": n, "outward": outward.normalized()})
 	n.add_child(Kit.box(Vector3(0.4, 0.4, 0.4), ctx["mats"]["dark"]))
 	var side := outward.normalized()
 	var a := side.cross(Vector3.FORWARD if absf(side.z) < 0.9 else Vector3.UP).normalized()

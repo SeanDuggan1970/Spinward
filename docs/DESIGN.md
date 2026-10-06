@@ -627,6 +627,38 @@ Sean's direction (2026-10-06): a follow camera with mouse control while the ship
 - **Lighting:** a soft fill light rides with the camera, so the design reads on the night side. Sky worlds no longer receive ship shadows.
 - **Capture:** `--shipcam=<dir>` shoots every set-up at the moments it suits (leaving, burning, coasting, arriving), and tests real mouse input.
 
+## Sound: heard through the hull (Oct 2026)
+
+Sean's direction (2026-10-06):
+- ambient ship noises
+- the distant rumble of engines through the structure
+- the structure as the ship rotates to the burn vector
+- manoeuvring jets vibrating through the frame
+- air pumps, and the motors turning radiators, panels and dishes
+- positional, by distance from the crew section
+
+- **Synthesised, not recorded** (`tools/make_sounds.py` writes `assets/audio/`, 16-bit mono 32 kHz; Godot imports it as QOA):
+  - noise shaped in the frequency domain, so loops repeat seamlessly and carry WAV loop points
+  - inharmonic metal modes, stick-slip friction trains for creaks, and sagging-pitch thumps for knocks
+  - the result is dark and structure-borne, because in vacuum nothing reaches the crew but what comes through the frame
+- **Heard from the crew section** (`view/audio/ship_audio.gd`): the AudioListener3D sits in the cabin whichever camera is in use, and each source sits on its hardware:
+  - the drive at the stern: a rumble, with ignition and cut-off
+  - each jet cluster (marked by ship_builder in `rig.rcs`): a knock and a valve snap per pulse, firing the clusters that push the way you asked or give the torque
+  - a motor at every panel hinge and on the dish's two axes: a servo whine that follows how fast the hinge is turning
+  - the pumps behind the cabin, and the cabin air around you
+  - the frame: creaks and groans as strain builds from turning, changes of turn and the drive's load
+  - knocks and crunches on impact, the alarm, the proximity beep, and the wreck
+- **Distance from the cabin** makes a source quieter (inverse distance) and duller (a low-pass that closes with distance). A deep freighter's drive is a long way back.
+- **The "Hull" bus** adds a short metallic ring and rolls off the highs.
+- **In transit** (`view/audio/transit_audio.gd`), a hidden copy of your ship carries the sound under every view (ship, orbit, cockpit, map). It turns to its burn attitude at the views' rate (creaks and attitude jets while it swings), burns when the plan does, and tracks the Sun and destination with its panels and dish (motors).
+- **Places:**
+  - docked: the station's hum and distant clanks, with the docking clamps and pressure hiss as you come in
+  - in a town or on a site: the pumps and air
+  - riding an elevator: traction wheels over the ribbon's joints
+- **Controls:** F2 turns sound on and off.
+- **Headless runs** (tests, smoke, docking trial) build every source but play nothing, as there's no audio device. Quits stop all sound first, so nothing is left registered with the audio server.
+- **Listening demo:** `tools/make_sound_demo.py` mixes about a minute of a ship's day offline into `build/ship-sounds-demo.wav`, for auditioning without the game.
+
 ## Milestones
 
 - **M0 – Foundation:** done.
