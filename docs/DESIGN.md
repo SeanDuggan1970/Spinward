@@ -293,6 +293,16 @@ Touchstone: the Eagle Transporter from *Space: 1999*, with ships that look built
 - **Wear and history:** scuffs, sun-bleaching, replaced mismatched panels, patch repairs. Older ships look older, and a second-hand starter ship looks second-hand.
 - **Lighting:** hard, single-source sunlight with deep shadows. Working lights, floodlights and blinking navigation beacons. Interiors are cramped and lit by instruments.
 - **Stations and habitats** follow the same logic: assembled from modules, under construction at the edges, with scaffolding and cranes. Your own base visibly grows through its stages.
+  - **Detail** (`view/flight/station_detail.gd`, the same kit as the ships). A spinning station is two machines.
+  - **The rotor** spins and holds everything crewed:
+    - **Hub:** frames, and a band of control-room windows just aft of the docking face.
+    - **Docking face:** radial ribs and a ring, floodlights trained on the port, two EVA hatches with handrails out to them, access panels, and latch blocks on a bolted flange round the port.
+    - **Spokes:** lift tubes inside the trusses, with collars and a lift head where each meets the ring.
+    - **Ring:** frames round the tube, running lights on the rim, and two decks of framed windows on each face, four to a bay.
+  - **The despun assembly** is held still on a bearing on the axis astern, so dishes keep their link and arrays face the Sun while the rest turns. It carries a truss mast, radiators edge-on, two solar wings of framed cell blankets, and a comm farm at the tip: one big dish, two small ones, whip aerials and a strobe.
+  - **The Stanford torus:** its 30 m window panes are framed, and its mirror has a rim, a ribbed back and a mast from the hub.
+  - **Kalpana One:** the drum's cap windows are framed glass, its docking nub has a dressed face, and it has a comm farm astern of its fins.
+  - **Draw calls:** both halves are merged per material, so a station costs a few dozen draw calls. The docking guide lights stay separate, since the docking computer recolours them.
 - **Transit cockpit:** the view from the ship's true position on its transfer. It accelerates along the track, flips at the midpoint and brakes facing back the way it came. There's free look and a telescope, and the system map is on M.
 - **Cockpit** (`view/flight/flight_deck.gd`, `view/ui/avionics.gd`, `view/ui/cockpit_pages.gd`): the flight deck of a working hauler, first-person by default. It is a glass cockpit for a crew who have systems to watch, not a fighter's HUD.
   - **The deck is real geometry** round the pilot's eye: a windscreen header and two pillars with rescue-orange grab handles, an anti-glare coaming, the glareshield, and an instrument panel with three displays in bezels with soft keys. The Sun falls across it as the ship turns. A warm flood under the glareshield and the displays' own glow keep the shadow side readable. The head sways a few centimetres against the deck under thrust and in a knock, which gives parallax. In transit, free look turns the head inside the deck. The deck is built from where each edge should sit in the view, so it holds at any window size, and it is rebuilt for a new aspect. The pilot sits looking 10° down, so the nose axis (the gull-wing boresight) is in the middle of the windscreen, not the middle of the screen.

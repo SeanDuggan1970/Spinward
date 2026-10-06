@@ -138,9 +138,11 @@ static func _dish_face(mats: Dictionary, r: float) -> ShaderMaterial:
 
 ## A framed window facing +Y, `w` across (X) by `l` along (Z). The pane sits a little
 ## back in its frame, behind a black gasket, with a raised bezel bolted all round.
-static func window(w: float, l: float, mats: Dictionary, frame: Material, warmth: float = 0.45, coating: float = 0.0) -> Node3D:
+## frame_w sets the bezel's width (else it follows the pane, 5 to 12 cm); a station's
+## windows leave the bolts off (`bolts`), too small to see at that scale.
+static func window(w: float, l: float, mats: Dictionary, frame: Material, warmth: float = 0.45, coating: float = 0.0, frame_w: float = -1.0, bolts: bool = true) -> Node3D:
 	var n := Node3D.new()
-	var fw := clampf(minf(w, l) * 0.12, 0.05, 0.12)
+	var fw := frame_w if frame_w > 0.0 else clampf(minf(w, l) * 0.12, 0.05, 0.12)
 	var fh := fw * 0.75
 	var g := fw * 0.3
 	n.add_child(Kit.box(Vector3(w, 0.03, l), glass(mats, warmth, coating), Vector3(0, -0.01, 0)))
@@ -153,6 +155,8 @@ static func window(w: float, l: float, mats: Dictionary, frame: Material, warmth
 	for s in [-1.0, 1.0]:
 		n.add_child(Kit.box(Vector3(ow + fw * 2.0, fh, fw), frame, Vector3(0, fh * 0.5, s * (ol + fw) * 0.5)))
 		n.add_child(Kit.box(Vector3(fw, fh, ol), frame, Vector3(s * (ow + fw) * 0.5, fh * 0.5, 0)))
+	if not bolts:
+		return n
 	# Bolts down the middle of the bezel, about every 20 cm.
 	var bolt: Material = Kit.mat("steel")
 	var b := fw * 0.3

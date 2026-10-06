@@ -94,7 +94,40 @@ func _run() -> void:
 		get_viewport().get_texture().get_image().save_png("%s/%s.png" % [dir, shot[0]])
 		print("SHOT ", shot[0])
 	await _ships()
+	await _stations()
 	get_tree().quit()
+
+
+## Stations close up: one of each build (wheels large and small, the Stanford torus,
+## the settlement drum), from off the quarter, at the port, along the ring and from
+## astern. Prefixed "station-".
+func _stations() -> void:
+	var sun_dir := Vector3(0.6, 0.5, 0.6).normalized()
+	_sun.look_at_from_position(Vector3.ZERO, -sun_dir, Vector3.UP)
+	_camera.far = 20000.0
+	for place in ["kibo_ring", "trojan_yards", "halo_depot", "kalpana_one", "tsiolkovsky_wheel"]:
+		var geom: Dictionary = data.places[place]["station"]
+		var st := Models.station(geom, data.places[place]["name"], Livery.for_station(data, place))
+		var node: Node3D = st["node"]
+		add_child(node)
+		var rr := maxf(float(st["ring_radius"]), float(st["hub_radius"]))
+		var rh := float(st["hub_radius"])
+		var lh := float(st["hub_length"])
+		var pz := float(st["port_z"])
+		var rt := maxf(float(st["ring_tube"]), 1.0)
+		var views := {
+			"": [Vector3(rr * 1.3, rr * 0.6, rr * 1.5 + lh), Vector3(0, 0, 0)],
+			"-port": [Vector3(rh * 1.1, rh * 0.7, pz + rh * 1.6 + 12.0), Vector3(0, 0, pz - rh * 0.3)],
+			"-ring": [Vector3(rr * 0.92, rt * 2.2, rt * 4.5), Vector3(rr * 0.75, rr * 0.35, 0)],
+			"-aft": [Vector3(-rr * 0.7, rr * 0.4, -lh * 0.5 - rr * 0.9 - 60.0), Vector3(0, 0, -lh * 0.5 - 20.0)],
+		}
+		for v in views:
+			_camera.look_at_from_position(views[v][0], views[v][1], Vector3.UP)
+			for _i in 4:
+				await get_tree().process_frame
+			get_viewport().get_texture().get_image().save_png("%s/station-%s%s.png" % [dir, place, v])
+		print("SHOT station %s" % place)
+		node.queue_free()
 
 
 func _ships() -> void:
