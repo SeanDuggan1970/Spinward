@@ -653,18 +653,20 @@ static func _propulsion(tanks: Array, drives: Array, radiators: Array, ctx: Dict
 		if dm["look"].get("shape", "") in ["sail", "climber"]:
 			continue
 		plumes.add_child(_plume(dm, ds, offsets[k] + Vector3(0, 0, z), float(ctx["livery"].get("seed", 0.0)) + 3.7 * k))
-		stern += offsets[k] + Vector3(0, 0, z + float(_nozzle(dm, ds)["z_e"]))
+		var nzk := _nozzle(dm, ds)
+		stern += offsets[k] + Vector3(0, 0, z + float(nzk["z_t"]) + float(nzk["lb"]) * 0.3)
 		lit += 1
 	if lit > 0:
-		# The plasma lights the stern a little: the lip, the thrust frame, the radiators.
+		# The plasma lights the stern a little. The light sits up in the bell, where the
+		# jet is brightest, so it lights the bell's inside and not the lip's face.
 		var glow := OmniLight3D.new()
 		glow.light_color = Color("b8b0ff")
-		glow.light_energy = 1.2
-		glow.set_meta("energy", 1.2)
+		glow.light_energy = 0.7
+		glow.set_meta("energy", 0.7)
 		glow.omni_range = 6.0 + spread * 2.0 + drive_r * 3.0
-		glow.omni_attenuation = 1.5
+		glow.omni_attenuation = 2.0
 		glow.shadow_enabled = false
-		glow.position = stern / float(lit) + Vector3(0, 0, drive_r * 0.6)
+		glow.position = stern / float(lit)
 		plumes.add_child(glow)
 	n.add_child(plumes)
 	radius = maxf(radius, shield_r)
@@ -824,7 +826,7 @@ static func _nozzle_hardware(m: Dictionary, s: Vector3, ctx: Dictionary, index: 
 	n.add_child(Kit.lathe(_ring(c[0].x - 0.05, r + 0.15, reactor_len - 0.12, reactor_len + 0.04), mats["steel"], 28))
 	# Lip stiffener, and two stiffening bands on the skirt.
 	var lip_r := _bell_r(outer, z_e - 0.1)
-	n.add_child(Kit.lathe(_ring(lip_r - 0.01, lip_r + 0.06, z_e - 0.16, z_e), mats["steel"], 40))
+	n.add_child(Kit.lathe(_ring(lip_r - 0.01, lip_r + 0.06, z_e - 0.16, z_e - 0.01), mats["dark"], 40))
 	var joint_z := z_t + lb * float(nz["joint"])
 	for f in [0.42, 0.75]:
 		var bz := lerpf(joint_z, z_e, f)
@@ -954,6 +956,7 @@ static func _plume(m: Dictionary, s: Vector3, at: Vector3, seed: float) -> Node3
 		in_mat.set_shader_parameter(k, base[k])
 	in_mat.set_shader_parameter("z_from", bound[0].y)
 	in_mat.set_shader_parameter("z_to", lb)
+	in_mat.set_shader_parameter("r_from", re)
 	in_mat.set_shader_parameter("r_bound", re)
 	var inner_vol := Kit.lathe([bound], in_mat, 28, Vector3(0, 0, z_t))
 	inner_vol.set_meta("brightness", 1.6)
@@ -964,7 +967,9 @@ static func _plume(m: Dictionary, s: Vector3, at: Vector3, seed: float) -> Node3
 	var out_mat := in_mat.duplicate() as ShaderMaterial
 	out_mat.set_shader_parameter("z_from", lb)
 	out_mat.set_shader_parameter("z_to", lb + plume_len)
+	out_mat.set_shader_parameter("r_from", re * 0.97)
 	out_mat.set_shader_parameter("r_bound", w_end * 1.8)
+	out_mat.set_shader_parameter("end_fade", plume_len * 0.35)
 	var outer_vol := Kit.lathe([free], out_mat, 28, Vector3(0, 0, z_t))
 	outer_vol.set_meta("brightness", 1.6)
 	n.add_child(outer_vol)

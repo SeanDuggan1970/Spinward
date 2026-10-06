@@ -22,10 +22,13 @@ uniform float lb = 3.2;
 // Spread of the free jet (tan of its half-angle) and the length over which it cools.
 uniform float spread = 0.14;
 uniform float fade = 12.0;
-// The slab of z this bound covers, and its widest radius.
+// The slab of z this bound covers, its radius at each end, and how far before z_to
+// the glow fades out (0: it doesn't; the bell's bound hands over to the free jet's).
 uniform float z_from = 0.0;
 uniform float z_to = 3.2;
+uniform float r_from = 2.0;
 uniform float r_bound = 2.0;
+uniform float end_fade = 0.0;
 uniform float brightness = 1.0;
 uniform vec3 core : source_color = vec3(0.78, 0.86, 1.0);
 uniform vec3 body : source_color = vec3(0.46, 0.42, 1.0);
@@ -70,7 +73,31 @@ void fragment() {
 		}
 	}
 	t_near = min(t_near, t_far);
-	const int STEPS = 24;
+	// Then clip to where the ray can meet the jet at all (within two widths of the
+	// axis; the jet only widens aft, so the wider end of the interval bounds it).
+	// Most rays through the bound miss the jet by metres: they cost nothing, and the
+	// samples go where the glow is.
+	if (a > 1e-8) {
+		float tc = -dot(ro.xy, rd.xy) / a;
+		vec2 off = ro.xy + rd.xy * tc;
+		float dc2 = dot(off, off);
+		for (int k = 0; k < 2; k++) {
+			float wb = 2.0 * jet_w(max(max(ro.z + rd.z * t_near, ro.z + rd.z * t_far), 0.0));
+			float span2 = wb * wb - dc2;
+			if (span2 <= 0.0) {
+				discard;
+			}
+			float h = sqrt(span2 / a);
+			t_near = max(t_near, tc - h);
+			t_far = min(t_far, tc + h);
+		}
+		if (t_far <= t_near) {
+			discard;
+		}
+	}
+	// Few samples: the web build is single-threaded. The jet is smooth and the
+	// samples are jittered, so a dozen is plenty.
+	const int STEPS = 12;
 	float dt = (t_far - t_near) / float(STEPS);
 	// Jitter the samples per pixel so the steps never band.
 	// (interleaved gradient noise: an even grain the eye reads as smooth).
@@ -85,18 +112,28 @@ void fragment() {
 		}
 		float w = jet_w(max(z, 0.0));
 		float q = length(p.xy) / w;
-		if (q > 2.0) {
+		// Exactly nothing at the bound, round the side and at the far end, so its
+		// outline never shows from any angle.
+		float r_edge = mix(r_from, r_bound, clamp((z - z_from) / max(z_to - z_from, 1e-3), 0.0, 1.0));
+		float edge = 1.0 - smoothstep(0.6, 1.0, length(p.xy) / r_edge);
+		if (end_fade > 0.0) {
+			edge *= 1.0 - smoothstep(z_to - end_fade, z_to, z);
+		}
+		if (q > 2.0 || edge <= 0.0) {
 			continue;  // past the jet's soft edge: nothing to add, skip the noise
 		}
 		// Flux is conserved, so density goes as 1/width^2; it glows less as it cools.
 		// (A little gentler than that, so the free jet carries: a liberty for the eye.)
-		float dens = pow(rt / w, 1.7) * exp(-z / fade) * smoothstep(-rt * 1.5, 0.0, z);
-		float shape = exp(-3.0 * q * q);
-		float filament = exp(-22.0 * q * q);
+		// It lights up just past the throat, where the field takes hold, so the throat
+		// lip never cuts a hard edge across the brightest part.
+		float dens = pow(rt / w, 1.7) * exp(-z / fade) * smoothstep(-rt * 0.4, rt * 0.6, z) * edge;
+		// Both Gaussians reach exactly zero at q = 2.
+		float shape = max(exp(-3.0 * q * q) - exp(-12.0), 0.0);
+		float filament = max(exp(-9.0 * q * q) - exp(-36.0), 0.0);
 		// Faint turbulent striations streaming aft.
 		vec2 around = p.xy / w;
 		float n = sw_vnoise(vec3(around * 2.2 + seed, z / (w * 1.5) - TIME * 3.0));
-		float d = dens * (shape * (0.6 + 0.8 * n) + filament * 1.6);
+		float d = dens * (shape * (0.6 + 0.8 * n) + filament * 1.2);
 		vec3 col = mix(tail, body, smoothstep(0.004, 0.05, dens));
 		col = mix(col, core, smoothstep(0.08, 0.6, dens * (shape + filament)));
 		glow += col * d * dt;
