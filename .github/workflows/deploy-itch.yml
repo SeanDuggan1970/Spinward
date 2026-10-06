@@ -1,0 +1,98 @@
+name: Deploy web build to itch.io
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: spinward-itch-html5
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install pinned Godot editor
+        run: ./tools/setup.ps1
+
+      - name: Validate game
+        run: ./tools/validate.ps1
+
+      - name: Install matching web export templates
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $release = 'https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable'
+          $archiveName = 'Godot_v4.7.2-stable_export_templates.tpz'
+          $archive = Join-Path $env:RUNNER_TEMP $archiveName
+          $sums = Join-Path $env:RUNNER_TEMP 'SHA512-SUMS.txt'
+          Invoke-WebRequest "$release/$archiveName" -OutFile $archive
+          Invoke-WebRequest "$release/SHA512-SUMS.txt" -OutFile $sums
+          $line = @(Get-Content $sums | Where-Object { $_ -match ('\s' + [regex]::Escape($archiveName) + '$') })
+          if ($line.Count -ne 1) { throw 'Could not identify the official template checksum.' }
+          $expected = ($line[0] -split '\s+')[0].ToLowerInvariant()
+          $actual = (Get-FileHash $archive -Algorithm SHA512).Hash.ToLowerInvariant()
+          if ($actual -ne $expected) { throw 'Export template checksum failed.' }
+          $unpacked = Join-Path $env:RUNNER_TEMP 'godot-templates'
+          Expand-Archive -Path $archive -DestinationPath $unpacked -Force
+          $destination = Join-Path $env:APPDATA 'Godot/export_templates/4.7.2.stable'
+          New-Item -ItemType Directory -Force -Path $destination | Out-Null
+          Copy-Item "$unpacked/templates/web_nothreads_*.zip" $destination
+          if (-not (Test-Path "$destination/web_nothreads_release.zip")) { throw 'Web release template missing.' }
+
+      - name: Export release web build
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path build/web | Out-Null
+          $output = & ./.tools/godot/Godot_v4.7.2-stable_win64_console.exe --headless --path . --export-release Web build/web/index.html 2>&1 | ForEach-Object { "$_" }
+          $code = $LASTEXITCODE
+          $output | ForEach-Object { Write-Host $_ }
+          if ($code -ne 0 -or ($output -match 'SCRIPT ERROR|^ERROR')) { throw 'Web export failed.' }
+          foreach ($file in @('index.html', 'index.js', 'index.wasm', 'index.pck')) {
+            if (-not (Test-Path "build/web/$file")) { throw "Web export missing $file." }
+          }
+
+      - name: Preserve downloadable build
+        uses: actions/upload-artifact@v4
+        with:
+          name: spinward-web
+          path: build/web/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Install Butler
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $archive = Join-Path $env:RUNNER_TEMP 'butler.zip'
+          $destination = Join-Path $env:RUNNER_TEMP 'butler'
+          Invoke-WebRequest 'https://broth.itch.zone/butler/windows-amd64/LATEST/archive/default' -OutFile $archive
+          Expand-Archive -Path $archive -DestinationPath $destination -Force
+          & "$destination/butler.exe" version
+          if ($LASTEXITCODE -ne 0) { throw 'Butler installation failed.' }
+
+      - name: Upload to itch.io
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ([string]::IsNullOrWhiteSpace($env:BUTLER_API_KEY)) { throw 'Repository secret BUTLER_API_KEY is missing.' }
+          $butler = Join-Path $env:RUNNER_TEMP 'butler/butler.exe'
+          $version = "$env:GITHUB_RUN_NUMBER-$($env:GITHUB_SHA.Substring(0, 7))"
+          & $butler push build/web funagenda/spinward:html5 --userversion $version
+          if ($LASTEXITCODE -ne 0) { throw 'itch.io upload failed.' }
+          "Uploaded **$version** to https://funagenda.itch.io/spinward (channel: html5)." >> $env:GITHUB_STEP_SUMMARY
