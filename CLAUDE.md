@@ -27,3 +27,10 @@ Read `docs/DESIGN.md` first. It is the source of truth for scope, pillars and ar
 ## Checks
 
 Run `./tools/validate.ps1` (PowerShell) before committing. Add tests in `tests/run_tests.gd` for new sim rules. After changing `data/`, re-run the balance bot (`tools/balance_bot.gd`, command in README) and note findings in `docs/balance/NOTES.md`. Use `-- --tour=<dir>` to screenshot every screen and look at them after view changes. For surfaces, shaders and liveries, also use `-- --art=<dir>`.
+
+## Cloud sessions (Linux)
+
+- Set up with `./tools/setup.sh` (a SessionStart hook runs it automatically; it downloads and checksum-verifies Godot into `.tools/`). Validate with `./tools/validate.sh`, the Linux twin of `validate.ps1`.
+- Linux paths are case-sensitive: every `res://` path must match the file's case on disk.
+- There is no GPU or display, so visual output (`--art`, `--gallery`, `--promo`, `--tour`, screenshots) cannot be judged in the cloud. Leave visual review to the Windows developer.
+- Cloud work goes on a branch with a pull request, never straight to `main` (pushing to `main` deploys to itch.io).
