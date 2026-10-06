@@ -6,7 +6,7 @@
 (--promo-ship=<shots> re-shoots just the ship-view stills into the same folder.)
 
 Writes cover.png (630x500, itch's cover size) and cover@2x.png, banner.png
-(1920x480, for the page header), and 19 numbered 1920x1080 screenshots, with the
+(1920x480, for the page header), and 20 numbered 1920x1080 screenshots, with the
 title lettered in the game's own font (Consolas) and amber.
 """
 import os, sys
@@ -108,6 +108,7 @@ picks = [
     ("cine-lunar-70.png", "under-the-selene-ring"),
     ("ship-huygens_port-plume_watch-30-flyby.png", "ship-view-fly-past"),
     ("play-map.png", "plotted-transfer"),
+    ("play-transit-cockpit.png", "flight-deck-under-way"),
     ("play-station-projects.png", "projects-and-pitches"),
     ("play-station-spaceline.png", "the-spaceline-news"),
     ("cine-sail-35.png", "lightfoot-solar-sail"),

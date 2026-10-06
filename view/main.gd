@@ -1100,6 +1100,11 @@ func _promo(dir: String) -> void:
 	for _i in 30:
 		await get_tree().process_frame
 	_shot("%s/play-map.png" % dir)
+	# Under way, from the flight deck: the burn and the trip on the glass.
+	(_screen as MapScreen).set_view("cockpit")
+	for _i in 30:
+		await get_tree().process_frame
+	_shot("%s/play-transit-cockpit.png" % dir)
 	await _promo_ship(dir, false)
 	_quit()
 
