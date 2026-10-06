@@ -75,6 +75,7 @@ func _initialize() -> void:
 	test_elevator_rides()
 	test_damage_in_depth()
 	test_story_arcs_in_depth()
+	test_story_favour_after_abandon()
 	test_edge_cases()
 	test_ship_audio()
 	print("%d checks, %d failures" % [checks, failures])
@@ -1863,6 +1864,47 @@ func test_story_arcs_in_depth() -> void:
 	check(not loan.state.story["fired"].has("the_meeting"), "The meeting is not delivered mid-transit")
 	var tx := SaveIO.from_text(SaveIO.to_text(loan.state))
 	check(tx.story == loan.state.story, "Story state survives a transit save")
+
+
+## A favour you gave up on is offered again, and you can still take it. (Abandoning
+## costs standing with the client; an offer gated at standing 0 would be locked for good.)
+func test_story_favour_after_abandon() -> void:
+	var sim := fresh()
+	var s := sim.state
+	s.stats["contracts_delivered"] = 3
+	s.reputation["Terran Compact"] = 7.0
+	_dock_at(sim, "clarke_exchange")
+	var first: Dictionary = _first_favour_offer(s)
+	check(sim.apply({"type": "accept_contract", "id": first["id"]}) == "", "Take the Long View's first favour")
+	check(sim.apply({"type": "abandon_contract", "id": first["id"]}) == "", "and give it up")
+	check(Contracts.rep_of(s, "The Long View") < 0.0, "which costs standing with the Long View")
+	sim.advance_game_time(2.0 * 3600.0)
+	var again: Dictionary = _first_favour_offer(s)
+	check(not again.is_empty() and int(again["id"]) != int(first["id"]), "The favour is offered again")
+	check(ContractSystemScript.visible_to(s, sim.data, again), "and the pilot can see it, whatever they owe")
+	check(sim.apply({"type": "accept_contract", "id": again["id"]}) == "", "and take it, so the arc can go on")
+	# The same goes for a favour that was allowed to fail.
+	var failed := fresh()
+	var f := failed.state
+	f.stats["contracts_delivered"] = 3
+	f.reputation["Terran Compact"] = 7.0
+	_dock_at(failed, "clarke_exchange")
+	var offer: Dictionary = _first_favour_offer(f)
+	failed.apply({"type": "accept_contract", "id": offer["id"]})
+	f.location = {"status": "docked", "place": "kibo_ring"}
+	failed.advance_game_time(float(offer["window_s"]) * 2.5)
+	check(f.contracts["history"].any(func(j): return j["id"] == offer["id"] and j["outcome"] == "failed"), "A favour left to rot fails")
+	failed.advance_game_time(2.0 * 3600.0)
+	var retry: Dictionary = _first_favour_offer(f)
+	check(not retry.is_empty() and ContractSystemScript.visible_to(f, failed.data, retry), "and is offered again at the next dock, in a form the pilot can accept")
+
+
+func _first_favour_offer(s) -> Dictionary:
+	for place in s.contracts["board"]:
+		for o in s.contracts["board"][place]:
+			if o.get("favour", "") == "first_favour":
+				return o
+	return {}
 
 
 ## Edge cases found by reading the sim: empty holds, huge balances, saves in odd moments.
