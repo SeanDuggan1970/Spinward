@@ -5,6 +5,8 @@ const Navigation := preload("res://sim/navigation.gd")
 const V := preload("res://sim/v3.gd")
 const RoutePlanner := preload("res://sim/route_planner.gd")
 const Perks := preload("res://sim/perks.gd")
+const Interplanetary := preload("res://sim/interplanetary.gd")
+const ShipStats := preload("res://sim/ship_stats.gd")
 
 const PERI_WARN_S := 2.0 * 3600.0
 const PERI_CLOSE_S := 600.0
@@ -25,6 +27,7 @@ func start_game() -> void:
 func tick(_game_dt: float) -> void:
 	var s = sim().state
 	_flyby_moments(s)
+	_time_ramps(s)
 	if s.location.get("status") == "transit" and s.time_s >= float(s.location["arrive_t"]):
 		var place: String = s.location["to"]
 		s.stats["trips"] += 1
@@ -36,6 +39,44 @@ func tick(_game_dt: float) -> void:
 		else:
 			s.location = {"status": "approach", "place": place}
 			sim().emit("arrived", {"place": place})
+
+
+## A quick trip waits on its ports either side of the burn: record where each port
+## is meanwhile, so the ship rides along with it (Navigation.transit_position).
+func _port_waits(loc: Dictionary) -> void:
+	if loc.get("samples") != null:
+		return
+	var duration := float(loc["arrive_t"]) - float(loc["depart_t"])
+	var burn := float(loc["burn_s"])
+	var start := float(loc["depart_t"]) + (duration - burn) * 0.5
+	var tracks := Navigation.port_tracks(sim().ephemeris, loc["from"], loc["to"], loc["frame"], float(loc["depart_t"]), start, start + burn, float(loc["arrive_t"]))
+	loc["pre_track"] = tracks[0]
+	loc["post_track"] = tracks[1]
+
+
+## Leaving and arriving at the pace of a film: on departure time steps up from x1
+## (balance time.departure_ramp) while the ship clears the port, unless the pilot
+## has picked a scale of their own; coming in, it is capped ever lower as the port
+## nears (time.approach_caps), so the last seconds play out at x1.
+func _time_ramps(s) -> void:
+	var loc: Dictionary = s.location
+	if loc.get("status") != "transit":
+		return
+	var time: Dictionary = sim().data.balance["time"]
+	var ramp: Array = time.get("departure_ramp", [])
+	var stage := int(loc.get("ramp_stage", ramp.size()))
+	while stage < ramp.size() and s.time_s - float(loc["depart_t"]) >= float(ramp[stage][0]):
+		if absf(s.time_scale - float(loc.get("ramp_scale", s.time_scale))) > 0.5:
+			stage = ramp.size()
+			break
+		s.time_scale = float(ramp[stage][1])
+		loc["ramp_scale"] = s.time_scale
+		stage += 1
+	loc["ramp_stage"] = stage
+	var left: float = float(loc["arrive_t"]) - s.time_s
+	for cap in time.get("approach_caps", []):
+		if left <= float(cap[0]) and s.time_scale > float(cap[1]):
+			s.time_scale = float(cap[1])
 
 
 ## Flyby drama: slow time for the run-in to periapsis, then for the pass itself,
@@ -96,8 +137,11 @@ func _depart(command: Dictionary) -> String:
 		"from_pos": route["from_pos"], "to_pos": route["to_pos"], "distance_m": route["distance_m"],
 		"from_vel": route["from_vel"], "to_vel": route["to_vel"],
 		"from_rot": route.get("from_rot"), "to_rot": route.get("to_rot"), "rot_axis": route.get("rot_axis"), "rot_angle": route.get("rot_angle", 0.0),
-		"samples": route.get("samples"),
+		"samples": route.get("samples"), "around": route.get("around"), "around_r": route.get("around_r", 0.0), "avoid": route.get("avoid"),
+		"ramp_stage": 0, "ramp_scale": 1.0,
 	}
+	_port_waits(s.location)
+	s.time_scale = 1.0
 	sim().emit("departed", {"from": here, "to": to, "arrive_t": route["arrive_t"], "fuel_t": route["fuel_t"]})
 	return ""
 
@@ -154,6 +198,9 @@ func _depart_route(here: String, to: String, route_id: String, plan_t: float) ->
 	s.ship["fuel_t"] = maxf(0.0, float(s.ship["fuel_t"]) - float(opt["fuel_t"]))
 	var arrive := float(opt["arrive_t"])
 	var frame: String = opt.get("frame", "earth")
+	if frame == "sun":
+		# The climb out of the world and the capture at the far end (Interplanetary.dress).
+		samples = Interplanetary.dress(samples, data, eph, here, to, s.time_s, arrive, ShipStats.accel_mps2(s.ship, data))
 	s.location = {
 		"status": "transit", "from": here, "to": to, "frame": frame,
 		"depart_t": s.time_s, "arrive_t": arrive,
@@ -161,9 +208,12 @@ func _depart_route(here: String, to: String, route_id: String, plan_t: float) ->
 		"from_pos": eph.relative(here, frame, s.time_s), "to_pos": eph.relative(to, frame, arrive),
 		"distance_m": V.distance(samples[0][1], samples[-1][1]),
 		"samples": samples, "route": route_id, "route_label": opt["label"],
+		"avoid": Navigation.sampled_avoid(data, eph, here, to, frame, s.time_s, arrive) if frame != "sun" else null,
 		"peri_t": float(opt["peri_t"]) if opt["kind"] == "flyby" else -1.0,
 		"peri_alt": float(opt["peri_alt"]), "peri_stage": 0,
+		"ramp_stage": 0, "ramp_scale": 1.0,
 	}
+	s.time_scale = 1.0
 	sim().emit("departed", {"from": here, "to": to, "arrive_t": arrive, "fuel_t": opt["fuel_t"], "route": opt["label"]})
 	return ""
 

@@ -101,6 +101,12 @@ func _ready() -> void:
 		if a.begins_with("--flyby="):
 			_flyby_tour.call_deferred(a.trim_prefix("--flyby="))
 			return
+		if a.begins_with("--market="):
+			_market_shot.call_deferred(a.trim_prefix("--market="))
+			return
+		if a.begins_with("--corridor="):
+			_corridor_shots.call_deferred(a.trim_prefix("--corridor="))
+			return
 		if a.begins_with("--shipcam="):
 			_shipcam_tour.call_deferred(a.trim_prefix("--shipcam="))
 			return
@@ -508,13 +514,28 @@ func _sync_mode() -> void:
 		"transit":
 			_screen = MapScreen.new(sim)
 			_layer.add_child(_screen)
+			_fade_in(0.5)
 		"approach", "lifeboat":
 			# 3D renders in the root viewport underneath all 2D; its HUD sits in this layer.
 			_screen = FlightScene.new(sim)
 			_layer.add_child(_screen)
+			_fade_in(0.7)
 		"elevator":
 			_screen = load("res://view/climber_view.gd").new(sim)
 			_layer.add_child(_screen)
+
+
+## Come up from black over `seconds`: the hand-over from one view to the next reads as
+## a cut in a film, not a jump.
+func _fade_in(seconds: float) -> void:
+	var r := ColorRect.new()
+	r.color = Color.BLACK
+	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	r.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_layer.add_child(r)
+	var tw := r.create_tween()
+	tw.tween_property(r, "color:a", 0.0, seconds)
+	tw.tween_callback(r.queue_free)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -920,6 +941,68 @@ func _gallery(dir: String) -> void:
 ## Windowed: the ship view in transit, Kibo Ring to Halo Depot. Every director set-up
 ## at the moment it suits (leaving the port, burning, coasting, nearing the Moon), and
 ## the free camera.
+## The market with cargo aboard (`--market=<dir>`): one load bought here (sold back
+## at a loss, red) and one bought cheap elsewhere (at a profit, green).
+func _market_shot(dir: String) -> void:
+	DirAccess.make_dir_recursive_absolute(dir)
+	_notices.visible = false
+	sim.state.location = {"status": "docked", "place": "kibo_ring"}
+	sim.apply({"type": "buy", "good": sim.data.places["kibo_ring"]["market"].keys()[0], "tonnes": 4.0})
+	var other: String = sim.data.places["kibo_ring"]["market"].keys()[1]
+	sim.state.ship["cargo"][other] = 3.0
+	sim.state.ship["cargo_paid"][other] = 30.0
+	_mode = ""
+	_sync_mode()
+	for _i in 12:
+		await get_tree().process_frame
+	_shot(dir + "/market.png")
+	_quit()
+
+
+## Leaving and arriving in the ship view (`--corridor=<dir>`): Kibo Ring to Halo
+## Depot, the chase and station shots at moments through the departure and the
+## arrival, then the approach scene that takes over.
+func _corridor_shots(dir: String) -> void:
+	DirAccess.make_dir_recursive_absolute(dir)
+	_notices.visible = false
+	sim.state.location = {"status": "docked", "place": "kibo_ring"}
+	_mode = ""
+	_sync_mode()
+	if sim.apply({"type": "depart", "to": "halo_depot"}) != "":
+		_quit()
+		return
+	_handle_events()
+	_sync_mode()
+	var loc: Dictionary = sim.state.location
+	var t0 := float(loc["depart_t"])
+	var t1 := float(loc["arrive_t"])
+	sim.state.paused = true
+	var moments := [["leave-005", t0 + 5.0], ["leave-040", t0 + 40.0], ["leave-200", t0 + 200.0], ["leave-700", t0 + 700.0],
+		["arrive-900", t1 - 900.0], ["arrive-300", t1 - 300.0], ["arrive-060", t1 - 60.0], ["arrive-005", t1 - 5.0]]
+	for m in moments:
+		sim.state.time_s = float(m[1])
+		var map: MapScreen = _screen
+		map.set_view("ship")
+		for _i in 12:
+			await get_tree().process_frame
+		var view = map._view
+		for shot in ["chase", "station"]:
+			view.mode = "director"
+			view.shot = shot
+			view.shot_label = shot.to_upper()
+			view.shot_clock = view.SHOT_S * 0.5
+			for _i in 8:
+				await get_tree().process_frame
+			_shot("%s/%s-%s.png" % [dir, m[0], shot])
+		print("CORRIDOR %s scale=%d" % [m[0], int(sim.state.time_scale)])
+	sim.state.paused = false
+	sim.state.time_s = t1 + 1.0
+	for _i in 40:
+		await get_tree().process_frame
+	_shot("%s/zz-approach.png" % dir)
+	_quit()
+
+
 func _shipcam_tour(dir: String) -> void:
 	DirAccess.make_dir_recursive_absolute(dir)
 	_notices.visible = false

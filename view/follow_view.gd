@@ -33,6 +33,11 @@ const SHOT_S := 11.0
 const FADE_S := 0.35
 ## Ports this close (metres) are shown as models.
 const STATION_RANGE_M := 30000.0
+## Ports are drawn for the first and last game seconds of a trip: leaving, backing
+## out and pulling away; arriving, closing in to where the approach takes over.
+const PORT_WINDOW_S := 1200.0
+## Leaving, the ship backs off the port nose-first for this long before it turns.
+const BACKOUT_S := 45.0
 
 var sim
 var camera: Camera3D
@@ -61,6 +66,9 @@ var _ready_basis := false
 var _thrusting := false
 var _sun_dir := Vector3.UP
 var _stations: Dictionary = {}
+## [the way we leave, the way we arrive] (view space), for the trip departed at _corridor_key.
+var _corridor := [Vector3.FORWARD, Vector3.FORWARD]
+var _corridor_key := -1.0
 ## Free camera, about the ship's middle: yaw, pitch (radians), distance (metres).
 var _yaw := 0.6
 var _pitch := 0.25
@@ -236,16 +244,22 @@ func _update_world(dt: float) -> void:
 			SkyKit.set_eclipse(_sun_dir, node.position, r_sky)
 	readout["seen"] = seen
 	SkyKit.aim_shine(_shine, SkyKit.planetshine(sim.data, seen, _sun_dir))
-	# Ports nearby, at their true distance and size: where the trip leaves from and
-	# arrives at (the path's own end points, so the ship starts and ends beside them).
-	var ship_rel: Array = Navigation.transit_position(loc, t)
+	# The ports at each end, for the first and last minutes of the trip
+	# (PORT_WINDOW_S). Leaving, the port sits off the nose with its docking face to us
+	# and falls away as we back out, turn and go. Arriving, it lies ahead and we close
+	# on it, slowing, to the point where the approach takes over (the flight scene's
+	# spawn distance), so the hand-over picks up where this leaves off. Each corridor
+	# runs along the trip's own first or last leg: we leave and arrive the way the
+	# path goes.
+	_corridors(loc)
+	var elapsed := t - float(loc["depart_t"])
+	var left := float(loc["arrive_t"]) - t
 	for place in [loc["from"], loc["to"]]:
 		if not sim.data.places.has(place) or not sim.data.places[place].has("station"):
 			continue
-		var anchor: Array = loc["from_pos"] if place == loc["from"] else loc["to_pos"]
-		var d := V.sub(anchor, ship_rel)
-		var rel := Vector3(d[0], d[2], -d[1])
-		var near := rel.length() < STATION_RANGE_M
+		var leaving: bool = place == loc["from"]
+		var tau := elapsed if leaving else left
+		var near := tau >= 0.0 and tau < PORT_WINDOW_S
 		if near and not _stations.has(place):
 			var geom: Dictionary = sim.data.places[place]["station"]
 			var st := Models.station(geom, sim.data.places[place]["name"], Livery.for_station(sim.data, place))
@@ -258,15 +272,13 @@ func _update_world(dt: float) -> void:
 		if _stations.has(place):
 			var entry: Dictionary = _stations[place]
 			var st: Dictionary = entry["model"]
-			# Just undocked (or about to dock): keep the port clear of the ship, behind it
-			# leaving and ahead arriving, its docking face turned to us.
-			var clear := maxf(float(st["ring_radius"]), float(st["hub_length"])) * 1.5 + 250.0
-			var heading := -_basis.z if place == loc["to"] else _basis.z
-			var at := rel + heading * clear * clampf(1.0 - rel.length() / STATION_RANGE_M, 0.0, 1.0)
+			# From the port toward the ship: along the way we leave, or back along the
+			# way we came in.
+			var d: Vector3 = _corridor[0] if leaving else -_corridor[1]
+			var at := -d * (_port_gap(place, tau, leaving) + float(st["port_z"]))
 			st["node"].visible = near
 			st["node"].position = at
-			if at.length() > 1.0:
-				st["node"].basis = Basis.looking_at(at.normalized(), Vector3.UP if absf(at.normalized().y) < 0.98 else Vector3.RIGHT)
+			st["node"].basis = Basis.looking_at(-d, Vector3.UP if absf(d.y) < 0.98 else Vector3.RIGHT)
 			st["rotor"].rotation.z = fposmod(t * float(entry["rate"]), TAU)
 			entry["dist"] = at.length() if near else INF
 	# Attitude: along the thrust while burning (from toward the target round to braking
@@ -274,6 +286,11 @@ func _update_world(dt: float) -> void:
 	var thrust: Array = Navigation.transit_accel(loc, t)
 	_thrusting = V.length(thrust) > 1e-6
 	var forward := Vector3(thrust[0], thrust[2], -thrust[1]).normalized() if _thrusting else -_basis.z
+	# Backing off the port, nose to it; coming in on the last stretch, nose to it too.
+	if elapsed < BACKOUT_S:
+		forward = -_corridor[0]
+	elif left < PORT_WINDOW_S and not _thrusting:
+		forward = _corridor[1]
 	var want := Basis.looking_at(forward, Vector3.UP if absf(forward.y) < 0.98 else Vector3.RIGHT)
 	if not _ready_basis:
 		_basis = want
@@ -295,6 +312,49 @@ func _update_world(dt: float) -> void:
 	readout["remaining"] = V.distance(here, eph.position(loc["to"], t))
 	readout["dest_dir"] = dest_dir
 	readout["phase"] = "COASTING" if not _thrusting else ("ACCELERATING" if V.dot(V.normalized(thrust), V.normalized(v_now)) > 0.3 else ("BRAKING" if V.dot(V.normalized(thrust), V.normalized(v_now)) < -0.3 else "BURNING ACROSS"))
+
+
+## The trip's corridors, once per trip: [the way we leave, the way we arrive], as
+## directions of travel in view space, from where the path first moves and where it
+## last does (a quick plan sits still at the port before its burn).
+func _corridors(loc: Dictionary) -> void:
+	var key := float(loc["depart_t"])
+	if key == _corridor_key:
+		return
+	_corridor_key = key
+	var t0 := key
+	var t1 := float(loc["arrive_t"])
+	var span := clampf((t1 - t0) * 0.01, 120.0, 21600.0)
+	# Measured from the ports themselves (the ship rides along with a port while it
+	# waits on it), so each corridor is the way we pull away from it or come in to it.
+	var eph = sim.ephemeris
+	var frame: String = loc["frame"]
+	var out := Vector3.ZERO
+	var inward := Vector3.ZERO
+	for k in range(1, 100):
+		var ta := minf(t0 + span * float(k), t1)
+		var a := V.sub(Navigation.transit_position(loc, ta), eph.relative(loc["from"], frame, ta))
+		if out == Vector3.ZERO and V.length(a) > 2000.0:
+			out = Vector3(a[0], a[2], -a[1]).normalized()
+		var tb := maxf(t1 - span * float(k), t0)
+		var b := V.sub(eph.relative(loc["to"], frame, tb), Navigation.transit_position(loc, tb))
+		if inward == Vector3.ZERO and V.length(b) > 2000.0:
+			inward = Vector3(b[0], b[2], -b[1]).normalized()
+		if out != Vector3.ZERO and inward != Vector3.ZERO:
+			break
+	_corridor = [out if out != Vector3.ZERO else Vector3.FORWARD, inward if inward != Vector3.ZERO else Vector3.FORWARD]
+
+
+## How far the ship is from a port's docking face tau seconds after leaving it (or
+## before reaching it): backing off gently, then pulling away under thrust; coming in,
+## the same in reverse, ending where the approach scene starts us.
+func _port_gap(place: String, tau: float, leaving: bool) -> float:
+	var half := _length * 0.5
+	if leaving:
+		return half + 2.0 + 1.5 * tau + 0.02 * tau * tau
+	var geom: Dictionary = sim.data.places[place]["station"]
+	var spawn := maxf(float(sim.data.balance["docking"]["spawn_distance_m"]), float(geom["hub_radius_m"]) * 3.0)
+	return half + spawn + 1.0 * tau + 0.02 * tau * tau
 
 
 # --- the director ----------------------------------------------------------------------

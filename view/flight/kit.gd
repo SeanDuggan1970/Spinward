@@ -17,6 +17,8 @@ const FINISHES := {
 }
 
 const HULL_SHADER := "res://view/shaders/hull.gdshader"
+const HALO_SHADER := "res://view/shaders/halo.gdshader"
+const LAMP := "res://view/flight/lamp.gd"
 
 static var _materials: Dictionary = {}
 
@@ -254,20 +256,70 @@ static func hazard_band(radius: float, width: float, at: Vector3, stripes: int =
 static func beacon(colour: Color, at: Vector3, radius: float = 0.35, period: float = 0.0, phase: float = 0.0) -> MeshInstance3D:
 	var b := sphere(radius, glow(colour, 3.0), at)
 	if period > 0.0:
+		# Flashes on its own (view/flight/lamp.gd); kept out of the merge.
 		b.set_meta("blink_period", period)
 		b.set_meta("blink_phase", phase)
+		b.set_script(load(LAMP))
+		b.set("period", period)
+		b.set("phase", phase)
 	return b
 
 
-## Collect blinking lights once; scanning the whole scene every frame is too slow.
-static func collect_blinkers(root: Node) -> Array:
-	return root.find_children("*", "MeshInstance3D", true, false).filter(func(b): return b.has_meta("blink_period"))
-
-
-static func update_blinkers(blinkers: Array, t: float) -> void:
-	for b in blinkers:
-		if is_instance_valid(b):
-			b.visible = fposmod(t / float(b.get_meta("blink_period")) + float(b.get_meta("blink_phase")), 1.0) < 0.18
+## A working light as fitted to a hull: a dark housing on the skin facing `out`, a
+## coloured lens, and when lit, a brighter lens and a glow that faces the camera
+## (view/shaders/halo.gdshader) and stays a point of light from far off. kind is
+## lamp.gd's: steady, flash, strobe or beacon. size is the lens radius (m).
+static func nav_light(colour: Color, at: Vector3, out: Vector3, size: float = 0.18, kind: String = "steady", period: float = 1.0, phase: float = 0.0) -> Node3D:
+	var n := Node3D.new()
+	n.position = at
+	var o := out.normalized() if out.length() > 0.001 else Vector3.UP
+	n.basis = Basis.looking_at(-o, Vector3.UP if absf(o.y) < 0.95 else Vector3.RIGHT)
+	# Housing and the unlit lens: static, merged with the hull.
+	n.add_child(box(Vector3(size * 2.2, size * 2.2, size * 0.7), mat("dark"), Vector3(0, 0, size * 0.35)))
+	var off_key := "lens_off_" + colour.to_html(false)
+	if not _materials.has(off_key):
+		var m := StandardMaterial3D.new()
+		m.albedo_color = colour.darkened(0.55)
+		m.roughness = 0.15
+		m.emission_enabled = true
+		m.emission = colour
+		m.emission_energy_multiplier = 0.25
+		_materials[off_key] = m
+	var lens := sphere(size, _materials[off_key], Vector3(0, 0, size * 0.75))
+	lens.scale = Vector3(1, 1, 0.6)
+	n.add_child(lens)
+	# The lit part.
+	var lit := Node3D.new()
+	lit.set_meta("no_merge", true)
+	lit.position = Vector3(0, 0, size * 0.75)
+	var on := sphere(size * 1.04, glow(colour, 4.0))
+	on.scale = Vector3(1, 1, 0.62)
+	lit.add_child(on)
+	var halo := MeshInstance3D.new()
+	var quad := QuadMesh.new()
+	quad.size = Vector2.ONE
+	halo.mesh = quad
+	halo.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	halo.extra_cull_margin = 16384.0
+	var key := "halo_%s_%0.2f_%s" % [colour.to_html(false), size, kind]
+	if not _materials.has(key):
+		var hm := ShaderMaterial.new()
+		hm.shader = load(HALO_SHADER)
+		hm.set_shader_parameter("colour", colour)
+		hm.set_shader_parameter("radius", size * 3.0)
+		hm.set_shader_parameter("energy", {"strobe": 3.5, "steady": 1.2}.get(kind, 2.2))
+		hm.set_shader_parameter("spikes", 1.0 if kind == "strobe" else 0.0)
+		_materials[key] = hm
+	halo.material_override = _materials[key]
+	lit.add_child(halo)
+	n.add_child(lit)
+	if kind != "steady":
+		lit.set_script(load(LAMP))
+		lit.set("period", period)
+		lit.set("phase", phase)
+		lit.set("kind", kind)
+		lit.set("halo", halo)
+	return n
 
 
 ## Merge a model's static meshes that share a material into one mesh each, so a ship

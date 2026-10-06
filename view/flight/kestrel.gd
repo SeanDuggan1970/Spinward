@@ -105,8 +105,8 @@ static func build(livery: Dictionary, scale: float = 1.0, payload: String = "pas
 	cab.add_child(_prism(1.47, 0.35, 8, accent, Vector3(0, 0, 1.55)))
 	for side in [-1.0, 1.0]:
 		frame.add_child(_rcs(Vector3(side * 1.45, spine_y + 0.4, -8.6), Vector3(side, 0.2, 0), mats, rig))
-	frame.add_child(Kit.beacon(Color("ff3a2a"), Vector3(-1.5, spine_y, -8.0), 0.14, 1.4, 0.0))
-	frame.add_child(Kit.beacon(Color("3aff5a"), Vector3(1.5, spine_y, -8.0), 0.14, 1.4, 0.0))
+	frame.add_child(Kit.nav_light(Color("ff3a2a"), Vector3(-1.5, spine_y, -8.0), Vector3.LEFT, 0.14, "flash", 1.6, 0.0))
+	frame.add_child(Kit.nav_light(Color("3aff5a"), Vector3(1.5, spine_y, -8.0), Vector3.RIGHT, 0.14, "flash", 1.6, 0.0))
 	# Steerable high-gain dish on a short mast behind the cabin.
 	var az := Node3D.new()
 	az.position = Vector3(0, spine_y + w * 0.6 + 0.9, -6.2)
@@ -212,7 +212,7 @@ static func build(livery: Dictionary, scale: float = 1.0, payload: String = "pas
 	aft.add_child(plume)
 	for side in [-1.0, 1.0]:
 		aft.add_child(_rcs(Vector3(side * 1.55, 0, 0.9), Vector3(side, 0, 0.3), mats, rig))
-	frame.add_child(Kit.beacon(Color.WHITE, Vector3(0, spine_y + 1.4, 10.6), 0.14, 1.0, 0.5))
+	frame.add_child(Kit.nav_light(Color("f4f8ff"), Vector3(0, spine_y + 1.4, 10.6), Vector3.UP, 0.12, "strobe", 1.4, 0.4))
 	# A pair of radiator fins on the service module, edge-on to the spine.
 	for side in [-1.0, 1.0]:
 		aft.add_child(Kit.box(Vector3(0.05, 0.9, 1.4), Livery.paint(livery, Kit.COLOURS["dark"], {"finish": 1, "mismatch": 0.0, "panel_m": 0.3}), Vector3(side * 1.2, 1.65, 0.2)))

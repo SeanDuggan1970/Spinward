@@ -74,7 +74,6 @@ var docked := false
 var _drive_plume: Node3D
 ## The player ship's panels and dish (ship_rig.gd).
 var _rig: Dictionary = {}
-var _blinkers: Array = []
 ## NPC id -> {node, mode: "berth"|"inbound"|"outbound"}
 var _traffic: Dictionary = {}
 var _traffic_check := 0.0
@@ -291,7 +290,6 @@ func _physics_process(dt: float) -> void:
 	clock += dt
 	spin_angle = fposmod(spin_angle + spin_rate * dt, TAU)
 	station["rotor"].rotation.z = spin_angle
-	Kit.update_blinkers(_blinkers, clock)
 	_traffic_check -= dt
 	if _traffic_check <= 0.0:
 		_traffic_check = 1.0
@@ -609,8 +607,6 @@ func _sync_traffic() -> void:
 			var dest_dir := _dir_to(sim.ephemeris.position(bound, sim.state.time_s), sim.ephemeris.position(place_id, sim.state.time_s)) if bound != place_id else Vector3.FORWARD
 			_traffic[id] = {"node": node, "ship": node, "mode": w["mode"], "npc": w["npc"], "rig": model["rig"], "dest_dir": dest_dir, "radius": float(model["radius"])}
 		changed = true
-	if changed or _blinkers.is_empty():
-		_blinkers = Kit.collect_blinkers(self)
 	_move_traffic(0.0)
 
 
@@ -670,7 +666,6 @@ func _spawn_work_craft() -> void:
 			"phase": rng.randf() * TAU,
 			"bob": rng.randf_range(2.0, 8.0),
 		})
-	_blinkers = Kit.collect_blinkers(self)
 
 
 func _move_work_craft() -> void:

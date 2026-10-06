@@ -41,6 +41,23 @@ const ARRIVE_MISS_R := 2.0e8
 const ARRIVE_MISS_V := 500.0
 
 
+## How close a path may come to a body: its radius plus the atmosphere drawn on it
+## (look.atmosphere.thickness), and never less than CLEAR_MIN_M above the ground.
+const CLEAR_MIN_M := 20.0e3
+## Climb-out and capture spirals: samples along each, and the hand-off radius as a
+## multiple of the station's own orbit and of the world's radius.
+const SPIRAL_SAMPLES := 32
+const HANDOFF_ORBITS := 2.5
+const HANDOFF_RADII := 25.0
+
+
+static func clearance(data, body: String) -> float:
+	var b: Dictionary = data.bodies[body]
+	var r := float(b["radius_m"])
+	var atm: Dictionary = b.get("look", {}).get("atmosphere", {})
+	return maxf(r * (1.0 + float(atm.get("thickness", 0.0))), r + CLEAR_MIN_M)
+
+
 static func is_interplanetary(data, from_place: String, to_place: String) -> bool:
 	return _frame(data, from_place, to_place) == "sun"
 
@@ -81,6 +98,10 @@ static func well(data, eph, place: String, t: float) -> Dictionary:
 		# A town on the ground (reached by elevator): as deep in the well as it gets.
 		body = loc["parent"]
 		dv += sqrt(float(data.bodies[body]["gm"]) / float(data.bodies[body]["radius_m"]))
+	elif loc["system"][0] == "sun":
+		# A Sun-planet Lagrange point (the Trojans): already in free solar orbit,
+		# moving with the planet. Nothing to climb out of.
+		return {"dv": 0.0, "body": place}
 	else:
 		# A Lagrange station co-moves with the secondary: it is that far from free.
 		body = loc["system"][0]
@@ -231,6 +252,195 @@ static func run(job: Dictionary) -> Array:
 	return opts
 
 
+## The path a voyage actually flies, from a transfer's Sun-centred samples, which run
+## from the departure world's centre to the destination world's (the patched-conic
+## shortcut). Added round them:
+##   - the climb-out: a spiral from the station, in the sense it orbits, out to a
+##     hand-off point clear of the world, along the direction the transfer leaves in
+##   - the capture: the same in reverse, down to the station at arrival
+##   - near each end, the transfer eased onto the hand-off point. The offset lies
+##     along the direction of travel, so it can only carry the path further out.
+## Times, distances and propellant are unchanged; only the shape of the path is.
+## accel thrusts the spirals (prograde out, retrograde in).
+static func dress(samples: Array, data, eph, from_place: String, to_place: String, t_dep: float, t_arr: float, accel: float) -> Array:
+	samples = _clean(samples)
+	if samples.size() < 2:
+		return samples
+	var out := []
+	# Velocities where the spirals meet the transfer, so the path joins smoothly.
+	var join_out = null
+	var join_in = null
+	var first: Array = samples[0]
+	var last: Array = samples[-1]
+	var t1 := float(first[0])
+	var t2 := float(last[0])
+	var a_body: String = well(data, eph, from_place, t_dep)["body"]
+	var b_body: String = well(data, eph, to_place, t_arr)["body"]
+	var e_out := [0.0, 0.0, 0.0]
+	var e_in := [0.0, 0.0, 0.0]
+	var tau_out := 1.0
+	var tau_in := 1.0
+	var tof := maxf(t2 - t1, 1.0)
+	if data.bodies.has(a_body) and t1 > t_dep:
+		var v_inf := V.sub(first[2], eph.velocity(a_body, t1))
+		var s0 := V.sub(eph.position(from_place, t_dep), eph.position(a_body, t_dep))
+		var r_hand := maxf(V.length(s0) * HANDOFF_ORBITS, float(data.bodies[a_body]["radius_m"]) * HANDOFF_RADII)
+		e_out = V.scale(V.normalized(v_inf if V.length(v_inf) > 1.0 else s0), r_hand)
+		tau_out = clampf(4.0 * r_hand / maxf(V.length(v_inf), 500.0), tof * 0.02, tof * 0.3)
+		var orbit_v := V.sub(eph.velocity(from_place, t_dep), eph.velocity(a_body, t_dep))
+		var climb := _spiral(eph, a_body, s0, e_out, orbit_v, t_dep, t1, accel, false)
+		join_out = climb[-1][2]
+		out.append_array(climb.slice(0, -1))
+	var capture := []
+	if data.bodies.has(b_body) and t_arr > t2:
+		var v_inf_in := V.sub(last[2], eph.velocity(b_body, t2))
+		var s1 := V.sub(eph.position(to_place, t_arr), eph.position(b_body, t_arr))
+		var r_hand_in := maxf(V.length(s1) * HANDOFF_ORBITS, float(data.bodies[b_body]["radius_m"]) * HANDOFF_RADII)
+		e_in = V.scale(V.normalized(V.scale(v_inf_in, -1.0) if V.length(v_inf_in) > 1.0 else s1), r_hand_in)
+		tau_in = clampf(4.0 * r_hand_in / maxf(V.length(v_inf_in), 500.0), tof * 0.02, tof * 0.3)
+		var orbit_v_in := V.sub(eph.velocity(to_place, t_arr), eph.velocity(b_body, t_arr))
+		capture = _spiral(eph, b_body, s1, e_in, orbit_v_in, t_arr, t2, accel, true)
+		capture.reverse()
+		join_in = capture[0][2]
+	# The transfer, with extra samples where it eases off and onto the hand-offs.
+	var times := []
+	for smp in samples:
+		times.append(float(smp[0]))
+	for k in range(1, 9):
+		times.append(t1 + tau_out * float(k) / 8.0)
+		times.append(t2 - tau_in * float(k) / 8.0)
+	times = times.filter(func(x): return x >= t1 and x <= t2)
+	times.sort()
+	var loc := {"samples": samples, "depart_t": t1, "arrive_t": t2, "from_pos": first[1], "to_pos": last[1]}
+	var prev := -INF
+	for tv in times:
+		var t := float(tv)
+		if t - prev < 1.0:
+			continue
+		prev = t
+		var pos := _replay(loc, t, false)
+		var vel := _replay(loc, t, true)
+		var x_out := (t - t1) / tau_out
+		if x_out < 1.0:
+			pos = V.add(pos, V.scale(e_out, 1.0 - x_out * x_out * (3.0 - 2.0 * x_out)))
+			vel = V.add(vel, V.scale(e_out, -6.0 * x_out * (1.0 - x_out) / tau_out))
+		var x_in := (t2 - t) / tau_in
+		if x_in < 1.0:
+			pos = V.add(pos, V.scale(e_in, 1.0 - x_in * x_in * (3.0 - 2.0 * x_in)))
+			vel = V.add(vel, V.scale(e_in, 6.0 * x_in * (1.0 - x_in) / tau_in))
+		if t <= t1 + 0.5 and join_out != null:
+			vel = join_out
+		if t >= t2 - 0.5 and join_in != null:
+			vel = join_in
+		var thrust: Array = samples[_seg_index(samples, t)][3]
+		out.append([t, pos, vel, thrust])
+	if not capture.is_empty():
+		out.append_array(capture.slice(1))
+	return out
+
+
+## Samples with no NaNs: a point with a bad position is dropped, a bad velocity is
+## rebuilt from its neighbours (the conic propagator can fail on its last step).
+static func _clean(samples: Array) -> Array:
+	var good := samples.filter(func(smp): return not (is_nan(float(smp[1][0])) or is_nan(float(smp[1][1])) or is_nan(float(smp[1][2]))))
+	for i in good.size():
+		var v: Array = good[i][2]
+		if is_nan(float(v[0])) or is_nan(float(v[1])) or is_nan(float(v[2])):
+			var a: Array = good[maxi(i - 1, 0)]
+			var b: Array = good[mini(i + 1, good.size() - 1)]
+			var dt := float(b[0]) - float(a[0])
+			good[i] = [good[i][0], good[i][1], V.scale(V.sub(b[1], a[1]), 1.0 / dt) if absf(dt) > 1e-3 else [0.0, 0.0, 0.0], good[i][3]]
+	return good
+
+
+## A spiral round `body` from offset `s0` (at t_from) to offset `e` (at t_to): radius
+## growing (or shrinking) geometrically, turning in the sense of `orbit_v` plus one
+## extra turn, so it never comes closer than the nearer end. Samples run t_from to
+## t_to, excluding t_to (that is the transfer's first sample). With `inward` the same
+## spiral is built from the station outward and the caller reverses it, with the thrust
+## turned retrograde. Returns SPIRAL_SAMPLES + 1 samples, the last at t_to.
+static func _spiral(eph, body: String, s0: Array, e: Array, orbit_v: Array, t_from: float, t_to: float, accel: float, inward: bool) -> Array:
+	var r0 := maxf(V.length(s0), 1.0)
+	var r1 := maxf(V.length(e), 1.0)
+	var n0 := V.normalized(s0)
+	var n1 := V.normalized(e)
+	var axis := V.cross(s0, orbit_v)
+	if V.length(axis) < 1e-6:
+		axis = V.cross(n0, n1)
+	if V.length(axis) < 1e-6:
+		axis = [0.0, 0.0, 1.0]
+	axis = V.normalized(axis)
+	# Built from the station outward; a capture is flown the other way in time, so it
+	# turns the other way here to arrive moving with the station.
+	if inward:
+		axis = V.scale(axis, -1.0)
+	# Work in the station's orbital plane: the hand-off direction projected into it,
+	# then tilted out of it over the last part of the spiral.
+	var n1p := V.sub(n1, V.scale(axis, V.dot(n1, axis)))
+	if V.length(n1p) < 1e-6:
+		n1p = V.cross(axis, n0)
+	n1p = V.normalized(n1p)
+	var ang := atan2(V.dot(V.cross(n0, n1p), axis), V.dot(n0, n1p))
+	if ang < 0.0:
+		ang += TAU
+	ang += TAU
+	var pts := []
+	for k in SPIRAL_SAMPLES:
+		var f := float(k) / float(SPIRAL_SAMPLES)
+		var t := lerpf(t_from, t_to, f)
+		var dir := V.rotate(n0, axis, ang * f)
+		# The last quarter leans from the orbital plane onto the hand-off direction.
+		var lean := clampf((f - 0.75) / 0.25, 0.0, 1.0)
+		dir = V.normalized(V.lerp(dir, n1, lean * lean * (3.0 - 2.0 * lean) * f))
+		var r := r0 * pow(r1 / r0, f)
+		pts.append([t, V.add(eph.position(body, t), V.scale(dir, r))])
+	pts.append([t_to, V.add(eph.position(body, t_to), e)])
+	var out := []
+	for k in SPIRAL_SAMPLES + 1:
+		var a: Array = pts[maxi(k - 1, 0)]
+		var b: Array = pts[mini(k + 1, SPIRAL_SAMPLES)]
+		var dt := float(b[0]) - float(a[0])
+		var vel := V.scale(V.sub(b[1], a[1]), 1.0 / (dt if absf(dt) > 1e-3 else 1e-3))
+		var rel_v := V.sub(vel, eph.velocity(body, float(pts[k][0])))
+		var thrust := V.scale(V.normalized(rel_v), accel * (-1.0 if inward else 1.0))
+		out.append([pts[k][0], pts[k][1], vel, thrust])
+	return out
+
+
+## Replay of a sampled path (Hermite between samples), the same rule
+## Navigation uses, here so dress() can resample it.
+static func _replay(loc: Dictionary, t: float, velocity: bool) -> Array:
+	var samples: Array = loc["samples"]
+	var i := _seg_index(samples, t)
+	var a: Array = samples[i]
+	var b: Array = samples[mini(i + 1, samples.size() - 1)]
+	var T := maxf(float(b[0]) - float(a[0]), 1e-6)
+	var s := clampf((t - float(a[0])) / T, 0.0, 1.0)
+	var s2 := s * s
+	var s3 := s2 * s
+	if velocity:
+		var v := V.scale(a[1], (6.0 * s2 - 6.0 * s) / T)
+		v = V.add(v, V.scale(a[2], 3.0 * s2 - 4.0 * s + 1.0))
+		v = V.add(v, V.scale(b[1], (-6.0 * s2 + 6.0 * s) / T))
+		return V.add(v, V.scale(b[2], 3.0 * s2 - 2.0 * s))
+	var p := V.scale(a[1], 2.0 * s3 - 3.0 * s2 + 1.0)
+	p = V.add(p, V.scale(a[2], (s3 - 2.0 * s2 + s) * T))
+	p = V.add(p, V.scale(b[1], -2.0 * s3 + 3.0 * s2))
+	return V.add(p, V.scale(b[2], (s3 - s2) * T))
+
+
+static func _seg_index(samples: Array, t: float) -> int:
+	var lo := 0
+	var hi := samples.size() - 1
+	while hi - lo > 1:
+		var mid := (lo + hi) >> 1
+		if float(samples[mid][0]) <= t:
+			lo = mid
+		else:
+			hi = mid
+	return lo
+
+
 ## Quick estimate for boards and NPCs (no flight): the fastest affordable candidate,
 ## or the cheapest if none is. In Navigation.plan's shape, with a free-fall conic path.
 static func quick(ship: Dictionary, data, eph, from_place: String, to_place: String, t: float) -> Dictionary:
@@ -261,6 +471,7 @@ static func quick(ship: Dictionary, data, eph, from_place: String, to_place: Str
 			var st := OM.kepler(pick["r_a"], sol[0], dt, job["mu"])
 			samples.append([t1 + dt, st[0], st[1], [0.0, 0.0, 0.0]])
 	var arrive := t + float(pick["duration_s"])
+	samples = dress(samples, data, eph, from_place, to_place, t, arrive, float(job["accel"]))
 	var fuel_t := float(pick["fuel_t"])
 	var dest_refuels: bool = "refuel" in data.locations[to_place].get("services", [])
 	var days := (arrive - t) / DAY

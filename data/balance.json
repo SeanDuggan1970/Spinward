@@ -16,7 +16,11 @@
 			100000,
 			1000000
 		],
-		"arrival_scale": 1
+		"arrival_scale": 1,
+		"_departure_note": "Leaving port: time drops to x1 while the ship backs off the port, then steps up. Each step is [game seconds since departure, scale]; a pilot who changes the scale meanwhile keeps theirs.",
+		"departure_ramp": [[8, 10], [23, 100], [173, 1000]],
+		"_approach_note": "Coming in: time is capped as the port nears, so the last of the approach is seen at x1. Each cap is [game seconds before arrival, highest scale].",
+		"approach_caps": [[172800, 100000], [14400, 10000], [3600, 1000], [600, 100], [60, 10], [10, 1]]
 	},
 	"economy": {
 		"_note": "price = base * clamp((target / stock) ^ elasticity, min, max). Stock relaxes toward target at relaxation_per_day, standing in for background traffic.",

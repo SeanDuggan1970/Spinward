@@ -727,6 +727,31 @@ Sean (2026-10-07): a ship passing in front of a gas giant has no depth cues, "th
 - **Bloom:** a gentle one in every scene, on bright limbs, beacons and exhausts.
 - **Dust** (`SkyKit.dust`): sunlit motes drifting around the ship-view camera, so near and far read apart as the view turns.
 
+## Leaving, arriving and keeping clear (Oct 2026)
+
+**No route through a world.** `tools/route_clearance.gd` plans every pair of ports at several departure dates, both quick plans and the co-pilot's gravity-flown options, and walks each path against every body. The clearance is the body's radius plus the atmosphere the renderer draws (`look.atmosphere.thickness`), and at least 20 km above the ground. Any crossing of Saturn's ring plane inside the main rings also counts. On the first run 154 of 272 quick routes failed. The fixes:
+- **Voyages between worlds** (`Interplanetary.dress`). The Sun-centred transfer runs from planet centre to planet centre, the patched-conic shortcut. The flown path now adds a climb-out round it: a spiral from the station, turning the way it orbits, out to a hand-off point clear of the world. The capture is the same in reverse. The transfer eases off and onto the hand-offs along its direction of travel, so the offset can only carry the path further out. Times, distances and propellant are unchanged.
+- **Quick trips in a planet's system** keep clear of the frame body, the bodies each end orbits, and the Moon. Each is tracked through the trip at its true position: the Moon's distance swings by tens of thousands of km, and Titan circles Saturn. A run that would cut through one goes round it on an arc (`_around`). The arc swings once it has climbed clear, and keeps the straight run's timing and propellant, so no trip got longer or dearer. Anything still grazing is eased up onto the clearance smoothly (`_clear_of`); the path bends, it doesn't kink.
+- **Gravity-flown trips** get the same tracking for the climb-outs and hand-offs either side of the flown part.
+- **Two old bugs.** Sun-planet Lagrange stations (Hektor Reach, at Jupiter's L4) were treated as deep in the Sun's well: their trips started at the Sun's centre and came out as NaN. They are now in free solar orbit, as they should be. The conic propagator's last velocity can come out NaN, and samples are now cleaned.
+
+**Navigation lights** (`Kit.nav_light`, `view/flight/lamp.gd`, `view/shaders/halo.gdshader`):
+- **Fixtures, not blobs:** a dark housing on the skin, a coloured lens that is dim unlit, and when lit a brighter lens and a glow that faces the camera. The glow never shrinks below a few pixels, so a ship's lights read as points of light a long way off.
+- **Patterns:** red to port and green to starboard pulse together; a white anti-collision strobe double-flashes on the keel; a red beacon sweeps on each drive.
+- **Blinking:** every flashing light drives itself from the real-time clock. It works in every view, and time compression never speeds it up. Before, only the docking scene and the title drove blinking, so in transit the lights stood still.
+
+**Leaving and arriving like a film.**
+- **Time** (`travel_system._time_ramps`, data in `balance.time`):
+  - Departure drops to x1 while the ship backs off the port, then steps up (`departure_ramp`, x10, x100, x1000 within about 11 s), unless the pilot picks a scale of their own.
+  - Coming in, time is capped ever lower as the port nears (`approach_caps`), so the last ten seconds play at x1.
+- **The ship view** (`follow_view.gd`) shows the ports at each end for the first and last 20 minutes of the trip.
+  - Leaving: the port sits off the nose, docking face toward us, and falls away as we back out nose-first, turn and go.
+  - Arriving: it lies ahead and we close on it, slowing, to the point where the approach scene starts us, so the hand-over picks up where the ship view left off.
+  - Each corridor runs along the trip's own first or last leg.
+  - Screens hand over with a short fade from black.
+
+**Selling:** each Sell All button is green when selling the whole load here makes a profit over what you paid, and red at a loss. The IF SOLD column beside it gives the profit in credits. The whole load is priced together, since your sale moves the price.
+
 ## Milestones
 
 - **M0 – Foundation:** done.

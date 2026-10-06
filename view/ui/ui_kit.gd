@@ -70,6 +70,15 @@ static func button(text: String, on_press: Callable, enabled: bool = true) -> Bu
 	return b
 
 
+## Colour a button for what it does: text and edge in `colour`, the face a shade of it
+## (a sale at a profit green, at a loss red).
+static func tint_button(b: Button, colour: Color) -> void:
+	for state in ["font_color", "font_hover_color", "font_focus_color"]:
+		b.add_theme_color_override(state, colour.lightened(0.15) if state == "font_hover_color" else colour)
+	b.add_theme_stylebox_override("normal", box(Color("2a2f34").lerp(colour, 0.18), colour, 1, 6))
+	b.add_theme_stylebox_override("hover", box(Color("343a40").lerp(colour, 0.28), colour.lightened(0.15), 1, 6))
+
+
 static func panel(title: String) -> Array:
 	var p := PanelContainer.new()
 	var v := VBoxContainer.new()

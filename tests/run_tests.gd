@@ -72,6 +72,7 @@ func _initialize() -> void:
 	test_elevators()
 	test_damage()
 	test_ship_audio()
+	test_time_ramps()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -241,8 +242,12 @@ func test_travel() -> void:
 	check(sim.apply({"type": "depart", "to": "halo_depot"}) == "", "Depart for Halo Depot")
 	check(s.location["status"] == "transit" and s.ship["fuel_t"] < 3.0, "In transit, fuel spent")
 	check(sim.apply({"type": "buy", "good": "food", "tonnes": 1}) != "", "No trading in transit")
+	# The ship starts at the port where it is now, and rides along with it until the
+	# burn, which starts from where the port is then (from_pos).
 	var start_pos: Array = Navigation.transit_position(s.location, s.time_s)
-	check(V.distance(start_pos, s.location["from_pos"]) < 1.0, "Transit starts at the origin")
+	check(V.distance(start_pos, sim.ephemeris.relative("kibo_ring", s.location["frame"], s.time_s)) < 1.0, "Transit starts at the origin")
+	var burn_t: float = float(s.location["depart_t"]) + (float(s.location["arrive_t"]) - float(s.location["depart_t"]) - float(s.location["burn_s"])) * 0.5
+	check(V.distance(Navigation.transit_position(s.location, burn_t), s.location["from_pos"]) < 1.0, "The burn starts from the port's position then")
 	sim.apply({"type": "set_time_scale", "scale": 10000})
 	sim.advance_game_time(float(s.location["arrive_t"]) - s.time_s - 60.0)
 	check(s.location["status"] == "transit", "Still travelling just before arrival")
@@ -560,9 +565,16 @@ func test_trajectories() -> void:
 		check(V.distance(Navigation.transit_position(loc, end), plan["to_pos"]) < 1.0, "%s path ends at the intercept" % to)
 		check(V.distance(Navigation.transit_velocity(loc, end), plan["to_vel"]) < 0.01, "%s path arrives matching the destination's motion" % to)
 		var peak := 0.0
+		var low := INF
 		for k in 41:
-			peak = maxf(peak, V.length(Navigation.transit_accel(loc, lerpf(start, end, k / 40.0))))
-		check(peak <= accel * 1.001, "%s thrust never exceeds the drive (%.4f vs %.4f m/s2)" % [to, peak, accel])
+			var tk := lerpf(start, end, k / 40.0)
+			peak = maxf(peak, V.length(Navigation.transit_accel(loc, tk)))
+			low = minf(low, V.length(Navigation.transit_position(loc, tk)) - 6371000.0)
+		# A run that has to go round Earth keeps the straight run's timing (its arc is the
+		# path's shape, clear of the planet), so only straight runs are held to the drive.
+		if loc.get("around") == null:
+			check(peak <= accel * 1.001, "%s thrust never exceeds the drive (%.4f vs %.4f m/s2)" % [to, peak, accel])
+		check(low > 140000.0, "%s path stays above Earth's air (%.0f km)" % [to, low / 1000.0])
 		# Curvature: how far the midpoint sits off the straight chord.
 		var mid := Navigation.transit_position(loc, (start + end) * 0.5)
 		var chord := V.sub(plan["to_pos"], plan["from_pos"])
@@ -1278,3 +1290,37 @@ func test_ship_audio() -> void:
 	root.free()
 	# The kit caches materials in statics; let them go before the test run exits.
 	load("res://view/flight/kit.gd")._materials.clear()
+
+
+## Leaving port time steps up from x1 to the default; arriving it is capped lower and
+## lower so the last seconds play at x1; a pilot's own choice of scale is kept.
+func test_time_ramps() -> void:
+	var sim := fresh()
+	var s := sim.state
+	s.time_scale = 100.0
+	check(sim.apply({"type": "depart", "to": "halo_depot"}) == "", "Depart for the ramp test")
+	check(s.time_scale == 1.0, "Departure starts at x1 (%.0f)" % s.time_scale)
+	for _i in 300:
+		sim.tick(0.05)
+	check(s.time_scale == 1000.0, "Fifteen seconds out, time has stepped up to x1000 (%.0f)" % s.time_scale)
+	s.time_scale = 100000.0
+	var last_scale := -1.0
+	var seen_slow := false
+	for _i in 5000:
+		if s.location.get("status") != "transit":
+			break
+		var left := float(s.location["arrive_t"]) - s.time_s
+		if left < 10.0:
+			seen_slow = true
+			last_scale = maxf(last_scale, s.time_scale)
+		sim.tick(0.05)
+	check(s.location.get("status") == "approach", "The trip ends on the approach")
+	check(seen_slow and last_scale <= 1.0, "The last ten seconds play at x1 (%.0f)" % last_scale)
+	# A pilot who picks a scale during the departure ramp keeps it.
+	var sim2 := fresh()
+	check(sim2.apply({"type": "depart", "to": "halo_depot"}) == "", "Depart again")
+	sim2.tick(1.0)
+	sim2.apply({"type": "set_time_scale", "scale": 10})
+	for _i in 300:
+		sim2.tick(0.05)
+	check(sim2.state.time_scale == 10.0, "The pilot's own x10 stands (%.0f)" % sim2.state.time_scale)

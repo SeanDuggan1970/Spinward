@@ -213,8 +213,15 @@ func _depart(npc: Dictionary, t: float) -> void:
 		"from_pos": plan["from_pos"], "to_pos": plan["to_pos"], "distance_m": plan["distance_m"],
 		"from_vel": plan["from_vel"], "to_vel": plan["to_vel"],
 		"from_rot": plan.get("from_rot"), "to_rot": plan.get("to_rot"), "rot_axis": plan.get("rot_axis"), "rot_angle": plan.get("rot_angle", 0.0),
-		"samples": plan.get("samples"),
+		"samples": plan.get("samples"), "around": plan.get("around"), "around_r": plan.get("around_r", 0.0), "avoid": plan.get("avoid"),
 	}
+	if plan.get("samples") == null:
+		# Riding along with the ports either side of the burn (Navigation.port_tracks).
+		var span := float(plan["arrive_t"]) - t
+		var start := t + (span - float(plan["burn_s"])) * 0.5
+		var tracks := Navigation.port_tracks(sim().ephemeris, here, choice["to"], plan["frame"], t, start, start + float(plan["burn_s"]), float(plan["arrive_t"]))
+		npc["location"]["pre_track"] = tracks[0]
+		npc["location"]["post_track"] = tracks[1]
 	npc["next_t"] = plan["arrive_t"]
 	npc.erase("flyby")
 	var fleet := _fleet(npc)

@@ -80,12 +80,13 @@ static func build(ship_state: Dictionary, data, livery: Dictionary) -> Dictionar
 	if keel_to <= keel_from:
 		keel_to = length * 0.8
 	parts.add_child(Kit.truss(keel_to - keel_from, truss_w, ctx["mats"]["steel"], Vector3(0, 0, (keel_from + keel_to) * 0.5)))
-	# Navigation lights: red port, green starboard, white strobe aft.
+	# Navigation lights, in fixtures on the hull (Kit.nav_light): red to port, green to
+	# starboard, pulsing together, and a white anti-collision strobe on the keel aft.
 	var crew_w := float(sections[0].get("hull_r", sections[0]["radius"])) if sections.size() > 1 else 2.0
 	var crew_z := float(sections[0]["length"]) * 0.55 if sections.size() > 1 else 2.0
-	parts.add_child(Kit.beacon(Color("ff3a2a"), Vector3(-crew_w, 0, crew_z), 0.2, 1.4, 0.0))
-	parts.add_child(Kit.beacon(Color("3aff5a"), Vector3(crew_w, 0, crew_z), 0.2, 1.4, 0.0))
-	parts.add_child(Kit.beacon(Color.WHITE, Vector3(0, truss_w, length * 0.7), 0.2, 1.0, 0.5))
+	parts.add_child(Kit.nav_light(Color("ff3a2a"), Vector3(-crew_w, 0, crew_z), Vector3.LEFT, 0.2, "flash", 1.6, 0.0))
+	parts.add_child(Kit.nav_light(Color("3aff5a"), Vector3(crew_w, 0, crew_z), Vector3.RIGHT, 0.2, "flash", 1.6, 0.0))
+	parts.add_child(Kit.nav_light(Color("f4f8ff"), Vector3(0, truss_w * 0.55, length * 0.7), Vector3.UP, 0.16, "strobe", 1.4, 0.4))
 	var root := Node3D.new()
 	parts.position.z = -length * 0.5
 	root.add_child(parts)
@@ -294,8 +295,9 @@ static func _crew(m: Dictionary, ctx: Dictionary) -> Dictionary:
 		chin.add_child(pane)
 	n.add_child(chin)
 	n.add_child(Kit.torus(0.9, 0.18, mats["trim"], Vector3(0, 0, -0.05), 20))
-	n.add_child(Kit.beacon(Color("fff4d6"), Vector3(w * 0.3, h * 0.25, nose_len * 0.3), 0.16))
-	n.add_child(Kit.beacon(Color("fff4d6"), Vector3(-w * 0.3, h * 0.25, nose_len * 0.3), 0.16))
+	# Docking floodlights either side of the collar.
+	n.add_child(Kit.nav_light(Color("fff4d6"), Vector3(w * 0.3, h * 0.25, nose_len * 0.3), Vector3(0.3, 0.2, -1.0), 0.14))
+	n.add_child(Kit.nav_light(Color("fff4d6"), Vector3(-w * 0.3, h * 0.25, nose_len * 0.3), Vector3(-0.3, 0.2, -1.0), 0.14))
 	# Flight deck: the box behind the nose, banded and stencilled.
 	var deck_len := size.z * 0.6
 	var deck_z := nose_len + deck_len * 0.5
@@ -806,7 +808,8 @@ static func _drive(m: Dictionary, s: Vector3, ctx: Dictionary, index: int) -> No
 	for k in 4:
 		var a := TAU * float(k) / 4.0 + PI * 0.25
 		n.add_child(rcs(Vector3(cos(a), sin(a), 0) * (r + 0.4) + Vector3(0, 0, reactor_len * 0.9), Vector3(cos(a), sin(a), 0), ctx))
-	n.add_child(Kit.beacon(Color("ff3a2a"), Vector3(0, r + 0.3, 0.3), 0.18, 2.0, 0.25 * index))
+	# The drive's red rotating beacon: keep clear when it's lit.
+	n.add_child(Kit.nav_light(Color("ff3a2a"), Vector3(0, r + 0.1, 0.3), Vector3.UP, 0.18, "beacon", 2.0, 0.25 * index))
 	return n
 
 

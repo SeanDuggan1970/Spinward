@@ -54,7 +54,6 @@ var _update: Callable
 var _spinners: Array = []
 ## Set-piece animations (SetPieces.animate).
 var _anims: Array = []
-var _blinkers: Array = []
 var _overlay: Control
 var _fade: ColorRect
 
@@ -112,7 +111,6 @@ func next_shot() -> void:
 	clock = 0.0
 	_pick_hero({"sail": "sail_freighter", "touchdown": "kestrel"}.get(_shot, ""))
 	call("_build_" + _shot)
-	_blinkers = Kit.collect_blinkers(_stage)
 
 
 # --- shared pieces ------------------------------------------------------------------
@@ -440,7 +438,6 @@ func _process(dt: float) -> void:
 	if _update.is_valid():
 		_update.call(dt)
 	SetPieces.animate(_anims, clock)
-	Kit.update_blinkers(_blinkers, clock)
 	# Cut through black: fade up at the start of a shot, down at its end.
 	var a := 0.0
 	if clock < FADE_S:

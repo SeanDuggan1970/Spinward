@@ -145,11 +145,11 @@ func _scroll(name_: String) -> Array:
 func _market_tab(place_id: String) -> Control:
 	var parts := _scroll("Market")
 	var grid := GridContainer.new()
-	grid.columns = 8
+	grid.columns = 9
 	grid.add_theme_constant_override("h_separation", 14)
 	grid.add_theme_constant_override("v_separation", 6)
 	parts[1].add_child(grid)
-	for h in ["GOOD", "STOCK", "BUY", "SELL", "ABOARD", "", "", ""]:
+	for h in ["GOOD", "STOCK", "BUY", "SELL", "ABOARD", "", "", "", "IF SOLD"]:
 		grid.add_child(UI.label(h, UI.DIM, 12))
 	var s = sim.state
 	var d = sim.data
@@ -171,14 +171,30 @@ func _market_tab(place_id: String) -> Control:
 		var max_buy := floorf(Market.affordable_tonnes(s, d, place_id, good, _spendable(place_id), minf(free, Market.stock(s, place_id, good))) * 10.0) / 10.0
 		grid.add_child(UI.button("Buy 1", send.bind({"type": "buy", "good": good, "tonnes": 1.0}), max_buy >= 1.0))
 		grid.add_child(UI.button("Buy max", _buy_max.bind(good), max_buy >= 0.1))
-		grid.add_child(UI.button("Sell all", send.bind({"type": "sell", "good": good, "tonnes": aboard}), aboard > 0.0))
+		# Selling it all: what it fetches here (your sale moves the price, so the whole
+		# load is priced together) against what you paid. Green at a profit, red at a loss.
+		var sell_all := UI.button("Sell all", send.bind({"type": "sell", "good": good, "tonnes": aboard}), aboard > 0.0)
+		grid.add_child(sell_all)
+		if aboard > 0.0:
+			var income := Market.sell_price(s, d, place_id, good, aboard) * aboard
+			var paid := float(s.ship.get("cargo_paid", {}).get(good, 0.0))
+			var profit := income - paid
+			var colour: Color = UI.GOOD if profit >= 0.0 else UI.WARN
+			UI.tint_button(sell_all, colour)
+			var gain := UI.label(("+" if profit >= 0.0 else "") + UI.money(profit), colour)
+			gain.tooltip_text = "Sells for %s; you paid %s." % [UI.money(income), UI.money(paid)]
+			gain.mouse_filter = Control.MOUSE_FILTER_PASS
+			sell_all.tooltip_text = gain.tooltip_text
+			grid.add_child(gain)
+		else:
+			grid.add_child(UI.label("", UI.DIM))
 	var unsellable := []
 	for good in s.ship["cargo"]:
 		if not Market.trades(d, place_id, good):
 			unsellable.append(d.goods[good]["name"])
 	if not unsellable.is_empty():
 		parts[1].add_child(UI.label("Not traded here: " + ", ".join(unsellable), UI.DIM, 13))
-	parts[1].add_child(UI.label("Green buy prices are below normal; amber sell prices are above normal. Your trades move the price.", UI.DIM, 12))
+	parts[1].add_child(UI.label("Green buy prices are below normal; amber sell prices are above normal. Your trades move the price. IF SOLD is the profit on selling the whole load here, after what you paid: green a gain, red a loss.", UI.DIM, 12))
 	parts[1].add_child(UI.label("* needed here for a megaproject: deliveries count toward it, and toward your share.", UI.HAZARD, 12))
 	var keep := CheckButton.new()
 	keep.text = "Buy max keeps a reserve for the tug and a full tank (%s)" % UI.money(_reserve(place_id))
