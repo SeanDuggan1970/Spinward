@@ -17,6 +17,8 @@ extends RefCounted
 
 const Kit := preload("res://view/flight/kit.gd")
 const Livery := preload("res://view/flight/livery.gd")
+const ShipBuilder := preload("res://view/flight/ship_builder.gd")
+const EXHAUST := "res://view/shaders/exhaust.gdshader"
 
 const LENGTH := 23.0
 
@@ -118,6 +120,7 @@ static func build(livery: Dictionary, scale: float = 1.0, payload: String = "pas
 
 	# --- the leg pods: lift thrusters, landing gear --------------------------------
 	var legs := []
+	var bell_mat: Material = Livery.paint(livery, Color("4a3d32"), {"finish": 1, "metallic": 0.7, "roughness": 0.45})
 	var lift := Node3D.new()
 	lift.name = "LiftPlume"
 	lift.visible = false
@@ -132,11 +135,16 @@ static func build(livery: Dictionary, scale: float = 1.0, payload: String = "pas
 			pod.add_child(Kit.box(Vector3(1.95, 0.25, 2.45), accent, Vector3(0, 0.45, 0)))
 			for c in [Vector3(1, 1, 1), Vector3(-1, 1, 1), Vector3(1, -1, 1), Vector3(-1, -1, 1), Vector3(1, 1, -1), Vector3(-1, 1, -1), Vector3(1, -1, -1), Vector3(-1, -1, -1)]:
 				pod.add_child(Kit.box(Vector3(0.12, 0.12, 0.12), steel, c * Vector3(0.97, 0.67, 1.22)))
-			var bell := Kit.cone(0.5, 0.22, 0.6, dark, Vector3.ZERO, 16)
-			bell.rotation = Vector3.ZERO
-			bell.position = Vector3(0, -0.95, 0)
+			# Throat at the pod's belly, opening straight down (+Z turned to -Y).
+			var down := Basis(Vector3.RIGHT, PI * 0.5)
+			var bell := ShipBuilder.small_bell(0.14, 0.42, 0.62, bell_mat, dark)
+			bell.position = Vector3(0, -0.68, 0)
+			bell.basis = down
 			pod.add_child(bell)
-			lift.add_child(Kit.sphere(0.3, Kit.glow(Color("ffcf8a"), 3.0), pod.position + Vector3(0, -1.4, 0)))
+			var lift_jet := _jet(0.14, 0.42, 0.62, 5.0, 0.16, float(legs.size()))
+			lift_jet.position = pod.position + Vector3(0, -0.68, 0)
+			lift_jet.basis = down
+			lift.add_child(lift_jet)
 			# Outriggers back to the spine.
 			for dz in [-0.9, 0.9]:
 				frame.add_child(_rod(Vector3(side * 0.85, spine_y + 0.3, zi + dz * 0.6), pod.position + Vector3(-side * 0.95, 0.35, dz), 0.07, steel))
@@ -186,11 +194,17 @@ static func build(livery: Dictionary, scale: float = 1.0, payload: String = "pas
 	var plume := Node3D.new()
 	plume.name = "DrivePlume"
 	plume.visible = false
-	var bell_mat: Material = Livery.paint(livery, Color("4a3d32"), {"finish": 1, "metallic": 0.7, "roughness": 0.45})
+	var k := 0
 	for c in [Vector3(-0.62, 0.55, 0), Vector3(0.62, 0.55, 0), Vector3(-0.62, -0.55, 0), Vector3(0.62, -0.55, 0)]:
-		aft.add_child(Kit.cylinder(0.25, 0.5, dark, c + Vector3(0, 0, 1.6), 12))
-		aft.add_child(Kit.cone(0.48, 0.22, 1.1, bell_mat, c + Vector3(0, 0, 2.35), 18))
-		plume.add_child(Kit.sphere(0.3, Kit.glow(Color("8fd0ff"), 4.0), c + Vector3(0, 0, 3.1)))
+		# Each chamber: a short barrel, then a hollow bell opening aft, its jet behind it.
+		aft.add_child(Kit.cylinder(0.25, 0.5, dark, c + Vector3(0, 0, 1.55), 12))
+		var bell := ShipBuilder.small_bell(0.18, 0.5, 1.1, bell_mat, dark)
+		bell.position = c + Vector3(0, 0, 1.8)
+		aft.add_child(bell)
+		var jet := _jet(0.18, 0.5, 1.1, 9.0, 0.12, 10.0 + float(k))
+		jet.position = c + Vector3(0, 0, 1.8)
+		plume.add_child(jet)
+		k += 1
 	aft.add_child(plume)
 	for side in [-1.0, 1.0]:
 		aft.add_child(_rcs(Vector3(side * 1.55, 0, 0.9), Vector3(side, 0, 0.3), mats, rig))
@@ -203,6 +217,24 @@ static func build(livery: Dictionary, scale: float = 1.0, payload: String = "pas
 	var s := scale
 	return {"node": root, "nose_z": -11.3 * s, "radius": 5.0 * s, "length": LENGTH * s, "rig": rig, "legs": legs, "lift": lift,
 		"foot_y": (spine_y - 0.15 - 3.1 - 0.12 - 0.07) * s}
+
+
+## A chamber's exhaust: the free jet from the lip aft, on the drives' exhaust shader
+## (view/shaders/exhaust.gdshader), throat at the origin, opening toward +Z. Short-burn
+## chambers burn paler and bluer than the fusion drives' violet.
+static func _jet(rt: float, re: float, lb: float, length: float, spread: float, seed: float) -> MeshInstance3D:
+	var mat := ShaderMaterial.new()
+	mat.shader = load(EXHAUST)
+	var w_end := re * 0.55 + length * spread
+	for kv in [["rt", rt], ["re", re], ["lb", lb], ["spread", spread], ["fade", lb * 6.0], ["seed", seed], ["brightness", 1.4],
+			["z_from", lb], ["z_to", lb + length], ["r_from", re * 0.97], ["r_bound", w_end * 1.8], ["end_fade", length * 0.35],
+			["core", Color(0.92, 0.94, 1.0)], ["body", Color(0.55, 0.66, 1.0)], ["tail", Color(0.45, 0.55, 0.95)]]:
+		mat.set_shader_parameter(kv[0], kv[1])
+	var free := PackedVector2Array([Vector2(0.0, lb), Vector2(re * 0.97, lb), Vector2(w_end * 1.8, lb + length), Vector2(0.0, lb + length)])
+	var vol := Kit.lathe([free], mat, 24)
+	vol.set_meta("brightness", 1.4)
+	vol.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return vol
 
 
 ## A landing leg: outrigger strut from the hip, a telescopic shock absorber (sleeve

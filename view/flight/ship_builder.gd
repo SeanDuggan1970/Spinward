@@ -30,6 +30,9 @@ const GAP := 0.6
 static func build(ship_state: Dictionary, data, livery: Dictionary) -> Dictionary:
 	var hull: Dictionary = data.ships[ship_state["hull"]]
 	var look: Dictionary = hull.get("look", {})
+	# Frame-built craft (the Kestrel surface transporter) have their own layout.
+	if look.get("layout", "") == "frame":
+		return load("res://view/flight/kestrel.gd").build(livery, 1.0, String(look.get("payload", "passenger")))
 	var spine: Dictionary = data.modules[hull["spine"]]
 	var truss_w := float(spine["look"].get("truss_m", 1.4))
 	var rng := RandomNumberGenerator.new()

@@ -27,7 +27,12 @@ var fuel := FUEL_S
 var done := false
 var landed := false
 var _lander: Node3D
-var _flame: MeshInstance3D
+## The lift thrusters' jets, lit while the engine fires.
+var _flame: Node3D
+## The lander (a small Kestrel) and how far its legs are pushed in.
+var _model: Dictionary = {}
+var _squash := 0.0
+var _squash_to := 0.0
 var _camera: Camera3D
 var _hud: Control
 var _font: Font
@@ -75,29 +80,28 @@ func _ready() -> void:
 	add_child(_hud)
 
 
+## The Bramble: a two-seat Kestrel, a third the size, a cargo pod slung under it.
+## It flies on its four lift thrusters, and its legs take the touchdown.
 func _build_lander() -> Node3D:
 	var n := Node3D.new()
-	n.add_child(Kit.cylinder(1.4, 2.2, Kit.mat("yellow"), Vector3(0, 1.6, 0), 8))
-	n.get_child(-1).basis = Basis.IDENTITY
-	n.add_child(Kit.box(Vector3(1.6, 0.06, 0.6), Kit.glass(0.4), Vector3(0, 2.4, -1.2)))
-	for k in 4:
-		var a := TAU * float(k) / 4.0 + PI * 0.25
-		var foot := Vector3(cos(a) * 2.4, 0.0, sin(a) * 2.4)
-		var leg := Kit.box(Vector3(0.12, 0.12, foot.distance_to(Vector3(cos(a) * 1.1, 1.2, sin(a) * 1.1))), Kit.mat("steel"), (foot + Vector3(cos(a) * 1.1, 1.2, sin(a) * 1.1)) * 0.5)
-		leg.look_at_from_position(leg.position, Vector3(cos(a) * 1.1, 1.2, sin(a) * 1.1), Vector3.UP)
-		n.add_child(leg)
-		n.add_child(Kit.cylinder(0.4, 0.1, Kit.mat("dark"), foot, 8))
-		n.get_child(-1).basis = Basis.IDENTITY
-	n.add_child(Kit.beacon(Color("f0a030"), Vector3(0, 3.0, 0), 0.15, 1.2, 0.0))
-	_flame = Kit.sphere(0.5, Kit.glow(Color("8fd0ff"), 4.0), Vector3(0, 0.1, 0))
+	var livery: Dictionary = preload("res://view/flight/livery.gd").for_ship(sim.data, "", String(sim.state.ship.get("name", "")), true)
+	_model = load("res://view/flight/kestrel.gd").build(livery, 0.36, "cargo")
+	var craft: Node3D = _model["node"]
+	# Feet at the node's origin, so the craft stands where it lands.
+	craft.position = Vector3(0, -float(_model["foot_y"]), 0)
+	n.add_child(craft)
+	_flame = _model["lift"]
 	_flame.visible = false
-	n.add_child(_flame)
 	return n
 
 
 func _physics_process(dt: float) -> void:
 	if done:
 		_result_t += dt
+		# The springs rebound from the impact and settle under the craft's weight.
+		_squash = lerpf(_squash, _squash_to, clampf(dt * 3.0, 0.0, 1.0))
+		_set_legs(_squash)
+		_flame.visible = false
 		return
 	var centre := Vector3(0, -radius, 0)
 	var up := (pos - centre).normalized()
@@ -136,10 +140,23 @@ func _physics_process(dt: float) -> void:
 		done = true
 		pos = centre + up * radius
 		vel = Vector3.ZERO
+		# The legs take it: a soft landing settles onto the springs; a hard one bottoms out.
+		_squash = clampf(down / LAND_V, 0.2, 1.6)
+		_squash_to = 0.35
 	_lander.position = pos
 	_lander.basis = Basis.looking_at(up.cross(Vector3.RIGHT).normalized(), up)
-	_camera.look_at_from_position(pos + up * 14.0 + Vector3(0, 0, 26.0), pos + up * 1.5, up)
+	_camera.look_at_from_position(pos + up * 7.0 + Vector3(0, 0, 15.0), pos + up * 1.2, up)
 	_hud.queue_redraw()
+
+
+## Push the legs in by `amount` of their travel (0 extended, 1 fully in).
+func _set_legs(amount: float) -> void:
+	if _model.is_empty():
+		return
+	var push := []
+	for leg in _model["legs"]:
+		push.append(float(leg["travel_max"]) * clampf(amount, 0.0, 1.0))
+	load("res://view/flight/kestrel.gd").compress(_model["legs"], push)
 
 
 func _unhandled_input(event: InputEvent) -> void:

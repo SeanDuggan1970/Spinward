@@ -662,6 +662,24 @@ Sean's direction (2026-10-06):
 - **Headless runs** (tests, smoke, docking trial) build every source but play nothing, as there's no audio device. Quits stop all sound first, so nothing is left registered with the audio server.
 - **Listening demo:** `tools/make_sound_demo.py` mixes about a minute of a ship's day offline into `build/ship-sounds-demo.wav`, for auditioning without the game.
 
+## The Kestrel: a lander for the inner kid (Oct 2026)
+
+Sean's direction (2026-10-07): the Eagle from *Space: 1999*, "a much loved design... the way the landing legs/pads allow it to safely touch down on solid surfaces of moons and other bodies. if our ship builder can create ships like that too it would be just magical to my inner kid."
+
+- **The Kestrel-class surface transporter** (`view/flight/kestrel.gd`, hull `kestrel` with `look.layout: "frame"`; `ship_builder.gd` hands frame-built hulls to it) is our own design in that spirit:
+  - **Spine:** an open box-truss, with service ducts.
+  - **Command module:** an octagonal cabin with a faceted nose, windows set into its upper facets, a hatch and docking collar on top, and a steerable dish.
+  - **Leg pods:** four, each with a lift thruster firing down (a hollow `small_bell` with its jet under `LiftPlume`), and a sprung leg: outrigger, knee, telescopic shock absorber, ball-jointed footpad, drag brace. `Kestrel.compress()` pushes the pistons in.
+  - **Payload pod:** passenger or cargo, slung beneath on clamps.
+  - **Service module aft:** four propellant spheres and four short-burn chambers with hollow bells and pale jets.
+- **In the data:**
+  - spine `kestrel_frame`, with a new `gear` slot
+  - modules `kestrel_cmd`, `kestrel_pod`, `kestrel_tanks`, `kestrel_engines` (no reactor heat) and `kestrel_gear`. The gear sets `lander: true`, so a Kestrel can work landing sites itself.
+  - a Luna Cooperative pair flying Shackleton Port to Farside Array
+- **The lander scene** now flies the Bramble as a small Kestrel (a third size, cargo pod). It descends on its lift jets, and at touchdown the legs take the impact: a soft landing settles onto the springs, a hard one bottoms out.
+- **The title** gains a touchdown shot: a Kestrel lowering onto the Moon, legs compressing and rebounding.
+- **Capture:** `--kestrel=<dir>` shoots it standing on regolith from all round.
+
 ## Milestones
 
 - **M0 – Foundation:** done.

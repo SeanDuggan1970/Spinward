@@ -8,6 +8,7 @@
 ##   belt          weaving between tumbling rocks off Ceres, the Concord Pair beyond
 ##   enceladus     under Enceladus' south pole, its plumes blazing against the Sun
 ##   sail          a Lightfoot sail freighter catching sunlight over Earth
+##   touchdown     a Kestrel lowering onto the Moon on its lift jets, legs taking the weight
 ## Bodies wear what is on them (plumes, elevators), as the system will be.
 ## Each shot flies a random hull in a real fleet's livery (the ships you will meet),
 ## with its caption. View-only: the sim is not ticking while this is up.
@@ -26,7 +27,7 @@ const SkyKit := preload("res://view/flight/sky.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
 const UI := preload("res://view/ui/ui_kit.gd")
 
-const SHOTS := ["earth_orbit", "jovian", "saturn", "lunar", "mars", "belt", "enceladus", "sail"]
+const SHOTS := ["earth_orbit", "jovian", "saturn", "lunar", "mars", "belt", "enceladus", "sail", "touchdown"]
 const SHOT_S := 18.0
 const FADE_S := 0.8
 
@@ -42,6 +43,8 @@ var _shot := ""
 var _stage: Node3D
 var _hero: Node3D
 var _hero_rig: Dictionary = {}
+## The hero's whole model (legs and lift jets, for a Kestrel).
+var _hero_model: Dictionary = {}
 var _hero_plume: Node3D
 var _hero_hull := ""
 var _hero_len := 30.0
@@ -107,7 +110,7 @@ func next_shot() -> void:
 	var pool: Array = SHOTS.filter(func(s): return s != _shot)
 	_shot = force_shot if force_shot != "" else pool[_rng.randi() % pool.size()]
 	clock = 0.0
-	_pick_hero("sail_freighter" if _shot == "sail" else "")
+	_pick_hero({"sail": "sail_freighter", "touchdown": "kestrel"}.get(_shot, ""))
 	call("_build_" + _shot)
 	_blinkers = Kit.collect_blinkers(_stage)
 
@@ -141,6 +144,7 @@ func _pick_hero(hull: String = "") -> void:
 	var model := Models.ship(_ship_dict(_hero_hull), data, livery)
 	_hero = model["node"]
 	_hero_rig = model["rig"]
+	_hero_model = model
 	_hero_len = float(model["length"])
 	_hero_plume = _hero.find_child("DrivePlume", true, false)
 	_stage.add_child(_hero)
@@ -379,6 +383,39 @@ func _build_sail() -> void:
 			_hero_plume.visible = false
 		camera.position = Vector3(380.0 * sin(f * 0.8 - 0.4), 160.0 - 80.0 * f, 300.0 * f)
 		camera.look_at(pos, Vector3.UP)
+
+
+## A Kestrel coming down on the Moon: lift jets on, the legs touching and taking the
+## weight, dust... (no air, so none drifts: the jets just push the regolith flat).
+func _build_touchdown() -> void:
+	_where = "The Moon  ·  a Kestrel setting down"
+	_light(Vector3(-0.55, 0.42, -0.72), 1.6, Vector3(-30, 10, -30))
+	var moon := _body("moon", 220000.0, Vector3(0.0, -220000.0, 0.0))
+	(moon.mesh as SphereMesh).radial_segments = 1024
+	(moon.mesh as SphereMesh).rings = 512
+	_body("earth", 5200.0, Vector3(95000.0, 16000.0, 72000.0), 0.004)
+	var Kestrel = load("res://view/flight/kestrel.gd")
+	var foot := float(_hero_model.get("foot_y", -3.2))
+	var legs: Array = _hero_model.get("legs", [])
+	var lift: Node3D = _hero_model.get("lift")
+	_update = func(dt: float) -> void:
+		var f := clampf(clock / (SHOT_S * 0.62), 0.0, 1.0)
+		# Down from 30 m, slowing all the way, to the pads touching.
+		var h := 30.0 * pow(1.0 - f, 1.7)
+		_hero.position = Vector3(0, h - foot, 0)
+		_hero.basis = Basis(Vector3.UP, 0.5)
+		if lift:
+			lift.visible = f < 1.0
+		if _hero_plume:
+			_hero_plume.visible = false
+		var after := clock - SHOT_S * 0.62
+		var squash := 0.0 if after < 0.0 else 0.35 + 0.4 * exp(-after * 2.5) * cos(after * 9.0)
+		var push := []
+		for leg in legs:
+			push.append(float(leg["travel_max"]) * clampf(squash, 0.0, 1.0))
+		Kestrel.compress(legs, push)
+		camera.position = Vector3(-24.0 + 4.0 * sin(clock * 0.1), 3.0, -20.0)
+		camera.look_at(_hero.position + Vector3(0, 1.0, 0), Vector3.UP)
 
 
 func _process(dt: float) -> void:
