@@ -20,6 +20,7 @@ const ShipStats := preload("res://sim/ship_stats.gd")
 const ProjectSystem := preload("res://sim/systems/project_system.gd")
 const DamageSystem := preload("res://sim/systems/damage_system.gd")
 const ShipAudio := preload("res://view/audio/ship_audio.gd")
+const FlightDeck := preload("res://view/flight/flight_deck.gd")
 
 const ASSIST_MODES := ["full", "assisted", "manual"]
 const SKY_DISTANCE := 60000.0
@@ -27,6 +28,10 @@ const SKY_DISTANCE := 60000.0
 const LANE_WINDOW := 3.0 * 3600.0
 const LANE_LENGTH := 15000.0
 const BERTH_ANGLES := [PI * 0.5, -PI * 0.5, PI * 0.25, PI * 0.75, -PI * 0.25, -PI * 0.75]
+## The pilot sits looking a little down over the instrument panel, so the ship's nose
+## axis (the HUD boresight) is above the middle of the view, in the middle of the
+## windscreen.
+const SEAT_PITCH_DEG := 10.0
 
 var sim
 var place_id: String
@@ -37,6 +42,14 @@ var ship_node: Node3D
 var station: Dictionary
 var camera: Camera3D
 var hud: Control
+## The flight deck around the pilot's eye (cockpit view only).
+var deck: Node3D
+var _deck_mount: Node3D
+## The pilot's head, swaying a little against the deck under thrust (eye space, m).
+var _head := Vector3.ZERO
+var _last_vel := Vector3.ZERO
+## The controls as last flown (for the annunciators).
+var controls_now: Dictionary = {}
 
 var velocity := Vector3.ZERO
 var ang_vel := Vector3.ZERO  # local, rad/s
@@ -142,6 +155,10 @@ func _ready() -> void:
 	camera.fov = 65.0
 	add_child(camera)
 	camera.make_current()
+	_deck_mount = Node3D.new()
+	add_child(_deck_mount)
+	deck = FlightDeck.new()
+	_deck_mount.add_child(deck)
 	_update_camera(1.0)
 	var progress := {}
 	for id in sim.data.projects:
@@ -269,6 +286,7 @@ func _physics_process(dt: float) -> void:
 		_move_rocks(dt)
 		camera.global_position = _wreck_cam
 		camera.look_at(ship_node.position, Vector3.UP)
+		deck.visible = false
 		return
 	clock += dt
 	spin_angle = fposmod(spin_angle + spin_rate * dt, TAU)
@@ -304,9 +322,20 @@ func _physics_process(dt: float) -> void:
 		flash("PROXIMITY  ·  rock on your course, %.1f s" % ahead, UI.WARN, 2.0)
 		audio.beep()
 	_check_docking()
+	# The head lags the ship's acceleration: lean back under thrust, sideways in a strafe.
+	if dt > 0.0:
+		var accel := ship_node.global_transform.basis.inverse() * (velocity - _last_vel) / dt
+		_last_vel = velocity
+		var want := -accel * 0.004
+		if want.length() > 0.03:
+			want = want.normalized() * 0.03
+		_head = _head.lerp(want, clampf(dt * 5.0, 0.0, 1.0))
 	_update_camera(dt)
 	if _shake > 0.0:
-		camera.global_position += Vector3(randf_range(-1, 1), randf_range(-1, 1), randf_range(-1, 1)) * _shake * 0.25
+		var jolt := Vector3(randf_range(-1, 1), randf_range(-1, 1), randf_range(-1, 1)) * _shake * 0.25
+		# The deck shakes with the ship; the head a touch more.
+		_deck_mount.global_position += jolt
+		camera.global_position += jolt * (1.15 if view_mode == "cockpit" else 1.0)
 
 
 func _input_axis(pos: Key, neg: Key) -> float:
@@ -331,6 +360,7 @@ func read_controls() -> Dictionary:
 func _fly(dt: float) -> void:
 	var basis := ship_node.global_transform.basis
 	var controls := read_controls()
+	controls_now = controls
 	var boost := float(tune_flight["boost_mult"]) if controls["boost"] else 1.0
 	var accel := float(tune_flight["rcs_accel_mps2"]) * boost
 	var thrust: Vector3 = controls["thrust"]
@@ -472,17 +502,18 @@ func contacts() -> Array:
 	for id in _traffic:
 		var entry: Dictionary = _traffic[id]
 		if is_instance_valid(entry["ship"]):
-			out.append({"pos": entry["ship"].global_position, "colour": SystemMap.fleet_colour(sim, entry["npc"]), "kind": "ship"})
+			out.append({"pos": entry["ship"].global_position, "colour": SystemMap.fleet_colour(sim, entry["npc"]), "kind": "ship", "r": float(entry.get("radius", 15.0))})
 	for w in _work_craft:
 		out.append({"pos": w["node"].global_position, "colour": UI.HAZARD, "kind": "pod"})
 	for rock in _rocks:
-		out.append({"pos": rock["node"].global_position, "colour": UI.DIM, "kind": "rock"})
+		out.append({"pos": rock["node"].global_position, "colour": UI.DIM, "kind": "rock", "r": float(rock["r"]), "vel": rock["vel"]})
 	return out
 
 
 func _update_camera(dt: float) -> void:
 	var t := ship_node.global_transform
 	ship_node.visible = view_mode != "cockpit"
+	deck.visible = view_mode == "cockpit"
 	if view_mode == "beauty":
 		# Gallery/screenshot camera: pulled far back and up to take in the set pieces.
 		camera.fov = 70.0
@@ -491,8 +522,12 @@ func _update_camera(dt: float) -> void:
 		return
 	if view_mode == "cockpit":
 		# Pilot's eye just behind the command pod's front window.
-		camera.fov = 72.0
-		camera.global_transform = Transform3D(t.basis, t * Vector3(0, 0.4, nose_z + 1.2))
+		camera.fov = FlightDeck.FOV
+		var eye := Transform3D(t.basis * Basis(Vector3.RIGHT, -deg_to_rad(SEAT_PITCH_DEG)), t * Vector3(0, 0.4, nose_z + 1.2))
+		_deck_mount.global_transform = eye
+		camera.global_transform = eye * Transform3D(Basis.IDENTITY, _head)
+		var vp := get_viewport().get_visible_rect().size
+		deck.fit(vp.x / maxf(vp.y, 1.0))
 		return
 	camera.fov = 65.0
 	var want := t * Vector3(0, 8.0, 40.0)
@@ -648,6 +683,13 @@ func _move_work_craft() -> void:
 		node.look_at(ahead, Vector3(0, 0, 1))
 
 
+## The closing speed the co-pilot advises at this distance from the port: quick far
+## out, slowing to under the capture limit for the last 25 m.
+func advised_closing(along: float) -> float:
+	var limit := float(tune_dock["max_speed_mps"])
+	return clampf(along * 0.02, limit * 0.5, 6.0) if along > 25.0 else limit * 0.6
+
+
 ## The co-pilot's next instruction for a manual approach, and the axis offset in the
 ## ship's own frame (x right, y up), for the HUD's axis display.
 func guidance() -> Dictionary:
@@ -659,7 +701,7 @@ func guidance() -> Dictionary:
 	var offset_world := Vector3(-nose.x, -nose.y, 0.0)
 	var offset_local := basis.inverse() * offset_world
 	var limit := float(tune_dock["max_speed_mps"])
-	var advised := clampf(along * 0.02, limit * 0.5, 6.0) if along > 25.0 else limit * 0.6
+	var advised := advised_closing(along)
 	var text := ""
 	if computer:
 		text = "Docking computer has control."

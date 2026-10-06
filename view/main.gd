@@ -176,6 +176,24 @@ func _process(delta: float) -> void:
 	_top.text = "SPINWARD   %s UTC   ×%d%s   %s   %s" % [
 		s.date_string().replace("T", " ").substr(0, 16), int(s.time_scale), "  PAUSED" if s.paused else "",
 		UI.money(s.credits), where]
+	_place_overlays()
+
+
+## A cockpit can ask for the comms log and notices to sit clear of its panel.
+func _place_overlays() -> void:
+	var slots := {}
+	for n in get_tree().get_nodes_in_group("cockpit_overlay_slots"):
+		if n.is_visible_in_tree():
+			slots = n.overlay_slots()
+			if not slots.is_empty():
+				break
+	var t: Rect2 = slots.get("ticker", Rect2(16, size.y - 62, 760, 54))
+	var n: Rect2 = slots.get("notices", Rect2(size.x - 460, size.y - 200, 440, 180))
+	if _ticker.position != t.position or _ticker.size != t.size:
+		_ticker.position = t.position
+		_ticker.size = t.size
+	if _notices.position != n.position:
+		_notices.position = n.position
 
 
 func _handle_events() -> void:
@@ -1243,6 +1261,12 @@ func _crash_tour(dir: String) -> void:
 	for _i in 40:
 		await get_tree().process_frame
 	_shot("%s/2-after.png" % dir)
+	# The same moment from the flight deck: the damage on the SYSTEMS display.
+	flight.view_mode = "cockpit"
+	for _i in 6:
+		await get_tree().process_frame
+	_shot("%s/2b-after-cockpit.png" % dir)
+	flight.view_mode = "chase"
 	# Into the station's ring, hard.
 	var rr: float = flight.station["ring_radius"]
 	flight.ship_node.position = Vector3(rr, 0, 60.0)

@@ -1,31 +1,47 @@
-## The cockpit: window pillars, an instrument dashboard, and the classic Elite-style
-## 3D scanner. The scanner is an ellipse for the ship's horizontal plane (forward is
-## up the screen); each contact sits at its bearing and range on the plane, with a
-## stalk rising or dropping to show how far above or below the ship it is.
-## A compass dot gives the port's direction: solid when ahead, hollow when behind.
+## The approach cockpit: head-up symbology in the windscreen (boresight, the port box,
+## the velocity vector), the glareshield annunciator panel with the co-pilot's message
+## window, and three multi-function displays on the instrument panel:
+##   APPROACH  range and closing rate against the co-pilot's target profile, the
+##             docking-axis display (axis offset, nose alignment, roll key) and the
+##             capture envelope
+##   SCANNER   the Elite-style 3D scanner: a plane ellipse with range rings, every
+##             contact at its bearing and range with a stalk for height above or
+##             below, coloured by type, and a closing-contact warning
+##   SYSTEMS   propellant, heat, drive, keel, hold, life support and a damage schematic
+## In the cockpit view the displays sit in the 3D flight deck (flight_deck.gd); in the
+## chase view they become a flat telemetry strip.
 extends Control
 
 const UI := preload("res://view/ui/ui_kit.gd")
+const AV := preload("res://view/ui/avionics.gd")
+const Pages := preload("res://view/ui/cockpit_pages.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
+const DamageSystem := preload("res://sim/systems/damage_system.gd")
 
-const DASH_H := 220.0
-const SCANNER_RX := 200.0
-const SCANNER_RY := 74.0
-const PANEL := Color("23272b")
-const PANEL_DARK := Color("16191c")
-const PILLAR := Color("1b1e21")
-const SCANNER_LINE := Color(0.95, 0.66, 0.19, 0.55)
+## Head-up symbology in the windscreen.
+const HUD_COL := Color("9cf2b4")
+## Scanner contacts closer than this many seconds on our course are flagged.
+const THREAT_S := 15.0
+const TRAIL_N := 80
 
 var flight
 var _font: Font
 var _message: Label
 var show_keys := true
+var _g := AV.new()
+## Recent [log10 range, closing] samples for the profile plot.
+var _trail: Array = []
+var _trail_next := 0.0
+var _bumps_seen := 0
+var _contact_until := -1.0
+var _slots := {}
 
 
 func _init(owner_flight) -> void:
 	flight = owner_flight
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_to_group("cockpit_overlay_slots")
 
 
 func _ready() -> void:
@@ -43,88 +59,129 @@ func _process(_dt: float) -> void:
 	_message.visible = flight.clock < flight.message_until
 	_message.text = flight.message
 	_message.add_theme_color_override("font_color", flight.message_colour)
+	if flight.bumps != _bumps_seen:
+		_bumps_seen = flight.bumps
+		_contact_until = flight.clock + 3.0
+	if not flight.readout.is_empty() and flight.clock >= _trail_next:
+		_trail_next = flight.clock + 0.25
+		_trail.append(Vector2(_log_range(flight.readout["range"]), flight.readout["closing"]))
+		if _trail.size() > TRAIL_N:
+			_trail.pop_front()
 	queue_redraw()
+
+
+## Where the main screen should put its comms log and notices so they clear the panel.
+func overlay_slots() -> Dictionary:
+	return _slots
+
+
+func _cockpit() -> bool:
+	return flight.view_mode == "cockpit" and not flight.wrecked and flight.deck != null and flight.deck.visible
 
 
 func _draw() -> void:
 	if flight.readout.is_empty() or flight.view_mode == "beauty":
+		_slots = {}
 		return
 	var w := size.x
 	var h := size.y
-	var cockpit: bool = flight.view_mode == "cockpit"
-	if cockpit:
-		_draw_frame(w, h)
-		_draw_crosshair(Vector2(w * 0.5, (h - DASH_H) * 0.5 + 16.0))
-	_draw_markers()
-	_draw_guidance(w, h)
-	_draw_dashboard(w, h)
+	var quads: Dictionary
+	var canvas: Dictionary
+	var sill := PackedVector2Array()
+	if _cockpit():
+		quads = flight.deck.quads(flight.camera)
+		canvas = flight.deck.canvas
+		sill = flight.deck.sill(flight.camera)
+		var wb: float = h * (0.5 - flight.deck.SILL_NY * 0.5)
+		var px: float = w * (0.5 - flight.deck.PILLAR_BOTTOM_NX * 0.5)
+		_slots = {"ticker": Rect2(px + 28, wb - 66, minf(640.0, w * 0.42), 54), "notices": Rect2(w - px - 28 - 440, wb - 196, 440, 180)}
+	else:
+		var flat := Pages.flat_layout(size)
+		quads = flat["quads"]
+		canvas = flat["canvas"]
+		var top: float = flat["top"]
+		draw_rect(Rect2(0, top, w, h - top), Color(0.03, 0.04, 0.045, 0.82))
+		draw_line(Vector2(0, top), Vector2(w, top), Color(AV.FAINT, 0.9), 1.0)
+		sill = PackedVector2Array([Vector2(0, top), Vector2(w, top)])
+		_slots = {"ticker": Rect2(16, top - 62, 760, 54), "notices": Rect2(w - 460, top - 196, 440, 180)}
+	_draw_markers(sill)
+	if quads.has("left") and _g.begin(self, _font, quads["left"], canvas["left"]):
+		_page_approach(_g)
+	if quads.has("centre") and _g.begin(self, _font, quads["centre"], canvas["centre"]):
+		_page_scanner(_g)
+	if quads.has("right") and _g.begin(self, _font, quads["right"], canvas["right"]):
+		Pages.systems(_g, flight.sim, [["T", "TUG %d cr" % int(flight.tune_dock["auto_dock_fee"]), AV.GREY], ["[ ]", "TIME", AV.GREY], ["P", "PAUSE", AV.GREY], ["F1", "KEYS", AV.GREY]], flight.wrecked)
+	if quads.has("annunciator") and _g.begin(self, _font, quads["annunciator"], canvas["annunciator"]):
+		_annunciators(_g)
 	if show_keys:
 		_draw_keys(w)
 
 
-# --- Window frame -----------------------------------------------------------
+# --- Head-up symbology ------------------------------------------------------------------
 
-func _draw_frame(w: float, h: float) -> void:
-	var top := 32.0
-	var dash_top := h - DASH_H
-	# Canopy pillars and a header bar: the cockpit of a working hauler, not a fighter.
-	draw_colored_polygon(PackedVector2Array([Vector2(0, top), Vector2(90, top), Vector2(190, dash_top), Vector2(0, dash_top)]), PILLAR)
-	draw_colored_polygon(PackedVector2Array([Vector2(w, top), Vector2(w - 90, top), Vector2(w - 190, dash_top), Vector2(w, dash_top)]), PILLAR)
-	draw_rect(Rect2(0, top, w, 14), PILLAR)
-	draw_line(Vector2(90, top + 14), Vector2(190, dash_top), Color("2e3338"), 3.0)
-	draw_line(Vector2(w - 90, top + 14), Vector2(w - 190, dash_top), Color("2e3338"), 3.0)
-	draw_line(Vector2(90, top + 14), Vector2(w - 90, top + 14), Color("2e3338"), 3.0)
-	for y in range(int(top + 60), int(dash_top - 20), 70):
-		var f := (y - top) / (dash_top - top)
-		_rivet(Vector2(lerpf(45.0, 95.0, f), y))
-		_rivet(Vector2(w - lerpf(45.0, 95.0, f), y))
+## Is this screen point in the windscreen (above the sill line)?
+func _in_window(p: Vector2, sill: PackedVector2Array) -> bool:
+	if p.y < 34.0:
+		return false
+	if sill.size() < 2:
+		return true
+	var a := sill[0]
+	var b := sill[1]
+	var f := 0.0 if absf(b.x - a.x) < 1e-3 else clampf((p.x - a.x) / (b.x - a.x), 0.0, 1.0)
+	return p.y < lerpf(a.y, b.y, f) - 6.0
 
 
-func _rivet(p: Vector2) -> void:
-	draw_circle(p, 3.0, Color("3a4046"))
-	draw_circle(p + Vector2(-0.8, -0.8), 1.2, Color("5a6168"))
-
-
-func _draw_crosshair(c: Vector2) -> void:
-	var col := Color(UI.AMBER, 0.85)
-	for d in [Vector2(1, 0), Vector2(-1, 0), Vector2(0, 1), Vector2(0, -1)]:
-		draw_line(c + d * 8.0, c + d * 22.0, col, 2.0)
-
-
-# --- Projected markers (port box, velocity vector) --------------------------
-
-func _draw_markers() -> void:
+func _draw_markers(sill: PackedVector2Array) -> void:
 	var cam: Camera3D = flight.camera
 	var r: Dictionary = flight.readout
+	var ship: Node3D = flight.ship_node
+	var basis: Basis = ship.global_transform.basis
+	# Boresight: the ship's nose axis, a gull-wing "waterline" mark.
+	var ahead: Vector3 = ship.global_position - basis.z * 1000.0
+	if flight.view_mode == "cockpit" and not cam.is_position_behind(ahead):
+		var c := cam.unproject_position(ahead)
+		if _in_window(c, sill):
+			var pts := PackedVector2Array([c + Vector2(-26, 0), c + Vector2(-11, 0), c + Vector2(-5.5, 7), c, c + Vector2(5.5, 7), c + Vector2(11, 0), c + Vector2(26, 0)])
+			draw_polyline(pts, Color(HUD_COL, 0.9), 1.5, true)
+	# The port: a box, green inside the capture envelope; a chevron at the edge if out of view.
 	var port := Vector3(0, 0, flight.station["port_z"])
-	var dash_top := size.y - DASH_H
+	var colour := AV.GREEN if _all_ok() else AV.AMBER
+	var shown := false
 	if not cam.is_position_behind(port):
 		var at := cam.unproject_position(port)
-		if at.y < dash_top:
-			var colour := UI.GOOD if _all_ok() else UI.AMBER
-			draw_rect(Rect2(at - Vector2(14, 14), Vector2(28, 28)), colour, false, 2.0)
-			draw_string(_font, at + Vector2(18, -6), "PORT %.0f m" % r["range"], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, colour)
+		if _in_window(at, sill) and at.x > 20 and at.x < size.x - 20:
+			shown = true
+			var s := 13.0
+			for k in 4:
+				var dx := 1.0 if k % 2 == 0 else -1.0
+				var dy := 1.0 if k < 2 else -1.0
+				var corner := at + Vector2(dx, dy) * s
+				draw_line(corner, corner - Vector2(dx * 7, 0), colour, 2.0, true)
+				draw_line(corner, corner - Vector2(0, dy * 7), colour, 2.0, true)
+			draw_string(_font, at + Vector2(18, -5), "PORT %s" % _range_text(r["range"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, colour)
+			draw_string(_font, at + Vector2(18, 10), "%+.1f m/s" % -r["closing"], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(colour, 0.8))
+	if not shown:
+		var local: Vector3 = cam.global_transform.basis.inverse() * (port - cam.global_position)
+		var dir := Vector2(local.x, -local.y)
+		if dir.length() < 1e-4:
+			dir = Vector2(0, 1)
+		dir = dir.normalized()
+		var centre := Vector2(size.x * 0.5, size.y * 0.33)
+		var reach := Vector2(size.x * 0.36, size.y * 0.26)
+		var p := centre + Vector2(dir.x * reach.x, dir.y * reach.y)
+		var n := dir.orthogonal()
+		draw_colored_polygon(PackedVector2Array([p + dir * 12.0, p - dir * 4.0 + n * 9.0, p - dir * 4.0 - n * 9.0]), Color(AV.AMBER, 0.85))
+		draw_string(_font, p - dir * 22.0 + Vector2(-20, 4), "PORT", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, AV.AMBER)
+	# Velocity vector: where we are drifting.
 	var v: Vector3 = flight.velocity
 	if v.length() > 0.05:
-		var ahead: Vector3 = flight.ship_node.position + v.normalized() * 200.0
-		if not cam.is_position_behind(ahead):
-			var p := cam.unproject_position(ahead)
-			if p.y < dash_top:
-				draw_arc(p, 7.0, 0.0, TAU, 20, UI.GOOD, 1.5)
+		var drift: Vector3 = ship.position + v.normalized() * 200.0
+		if not cam.is_position_behind(drift):
+			var p := cam.unproject_position(drift)
+			if _in_window(p, sill):
+				draw_arc(p, 6.0, 0.0, TAU, 20, HUD_COL, 1.5, true)
 				for d in [Vector2(1, 0), Vector2(-1, 0), Vector2(0, -1)]:
-					draw_line(p + d * 7.0, p + d * 13.0, UI.GOOD, 1.5)
-
-
-## The co-pilot's next instruction, on a strip just above the dashboard.
-func _draw_guidance(w: float, h: float) -> void:
-	var g: Dictionary = flight.guidance()
-	if g.is_empty():
-		return
-	var text: String = g["text"]
-	var tw := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
-	var y := h - DASH_H - 22.0
-	draw_rect(Rect2(w * 0.5 - tw * 0.5 - 12, y - 18, tw + 24, 26), Color(0.06, 0.07, 0.08, 0.8))
-	draw_string(_font, Vector2(w * 0.5 - tw * 0.5, y), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, UI.GOOD if text.begins_with("Good") else UI.AMBER)
+					draw_line(p + d * 6.0, p + d * 13.0, HUD_COL, 1.5, true)
 
 
 func _all_ok() -> bool:
@@ -132,167 +189,278 @@ func _all_ok() -> bool:
 	return r["ok_speed"] and r["ok_align"] and r["ok_roll"]
 
 
-# --- Dashboard ---------------------------------------------------------------
-
-func _draw_dashboard(w: float, h: float) -> void:
-	var top := h - DASH_H
-	draw_rect(Rect2(0, top, w, DASH_H), PANEL)
-	# Hazard-striped coaming along the top edge of the panel.
-	draw_rect(Rect2(0, top, w, 10), UI.HAZARD)
-	for i in int(w / 28.0) + 2:
-		draw_colored_polygon(PackedVector2Array([Vector2(i * 28, top), Vector2(i * 28 + 12, top), Vector2(i * 28 + 2, top + 10), Vector2(i * 28 - 10, top + 10)]), UI.BG)
-	var centre := Vector2(w * 0.5, top + DASH_H * 0.5)
-	_draw_scanner(centre)
-	_draw_left_panel(Rect2(24, top + 22, centre.x - SCANNER_RX - 60, DASH_H - 34))
-	_draw_right_panel(Rect2(centre.x + SCANNER_RX + 36, top + 22, w - centre.x - SCANNER_RX - 60, DASH_H - 34))
+func _range_text(m: float) -> String:
+	return "%.1f m" % m if m < 100.0 else ("%d m" % int(m) if m < 10000.0 else "%.1f km" % (m / 1000.0))
 
 
-func _draw_scanner(c: Vector2) -> void:
-	var rx := SCANNER_RX
-	var ry := SCANNER_RY
-	# Bezel and glass.
-	draw_colored_polygon(_ellipse(c, rx + 14, ry + 14, 72), Color("2e3338"))
-	draw_colored_polygon(_ellipse(c, rx + 4, ry + 4, 72), PANEL_DARK)
-	draw_colored_polygon(_ellipse(c, rx, ry, 72), Color("0d1410"))
-	# Range rings, cross lines and the forward field-of-view wedge.
-	for f in [1.0, 0.66, 0.33]:
-		draw_polyline(_ellipse(c, rx * f, ry * f, 72, true), SCANNER_LINE, 1.0)
-	draw_line(c - Vector2(rx, 0), c + Vector2(rx, 0), Color(SCANNER_LINE, 0.35), 1.0)
-	draw_line(c - Vector2(0, ry), c + Vector2(0, ry), Color(SCANNER_LINE, 0.35), 1.0)
-	draw_line(c, c + Vector2(-rx * 0.62, -ry * 0.78), Color(SCANNER_LINE, 0.35), 1.0)
-	draw_line(c, c + Vector2(rx * 0.62, -ry * 0.78), Color(SCANNER_LINE, 0.35), 1.0)
-	var range_m: float = flight.scanner_range()
-	var basis: Basis = flight.ship_node.global_transform.basis
-	var origin: Vector3 = flight.ship_node.global_position
-	var contacts: Array = flight.contacts()
-	# Draw far-below first so nearer, higher stalks sit on top.
-	contacts.sort_custom(func(a, b): return (basis.inverse() * (a["pos"] - origin)).y < (basis.inverse() * (b["pos"] - origin)).y)
-	for contact in contacts:
-		var local: Vector3 = basis.inverse() * (contact["pos"] - origin)
-		if local.length() > range_m:
-			continue
-		# Square-root radial scale: close contacts spread out, far ones stay on the glass.
-		var d := local.length()
-		var k := sqrt(d / range_m) / maxf(d / range_m, 1e-6) / range_m
-		# Plane position: x right, -z forward (up the screen). Height becomes the stalk.
-		var plane := c + Vector2(local.x * k * rx, local.z * k * ry)
-		var tip := plane - Vector2(0, local.y * k * ry * 1.6)
-		var col: Color = contact["colour"]
-		draw_line(plane, tip, col, 1.5)
-		var s := 5.0 if contact["kind"] == "station" else 3.0
-		draw_rect(Rect2(tip - Vector2(s, s * 0.6), Vector2(s * 2, s * 1.2)), col)
-	# Own ship at the centre.
-	draw_colored_polygon(PackedVector2Array([c + Vector2(0, -6), c + Vector2(4, 4), c + Vector2(-4, 4)]), UI.TEXT)
-	var label := "SCANNER  %s" % (("%d m" % int(range_m)) if range_m < 1000.0 else ("%d km" % int(range_m / 1000.0)))
-	draw_string(_font, c + Vector2(-rx - 6, ry + 24), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, UI.DIM)
-	draw_string(_font, c + Vector2(rx - 50, ry + 24), "G range", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, UI.DIM)
+func _log_range(m: float) -> float:
+	return log(maxf(m, 1.0)) / log(10.0)
 
 
-func _ellipse(c: Vector2, rx: float, ry: float, n: int, closed: bool = false) -> PackedVector2Array:
-	var pts := PackedVector2Array()
-	for i in (n + 1 if closed else n):
-		var a := TAU * float(i) / float(n)
-		pts.append(c + Vector2(cos(a) * rx, sin(a) * ry))
-	return pts
+# --- APPROACH ------------------------------------------------------------------------------
 
-
-func _draw_left_panel(rect: Rect2) -> void:
+func _page_approach(g) -> void:
 	var r: Dictionary = flight.readout
 	var d: Dictionary = flight.tune_dock
-	var x := rect.position.x
-	var y := rect.position.y + 14
+	var gd: Dictionary = flight.guidance()
+	var W: float = g.size.x
+	var limit := float(d["max_speed_mps"])
+	var advised: float = gd.get("advised", limit)
+	g.glass()
+	g.title("APPROACH", String(flight.sim.data.places[flight.place_id]["name"]).to_upper())
+	# Readouts.
+	var y := 36.0
+	var closing: float = r["closing"]
+	var cl_col := AV.WHITE
+	if closing < -0.05:
+		cl_col = AV.AMBER
+	elif closing > advised * 1.3 or not r["ok_speed"] and r["range"] < 50.0:
+		cl_col = AV.AMBER
+	elif closing > 0.05:
+		cl_col = AV.GREEN
 	var rows := [
-		["RANGE", "%.1f m" % r["range"], r["range"] < 50.0],
-		["CLOSING", "%.2f m/s" % r["closing"], r["closing"] > 0.0 and r["ok_speed"]],
-		["SPEED", "%.2f / %.1f" % [r["speed"], d["max_speed_mps"]], r["ok_speed"]],
-		["ALIGN", "%.1f° / %d°" % [r["align"], int(d["max_angle_deg"])], r["ok_align"]],
-		["ROLL KEY", "%.1f° / %d°" % [rad_to_deg(r["roll_err"]), int(d["max_roll_error_deg"])], r["ok_roll"]],
-		["LATERAL", "%.1f m" % r["lateral"], r["lateral"] < 3.0],
-		["HULL", "LOST" if flight.wrecked else "%d%%" % int(round(preload("res://sim/systems/damage_system.gd").integrity(flight.sim.state.ship) * 100.0)), not flight.wrecked and preload("res://sim/systems/damage_system.gd").integrity(flight.sim.state.ship) > 0.7],
+		["RNG", _range_text(r["range"]), AV.GREEN if r["range"] < 50.0 else AV.WHITE],
+		["CLS", "%+.2f" % closing, cl_col],
+		["TGT", "%.1f" % advised, AV.CYAN],
+		["SPD", "%.2f/%.1f" % [r["speed"], limit], AV.GREEN if r["ok_speed"] else AV.AMBER],
+		["ALN", "%.1f°/%d" % [r["align"], int(d["max_angle_deg"])], AV.GREEN if r["ok_align"] else AV.AMBER],
+		["KEY", "%+.1f°/%d" % [rad_to_deg(r["roll_err"]), int(d["max_roll_error_deg"])], AV.GREEN if r["ok_roll"] else AV.AMBER],
+		["LAT", "%.1f m" % r["lateral"], AV.GREEN if r["lateral"] < 3.0 else AV.WHITE],
 	]
 	for row in rows:
-		_lamp(Vector2(x + 6, y - 4), row[2])
-		draw_string(_font, Vector2(x + 18, y), row[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, UI.DIM)
-		draw_string(_font, Vector2(x + 100, y), row[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, UI.GOOD if row[2] else UI.TEXT)
-		y += 24
-	# Speed bar against the capture limit.
-	var bar := Rect2(x, y, minf(rect.size.x - 10, 260), 10)
-	draw_rect(bar, PANEL_DARK)
-	var limit := float(d["max_speed_mps"])
-	var frac := clampf(float(r["speed"]) / (limit * 4.0), 0.0, 1.0)
-	draw_rect(Rect2(bar.position, Vector2(bar.size.x * frac, bar.size.y)), UI.GOOD if r["ok_speed"] else UI.WARN)
-	draw_line(bar.position + Vector2(bar.size.x * 0.25, -3), bar.position + Vector2(bar.size.x * 0.25, 13), UI.TEXT, 1.0)
+		g.row(Vector2(8, y), row[0], row[1], row[2], 30.0)
+		y += 15.5
+	# Range / closing-rate chart: the co-pilot's target profile in cyan, the capture
+	# limit in amber, our track in white.
+	var cr := Rect2(122, 26, W - 122 - 128, 104)
+	_profile_chart(g, cr, limit, advised)
+	# Docking-axis display.
+	_axis_display(g, Vector2(W - 62, 76), 46.0, gd)
+	g.soft_keys([["Z", "ASSIST " + _assist_short(r["assist"]), AV.GREEN if r["assist"] != "manual" else AV.AMBER],
+		["V", "SPIN " + ("ON" if r["spin_match"] else "OFF"), AV.GREEN if r["spin_match"] else AV.GREY],
+		["K", "DOCK " + ("ON" if flight.computer else ("--" if not ShipStats.has_docking_computer(flight.sim.state.ship, flight.sim.data) else "OFF")), AV.GREEN if flight.computer else AV.GREY],
+		["X", "BRAKE", AV.GREY], ["S", "BACK", AV.GREY]])
 
 
-func _draw_right_panel(rect: Rect2) -> void:
+func _assist_short(mode: String) -> String:
+	return {"full": "FULL", "assisted": "ASST", "manual": "MAN"}.get(mode, mode.to_upper())
+
+
+func _profile_chart(g, cr: Rect2, limit: float, advised: float) -> void:
+	var lo := 0.0
+	var hi := 3.3
+	var vmax := 8.0
+	var vmin := -1.0
+	var to_xy := func(lr: float, v: float) -> Vector2:
+		return Vector2(cr.position.x + cr.size.x * (hi - clampf(lr, lo, hi)) / (hi - lo), cr.end.y - cr.size.y * (clampf(v, vmin, vmax) - vmin) / (vmax - vmin))
+	g.rect(cr, Color("0a1112"))
+	for decade in [1.0, 2.0, 3.0]:
+		var x: float = to_xy.call(decade, 0.0).x
+		g.line(Vector2(x, cr.position.y), Vector2(x, cr.end.y), AV.FAINT, 1.0)
+		g.text(Vector2(x, cr.end.y + 10), ["", "10", "100", "1k"][int(decade)], 9, AV.GREY, 0)
+	for v in [2.0, 4.0, 6.0]:
+		var yv: float = to_xy.call(0.0, v).y
+		g.line(Vector2(cr.position.x, yv), Vector2(cr.end.x, yv), Color(AV.FAINT, 0.6), 1.0)
+		g.text(Vector2(cr.position.x - 3, yv + 3), "%d" % int(v), 9, AV.GREY, 1)
+	var zero: float = to_xy.call(0.0, 0.0).y
+	g.line(Vector2(cr.position.x, zero), Vector2(cr.end.x, zero), AV.GREY, 1.0)
+	g.text(Vector2(cr.end.x, cr.end.y + 10), "m", 9, AV.GREY, 1)
+	g.text(Vector2(cr.position.x + 2, cr.position.y + 9), "m/s", 9, AV.GREY)
+	# Capture limit.
+	var ly: float = to_xy.call(0.0, limit).y
+	g.dashed(Vector2(cr.position.x, ly), Vector2(cr.end.x, ly), Color(AV.AMBER, 0.8), 1.0, 4.0)
+	# Target profile.
+	var pts := PackedVector2Array()
+	for i in 41:
+		var lr := hi * float(i) / 40.0
+		pts.append(to_xy.call(lr, flight.advised_closing(pow(10.0, lr))))
+	g.polyline(pts, AV.CYAN, 1.5)
+	# Our track and now.
+	if _trail.size() >= 2:
+		var tp := PackedVector2Array()
+		for s in _trail:
+			tp.append(to_xy.call(s.x, s.y))
+		g.polyline(tp, Color(AV.WHITE, 0.4), 1.0)
+	var now: Vector2 = to_xy.call(_log_range(flight.readout["range"]), flight.readout["closing"])
+	var on_profile: bool = absf(flight.readout["closing"] - advised) < maxf(0.3, advised * 0.3)
+	g.circle(now, 3.5, AV.GREEN if on_profile else AV.WHITE, true, 1.0, 12)
+	g.rect(cr, AV.FAINT, false, 1.0)
+
+
+func _axis_display(g, c: Vector2, R: float, gd: Dictionary) -> void:
 	var r: Dictionary = flight.readout
-	var x := rect.position.x
-	var y := rect.position.y + 14
-	var cc := Vector2(x + 44, y + 40)
-	if r["range"] < 400.0:
-		_draw_axis_display(cc)
-	else:
-		_draw_compass(cc, x, y)
-	_draw_right_lamps(x, y)
-
-
-## Inside 400 m: where the station's axis is relative to you. Centre the dot to sit
-## on the axis; the ring is the capture zone.
-func _draw_axis_display(cc: Vector2) -> void:
-	var g: Dictionary = flight.guidance()
-	draw_circle(cc, 36, PANEL_DARK)
-	draw_arc(cc, 36, 0, TAU, 40, SCANNER_LINE, 1.5)
-	draw_line(cc - Vector2(36, 0), cc + Vector2(36, 0), Color(SCANNER_LINE, 0.3), 1.0)
-	draw_line(cc - Vector2(0, 36), cc + Vector2(0, 36), Color(SCANNER_LINE, 0.3), 1.0)
-	var capture: float = float(flight.tune_dock["capture_distance_m"])
-	draw_arc(cc, 30.0 * capture / 30.0, 0, TAU, 24, UI.GOOD, 1.0)
-	if not g.is_empty():
-		var o: Vector3 = g["offset_local"]
+	var capture := float(flight.tune_dock["capture_distance_m"])
+	var ok_all := _all_ok()
+	g.circle(c, R, Color("0a1112"), true, 1.0, 40)
+	g.circle(c, R, AV.GREY, false, 1.0, 40)
+	g.line(c - Vector2(R, 0), c + Vector2(R, 0), AV.FAINT, 1.0)
+	g.line(c - Vector2(0, R), c + Vector2(0, R), AV.FAINT, 1.0)
+	# Nose-alignment limit (half scale = the limit) and the capture zone.
+	g.circle(c, R * 0.5, Color(AV.GREY, 0.5), false, 1.0, 32)
+	var cap_r := R * sqrt(capture / 30.0)
+	g.circle(c, cap_r, AV.GREEN if ok_all else Color(AV.GREEN, 0.5), false, 1.0, 24)
+	# Roll key: index at the top, the slot's mark rotated by the error.
+	var err: float = r["roll_err"]
+	g.poly(PackedVector2Array([c + Vector2(0, -R - 1), c + Vector2(-4, -R - 8), c + Vector2(4, -R - 8)]), AV.GREY)
+	var a := -PI * 0.5 + err
+	var key_col := AV.GREEN if r["ok_roll"] else AV.AMBER
+	var tip := c + Vector2(cos(a), sin(a)) * (R - 1.0)
+	var base := c + Vector2(cos(a), sin(a)) * (R - 9.0)
+	var side := Vector2(-sin(a), cos(a)) * 4.0
+	g.poly(PackedVector2Array([tip, base + side, base - side]), key_col)
+	# Nose: where the station's axis lies from our nose (diamond, cyan), 30° full scale.
+	var basis: Basis = flight.ship_node.global_transform.basis
+	var axis_local := basis.inverse() * Vector3(0, 0, -1)
+	var nd := Vector2(axis_local.x, -axis_local.y)
+	if nd.length() > 1e-4:
+		nd = nd.normalized() * R * clampf(float(r["align"]) / 30.0, 0.0, 1.0)
+	var nc := c + nd
+	var ncol := AV.CYAN if r["ok_align"] else AV.AMBER
+	g.polyline(PackedVector2Array([nc + Vector2(0, -5), nc + Vector2(5, 0), nc + Vector2(0, 5), nc + Vector2(-5, 0), nc + Vector2(0, -5)]), ncol, 1.5)
+	# Axis offset: where the axis is from us (dot), square-root scale to 30 m.
+	if not gd.is_empty():
+		var o: Vector3 = gd["offset_local"]
 		var p := Vector2(o.x, -o.y)
-		var pr := clampf(p.length(), 0.0, 30.0)
-		var dot := cc + (p.normalized() * pr if p.length() > 1e-3 else Vector2.ZERO)
-		draw_circle(dot, 5.0, UI.GOOD if p.length() <= capture else UI.AMBER)
-	draw_string(_font, cc + Vector2(-40, 56), "AXIS (30 m)", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, UI.DIM)
+		var pr := R * sqrt(clampf(p.length(), 0.0, 30.0) / 30.0)
+		var dot := c + (p.normalized() * pr if p.length() > 1e-3 else Vector2.ZERO)
+		g.circle(dot, 4.0, AV.GREEN if p.length() <= capture else AV.WHITE, true, 1.0, 12)
+	# Capture envelope: three chips.
+	var chips := [["SPD", r["ok_speed"]], ["ALN", r["ok_align"]], ["KEY", r["ok_roll"]]]
+	for i in 3:
+		var cr := Rect2(c.x - R + i * (R * 2.0 / 3.0) + 1, c.y + R + 6, R * 2.0 / 3.0 - 2, 12)
+		var on: bool = chips[i][1]
+		g.rect(cr, Color(AV.GREEN, 0.25) if on else Color(AV.AMBER, 0.12))
+		g.text(Vector2(cr.get_center().x, cr.end.y - 2.5), chips[i][0], 9, AV.GREEN if on else AV.AMBER, 0)
 
 
-func _draw_compass(cc: Vector2, x: float, y: float) -> void:
-	draw_circle(cc, 36, PANEL_DARK)
-	draw_arc(cc, 36, 0, TAU, 40, SCANNER_LINE, 1.5)
-	draw_line(cc - Vector2(36, 0), cc + Vector2(36, 0), Color(SCANNER_LINE, 0.3), 1.0)
-	draw_line(cc - Vector2(0, 36), cc + Vector2(0, 36), Color(SCANNER_LINE, 0.3), 1.0)
-	var to_port: Vector3 = flight.ship_node.global_transform.basis.inverse() * (Vector3(0, 0, flight.station["port_z"]) - flight.ship_node.global_position)
-	var dir := to_port.normalized()
-	var dot := cc + Vector2(dir.x, -dir.y) * 30.0
-	if dir.z < 0.0:
-		draw_circle(dot, 5.0, UI.GOOD)
-	else:
-		draw_arc(dot, 5.0, 0, TAU, 16, UI.WARN, 2.0)
-	draw_string(_font, Vector2(x + 4, y + 96), "COMPASS · PORT", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, UI.DIM)
+# --- SCANNER -------------------------------------------------------------------------------
+
+func _page_scanner(g) -> void:
+	var W: float = g.size.x
+	var H: float = g.size.y
+	var range_m: float = flight.scanner_range()
+	var contacts: Array = flight.contacts()
+	g.glass()
+	g.title("SCANNER", "%d CONTACTS" % (contacts.size() - 1))
+	var c := Vector2(W * 0.5, 86.0)
+	var rx := W * 0.43
+	var ry := 44.0
+	g.ellipse(c, rx, ry, Color("08130f"), true, 1.0, 72)
+	for f in [1.0, 2.0 / 3.0, 1.0 / 3.0]:
+		g.ellipse(c, rx * f, ry * f, Color(AV.GREEN, 0.45 if f == 1.0 else 0.28), false, 1.0, 72)
+		# Ring range on the square-root scale.
+		g.text(c + Vector2(rx * f + 2, -2), _range_text(range_m * f * f), 9, Color(AV.GREY, 0.9))
+	g.line(c - Vector2(rx, 0), c + Vector2(rx, 0), Color(AV.GREEN, 0.18), 1.0)
+	g.line(c - Vector2(0, ry), c + Vector2(0, ry), Color(AV.GREEN, 0.18), 1.0)
+	# Forward field of view (the windscreen), and bearing ticks every 30°.
+	var half := deg_to_rad(36.0)
+	for s in [-1.0, 1.0]:
+		g.line(c, c + Vector2(sin(half) * s * rx, -cos(half) * ry), Color(AV.GREEN, 0.3), 1.0)
+	for i in 12:
+		var a := TAU * i / 12.0
+		var e := Vector2(sin(a), -cos(a))
+		g.line(c + Vector2(e.x * rx, e.y * ry), c + Vector2(e.x * (rx + 5), e.y * (ry + 3)), Color(AV.GREEN, 0.45), 1.0)
+	var basis: Basis = flight.ship_node.global_transform.basis
+	var inv := basis.inverse()
+	var origin: Vector3 = flight.ship_node.global_position
+	var vel: Vector3 = flight.velocity
+	var items := []
+	var worst_t := INF
+	for contact in contacts:
+		var rel: Vector3 = contact["pos"] - origin
+		var local: Vector3 = inv * rel
+		var threat := INF
+		if contact["kind"] in ["rock", "ship", "pod"]:
+			var rv: Vector3 = vel - contact.get("vel", Vector3.ZERO)
+			var closing := rel.dot(rv)
+			if closing > 0.0:
+				var t := closing / maxf(rv.length_squared(), 1e-6)
+				if (rel - rv * t).length() < float(contact.get("r", 3.0)) + flight.ship_radius * 1.5 and t < THREAT_S:
+					threat = t
+					worst_t = minf(worst_t, t)
+		items.append([local, contact, threat])
+	# Far below first, so nearer, higher stalks draw on top.
+	items.sort_custom(func(a, b): return a[0].y < b[0].y)
+	for it in items:
+		var local: Vector3 = it[0]
+		var contact: Dictionary = it[1]
+		var dist := local.length()
+		if dist > range_m:
+			if contact["kind"] == "station":
+				# Off scale: a chevron on the rim at its bearing.
+				var b := Vector2(local.x, local.z).normalized()
+				var p := c + Vector2(b.x * rx, b.y * ry)
+				g.poly(PackedVector2Array([p + b * 7.0, p - b * 2.0 + b.orthogonal() * 5.0, p - b * 2.0 - b.orthogonal() * 5.0]), AV.GREEN)
+			continue
+		# Square-root radial scale: close contacts spread out, far ones stay on the glass.
+		var k := sqrt(dist / range_m) / maxf(dist / range_m, 1e-6) / range_m
+		var plane := c + Vector2(local.x * k * rx, local.z * k * ry)
+		var tip := plane - Vector2(0, local.y * k * ry * 1.4)
+		tip.y = clampf(tip.y, 22.0, H - 24.0)
+		var col: Color = contact["colour"]
+		var threat: float = it[2]
+		if threat < INF:
+			col = AV.RED if threat < 6.0 else AV.AMBER
+		var below: bool = local.y < 0.0
+		g.line(plane - Vector2(2.5, 0), plane + Vector2(2.5, 0), Color(col, 0.6), 1.0)
+		g.line(plane, tip, Color(col, 0.55 if below else 0.95), 1.0 if below else 1.5)
+		match contact["kind"]:
+			"station":
+				g.rect(Rect2(tip - Vector2(5, 4), Vector2(10, 8)), col)
+			"ship":
+				g.poly(PackedVector2Array([tip + Vector2(0, -5), tip + Vector2(4, 0), tip + Vector2(0, 5), tip + Vector2(-4, 0)]), col)
+			"pod":
+				g.poly(PackedVector2Array([tip + Vector2(0, -4), tip + Vector2(4, 3), tip + Vector2(-4, 3)]), col)
+			_:
+				g.circle(tip, 2.4, col, true, 1.0, 10)
+		if threat < INF:
+			g.circle(tip, 7.0, col, false, 1.0, 16)
+	# Own ship.
+	g.poly(PackedVector2Array([c + Vector2(0, -6), c + Vector2(4, 4), c + Vector2(-4, 4)]), AV.WHITE)
+	var rock_s: float = flight.readout.get("rock_s", INF)
+	var warn_t := minf(worst_t, rock_s)
+	if warn_t < THREAT_S and (warn_t >= 6.0 or fmod(flight.clock, 0.6) < 0.4):
+		g.text(Vector2(W * 0.5, H - 26), "CLOSING CONTACT  %.1f s" % warn_t, 12, AV.RED if warn_t < 6.0 else AV.AMBER, 0)
+	g.soft_keys([["G", "RNG " + _range_text(range_m).replace(".0 km", " km"), AV.CYAN], ["C", "VIEW " + ("CHASE" if flight.view_mode == "cockpit" else "DECK"), AV.GREY],
+		[], ["H", "KEYS", AV.GREY], ["T", "TUG", AV.GREY]])
 
 
-func _draw_right_lamps(x: float, y: float) -> void:
+# --- Annunciators ------------------------------------------------------------------------
+
+func _annunciators(g) -> void:
 	var r: Dictionary = flight.readout
-	# Mode lamps.
-	var lx := x + 110
-	var ly := y + 4
-	var lamps := [
-		["ASSIST " + String(r["assist"]).to_upper(), r["assist"] != "manual"],
-		["SPIN MATCH", r["spin_match"] and r["assist"] != "manual"],
-		["CAPTURE READY", _all_ok()],
-		["CONTACTS %d" % flight.bumps, flight.bumps == 0],
+	var sim = flight.sim
+	var alerts := Pages.ship_alerts(sim, flight.wrecked)
+	var rock_s: float = r.get("rock_s", INF)
+	var ctl: Dictionary = flight.controls_now
+	var spin_live: bool = r["spin_match"] and r["assist"] != "manual"
+	var left := [
+		["PROX", 2 if rock_s < 6.0 else (1 if rock_s < THREAT_S else 0)],
+		["HULL", alerts["HULL"]],
+		["CONTACT", 1 if flight.clock < _contact_until else 0],
+		["FUEL LOW", alerts["FUEL LOW"]],
+		["HEAT", alerts["HEAT"]],
+		["DRIVE", alerts["DRIVE"]],
 	]
-	for l in lamps:
-		_lamp(Vector2(lx, ly - 4), l[1])
-		draw_string(_font, Vector2(lx + 12, ly), l[0], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, UI.TEXT if l[1] else UI.DIM)
-		ly += 22
-	var ship: Dictionary = flight.sim.state.ship
-	draw_string(_font, Vector2(lx, ly + 8), "FUEL %.2f t   %s" % [ship["fuel_t"], UI.money(flight.sim.state.credits)], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, UI.DIM)
-	draw_string(_font, Vector2(lx, ly + 28), "C view  H keys  T tug%s" % ("  K computer" if ShipStats.has_docking_computer(ship, flight.sim.data) else ""), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, UI.DIM)
-
-
-func _lamp(at: Vector2, on: bool) -> void:
-	draw_circle(at, 5.0, Color("101214"))
-	draw_circle(at, 3.6, UI.GOOD if on else Color("4a2a24"))
+	var right := [
+		["CAPTURE", AV.GREEN if _all_ok() and r["range"] < 60.0 else 0],
+		["SPIN MATCH", (AV.GREEN if r["range"] < 400.0 else AV.CYAN) if spin_live else 0],
+		["DOCK COMP", AV.GREEN if flight.computer else 0],
+		["ASSIST " + _assist_short(r["assist"]), AV.GREEN if r["assist"] != "manual" else AV.AMBER],
+		["BOOST", AV.CYAN if ctl.get("boost", false) else 0],
+		["BRAKE", AV.CYAN if ctl.get("brake", false) or (r["assist"] == "full" and ctl.get("thrust", Vector3.ONE) == Vector3.ZERO and r["speed"] > 0.02) else 0],
+	]
+	var gd: Dictionary = flight.guidance()
+	var text: String = gd.get("text", "")
+	var col := AV.AMBER
+	if flight.wrecked:
+		text = "Keel failure. Abandon ship: the lifeboat is away."
+		col = AV.RED
+	elif flight.computer:
+		col = AV.WHITE
+	elif text.begins_with("Good"):
+		col = AV.GREEN
+	Pages.annunciators(g, left, right, text, col, Pages.clock(sim), flight.clock)
 
 
 func _draw_keys(w: float) -> void:
@@ -301,6 +469,7 @@ func _draw_keys(w: float) -> void:
 		"G scanner range   C cockpit/chase   K docking computer   P pause",
 		"T tug (%d cr, on credit if you are broke)   H hide keys   F1 all controls" % int(flight.tune_dock["auto_dock_fee"])]
 	var y := 140.0
+	draw_rect(Rect2(w * 0.5 - 312, y - 16, 624, 18 * lines.size() + 8), Color(0.02, 0.03, 0.035, 0.6))
 	for l in lines:
-		draw_string(_font, Vector2(w * 0.5 - 300, y), l, HORIZONTAL_ALIGNMENT_LEFT, 600, 13, Color(UI.TEXT, 0.8))
+		draw_string(_font, Vector2(w * 0.5 - 300, y), l, HORIZONTAL_ALIGNMENT_LEFT, 600, 13, Color(UI.TEXT, 0.85))
 		y += 18
