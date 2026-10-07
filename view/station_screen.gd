@@ -19,6 +19,7 @@ const Comms := preload("res://view/comms.gd")
 const Contracts := preload("res://sim/contracts.gd")
 const ContractSystem := preload("res://sim/systems/contract_system.gd")
 const Perks := preload("res://sim/perks.gd")
+const Favours := preload("res://sim/favours.gd")
 const SiteSystem := preload("res://sim/systems/site_system.gd")
 const DAY := 86400.0
 
@@ -444,6 +445,7 @@ func _contracts_tab(place_id: String) -> Control:
 			row.add_child(UI.button("Abandon", send.bind({"type": "abandon_contract", "id": job["id"]})))
 			mine[1].add_child(row)
 		parts[1].add_child(mine[0])
+	_favours_panels(parts[1], place_id)
 	var board: Array = s.contracts.get("board", {}).get(place_id, [])
 	var shown := 0
 	var gated := 0
@@ -463,6 +465,55 @@ func _contracts_tab(place_id: String) -> Control:
 	if gated > 0:
 		parts[1].add_child(UI.label("%d more job%s here for pilots they know (%s)." % [gated, "s" if gated > 1 else "", gate_tier], UI.HAZARD, 13))
 	return parts[0]
+
+
+## Hitchhikers asking for a ride here, those aboard, and the vouchers you hold.
+func _favours_panels(into: Control, place_id: String) -> void:
+	var s = sim.state
+	var d = sim.data
+	if d.favours.is_empty():
+		return
+	var asking: Array = s.favours.get("waiting", {}).get(place_id, [])
+	var aboard: Array = s.ship.get("hikers", [])
+	if not asking.is_empty() or not aboard.is_empty():
+		var pan := UI.panel("Hitchhikers")
+		for h in aboard:
+			pan[1].add_child(UI.label("Aboard: %s, bound for %s" % [Favours.hiker_blurb(d, h), d.places[h["to"]]["name"]], UI.GOOD, 13))
+		for h in asking:
+			var row := HBoxContainer.new()
+			var l := UI.label("%s, wants to go to %s. Pays %s." % [Favours.hiker_blurb(d, h), d.places[h["to"]]["name"], UI.money(float(h["fare"])) if float(h["fare"]) > 0.0 else "nothing but thanks"], UI.TEXT, 13)
+			l.autowrap_mode = TextServer.AUTOWRAP_WORD
+			l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			row.add_child(l)
+			var free := Favours.free_berths(s, d)
+			row.add_child(UI.button("Take aboard" if free > 0 else "No free berth", send.bind({"type": "accept_hitchhiker", "id": h["id"]}), free > 0))
+			pan[1].add_child(row)
+		into.add_child(pan[0])
+	var held: Array = s.favours.get("vouchers", [])
+	if not held.is_empty():
+		var pan2 := UI.panel("Vouchers and favours owed")
+		for v in held:
+			var left := UI.duration(maxf(0.0, float(v["expires_t"]) - s.time_s))
+			var text := ""
+			match v["form"]:
+				"yard":
+					text = "Repair voucher, %d cr left at %s yards (%s)" % [int(float(v["value_cr"])), v["operator"], ", ".join(Favours.yard_names(d, v["operator"]))]
+				"docking":
+					text = "Free docking tugs at %s ports" % v["operator"]
+				"fuel":
+					text = "%d%% off propellant at %s ports" % [int(round(float(v["discount"]) * 100.0)), v["operator"]]
+				"refuel":
+					text = "%.1f t free propellant at %s ports" % [float(v["tonnes"]), v["operator"]]
+			var vrow := HBoxContainer.new()
+			var vl := UI.label("%s  ·  expires in %s" % [text, left], UI.TEXT, 13)
+			vl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			vrow.add_child(vl)
+			if v["form"] == "yard":
+				var usable: bool = Favours.operator_of(d, place_id) == v["operator"] and "shipyard" in d.places[place_id].get("services", []) and DamageSystem.repair_cost(s, d) > 0.5
+				vrow.add_child(UI.button("Use for repairs", send.bind({"type": "use_voucher", "id": v["id"]}), usable))
+			pan2[1].add_child(vrow)
+		pan2[1].add_child(UI.label("Fuel and docking vouchers are used for you when you pay.", UI.DIM, 12))
+		into.add_child(pan2[0])
 
 
 func _cargo_words(job: Dictionary) -> String:
@@ -502,6 +553,10 @@ func _offer_card(place_id: String, offer: Dictionary) -> Control:
 		est = "co-pilot reckons %s at your mass" % UI.duration(need)
 		colour = UI.GOOD if need < due * 0.85 else (UI.AMBER if need < due else UI.WARN)
 	p[1].add_child(UI.label("Allow %s  ·  %s  ·  pays %s  ·  %s" % [UI.duration(due), est, UI.money(float(offer["reward"])), offer["client"]], colour, 13))
+	if offer.has("in_kind"):
+		var kind_line := UI.label("Also: " + Favours.describe(d, offer["in_kind"]), UI.GOOD, 13)
+		kind_line.autowrap_mode = TextServer.AUTOWRAP_WORD
+		p[1].add_child(kind_line)
 	var why := ""
 	if int(offer["passengers"]) > 0 and ContractSystem.free_berths(s, d) < int(offer["passengers"]):
 		var yards := ContractSystem.berth_yards(d)
@@ -739,6 +794,8 @@ func _ship_panel(place_id: String) -> Control:
 	v.add_child(fuel_bar)
 	v.add_child(UI.label("Mass    %.1f t" % ShipStats.total_mass_t(s.ship, d)))
 	v.add_child(UI.label("Accel   %.2f milli-g" % (ShipStats.accel_mps2(s.ship, d) / 9.80665 * 1000.0)))
+	for t in ShipStats.active_tunes(s.ship, d):
+		v.add_child(UI.label("  Tune: %s (%s)  ·  %s" % [Favours.tune_name(d, t["id"]), Favours.tune_effects(d, t["id"]), t["source"]], UI.GOOD, 12))
 	var heat := ShipStats.heat_ratio(s.ship, d)
 	v.add_child(UI.label("Heat    %d%% of radiator capacity%s" % [int(heat * 100.0), "  (drive throttled)" if heat > 1.0 else ""], UI.WARN if heat > 1.0 else UI.TEXT))
 	var hull := DamageSystem.integrity(s.ship)
@@ -753,7 +810,9 @@ func _ship_panel(place_id: String) -> Control:
 	var services: Array = d.locations[place_id].get("services", [])
 	if "refuel" in services:
 		var need := minf(fuel_cap - float(s.ship["fuel_t"]), Market.stock(s, place_id, "propellant"))
-		var cost := Market.buy_cost(s, d, place_id, "propellant", need) if need > 0.01 else 0.0
+		var terms := Favours.fuel_terms(s, d, place_id)
+		var paid_need := maxf(0.0, need - float(terms["free_t"]))
+		var cost := Market.buy_cost(s, d, place_id, "propellant", paid_need) * float(terms["mult"]) if paid_need > 0.01 else 0.0
 		v.add_child(UI.button("Refuel  (%s)" % UI.money(cost), send.bind({"type": "refuel", "fill": true}), need > 0.01 and s.credits > 1.0))
 	else:
 		v.add_child(UI.label("No fuel sold here.", UI.HAZARD, 13))

@@ -44,6 +44,10 @@ var tip_seq: int = 0
 ## Courier contracts: {board: {place: [offer]}, next_t: {place: t}, active: [job],
 ## history: [job], seq, last_dock}. See contract_system.gd.
 var contracts: Dictionary = {}
+## Rewards in kind and hitchhikers: {vouchers: [voucher], waiting: {place: [hiker]},
+## next_t: {place: t}, last_dock, seq}. Hitchhikers aboard live in ship["hikers"] and
+## engine tunes in ship["tunes"]. See favour_system.gd.
+var favours: Dictionary = {}
 ## Standing with each operator: {operator: score}. Tiers in data/contracts.json.
 var reputation: Dictionary = {}
 ## The quiet arc: {done: [beat], fired: {beat: {t, offer}}, messages: [{t, from, text}]}.
@@ -92,6 +96,7 @@ func to_dict() -> Dictionary:
 		"knowledge": knowledge.duplicate(true),
 		"tip_seq": tip_seq,
 		"contracts": contracts.duplicate(true),
+		"favours": favours.duplicate(true),
 		"reputation": reputation.duplicate(true),
 		"perks": perks.duplicate(true),
 		"sites": sites.duplicate(true),
@@ -124,6 +129,7 @@ func load_dict(d: Dictionary) -> void:
 	knowledge = d.get("knowledge", {}).duplicate(true)
 	tip_seq = int(d.get("tip_seq", 0))
 	contracts = d.get("contracts", {}).duplicate(true)
+	favours = d.get("favours", {}).duplicate(true)
 	reputation = d.get("reputation", {}).duplicate(true)
 	perks = d.get("perks", {}).duplicate(true)
 	sites = d.get("sites", {}).duplicate(true)

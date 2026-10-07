@@ -176,3 +176,9 @@ A full pass with the bot and the new `tools/balance_probe.gd` is in [2026-10-clo
 - Watch: Kalpana One to Kalpana Two is a 760 m hop, and Kernel to Island One 3 km. Spread, docking time and fee limit it, but a short-hop loop could pay too well once both are open.
 - Route clearance: 1,554 routes between every non-foot place at three dates, all clear (`ROUTES_CLEAR`).
 - Dock trial: all new places dock, 200 to 295 s. Concord at full size (4 km radius) did not dock in 900 s because the scene spawns you three hub radii out, so its model is a tenth scale.
+
+
+## Favours (rewards in kind, hitchhikers, tunes), 2026-10-07
+
+- The bot takes no jobs, hitchhikers or vouchers, so it only feels favours through the shared sim random stream (the new system draws from `rng_state`, which shifts NPC and market rolls). Before/after, 180 days, 20 seeds: mean 95,532 cr before, 91,173 after (median 105,797 vs 83,646; spread 35k to 160k either way). That is inside the seed noise this file already warns about; nothing in the trading path changed.
+- Not measured by the bot, to check by hand: how often offers come in kind (`in_kind.chance` x `client_mult`: about 6 to 20% by kind and operator), whether the 0.85 `cash_offset` makes vouchers feel fair, and whether a +6% thrust / +8% heat Overdrive map throttles a stock Mule's radiators (it can).

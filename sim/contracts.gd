@@ -11,6 +11,7 @@ extends RefCounted
 
 const Navigation := preload("res://sim/navigation.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
+const Favours := preload("res://sim/favours.gd")
 
 const DAY := 86400.0
 
@@ -134,10 +135,13 @@ static func make_offer(data, eph, state, rng: RandomNumberGenerator, place: Stri
 		reward_base_override = [float(lh["pay_base"]), float(lh["pay_per_day"])]
 	var reward := (float(reward_base_override[0]) + float(reward_base_override[1]) * days) * urgency * pay_mult * float(maxi(heads, 1))
 	var od: Array = data.contracts["board"]["offer_days"]
-	return {
+	var offer := {
 		"kind": kind, "client": client_of(data, place), "issued_at": place, "pickup": pickup, "to": to,
 		"item": item, "mass_t": mass, "passengers": heads, "hand": hand, "reward": snappedf(reward, 50.0),
 		"window_s": days * slack * DAY, "expires_t": t + rng.randf_range(float(od[0]), float(od[1])) * DAY,
 		"min_rep": float(spec.get("min_rep", 0.0)), "rep": float(spec["rep"]), "channel": channel,
 		"hidden": channel == "rumour", "quick_days": days,
 	}
+	# Some clients pay part of it in kind (data/favours.json); the cash part drops to match.
+	Favours.maybe_in_kind(data, rng, offer)
+	return offer

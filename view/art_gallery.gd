@@ -105,7 +105,7 @@ func _stations() -> void:
 	var sun_dir := Vector3(0.6, 0.5, 0.6).normalized()
 	_sun.look_at_from_position(Vector3.ZERO, -sun_dir, Vector3.UP)
 	_camera.far = 20000.0
-	for place in ["kibo_ring", "trojan_yards", "halo_depot", "kalpana_one", "tsiolkovsky_wheel"]:
+	for place in ["kibo_ring", "trojan_yards", "halo_depot", "kalpana_one", "tsiolkovsky_wheel", "island_one", "kalpana_two", "concord_pair", "selene_ring"]:
 		var geom: Dictionary = data.places[place]["station"]
 		var st := Models.station(geom, data.places[place]["name"], Livery.for_station(data, place))
 		var node: Node3D = st["node"]

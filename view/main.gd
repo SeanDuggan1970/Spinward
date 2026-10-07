@@ -328,13 +328,34 @@ func _handle_events() -> void:
 			"contract_approach":
 				notice("Someone at %s is asking for you by name. See Contracts." % sim.data.places[d["place"]]["name"], UI.AMBER)
 				refresh = true
+			"favour_granted":
+				notice(d["text"], UI.GOOD)
+				refresh = true
+			"voucher_expired":
+				notice("A voucher from %s has expired." % d["operator"], UI.WARN)
+				refresh = true
+			"voucher_used":
+				notice("Repair voucher used at %s: %s of work done, %s left." % [sim.data.places[d["place"]]["name"], UI.money(float(d["spent"])), UI.money(float(d["left"]))], UI.GOOD)
+				refresh = true
+			"hitchhiker_asks":
+				notice("Someone at %s is looking for a ride (%s). See Contracts." % [sim.data.places[d["place"]]["name"], d["trade"]], UI.AMBER)
+				refresh = true
+			"hitchhiker_boarded", "hitchhiker_line", "hitchhiker_helped", "hitchhiker_left":
+				var hline: String = d["text"]
+				if e["type"] == "hitchhiker_left":
+					hline += "  (%s%s)" % ["fare %s" % UI.money(float(d["fare"])) if float(d["fare"]) > 0.0 else "no fare", ", fitted a tune: %s" % sim.data.favours["tunes"][d["tune"]]["name"] if d["tune"] != "" else ""]
+				notice(hline, UI.GOOD if e["type"] != "hitchhiker_line" else UI.TEXT)
+				comms.append("%s  %s" % [_clock(e["time_s"]), hline])
+				if comms.size() > COMMS_KEEP:
+					comms.pop_front()
+				refresh = true
 			"reputation_tier":
 				notice("%s now counts you as %s." % [d["operator"], String(d["tier"]).to_lower()], UI.GOOD if d["up"] else UI.WARN)
 			"module_installed":
 				notice("Fitted %s" % sim.data.modules[d["module"]]["name"], UI.GOOD)
 				refresh = true
 			"departed":
-				notice("Departed for %s%s" % [sim.data.places[d["to"]]["name"], (" via %s" % d["route"]) if d.has("route") else ""], UI.AMBER)
+				notice("Departed for %s%s" % [sim.data.places[d["to"]]["name"], (" via %s" % d["route"]) if d.has("route") else ""] + ("  (your navigator trimmed %.2f t)" % float(d["fuel_trimmed_t"]) if float(d.get("fuel_trimmed_t", 0.0)) > 0.005 else ""), UI.AMBER)
 			"periapsis_near", "periapsis":
 				var line := Comms.copilot(sim, "copilot_near" if e["type"] == "periapsis_near" else "copilot_pass", float(d["alt"]), float(d.get("in_s", 0.0)))
 				notice(line, UI.AMBER)
@@ -370,7 +391,7 @@ func _handle_events() -> void:
 				else:
 					notice("Docked at %s%s" % [sim.data.places[d["place"]]["name"], "  (hand-flown, no fee)" if d["manual"] else ""], UI.GOOD)
 				play_sfx("dock_clunk", -2.0)
-	if refresh and _screen is StationScreen and is_instance_valid(_screen):
+	if refresh and is_instance_valid(_screen) and _screen is StationScreen:
 		_screen.refresh()
 
 
