@@ -134,7 +134,7 @@
 	"insurance": {
 		"_note": "Policies are bought at any port. Premium per period_days = insured value * plan rate * risk * claims. Insured value = keel_value + each module's basis * its resale factor. A claim for a total loss pays (insured value of the lost ship - insured value of the replacement hull) * payout_frac, less the excess, and cargo cover pays cargo_payout_frac of what the hold cost. Collision cover pays a yard repair above collision_excess_mult * the plan excess. Claims within claim_decay_days each add claim_surcharge to the premium. A void or lapsed policy pays nothing: the Commons fallback hull comes on a loan, repaid at loan_repay_cr_per_day whenever credits are above loan_keep_cr, so no pilot is ever stuck. Plans that cover collision are refused for a ship damaged beyond buy_max_damage.",
 		"period_days": 30,
-		"renew_window_days": 3,
+		"renew_window_days": 10,
 		"min_premium_cr": 150,
 		"risk_wear_weight": 0.5,
 		"claim_surcharge": 0.25,

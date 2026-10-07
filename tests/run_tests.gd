@@ -113,6 +113,7 @@ func _initialize() -> void:
 	test_ship_economy_saves()
 	test_yard_voucher_on_bill()
 	test_hitchhikers_and_wof()
+	test_upkeep_bites()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -3749,3 +3750,51 @@ func test_hitchhikers_and_wof() -> void:
 	relaxed.advance_game_time(60.0)
 	check(not Fitness.dock_terms(relaxed.state, relaxed.data, "trojan_yards")["refuse_passengers"] and relaxed.state.ship.get("hikers", []).is_empty(), "A relaxed port lets them off at their stop")
 	check(relaxed.take_events().any(func(e): return e["type"] == "hitchhiker_left" and float(e["data"]["fare"]) == 200.0), "and they pay the fare")
+
+
+## Upkeep that matters: a tired drive costs real speed, a tune's wear is real, insurance
+## renews early enough that short trips do not lapse it, and tunes are priced at what they save.
+func test_upkeep_bites() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var ship: Dictionary = s.ship.duplicate(true)
+	Condition.set_condition(ship, "drive.0", 0.9)
+	var fresh_a := ShipStats.accel_mps2(ship, d)
+	Condition.set_condition(ship, "drive.0", 0.0)
+	var worn_a := ShipStats.accel_mps2(ship, d)
+	var loss := float(d.ship_economy["performance"]["max_loss"])
+	check(loss >= 0.25 and absf(worn_a / fresh_a - (1.0 - loss)) < 0.02, "A worn-out drive pushes %d%% less than a fresh one (%.4f vs %.4f)" % [int(round(loss * 100.0)), worn_a, fresh_a])
+	# Tunes: Overdrive wears its drive faster, lean-burn slower, in the wear system itself.
+	var wear := {}
+	for tune in ["", "overdrive_map", "lean_burn_map"]:
+		var t := fresh()
+		t.state.credits = 100000.0
+		t.state.ship["tunes"] = []
+		if tune != "":
+			check(Favours.install_tune(t.state.ship, t.data, tune, "test", 0.0) == "", "Fit %s" % tune)
+		t.state.ship["wear"]["drive.0"] = 0.0
+		check(t.apply({"type": "depart", "to": "halo_depot"}) == "", "Depart (%s)" % tune)
+		t.advance_game_time(86400.0)
+		wear[tune] = float(t.state.ship["wear"]["drive.0"])
+	check(wear[""] > 0.0 and wear["overdrive_map"] > wear[""] * 1.3, "Overdrive wears its drive about 40%% faster (%.5f vs %.5f)" % [wear["overdrive_map"], wear[""]])
+	check(wear["lean_burn_map"] < wear[""] * 0.95, "Lean-burn is gentler on it (%.5f)" % wear["lean_burn_map"])
+	# Every tune is still big enough to be offered as a reward in kind.
+	for id in d.favours["tunes"]:
+		check(float(d.favours["tunes"][id]["value_cr"]) >= float(d.favours["in_kind"]["min_value_cr"]), "Tune %s is priced above the in-kind minimum" % id)
+	# Insurance renews at a dock inside the window, and adds to the paid time rather than wasting it.
+	var r := fresh()
+	r.state.credits = 50000.0
+	var pol: Dictionary = r.state.insurance["policy"]
+	var window := float(d.ship_economy["insurance"]["renew_window_days"])
+	check(window >= 7.0, "The renewal window is a week or more (%d days)" % int(window))
+	var before: float = pol["paid_until_t"]
+	r.state.insurance["policy"]["paid_until_t"] = r.state.time_s + (window - 1.0) * DAY
+	before = r.state.insurance["policy"]["paid_until_t"]
+	r.advance_game_time(60.0)
+	check(r.state.insurance["policy"]["paid_until_t"] > before + 29.0 * DAY - 120.0, "A docked ship inside the window renews, from the old expiry")
+	var far := fresh()
+	far.state.insurance["policy"]["paid_until_t"] = far.state.time_s + (window + 5.0) * DAY
+	var far_before: float = far.state.insurance["policy"]["paid_until_t"]
+	far.advance_game_time(60.0)
+	check(far.state.insurance["policy"]["paid_until_t"] == far_before, "and does not renew too early")
