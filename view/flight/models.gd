@@ -7,6 +7,7 @@ const Kit := preload("res://view/flight/kit.gd")
 const Livery := preload("res://view/flight/livery.gd")
 const ShipBuilder := preload("res://view/flight/ship_builder.gd")
 const StationDetail := preload("res://view/flight/station_detail.gd")
+const Habitats := preload("res://view/flight/habitats.gd")
 const HullKit := preload("res://view/flight/hull_kit.gd")
 
 
@@ -21,8 +22,10 @@ static func ship(ship_state: Dictionary, data, livery: Dictionary = {}) -> Dicti
 
 ## Returns {node, rotor, port_z, port_radius, hub_radius, hub_length, ring_radius, ring_tube,
 ## lights, colliders}. colliders: {"cylinders": [[radius, z_min, z_max]], "tori": [[radius, tube]]},
-## all about the Z axis. station.type "wheel" is a hub, spokes and ring; "cylinder" is a
-## settlement drum with an axial docking nub on its forward cap.
+## all about the Z axis (a cylinder may carry an x, y offset, a torus a z). station.type
+## "wheel" is a hub, spokes and ring; "stanford" a Stanford torus; "cylinder" a settlement
+## drum with an axial docking nub on its forward cap; "bernal" a Bernal sphere and "pair"
+## a counter-rotating O'Neill pair (view/flight/habitats.gd).
 static func station(geom: Dictionary, name: String = "", livery: Dictionary = {}) -> Dictionary:
 	var colour: String = geom.get("colour", "offwhite")
 	var hull_mat: Material = livery["mats"]["hull"] if not livery.is_empty() else Kit.mat(colour)
@@ -50,52 +53,26 @@ static func station(geom: Dictionary, name: String = "", livery: Dictionary = {}
 	var pr := float(geom.get("port_radius_m", minf(rh * 0.45, 8.0)))
 	var colliders := {"cylinders": [], "tori": []}
 	var face_z := lh * 0.5
-	if geom.get("type", "wheel") == "cylinder":
-		# Settlement drum: plain hull with stiffening bands, end-cap rings, radiator fins aft.
-		rotor.add_child(Kit.cylinder(rh, lh, hull_mat, Vector3.ZERO, 64))
-		for f in [-0.36, -0.12, 0.12, 0.36]:
-			rotor.add_child(Kit.torus(rh + 0.6, 1.2, Kit.mat("grey"), Vector3(0, 0, lh * f), 96))
-		for side in [1.0, -1.0]:
-			rotor.add_child(Kit.torus(rh * 0.7, 2.5, steel, Vector3(0, 0, side * (lh * 0.5 + 0.5)), 72))
-			rotor.add_child(Kit.hazard_band(rh + 0.3, 6.0, Vector3(0, 0, side * (lh * 0.5 - 4.0)), 64))
-		for i in 8:
-			var a := TAU * float(i) / 8.0
-			var fin := Kit.box(Vector3(1.0, rh * 0.5, 60.0), Kit.mat("dark"), Vector3(cos(a) * rh * 0.55, sin(a) * rh * 0.55, -lh * 0.5 - 30.0))
-			fin.rotation.z = a + PI * 0.5
-			rotor.add_child(fin)
-		# Running lights along the hull so the drum reads at a distance.
-		for i in 12:
-			var a := TAU * float(i) / 12.0
-			rotor.add_child(Kit.beacon(Color("ffdca0"), Vector3(cos(a) * (rh + 1.0), sin(a) * (rh + 1.0), 0), 1.2))
-		# Forward end cap: radial stiffeners, structural rings and lit observation ports,
-		# so a 500 m disc reads as engineering rather than a blank plate.
-		var cap_z := lh * 0.5 + 0.4
-		for i in 16:
-			var a := TAU * float(i) / 16.0
-			var rib := Kit.box(Vector3(rh * 0.82, 3.0, 2.0), Kit.mat("grey"), Vector3(cos(a) * rh * 0.55, sin(a) * rh * 0.55, cap_z))
-			rib.rotation.z = a
-			rotor.add_child(rib)
-		for f in [0.3, 0.62, 0.93]:
-			rotor.add_child(Kit.torus(rh * f, 2.0, Kit.mat("steel"), Vector3(0, 0, cap_z + 0.5), 72))
-		for i in 32:
-			var a := TAU * (float(i) + 0.5) / 32.0
-			var holder := StationDetail._on_face(a, rh * 0.78, cap_z + 0.3)
-			holder.add_child(HullKit.window(9.0, 4.0, mats, mats["dark"], 1.0, 0.0, 0.5, false))
-			rotor.add_child(holder)
-		StationDetail.face(rotor, pr * 1.6, lh * 0.5 + 12.0, pr, mats, rng)
-		StationDetail.despun(still, -lh * 0.5 - 0.5, 150.0, rh * 0.9, 6.0, livery, rng)
-		# Axial docking nub standing off the forward cap.
-		rotor.add_child(Kit.cylinder(pr * 1.6, 12.0, Kit.mat("grey"), Vector3(0, 0, lh * 0.5 + 6.0)))
-		colliders["cylinders"].append([rh, -lh * 0.5, lh * 0.5])
-		colliders["cylinders"].append([pr * 1.6, lh * 0.5, lh * 0.5 + 12.0])
-		face_z = lh * 0.5 + 12.0
+	var kind: String = geom.get("type", "wheel")
+	var stencil_at := {}
+	if kind in ["cylinder", "pair"]:
+		var drum := func(r: Node3D, s: Node3D) -> Dictionary:
+			return _drum(r, s, rh, lh, pr, livery, rng, hull_mat, steel)
+		var built: Dictionary = Habitats.pair(rotor, still, root, geom, livery, rng, drum) if kind == "pair" else drum.call(rotor, still)
+		colliders = built["colliders"]
+		face_z = built["face_z"]
+	elif kind == "bernal":
+		var built := Habitats.bernal(rotor, still, geom, mats, livery, rng)
+		colliders = built["colliders"]
+		face_z = built["face_z"]
+		stencil_at = built["stencil"]
 	else:
 		rotor.add_child(Kit.cylinder(rh, lh, hull_mat, Vector3.ZERO, 28))
 		# The operator's colours round the hub's waist.
 		rotor.add_child(Kit.cylinder(rh + 0.08, lh * 0.12, accent_mat, Vector3(0, 0, lh * 0.1), 28))
 		rotor.add_child(Kit.hazard_band(rh + 0.05, 2.5, Vector3(0, 0, lh * 0.5 - 2.0), 24))
 		rotor.add_child(Kit.hazard_band(rh + 0.05, 2.5, Vector3(0, 0, -lh * 0.5 + 2.0), 24))
-		var stanford: bool = geom.get("type", "wheel") == "stanford"
+		var stanford: bool = kind == "stanford"
 		rotor.add_child(Kit.torus(rr, rt, hull_mat, Vector3.ZERO, 256 if stanford else 72))
 		var spokes := int(geom.get("spokes", 4))
 		if stanford:
@@ -178,8 +155,9 @@ static func station(geom: Dictionary, name: String = "", livery: Dictionary = {}
 		stencil.font_size = 96
 		stencil.outline_size = 0
 		stencil.modulate = Color("1b1d20") if colour == "offwhite" else Color("e6dcc4")
-		stencil.pixel_size = (rh * 0.16 if geom.get("type", "wheel") == "cylinder" else rh * 0.3) / 96.0
-		stencil.position = Vector3(0, -(rh * 0.42 if geom.get("type", "wheel") == "cylinder" else rh * 0.72), face_z - (11.4 if geom.get("type", "wheel") == "cylinder" else 1.6))
+		var drum_face := kind in ["cylinder", "pair"]
+		stencil.pixel_size = float(stencil_at["px"]) if not stencil_at.is_empty() else (rh * 0.16 if drum_face else rh * 0.3) / 96.0
+		stencil.position = Vector3(0, float(stencil_at["y"]), float(stencil_at["z"])) if not stencil_at.is_empty() else Vector3(0, -(rh * 0.42 if drum_face else rh * 0.72), face_z - (11.4 if drum_face else 1.6))
 		stencil.double_sided = false
 		rotor.add_child(stencil)
 	# Approach corridor: fixed "rabbit" lights stepping in toward the port.
@@ -191,6 +169,49 @@ static func station(geom: Dictionary, name: String = "", livery: Dictionary = {}
 	Kit.merge_static(still)
 	return {"node": root, "rotor": rotor, "port_z": port_z, "port_radius": pr, "hub_radius": rh, "hub_length": lh,
 		"ring_radius": rr, "ring_tube": rt, "lights": lights, "colliders": colliders, "type": geom.get("type", "wheel")}
+
+
+## A settlement drum about Z (radius rh, length lh), with an axial docking nub on its
+## forward cap and its despun stern in `still`: Kalpana's cylinders, and each of an
+## O'Neill pair. Returns {colliders, face_z}.
+static func _drum(rotor: Node3D, still: Node3D, rh: float, lh: float, pr: float, livery: Dictionary, rng: RandomNumberGenerator, hull_mat: Material, steel: Material) -> Dictionary:
+	var mats: Dictionary = livery["mats"]
+	# Settlement drum: plain hull with stiffening bands, end-cap rings, radiator fins aft.
+	rotor.add_child(Kit.cylinder(rh, lh, hull_mat, Vector3.ZERO, 64))
+	for f in [-0.36, -0.12, 0.12, 0.36]:
+		rotor.add_child(Kit.torus(rh + 0.6, 1.2, Kit.mat("grey"), Vector3(0, 0, lh * f), 96))
+	for side in [1.0, -1.0]:
+		rotor.add_child(Kit.torus(rh * 0.7, 2.5, steel, Vector3(0, 0, side * (lh * 0.5 + 0.5)), 72))
+		rotor.add_child(Kit.hazard_band(rh + 0.3, 6.0, Vector3(0, 0, side * (lh * 0.5 - 4.0)), 64))
+	for i in 8:
+		var a := TAU * float(i) / 8.0
+		var fin := Kit.box(Vector3(1.0, rh * 0.5, 60.0), Kit.mat("dark"), Vector3(cos(a) * rh * 0.55, sin(a) * rh * 0.55, -lh * 0.5 - 30.0))
+		fin.rotation.z = a + PI * 0.5
+		rotor.add_child(fin)
+	# Running lights along the hull so the drum reads at a distance.
+	for i in 12:
+		var a := TAU * float(i) / 12.0
+		rotor.add_child(Kit.beacon(Color("ffdca0"), Vector3(cos(a) * (rh + 1.0), sin(a) * (rh + 1.0), 0), 1.2))
+	# Forward end cap: radial stiffeners, structural rings and lit observation ports,
+	# so a 500 m disc reads as engineering rather than a blank plate.
+	var cap_z := lh * 0.5 + 0.4
+	for i in 16:
+		var a := TAU * float(i) / 16.0
+		var rib := Kit.box(Vector3(rh * 0.82, 3.0, 2.0), Kit.mat("grey"), Vector3(cos(a) * rh * 0.55, sin(a) * rh * 0.55, cap_z))
+		rib.rotation.z = a
+		rotor.add_child(rib)
+	for f in [0.3, 0.62, 0.93]:
+		rotor.add_child(Kit.torus(rh * f, 2.0, Kit.mat("steel"), Vector3(0, 0, cap_z + 0.5), 72))
+	for i in 32:
+		var a := TAU * (float(i) + 0.5) / 32.0
+		var holder := StationDetail._on_face(a, rh * 0.78, cap_z + 0.3)
+		holder.add_child(HullKit.window(9.0, 4.0, mats, mats["dark"], 1.0, 0.0, 0.5, false))
+		rotor.add_child(holder)
+	StationDetail.face(rotor, pr * 1.6, lh * 0.5 + 12.0, pr, mats, rng)
+	StationDetail.despun(still, -lh * 0.5 - 0.5, 150.0, rh * 0.9, 6.0, livery, rng)
+	# Axial docking nub standing off the forward cap.
+	rotor.add_child(Kit.cylinder(pr * 1.6, 12.0, Kit.mat("grey"), Vector3(0, 0, lh * 0.5 + 6.0)))
+	return {"colliders": {"cylinders": [[rh, -lh * 0.5, lh * 0.5], [pr * 1.6, lh * 0.5, lh * 0.5 + 12.0]], "tori": []}, "face_z": lh * 0.5 + 12.0}
 
 
 ## A station work pod: a one-person cab with a manipulator arm and floodlight,

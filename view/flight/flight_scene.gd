@@ -438,6 +438,17 @@ func _collide() -> void:
 			var cr: float = c[0]
 			var z0: float = c[1]
 			var z1: float = c[2]
+			# The twin of a pair stands off the axis.
+			if c.size() > 3:
+				var off := Vector2(p.x - float(c[3]), p.y - float(c[4]))
+				var orxy := off.length()
+				if p.z > z0 - r and p.z < z1 + r and orxy < cr + r:
+					var o_side := cr + r - orxy
+					var o_d := minf(o_side, minf(z1 + r - p.z, p.z - (z0 - r)))
+					if o_d > depth:
+						depth = o_d
+						normal = Vector3(off.x, off.y, 0.0).normalized() if o_d == o_side and orxy > 1e-4 else (Vector3(0, 0, 1) if o_d == z1 + r - p.z else Vector3(0, 0, -1))
+				continue
 			if p.z > z0 - r and p.z < z1 + r and rxy < cr + r:
 				var into_side := cr + r - rxy
 				var into_front := z1 + r - p.z
@@ -448,7 +459,7 @@ func _collide() -> void:
 					normal = radial if d == into_side else (Vector3(0, 0, 1) if d == into_front else Vector3(0, 0, -1))
 		# Rings.
 		for torus in colliders["tori"]:
-			var q := Vector2(rxy - float(torus[0]), p.z)
+			var q := Vector2(rxy - float(torus[0]), p.z - (float(torus[2]) if torus.size() > 2 else 0.0))
 			var reach := float(torus[1]) + r
 			if q.length() < reach and reach - q.length() > depth:
 				var qn := q.normalized() if q.length() > 1e-4 else Vector2.RIGHT

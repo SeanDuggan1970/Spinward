@@ -1,5 +1,5 @@
 {
-	"_note": "Flows are tonnes per game day. market.target is the stock where price equals base price. Recipes run per day while inputs last. Station geometry drives the docking scene. Orbits flagged 'equatorial' are relative to Earth's equator. 'features' add view-only megastructure set pieces (skyhook, power_arrays, elevator, bernal_frame, telescope_array, captured_rock). station.type is 'wheel' (default) or 'cylinder'. Places that a project builds ('opens_with': island_one, kalpana_two, concord_pair, selene_ring, tsiolkovsky_wheel, hektor_reach) stay shut (departures, boards, map, traffic, tips) until the project is done (Perks.place_open); their markets still warm up from day one. A habitat built beside an existing port sits a few km off it (lagrange offset_km, or a slightly different mean anomaly in the same orbit). station.type 'cylinder' is also used for Island One, a Bernal sphere, as a squat drum (no sphere model exists yet).",
+	"_note": "Flows are tonnes per game day. market.target is the stock where price equals base price. Recipes run per day while inputs last. Station geometry drives the docking scene. Orbits flagged 'equatorial' are relative to Earth's equator. 'features' add view-only megastructure set pieces (skyhook, power_arrays, elevator, bernal_frame, telescope_array, captured_rock). station.type is 'wheel' (default) or 'cylinder'. Places that a project builds ('opens_with': island_one, kalpana_two, concord_pair, selene_ring, tsiolkovsky_wheel, hektor_reach) stay shut (departures, boards, map, traffic, tips) until the project is done (Perks.place_open); their markets still warm up from day one. A habitat built beside an existing port sits a few km off it (lagrange offset_km, or a slightly different mean anomaly in the same orbit). station.type 'bernal' is a Bernal sphere (Island One: hub_radius_m is the sphere's radius) and 'pair' an O'Neill pair of counter-rotating cylinders (Concord; optional mirror_open_deg, twin_offset_m), both in view/flight/habitats.gd.",
 	"kibo_ring": {
 		"name": "Kibo Ring",
 		"operator": "Terran Compact",
@@ -1305,7 +1305,7 @@
 			]
 		},
 		"station": {
-			"type": "cylinder",
+			"type": "bernal",
 			"hub_radius_m": 250,
 			"hub_length_m": 500,
 			"ring_radius_m": 0,
@@ -1419,7 +1419,7 @@
 			}
 		},
 		"station": {
-			"type": "cylinder",
+			"type": "pair",
 			"hub_radius_m": 400,
 			"hub_length_m": 3200,
 			"ring_radius_m": 0,
