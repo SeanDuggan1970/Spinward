@@ -5,6 +5,7 @@ extends "res://sim/systems/system.gd"
 const ShipStats := preload("res://sim/ship_stats.gd")
 const Perks := preload("res://sim/perks.gd")
 const ShipBill := preload("res://sim/ship_bill.gd")
+const Favours := preload("res://sim/favours.gd")
 const Condition := preload("res://sim/condition.gd")
 const StockShip := preload("res://sim/stock_ship.gd")
 
@@ -163,6 +164,9 @@ func _commit(request: Dictionary) -> String:
 	var before: Dictionary = s.ship
 	s.ship = bill["ship_after"]
 	s.credits -= float(bill["total"])
+	if float(bill["voucher"]) > 0.0:
+		var used := Favours.spend_yard_vouchers(s, data, String(bill["place"]), float(bill["voucher"]))
+		sim().emit("voucher_used", {"spent": used, "place": bill["place"], "for": "yard work"})
 	for swap in request.get("swaps", []):
 		var net := 0.0
 		for line in bill["lines"]:

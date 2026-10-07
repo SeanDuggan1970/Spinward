@@ -245,10 +245,39 @@ static func route_fuel(ship: Dictionary, data, fuel_t: float) -> float:
 	return fuel_t * (1.0 - clampf(ShipStats.crew_sum(ship, data, "fuel_trim"), 0.0, 0.5))
 
 
-## PLUG-IN POINT for maintenance and repairs: spend up to value_cr of service at a
-## yard, mending damage by the repair rates in balance.json "damage". Returns the credits
-## of service used. The maintenance work can extend what this mends (wear, warrant of
-## fitness) here without touching voucher bookkeeping.
+## What a repair voucher is worth at a yard: the credits left on the live yard vouchers of
+## the operator that runs `place` (0 if it is not a shipyard). The ship bill
+## (ShipBill.quote) takes this off the yard's service and overhaul work.
+static func yard_voucher_balance(state, data, place: String) -> float:
+	if not "shipyard" in data.places.get(place, {}).get("services", []):
+		return 0.0
+	var total := 0.0
+	for v in live_vouchers(state, "yard", operator_of(data, place)):
+		total += float(v["value_cr"])
+	return total
+
+
+## Spend `amount` credits of yard voucher at `place` (soonest-expiring first), as the bill
+## said. Returns the credits really spent. A voucher with under a credit left is used up.
+static func spend_yard_vouchers(state, data, place: String, amount: float) -> float:
+	var live := live_vouchers(state, "yard", operator_of(data, place))
+	live.sort_custom(func(a, b): return float(a["expires_t"]) < float(b["expires_t"]) or (float(a["expires_t"]) == float(b["expires_t"]) and int(a["id"]) < int(b["id"])))
+	var left := amount
+	for v in live:
+		if left <= 0.0:
+			break
+		var take := minf(left, float(v["value_cr"]))
+		v["value_cr"] = float(v["value_cr"]) - take
+		left -= take
+		if float(v["value_cr"]) < 1.0:
+			state.favours["vouchers"].erase(v)
+	return amount - left
+
+
+## Spend up to value_cr of repair at a yard, mending collision damage by the repair
+## rates in balance.json "damage" (the `use_voucher` command). Returns the credits of
+## repair used. Wear (service, overhaul) is paid through the ship bill instead, so a
+## voucher shows as a line there: see ShipBill.quote and yard_voucher_balance.
 static func repair_service(state, data, value_cr: float) -> float:
 	var cost := DamageSystem.repair_cost(state, data)
 	if cost <= 0.0 or value_cr <= 0.0:
