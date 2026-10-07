@@ -3677,7 +3677,7 @@ func test_yard_voucher_on_bill() -> void:
 	check(sim.apply({"type": "service", "slot": "all"}) == "", "Service the whole ship")
 	check(absf((before - s.credits) - (float(plain["total"]) - 500.0)) < 1e-6, "The yard is paid the bill less the voucher (%d cr)" % int(before - s.credits))
 	check(s.favours["vouchers"].is_empty(), "A used-up voucher is gone")
-	check(sim.take_events().any(func(e): return e["type"] == "voucher_used"), "and says so")
+	check(sim.take_events().any(func(e): return e["type"] == "voucher_used" and e["data"].has("left") and e["data"].has("spent") and e["data"].has("place")), "and says so (with what the view reads: spent, left, place)")
 	# A big voucher pays the whole job and keeps the rest (soonest-expiring first).
 	s.favours["vouchers"] = [
 		{"id": 91, "form": "yard", "operator": op, "value_cr": 400.0, "expires_t": s.time_s + 90.0 * DAY},

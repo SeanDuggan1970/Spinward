@@ -166,7 +166,7 @@ func _commit(request: Dictionary) -> String:
 	s.credits -= float(bill["total"])
 	if float(bill["voucher"]) > 0.0:
 		var used := Favours.spend_yard_vouchers(s, data, String(bill["place"]), float(bill["voucher"]))
-		sim().emit("voucher_used", {"spent": used, "place": bill["place"], "for": "yard work"})
+		sim().emit("voucher_used", {"spent": used, "left": Favours.yard_voucher_balance(s, data, String(bill["place"])), "place": bill["place"], "for": "yard work"})
 	for swap in request.get("swaps", []):
 		var net := 0.0
 		for line in bill["lines"]:
