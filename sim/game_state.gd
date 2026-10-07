@@ -62,6 +62,10 @@ var started_t: float = 0.0
 var news: Dictionary = {}
 ## Electrical bus: {charge_kwh, shed, flat, reactor}. See sim/power.gd. Empty = full battery.
 var power: Dictionary = {}
+## Ship insurance: {policy: {plan, start_t, paid_until_t, auto_renew} | {}, claims: [{t, kind, paid}], loan_cr}.
+## See sim/insurance.gd. Empty (an old save) gets the starter cover at the first tick.
+## Wear, faults and the Warrant of Fitness live on the ship (ship["wear"], ["use"], ["faults"], ["wof"]).
+var insurance: Dictionary = {}
 
 
 static func from_unix(unix_seconds: float) -> float:
@@ -104,6 +108,7 @@ func to_dict() -> Dictionary:
 		"started_t": started_t,
 		"news": news.duplicate(true),
 		"power": power.duplicate(true),
+		"insurance": insurance.duplicate(true),
 	}
 
 
@@ -137,3 +142,4 @@ func load_dict(d: Dictionary) -> void:
 	started_t = float(d.get("started_t", time_s))
 	news = d.get("news", {}).duplicate(true)
 	power = d.get("power", {}).duplicate(true)
+	insurance = d.get("insurance", {}).duplicate(true)

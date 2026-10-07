@@ -20,6 +20,10 @@ const Contracts := preload("res://sim/contracts.gd")
 const ContractSystem := preload("res://sim/systems/contract_system.gd")
 const Perks := preload("res://sim/perks.gd")
 const Favours := preload("res://sim/favours.gd")
+const Condition := preload("res://sim/condition.gd")
+const Fitness := preload("res://sim/fitness.gd")
+const Insurance := preload("res://sim/insurance.gd")
+const ShipBill := preload("res://sim/ship_bill.gd")
 const SiteSystem := preload("res://sim/systems/site_system.gd")
 const DAY := 86400.0
 
@@ -716,30 +720,38 @@ func _shipyard_tab() -> Control:
 	var s = sim.state
 	var d = sim.data
 	var stock: Array = ShipyardSystem.yard_stock(s, d)
-	var resale := float(d.balance["shipyard"]["resale_fraction"])
 	# The ship builder: plan the whole refit on screen, with the ship and the bill, then
 	# put it together. The quick swaps below still work for one change at a time.
 	var open := UI.button("Open the ship builder: plan a refit, see her and the bill", _open_builder)
 	UI.tint_button(open, UI.AMBER)
 	parts[1].add_child(open)
-	parts[1].add_child(UI.label("Or swap one module at a time below. Your old module is taken in part-exchange at %d%% of its price." % int(resale * 100), UI.DIM, 13))
+	parts[1].add_child(UI.label("Or swap one module at a time below: parts, fitting labour and days in port, less a trade-in by condition and age. Every price is the bill you will be charged.", UI.DIM, 13))
+	parts[1].add_child(_fitness_panel())
 	var slots: Array = s.ship["modules"].keys()
 	slots.sort()
 	for slot in slots:
 		var kind: String = slot.split(".")[0]
 		var current: Dictionary = d.modules[s.ship["modules"][slot]]
 		var p := UI.panel("%s %s" % [kind, int(slot.split(".")[1]) + 1])
-		p[1].add_child(UI.label("Fitted: %s  (%s)" % [current["name"], _module_stats(current)]))
+		var cond := Condition.condition(s.ship, slot)
+		var fault := Condition.fault_loss(s.ship, slot)
+		p[1].add_child(UI.label("Fitted: %s  (%s)  condition %d%%%s" % [current["name"], _module_stats(current), int(round(cond * 100.0)), "  FAULT: %s" % s.ship["faults"][slot]["text"] if fault > 0.0 else ""], UI.WARN if cond < 0.4 or fault > 0.0 else UI.TEXT))
+		var work := HBoxContainer.new()
+		for level in ["service", "overhaul"]:
+			var bill := ShipBill.quote(s, d, {"services": [{"slot": slot, "level": level}]})
+			if bill["ok"]:
+				work.add_child(UI.button("%s %s, %.1f d" % [level.capitalize(), UI.money(bill["total"]), bill["days"]], send.bind({"type": level, "slot": slot}), bill["afford"]))
+		p[1].add_child(work)
 		for module_id in stock:
 			var m: Dictionary = d.modules[module_id]
 			if not ShipyardSystem.fits(m, slot) or module_id == s.ship["modules"][slot]:
 				continue
-			var cost := float(m["price"]) - float(current["price"]) * resale
+			var bill := ShipBill.quote(s, d, {"swaps": [{"slot": slot, "module": module_id}]})
 			var row := HBoxContainer.new()
 			var l := UI.label("%s  (%s)" % [m["name"], _module_stats(m)], UI.DIM)
 			l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			row.add_child(l)
-			row.add_child(UI.button("Fit for %s" % UI.money(cost), send.bind({"type": "install_module", "slot": slot, "module": module_id}), cost <= s.credits))
+			row.add_child(UI.button("Fit for %s, %.1f d" % [UI.money(bill["total"]), bill["days"]], send.bind({"type": "install_module", "slot": slot, "module": module_id}), bill["ok"] and bill["afford"]))
 			p[1].add_child(row)
 		parts[1].add_child(p[0])
 	return parts[0]
@@ -749,6 +761,46 @@ func _open_builder() -> void:
 	var b := preload("res://view/ship_builder_screen.gd").new(sim)
 	b.closed.connect(refresh)
 	add_child(b)
+
+
+## Warrant of Fitness and insurance at the yard, with what each action costs.
+func _fitness_panel() -> Control:
+	var s = sim.state
+	var d = sim.data
+	var p := UI.panel("Warrant of Fitness and insurance")
+	var w := Fitness.status(s, d)
+	var wtext := "Warrant of Fitness: %s" % w["state"]
+	if w["state"] in ["valid", "expiring"] and is_finite(w["days_left"]):
+		wtext += " (%d days left)" % int(w["days_left"])
+	p[1].add_child(UI.label(wtext, UI.GOOD if w["valid"] else UI.WARN))
+	for issue in w["issues"]:
+		p[1].add_child(UI.label("  to fix: %s" % issue, UI.WARN, 13))
+	var inspect := ShipBill.quote(s, d, {"inspect": true})
+	var row := HBoxContainer.new()
+	row.add_child(UI.button("Inspect for %s" % UI.money(inspect["total"]), send.bind({"type": "inspect"}), inspect["ok"] and inspect["afford"]))
+	for level in ["service", "overhaul"]:
+		var all := ShipBill.quote(s, d, {"service_all": level})
+		if all["ok"]:
+			row.add_child(UI.button("%s all %s, %.1f d" % [level.capitalize(), UI.money(all["total"]), all["days"]], send.bind({"type": level, "slot": "all"}), all["afford"]))
+	p[1].add_child(row)
+	var ins := Insurance.status(s, d)
+	var itext := "Insurance: none"
+	if ins["state"] != "none":
+		itext = "Insurance: %s, %s" % [d.ship_economy["insurance"]["plans"][ins["plan"]]["name"], ins["state"]]
+		if ins["state"] == "active":
+			itext += " (%d days left, excess %s)" % [int(ins["days_left"]), UI.money(ins["excess"])]
+		else:
+			itext += ": " + ins["reason"]
+	p[1].add_child(UI.label(itext, UI.GOOD if ins["state"] == "active" else UI.WARN))
+	if float(s.insurance.get("loan_cr", 0.0)) > 0.0:
+		p[1].add_child(UI.label("Commons hull loan outstanding: %s" % UI.money(s.insurance["loan_cr"]), UI.AMBER, 13))
+	var plans := HBoxContainer.new()
+	for id in d.ship_economy["insurance"]["plans"]:
+		var prem := float(Insurance.premium(s, d, id)["per_period"])
+		var block := Insurance.buy_block(s, d, id)
+		plans.add_child(UI.button("%s: %s / %d d" % [id.capitalize(), UI.money(prem), int(d.ship_economy["insurance"]["period_days"])], send.bind({"type": "buy_insurance", "plan": id}), block == "" and prem <= s.credits))
+	p[1].add_child(plans)
+	return p[0]
 
 
 func _module_stats(m: Dictionary) -> String:

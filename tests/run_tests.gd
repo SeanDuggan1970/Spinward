@@ -26,6 +26,10 @@ const NpcSystem := preload("res://sim/systems/npc_system.gd")
 const Bindings := preload("res://view/bindings.gd")
 const DamageSystem := preload("res://sim/systems/damage_system.gd")
 const Power := preload("res://sim/power.gd")
+const Condition := preload("res://sim/condition.gd")
+const Fitness := preload("res://sim/fitness.gd")
+const Insurance := preload("res://sim/insurance.gd")
+const ShipBill := preload("res://sim/ship_bill.gd")
 const CockpitPages := preload("res://view/ui/cockpit_pages.gd")
 
 const AU := 1.495978707e11
@@ -98,6 +102,15 @@ func _initialize() -> void:
 	test_favours_saves()
 	test_controls()
 	test_new_habitat_places()
+	test_wear_accrual()
+	test_wear_faults()
+	test_condition_resale()
+	test_service_and_overhaul()
+	test_refit_labour_and_time()
+	test_ship_bill()
+	test_wof()
+	test_insurance()
+	test_ship_economy_saves()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -300,7 +313,11 @@ func test_shipyard() -> void:
 	check(sim.apply({"type": "install_module", "slot": "drive.0", "module": "pathfinder_mk2"}) != "", "Kibo Ring does not sell Mk2 drives")
 	check(sim.apply({"type": "install_module", "slot": "cargo.0", "module": "cargo_pod_m"}) == "", "Fit a 20 t container")
 	check(ShipStats.cargo_capacity_t(s.ship, d) == 30.0, "Capacity grows")
-	check(s.credits == 200000.0 - 30000.0 + 4000.0, "Old module resold at half price")
+	# The old cage (part-worn, 8,000 new) goes in part-exchange by condition and age, not a flat half,
+	# and the yard charges fitting labour on top of the parts (data/ship_economy.json).
+	var old_trade := 8000.0 * Condition.value_factor(0.7, 900.0, d)
+	var labour := float(Condition.refit_quote("cargo_pod_m", "kibo_ring", d)["labour_cr"])
+	check(absf(s.credits - (200000.0 - 30000.0 + old_trade - labour)) < 1e-6, "Old module part-exchanged by condition, labour charged")
 	sim.apply({"type": "buy", "good": "water_ice", "tonnes": 25})
 	check(sim.apply({"type": "install_module", "slot": "cargo.0", "module": "cargo_pod_s"}) != "", "Cannot shrink below cargo aboard")
 	# Heat: a Mk2 drive (4 MW) on two 1.5 MW panels runs throttled.
@@ -571,7 +588,7 @@ func test_docking_help() -> void:
 	var dc := fresh()
 	dc.state.credits = 50000.0
 	check(dc.apply({"type": "install_module", "slot": "avionics.0", "module": "docking_computer"}) == "", "Fit a docking computer at Kibo Ring")
-	check(ShipStats.has_docking_computer(dc.state.ship, dc.data) and dc.state.credits == 35000.0, "Docking computer fitted and paid for")
+	check(ShipStats.has_docking_computer(dc.state.ship, dc.data) and absf(dc.state.credits - (50000.0 - 15000.0 - float(Condition.refit_quote("docking_computer", "kibo_ring", dc.data)["labour_cr"]))) < 1e-6, "Docking computer fitted and paid for (parts and labour)")
 
 
 func test_trajectories() -> void:
@@ -1733,7 +1750,7 @@ func test_damage_in_depth() -> void:
 		if e["type"] == "ship_lost":
 			lost_event = e["data"]
 	check(not lost_event.is_empty() and lost_event["jobs_lost"] == [501] and lost_event["excess"] == float(tune["insurance_excess"]), "The ship_lost event names the lost job and the excess")
-	check(ls.credits == 20000.0 - float(tune["insurance_excess"]), "Insurance costs exactly the excess")
+	check(lost_event["payout"] > 0.0 and absf(ls.credits - (20000.0 + lost_event["payout"] - float(tune["insurance_excess"]))) < 1e-6, "Insurance pays out the Mk2 drive's worth and costs exactly the excess")
 	check(ls.ship["name"] == "Second Wind" and ls.ship["hull"] == d.balance["start"]["ship"], "The name carries over to the stock hull")
 	check(ls.ship["modules"]["drive.0"] == "pathfinder_mk1", "The upgraded drive is gone: a stock Mule")
 	check(ls.ship["cargo"].is_empty() and ls.ship["cargo_paid"].is_empty(), "Cargo is lost with its paid value")
@@ -2581,22 +2598,34 @@ func test_cabin_and_berths() -> void:
 	check(absf(ShipStats.cargo_t(s2.ship) - hold2) < 1e-9 and int(s2.ship["passengers"]) == 3, "Passengers take berths, not hold space")
 
 
-## The ship builder's bill (ShipyardSystem.quote) is what the yard then charges: the
-## same parts, trade-ins and total, refused lines say why, and a plan that would leave
-## cargo without a hold is stopped.
+## The ship builder's bill (ShipyardSystem.quote, over ShipBill) is what the yard then
+## charges for the whole plan as one refit: parts, trade-ins by condition, labour, and
+## any service or inspection in the same visit. Refused lines say why, and a plan that
+## would leave cargo without a hold is stopped.
 func test_refit_quote() -> void:
 	var sim := fresh()
 	var s := sim.state
 	var d := sim.data
 	s.credits = 200000.0
 	var plan := {"cargo.1": "passenger_berths", "tank.0": "tank_m"}
-	var q := ShipyardSystem.quote(s, d, plan)
+	var extra := {"service_all": "service", "inspect": true}
+	var q := ShipyardSystem.quote(s, d, plan, extra)
 	check(q["lines"].size() == 2 and q["ok"], "A two-part refit at Kibo Ring is quoted and possible")
 	check(ShipStats.berths(q["trial"], d) == 6, "The trial ship has the berths")
+	check(q["lines"].all(func(l): return float(l["labour"]) > 0.0), "Each swap carries fitting labour")
+	var stock_tank := float(d.modules[s.ship["modules"]["tank.0"]]["price"])
+	check(float(q["lines"][1]["trade_in"]) < stock_tank * 0.92 and float(q["lines"][1]["trade_in"]) > 0.0, "A part-worn tank trades in below new value")
+	check(q["bill"]["lines"].any(func(b): return b["kind"] == "inspection") and q["bill"]["lines"].any(func(b): return b["kind"] == "service"), "Service and inspection are on the same bill")
+	check(float(q["bill"]["days"]) > 0.0, "The job takes days in port")
 	var before := float(s.credits)
-	for l in q["lines"]:
-		check(sim.apply({"type": "install_module", "slot": l["slot"], "module": l["module"]}) == "", "Fit %s" % l["module"])
+	var t0 := s.time_s
+	var command := extra.duplicate()
+	command["type"] = "refit"
+	command["swaps"] = q["lines"].map(func(l): return {"slot": l["slot"], "module": l["module"]})
+	check(sim.apply(command) == "", "The builder's plan goes in as one refit")
 	check(absf((before - float(s.credits)) - float(q["total"])) < 0.01, "The yard charges what the bill said (%.0f vs %.0f)" % [before - float(s.credits), float(q["total"])])
+	check(absf((s.time_s - t0) / 86400.0 - float(q["bill"]["days"])) < 0.01, "and takes the days it said")
+	check(Fitness.valid(s, d), "Inspected in the same visit: the warrant is good")
 	var bad := ShipyardSystem.quote(s, d, {"drive.0": "pathfinder_mk3"})
 	check(not bad["ok"] and String(bad["lines"][0]["why"]) == "not sold here", "A part this yard doesn't stock is refused, with the reason")
 	s.ship["cargo"]["water_ice"] = 25.0
@@ -2839,8 +2868,9 @@ func test_favours_in_kind() -> void:
 	check(ShipStats.thrust_n(st.state.ship, st.data) > thrust0, "A tune paid in kind is fitted on delivery")
 	var st2 := fresh()
 	var cr0: float = st2.state.credits
+	# Parts wear while the job runs, so measure against this ship, not a fresh one.
 	_deliver_in_kind(st2, op, {"form": "tune", "operator": op, "tune": "injector_retime", "value_cr": 1800.0}, 1000.0, false)
-	check(ShipStats.thrust_n(st2.state.ship, st2.data) == thrust0 and st2.state.credits > cr0 + 500.0, "A late tune is paid in credits instead")
+	check(ShipStats.active_tunes(st2.state.ship, st2.data).is_empty() and ShipStats.thrust_n(st2.state.ship, st2.data) <= thrust0 + 1e-6 and st2.state.credits > cr0 + 500.0, "A late tune is paid in credits instead")
 	# Odds are data: client multipliers and per-kind chances come from favours.json.
 	check(float(sim.data.favours["in_kind"]["client_mult"].get("Belt Assembly", 1.0)) > float(sim.data.favours["in_kind"]["client_mult"].get("Terran Compact", 1.0)), "Odds differ by client (data)")
 
@@ -3042,3 +3072,564 @@ func test_favours_saves() -> void:
 	a.advance_game_time(20 * DAY)
 	b.advance_game_time(20 * DAY)
 	check(a.state.favours == b.state.favours, "Hitchhikers are deterministic")
+
+
+# ---- Ship economy: wear, condition, service, refit, WoF, insurance ----
+
+## A passenger job on the Kibo Ring board, ready to accept (berths fitted).
+func _passenger_job(sim: Sim, id: int) -> Dictionary:
+	var s := sim.state
+	s.ship["modules"]["cargo.1"] = "passenger_berths"
+	var job := {"id": id, "kind": "passenger", "client": "Terran Compact", "issued_at": "kibo_ring", "pickup": "", "to": "halo_depot",
+		"item": "two colonists", "mass_t": 0.2, "passengers": 2, "hand": false, "reward": 4000.0, "window_s": 9.0 * DAY,
+		"expires_t": s.time_s + DAY, "min_rep": -100.0, "rep": 1.0, "channel": "board", "hidden": false, "quick_days": 2.0}
+	s.contracts["board"]["kibo_ring"] = [job]
+	return job
+
+
+func _wreck(sim: Sim) -> Dictionary:
+	sim.state.location = {"status": "approach", "place": "kibo_ring"}
+	sim.take_events()
+	sim.apply({"type": "impact", "speed": 30.0, "zone": "mid", "seed": 0})
+	for e in sim.take_events():
+		if e["type"] == "ship_lost":
+			return e["data"]
+	return {}
+
+
+func test_wear_accrual() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	# A stock second-hand Mule starts part-worn, with a Warrant of Fitness and cover.
+	for slot in s.ship["modules"]:
+		check(Condition.condition(s.ship, slot) < 1.0 and Condition.condition(s.ship, slot) > 0.6, "%s starts part-worn (%.2f)" % [slot, Condition.condition(s.ship, slot)])
+	check(Condition.age_days(s.ship, "drive.0") >= 900.0 and Fitness.valid(s, d), "The starter Mule has age and a valid WoF")
+	# Parked: only slow ageing.
+	var w0 := Condition.wear_of(s.ship, "drive.0")
+	var c0 := Condition.wear_of(s.ship, "cargo.0")
+	sim.advance_game_time(10.0 * DAY)
+	var parked := Condition.wear_of(s.ship, "drive.0") - w0
+	check(parked > 0.0 and parked < 0.005, "A drive parked ten days barely wears (%.5f)" % parked)
+	check(s.ship.get("damage", {}).is_empty(), "Wear is not collision damage")
+	# Flying: the drive burns, radiators work their load, pods wear on the dock.
+	sim.apply({"type": "buy", "good": "water_ice", "tonnes": 10})
+	var rad0 := Condition.wear_of(s.ship, "radiator.0")
+	var drive1 := Condition.wear_of(s.ship, "drive.0")
+	var cargo1 := Condition.wear_of(s.ship, "cargo.0")
+	check(sim.apply({"type": "depart", "to": "halo_depot"}) == "", "Depart to Halo Depot")
+	var days := (float(s.location["arrive_t"]) - s.time_s) / DAY
+	sim.advance_game_time(float(s.location["arrive_t"]) - s.time_s + 1.0)
+	var flown := Condition.wear_of(s.ship, "drive.0") - drive1
+	check(flown > parked * 0.8 / 10.0 * days * 4.0, "A drive wears much faster in flight than parked (%.5f over %.1f d)" % [flown, days])
+	check(Condition.wear_of(s.ship, "radiator.0") - rad0 > 0.0, "Radiators wear on thermal load")
+	check(Condition.wear_of(s.ship, "cargo.0") - cargo1 > 0.0, "Pods wear carrying cargo")
+	sim.apply({"type": "dock"})
+	sim.advance_game_time(3600.0)
+	check(int(s.ship["use"]["drive.0"]["docks"]) == 1, "A dock is counted")
+	check(float(s.ship["use"]["drive.0"]["burn_h"]) > 10.0, "Burn hours are counted")
+	check(float(s.ship["hull_h"]) > 10.0 * 24.0, "Hull hours in service are counted")
+	check(Condition.wear_of(s.ship, "cargo.0") > c0, "Cargo pod wear is up")
+	# Wear is bounded and a module that is worn out is just worn out.
+	Condition.add_wear(s.ship, "drive.0", 5.0)
+	check(Condition.condition(s.ship, "drive.0") == 0.0, "Condition floors at zero")
+	# Mild performance loss, never a dead drive.
+	var fresh_ship := fresh().state.ship
+	Condition.set_condition(fresh_ship, "drive.0", 1.0)
+	var full := ShipStats.thrust_n(fresh_ship, d)
+	Condition.set_condition(fresh_ship, "drive.0", 0.0)
+	var worn := ShipStats.thrust_n(fresh_ship, d)
+	var loss := 1.0 - worn / full
+	check(absf(loss - float(d.ship_economy["performance"]["max_loss"])) < 1e-9, "A worn-out drive pushes max_loss less (%.3f)" % loss)
+	Condition.set_condition(fresh_ship, "drive.0", 0.8)
+	check(ShipStats.thrust_n(fresh_ship, d) == full, "Above the onset there is no loss")
+	# Capacity and loads are not trimmed by wear.
+	var cap := ShipStats.cargo_capacity_t(fresh_ship, d)
+	Condition.set_condition(fresh_ship, "cargo.0", 0.0)
+	check(ShipStats.cargo_capacity_t(fresh_ship, d) == cap, "A worn pod holds as much")
+
+
+func test_wear_faults() -> void:
+	var run := func() -> Sim:
+		var sim := fresh()
+		Condition.set_condition(sim.state.ship, "drive.0", 0.1)
+		Condition.set_condition(sim.state.ship, "radiator.0", 0.1)
+		sim.apply({"type": "set_time_scale", "scale": 1.0})
+		sim.advance_game_time(120.0 * DAY)
+		return sim
+	var a: Sim = run.call()
+	var b: Sim = run.call()
+	var faults: Dictionary = a.state.ship["faults"]
+	check(not faults.is_empty(), "A worn-out module throws small faults over months")
+	for slot in faults:
+		check(float(faults[slot]["loss"]) > 0.0 and float(faults[slot]["loss"]) <= float(a.data.ship_economy["faults"]["cap"]) + 1e-9, "A fault is a few percent, capped (%s %.3f)" % [slot, float(faults[slot]["loss"])])
+	check(a.state.ship["faults"] == b.state.ship["faults"] and a.state.rng_state == b.state.rng_state, "Faults are deterministic for a seed")
+	check(a.state.ship.get("damage", {}).is_empty() and a.state.ship["hull"] == "mule", "A fault is never damage and never a lost ship")
+	var warnings := a.take_events().filter(func(e): return e["type"] == "module_fault" or e["type"] == "condition_low")
+	check(not warnings.is_empty(), "Faults and low condition raise warnings")
+	# A healthy ship has none.
+	var good := fresh()
+	for slot in good.state.ship["modules"]:
+		Condition.set_condition(good.state.ship, slot, 0.9)
+	good.advance_game_time(60.0 * DAY)
+	check(good.state.ship["faults"].is_empty(), "A well-kept ship has no faults")
+	# Service clears them.
+	good.state.ship["faults"]["drive.0"] = {"loss": 0.05, "text": "x", "t": 0.0}
+	Condition.set_condition(good.state.ship, "drive.0", 0.95)
+	check(good.apply({"type": "service", "slot": "drive.0"}) == "" and good.state.ship["faults"].is_empty(), "Service clears a fault")
+
+
+func test_condition_resale() -> void:
+	var sim := fresh()
+	var d := sim.data
+	var ship: Dictionary = sim.state.ship
+	var price := 8000.0
+	Condition.reset_slot(ship, "cargo.0")
+	var fresh_value := Condition.trade_in(ship, "cargo.0", d)
+	check(fresh_value >= 0.9 * price and fresh_value <= price, "A fresh module trades in near full value (%.0f)" % fresh_value)
+	Condition.set_condition(ship, "cargo.0", 0.05)
+	var tired := Condition.trade_in(ship, "cargo.0", d)
+	check(tired <= 0.12 * price, "A tired module trades in for scrap (%.0f)" % tired)
+	var last := 0.0
+	var monotone := true
+	for i in 11:
+		Condition.set_condition(ship, "cargo.0", i / 10.0)
+		var v := Condition.trade_in(ship, "cargo.0", d)
+		monotone = monotone and v >= last
+		last = v
+	check(monotone, "Trade-in rises with condition")
+	Condition.set_condition(ship, "cargo.0", 1.0)
+	ship["use"]["cargo.0"] = {"h": 0.0}
+	var young := Condition.trade_in(ship, "cargo.0", d)
+	ship["use"]["cargo.0"] = {"h": 10.0 * 365.0 * 24.0}
+	var old := Condition.trade_in(ship, "cargo.0", d)
+	check(old < young and old >= young * float(d.ship_economy["resale"]["age_floor"]) / 1.0 - 1e-6, "Age trims the trade-in to a floor")
+	ship["damage"] = {"cargo.0": 0.5}
+	check(absf(Condition.trade_in(ship, "cargo.0", d) - old * 0.5) < 1e-6, "Damage halves it")
+	check(Condition.trade_in(ship, "drive.0", d) == 0.0, "A zero-price module is worth nothing as trade-in")
+	# It is what the install command credits (not a flat 50%).
+	var s2 := fresh()
+	s2.state.credits = 100000.0
+	Condition.set_condition(s2.state.ship, "cargo.0", 0.2)
+	var credits := s2.state.credits
+	var expect := Condition.trade_in(s2.state.ship, "cargo.0", d)
+	s2.apply({"type": "install_module", "slot": "cargo.0", "module": "cargo_pod_m"})
+	var labour := float(Condition.refit_quote("cargo_pod_m", "kibo_ring", d)["labour_cr"])
+	check(absf(credits - s2.state.credits - (30000.0 - expect + labour)) < 1e-6, "Install credits the condition-based trade-in, charges labour")
+	check(not d.balance.has("shipyard"), "The flat resale fraction is gone from balance.json")
+	# A new module is as new.
+	check(Condition.condition(s2.state.ship, "cargo.0") > 0.99 and Condition.age_days(s2.state.ship, "cargo.0") < 1.0, "A fitted module is new (it has only aged the days it was in the yard)")
+
+
+func test_service_and_overhaul() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	s.credits = 100000.0
+	Condition.set_condition(s.ship, "drive.0", 0.4)
+	var q_service := Condition.work_quote(s.ship, "drive.0", "service", "kibo_ring", d)
+	var q_over := Condition.work_quote(s.ship, "drive.0", "overhaul", "kibo_ring", d)
+	check(q_service["cost"] > 0.0 and q_over["cost"] > 3.0 * q_service["cost"], "Overhaul is dear, service is cheap (%d vs %d)" % [q_service["cost"], q_over["cost"]])
+	check(absf(q_service["to"] - 0.7) < 1e-9 and absf(q_over["to"] - 0.97) < 1e-9, "Service restores some, overhaul near-new")
+	check(q_over["days"] > q_service["days"] + 2.0, "Overhaul takes days in port")
+	var t0 := s.time_s
+	var credits := s.credits
+	check(sim.apply({"type": "service", "slot": "drive.0"}) == "", "Service the drive")
+	check(absf(Condition.condition(s.ship, "drive.0") - 0.7) < 0.01, "The drive is better after service (%.3f)" % Condition.condition(s.ship, "drive.0"))
+	check(absf(credits - s.credits - q_service["cost"]) < 1e-6, "Charged the quoted price")
+	check(s.time_s - t0 >= q_service["days"] * DAY - 1.0, "Game time passes in the yard")
+	# Service tops out at its cap; overhaul goes on.
+	Condition.set_condition(s.ship, "drive.0", 0.91)
+	check(sim.apply({"type": "service", "slot": "drive.0"}) == "", "A service still helps a little at 0.91")
+	check(Condition.condition(s.ship, "drive.0") <= float(d.ship_economy["service"]["cap"]) + 1e-9, "but never past the cap")
+	check(sim.apply({"type": "service", "slot": "drive.0"}) != "", "Nothing to service at the cap")
+	t0 = s.time_s
+	credits = s.credits
+	var over: Dictionary = Condition.work_quote(s.ship, "drive.0", "overhaul", "kibo_ring", d)
+	check(sim.apply({"type": "overhaul", "slot": "drive.0"}) == "", "Overhaul the drive")
+	check(absf(Condition.condition(s.ship, "drive.0") - 0.97) < 0.01, "Near new after overhaul")
+	check(s.time_s - t0 >= float(over["days"]) * DAY - 1.0 and absf(credits - s.credits - over["cost"]) < 1e-6, "Overhaul takes its days and its price")
+	check(Condition.age_days(s.ship, "drive.0") > 900.0, "Overhaul does not make a module younger")
+	# Service all: every module gets a line; overhaul is dearer than service.
+	for slot in s.ship["modules"]:
+		Condition.set_condition(s.ship, slot, 0.5)
+	var all_service := ShipBill.quote(s, d, {"service_all": "service"})
+	var all_over := ShipBill.quote(s, d, {"service_all": "overhaul"})
+	check(all_service["ok"] and all_service["lines"].size() == s.ship["modules"].size(), "Service all is one line per module")
+	check(all_over["total"] > all_service["total"] and all_over["days"] > all_service["days"], "Overhauling everything costs and takes more")
+	check(all_over["days"] < all_over["lines"].size() * 4.0, "Yard crews work in parallel")
+	# Prices vary by yard.
+	var cheap := Condition.work_quote(s.ship, "drive.0", "overhaul", "trojan_yards", d)
+	var dear := Condition.work_quote(s.ship, "drive.0", "overhaul", "landauer_deep", d)
+	check(cheap["cost"] < q_over["cost"] * 2.0 and cheap["cost"] < dear["cost"], "Yard prices differ (%d vs %d)" % [cheap["cost"], dear["cost"]])
+	# Money: not enough credits, not at a yard.
+	s.credits = 10.0
+	check(sim.apply({"type": "overhaul", "slot": "drive.0"}) != "", "No overhaul without the credits")
+	var away := fresh()
+	var no_yard := ""
+	for id in away.data.places:
+		if not "shipyard" in away.data.places[id].get("services", []) and not away.data.places[id].has("foot_of"):
+			no_yard = id
+			break
+	away.state.location = {"status": "docked", "place": no_yard}
+	away.state.credits = 50000.0
+	check(away.apply({"type": "service", "slot": "drive.0"}) != "", "No service away from a shipyard")
+	# Paused clocks still pay the days.
+	var paused := fresh()
+	paused.state.credits = 50000.0
+	Condition.set_condition(paused.state.ship, "drive.0", 0.3)
+	paused.state.paused = true
+	var pt := paused.state.time_s
+	paused.apply({"type": "service", "slot": "drive.0"})
+	check(paused.state.time_s > pt and paused.state.paused, "The yard's days pass even while paused, and pause is kept")
+
+
+func test_refit_labour_and_time() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	s.credits = 500000.0
+	var rq := Condition.refit_quote("cargo_pod_m", "kibo_ring", d)
+	var t0 := s.time_s
+	var credits := s.credits
+	var trade := Condition.trade_in(s.ship, "cargo.0", d)
+	check(sim.apply({"type": "install_module", "slot": "cargo.0", "module": "cargo_pod_m"}) == "", "Install still works")
+	check(absf(credits - s.credits - (30000.0 + rq["labour_cr"] - trade)) < 1e-6, "Parts plus labour less trade-in")
+	check(absf(s.time_s - t0 - rq["days"] * DAY) < 1.0, "Fitting takes its days (%.2f)" % rq["days"])
+	# A bundle: two swaps at once share the yard's crews.
+	var q := ShipBill.quote(s, d, {"swaps": [{"slot": "cargo.1", "module": "cargo_pod_m"}, {"slot": "tank.0", "module": "tank_m"}]})
+	var days_a := float(Condition.refit_quote("cargo_pod_m", "kibo_ring", d)["days"])
+	var days_b := float(Condition.refit_quote("tank_m", "kibo_ring", d)["days"])
+	check(q["ok"] and absf(q["days"] - maxf(maxf(days_a, days_b), (days_a + days_b) / 2.0)) < 1e-9, "A bundle takes the longer job or half the total")
+	t0 = s.time_s
+	credits = s.credits
+	check(sim.apply({"type": "refit", "swaps": [{"slot": "cargo.1", "module": "cargo_pod_m"}, {"slot": "tank.0", "module": "tank_m"}]}) == "", "Refit two modules in one visit")
+	check(absf(credits - s.credits - q["total"]) < 1e-6 and absf(s.time_s - t0 - q["days"] * DAY) < 1.0, "Charged and timed exactly as quoted")
+	check(s.ship["modules"]["cargo.1"] == "cargo_pod_m" and s.ship["modules"]["tank.0"] == "tank_m", "Both fitted")
+	# Labour varies by yard and by module.
+	check(Condition.refit_quote("pathfinder_mk2", "trojan_yards", d)["labour_cr"] > Condition.refit_quote("cargo_pod_m", "trojan_yards", d)["labour_cr"], "A drive costs more to fit than a pod")
+	check(Condition.refit_quote("cargo_pod_m", "landauer_deep", d)["labour_cr"] > Condition.refit_quote("cargo_pod_m", "trojan_yards", d)["labour_cr"], "Remote yards charge more labour")
+	# Refusals keep the old rules.
+	check(sim.apply({"type": "refit", "swaps": [{"slot": "cargo.0", "module": "cargo_pod_m"}]}) != "", "Already fitted is refused")
+	check(sim.apply({"type": "refit", "swaps": [{"slot": "cargo.0", "module": "cargo_pod_m"}, {"slot": "cargo.0", "module": "cargo_pod_s"}]}) != "", "The same slot twice is refused")
+	check(sim.apply({"type": "refit", "swaps": []}) != "", "An empty refit is refused")
+	var poor := fresh()
+	check(poor.apply({"type": "refit", "swaps": [{"slot": "cargo.0", "module": "cargo_pod_m"}]}) != "", "A poor pilot cannot afford the labour and parts")
+	# A drive refit voids the WoF until inspected; inspecting in the same visit does not.
+	var yard := fresh()
+	yard.state.location = {"status": "docked", "place": "trojan_yards"}
+	yard.state.credits = 900000.0
+	for slot in yard.state.ship["modules"]:
+		Condition.set_condition(yard.state.ship, slot, 0.9)
+	check(Fitness.valid(yard.state, yard.data), "Valid before the refit")
+	yard.apply({"type": "install_module", "slot": "drive.0", "module": "pathfinder_mk2"})
+	check(Fitness.status(yard.state, yard.data)["state"] == "voided", "A new drive voids the Warrant of Fitness")
+	yard.apply({"type": "inspect"})
+	check(Fitness.valid(yard.state, yard.data), "and an inspection restores it")
+	var yard2 := fresh()
+	yard2.state.location = {"status": "docked", "place": "trojan_yards"}
+	yard2.state.credits = 900000.0
+	for slot in yard2.state.ship["modules"]:
+		Condition.set_condition(yard2.state.ship, slot, 0.9)
+	yard2.apply({"type": "install_module", "slot": "drive.0", "module": "pathfinder_mk2", "inspect": true})
+	check(Fitness.valid(yard2.state, yard2.data), "Inspecting in the same visit keeps the WoF valid")
+
+
+func test_ship_bill() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	s.credits = 200000.0
+	Condition.set_condition(s.ship, "radiator.0", 0.3)
+	var req := {"swaps": [{"slot": "cargo.0", "module": "cargo_pod_m"}], "services": [{"slot": "drive.0", "level": "service"}, {"slot": "radiator.0", "level": "overhaul"}], "inspect": true}
+	var before := s.to_dict()
+	var bill := ShipBill.quote(s, d, req)
+	check(s.to_dict() == before, "Quoting does not change the state")
+	check(bill["ok"], "The bill is ok: %s" % str(bill["problems"]))
+	var kinds := {}
+	var sum := 0.0
+	for line in bill["lines"]:
+		kinds[line["kind"]] = true
+		sum += float(line["credits"])
+	check(kinds.has("part") and kinds.has("trade_in") and kinds.has("labour") and kinds.has("service") and kinds.has("overhaul") and kinds.has("inspection"), "The bill itemises parts, trade-in, labour, service, overhaul and inspection")
+	check(absf(sum - bill["total"]) < 1e-6, "Lines add up to the total")
+	check(absf(bill["parts"] - 30000.0) < 1e-6 and bill["trade_in"] > 0.0 and bill["labour"] > 0.0, "Parts, trade-in and labour are broken out")
+	check(bill["days"] > 0.0 and bill["afford"], "Days in port, and affordable")
+	check(bill["wof"]["after"]["valid"] and bill["wof"]["would_pass"], "The WoF effect is shown: it would pass")
+	check(bill["insurance"]["premium_after"] > bill["insurance"]["premium_before"], "A better fit raises the premium (%d to %d)" % [bill["insurance"]["premium_before"], bill["insurance"]["premium_after"]])
+	check(bill["ship_after"]["modules"]["cargo.0"] == "cargo_pod_m" and Condition.condition(bill["ship_after"], "radiator.0") > 0.9, "The ship after is previewed")
+	# Committing charges exactly the bill.
+	var credits := s.credits
+	var t0 := s.time_s
+	check(sim.apply({"type": "refit", "swaps": req["swaps"], "services": req["services"], "inspect": true}) == "", "Commit the same job")
+	check(absf(credits - s.credits - bill["total"]) < 1e-6 and absf(s.time_s - t0 - bill["days"] * DAY) < 1.0, "Charged and timed as billed")
+	# A drive swap without inspection voids the WoF, and the bill says so.
+	var drive := ShipBill.quote(fresh().state, d, {"place": "trojan_yards", "swaps": [{"slot": "drive.0", "module": "pathfinder_mk2"}]})
+	check(drive["ok"] and drive["wof"]["voided_by_refit"] and not drive["wof"]["after"]["valid"], "The bill warns that a drive refit voids the WoF")
+	check(drive["insurance"]["state_after"] == "void" and drive["insurance"]["void_after"], "and that the insurance would be void")
+	# A failing inspection shows what must be fixed.
+	var bad := fresh()
+	Condition.set_condition(bad.state.ship, "tank.0", 0.1)
+	var fail := ShipBill.quote(bad.state, bad.data, {"inspect": true})
+	check(not fail["wof"]["after"]["valid"] and not fail["wof"]["issues"].is_empty(), "The bill shows an inspection would fail and why")
+	# Problems and affordability.
+	var poor := ShipBill.quote(fresh().state, d, {"swaps": [{"slot": "cargo.0", "module": "cargo_pod_l"}]})
+	check(not poor["ok"] or not poor["afford"], "Not sold here or not affordable")
+	var nothing := ShipBill.quote(fresh().state, d, {})
+	check(not nothing["ok"] and nothing["problems"].has("nothing to do"), "An empty request says so")
+	var bogus := ShipBill.quote(fresh().state, d, {"swaps": [{"slot": "cargo.9", "module": "cargo_pod_m"}]})
+	check(not bogus["ok"], "A phantom slot fails the bill")
+	var cargo_state := fresh()
+	cargo_state.state.credits = 100000.0
+	cargo_state.state.ship["cargo"] = {"water_ice": 19.0}
+	var small := ShipBill.quote(cargo_state.state, d, {"swaps": [{"slot": "cargo.0", "module": "cargo_pod_s"}]})
+	check(not small["ok"], "A swap that leaves cargo with no room is refused (same module or too small)")
+	# Quoting at another yard without going there.
+	var elsewhere := ShipBill.quote(s, d, {"place": "trojan_yards", "service_all": "service"})
+	var here := ShipBill.quote(s, d, {"service_all": "service"})
+	check(elsewhere["ok"] and elsewhere["place"] == "trojan_yards" and elsewhere["total"] != here["total"], "A yard elsewhere can be quoted")
+
+
+func test_wof() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	s.credits = 100000.0
+	check(Fitness.status(s, d)["state"] == "valid" and Fitness.valid(s, d), "A new game has a valid WoF")
+	check(Fitness.passenger_job_block(s, d) == "", "with passenger jobs allowed")
+	# It runs down and warns.
+	var warn_days := float(d.ship_economy["wof"]["warn_days"])
+	sim.advance_game_time((float(d.ship_economy["start"]["wof_days"]) - warn_days + 1.0) * DAY)
+	check(Fitness.status(s, d)["state"] == "expiring" and Fitness.valid(s, d), "It is still valid but expiring")
+	check(sim.take_events().any(func(e): return e["type"] == "wof_expiring"), "A warning is raised")
+	# It expires; the effects bite.
+	sim.advance_game_time(warn_days * DAY)
+	check(Fitness.status(s, d)["state"] == "expired" and not Fitness.valid(s, d), "It expires")
+	check(sim.take_events().any(func(e): return e["type"] == "wof_lapsed"), "and says so once")
+	check(Insurance.status(s, d)["state"] == "void", "An expired WoF voids the insurance")
+	var job := _passenger_job(sim, 7001)
+	check(sim.apply({"type": "accept_contract", "id": 7001}) != "", "Passenger jobs are refused without a WoF")
+	check(Fitness.passenger_job_block(s, d) != "", "with a reason")
+	# Docking: a surcharge everywhere it is set, and strict ports turn passengers away.
+	check(Fitness.port_class("kibo_ring", d) == "strict" and Fitness.port_class("trojan_yards", d) in ["relaxed", "standard"], "Ports have traffic-control classes by operator")
+	var credits := s.credits
+	s.location = {"status": "approach", "place": "kibo_ring"}
+	var fee := float(d.balance["docking"]["auto_dock_fee"])
+	check(sim.apply({"type": "dock"}) == "", "Docking is not refused outright")
+	check(absf(credits - s.credits - fee - float(d.ship_economy["wof"]["port_rules"]["strict"]["surcharge_cr"])) < 1e-6, "A strict port charges extra")
+	# Passengers already aboard are put ashore at a strict port.
+	var p := fresh()
+	_passenger_job(p, 7002)
+	p.state.credits = 50000.0
+	check(p.apply({"type": "accept_contract", "id": 7002}) == "", "A passenger job is accepted with a valid WoF")
+	p.state.ship["wof"]["valid_until_t"] = p.state.time_s - 1.0
+	p.state.location = {"status": "approach", "place": "kibo_ring"}
+	p.take_events()
+	check(p.apply({"type": "dock"}) == "", "Dock with passengers aboard")
+	check(p.state.contracts["active"].is_empty() and int(p.state.ship["passengers"]) == 0, "Strict traffic control puts the passengers ashore")
+	check(p.state.contracts["history"][-1]["outcome"] == "turned_away" and p.take_events().any(func(e): return e["type"] == "passengers_refused"), "and the job is closed as turned away")
+	# A relaxed or lenient port keeps them (passengers_refused only where data says).
+	var lax := fresh()
+	_passenger_job(lax, 7003)
+	check(lax.apply({"type": "accept_contract", "id": 7003}) == "", "Accept")
+	lax.state.ship["wof"]["valid_until_t"] = lax.state.time_s - 1.0
+	var relaxed := ""
+	for id in lax.data.places:
+		if Fitness.port_class(id, lax.data) == "relaxed" and not lax.data.places[id].has("foot_of"):
+			relaxed = id
+			break
+	lax.state.location = {"status": "approach", "place": relaxed}
+	lax.apply({"type": "dock"})
+	check(int(lax.state.ship["passengers"]) == 2 and lax.state.contracts["active"].size() == 1, "A relaxed port lets passengers through")
+	# Inspection at the yard: fail lists issues, charges, and keeps the WoF failed.
+	var f := fresh()
+	f.state.credits = 50000.0
+	Condition.set_condition(f.state.ship, "drive.0", 0.1)
+	f.state.ship["damage"] = {"keel": 0.4}
+	var fee_i := float(d.ship_economy["wof"]["inspection_cr"])
+	var c0 := f.state.credits
+	check(f.apply({"type": "inspect"}) == "", "An inspection can be had")
+	check(absf(c0 - f.state.credits - fee_i) < 1e-6, "It costs the fee")
+	var st := Fitness.status(f.state, f.data)
+	check(st["state"] == "failed" and not st["valid"] and st["issues"].size() == 2, "It fails and lists what must be fixed (%s)" % str(st["issues"]))
+	check(f.take_events().any(func(e): return e["type"] == "wof_failed"), "A failure is announced")
+	check(Insurance.status(f.state, f.data)["state"] == "void", "A failed WoF voids the insurance")
+	# Fix it and pass.
+	check(f.apply({"type": "repair"}) == "" and f.apply({"type": "overhaul", "slot": "drive.0"}) == "", "Repair and overhaul")
+	check(f.apply({"type": "inspect"}) == "" and Fitness.valid(f.state, f.data), "Then it passes")
+	check(absf(float(f.state.ship["wof"]["valid_until_t"]) - f.state.time_s - float(d.ship_economy["wof"]["valid_days"]) * DAY) < 1.0, "valid for the data's period")
+	check(f.take_events().any(func(e): return e["type"] == "wof_issued") and Insurance.status(f.state, f.data)["state"] == "active", "and cover is back")
+	# Renewing an expired one works too, and inspection is yard-only.
+	var e := fresh()
+	e.state.ship["wof"]["valid_until_t"] = e.state.time_s - DAY
+	e.state.credits = 5000.0
+	check(e.apply({"type": "inspect"}) == "" and Fitness.valid(e.state, e.data), "An expired WoF is renewed by inspection")
+	e.state.location = {"status": "approach", "place": "kibo_ring"}
+	check(e.apply({"type": "inspect"}) != "", "No inspections in flight")
+
+
+func test_insurance() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var tune: Dictionary = d.balance["damage"]
+	var st := Insurance.status(s, d)
+	check(st["state"] == "active" and st["plan"] == "basic" and "total_loss" in st["covers"] and not "collision" in st["covers"], "A new game starts with the basic cover")
+	var prem := Insurance.premium(s, d, "basic")
+	check(prem["per_period"] >= float(d.ship_economy["insurance"]["min_premium_cr"]) and prem["insured_value"] > 9000.0, "The premium comes from hull value (%d on %d)" % [prem["per_period"], prem["insured_value"]])
+	check(Insurance.premium(s, d, "full")["per_period"] > Insurance.premium(s, d, "standard")["per_period"] and Insurance.premium(s, d, "standard")["per_period"] > prem["per_period"], "Wider cover costs more")
+	# Wear raises risk; claims raise premiums.
+	var tired := fresh()
+	for slot in tired.state.ship["modules"]:
+		Condition.set_condition(tired.state.ship, slot, 0.2)
+	check(Insurance.premium(tired.state, d, "standard")["risk_mult"] > Insurance.premium(s, d, "standard")["risk_mult"], "A worn ship is a bigger risk")
+	var base := float(Insurance.premium(s, d, "standard")["per_period"])
+	Insurance.record_claim(s, "collision", 1000.0)
+	check(float(Insurance.premium(s, d, "standard")["per_period"]) > base, "A claim raises the premium")
+	sim.advance_game_time((float(d.ship_economy["insurance"]["claim_decay_days"]) + 1.0) * DAY)
+	check(Insurance.recent_claims(s, d) == 0, "Old claims stop counting")
+	# Buying a policy.
+	var b := fresh()
+	b.state.credits = 20000.0
+	var p2 := float(Insurance.premium(b.state, b.data, "standard")["per_period"])
+	check(b.apply({"type": "buy_insurance", "plan": "standard"}) == "", "Buy the standard policy")
+	check(absf(20000.0 - b.state.credits - p2) < 1e-6 and "collision" in Insurance.status(b.state, b.data)["covers"], "Premium paid, collision now covered")
+	check(b.apply({"type": "buy_insurance", "plan": "nonsense"}) != "", "No such plan")
+	b.state.credits = 10.0
+	check(b.apply({"type": "buy_insurance", "plan": "full"}) != "", "Cannot pay the premium")
+	b.state.credits = 20000.0
+	b.state.ship["damage"] = {"drive.0": 0.4}
+	check(b.apply({"type": "buy_insurance", "plan": "full"}) != "", "No collision cover on an already-damaged ship")
+	check(b.apply({"type": "buy_insurance", "plan": "basic"}) == "", "but total-loss-only cover is fine")
+	# Collision repair: the insurer pays above the excess, the claim goes on record.
+	var r := fresh()
+	r.state.credits = 50000.0
+	r.apply({"type": "buy_insurance", "plan": "standard"})
+	r.state.ship["damage"] = {"drive.0": 0.8, "keel": 0.3}
+	var cost := DamageSystem.repair_cost(r.state, r.data)
+	var excess := Insurance.collision_excess("standard", r.data)
+	check(cost > excess, "The repair is dearer than the collision excess (%d vs %d)" % [cost, excess])
+	var cr := r.state.credits
+	var claims0 := Insurance.recent_claims(r.state, r.data)
+	check(r.apply({"type": "repair"}) == "", "Repair under cover")
+	check(absf(cr - r.state.credits - excess) < 1e-6, "The pilot pays only the excess")
+	check(Insurance.recent_claims(r.state, r.data) == claims0 + 1, "and a claim is recorded")
+	# Without cover the repair is all yours; small repairs are not claimed.
+	var u := fresh()
+	u.state.credits = 50000.0
+	u.state.ship["damage"] = {"drive.0": 0.8}
+	var full_cost := DamageSystem.repair_cost(u.state, u.data)
+	var uc := u.state.credits
+	u.apply({"type": "repair"})
+	check(absf(uc - u.state.credits - full_cost) < 1e-6 and Insurance.recent_claims(u.state, u.data) == 0, "No collision cover: you pay the lot, no claim")
+	# Total loss with cover: payout for the upgrade less the excess, and a claim.
+	var t := fresh()
+	t.state.credits = 50000.0
+	t.state.ship["modules"]["cargo.0"] = "cargo_pod_l"
+	Condition.reset_slot(t.state.ship, "cargo.0")
+	t.state.ship["cargo_paid"] = {"food": 700.0}
+	var c1 := t.state.credits
+	var ev := _wreck(t)
+	check(ev["cover"] == "basic" and ev["payout"] > 0.0 and ev["loan"] == 0.0, "A total loss on cover pays out")
+	check(absf(t.state.credits - (c1 + ev["payout"] - float(tune["insurance_excess"]))) < 1e-6, "less exactly the excess")
+	check(t.state.ship["hull"] == "mule" and Insurance.recent_claims(t.state, t.data) == 1, "You get a hull and a claim goes on file")
+	check(t.state.ship["modules"]["cargo.0"] == "cargo_pod_s", "The replacement is a stock hull")
+	check(Insurance.status(t.state, t.data)["state"] == "active" and float(Insurance.premium(t.state, t.data, "basic")["claims_mult"]) > 1.0, "Cover continues at a higher premium")
+	# Cargo cover pays the cargo only on the full plan.
+	var cg := fresh()
+	cg.state.credits = 60000.0
+	cg.apply({"type": "buy_insurance", "plan": "full"})
+	cg.state.ship["cargo_paid"] = {"food": 1000.0}
+	var cg0 := cg.state.credits
+	var cev := _wreck(cg)
+	check(cev["payout"] >= 900.0 and absf(cg.state.credits - cg0 - cev["payout"] + Insurance.excess("full", cg.data)) < 1e-6, "Cargo cover pays 90% of the cargo, less the lower excess")
+	var cb := fresh()
+	cb.state.ship["cargo_paid"] = {"food": 1000.0}
+	check(_wreck(cb)["payout"] == 0.0, "Basic cover does not pay for cargo")
+	# No policy: a Commons hull on a loan; credits are not touched, and it is repaid slowly.
+	var n := fresh()
+	n.state.credits = 5000.0
+	n.apply({"type": "cancel_insurance"})
+	check(Insurance.status(n.state, n.data)["state"] == "none", "Cancelled: no cover")
+	var nev := _wreck(n)
+	var loan := float(d.ship_economy["insurance"]["fallback"]["loan_cr"])
+	check(nev["cover"] == "" and nev["payout"] == 0.0 and nev["loan"] == loan and n.state.credits == 5000.0, "No policy: no payout, a Commons hull on a loan")
+	check(n.state.ship["hull"] == "mule" and n.state.insurance["loan_cr"] == loan, "The loan is on the books")
+	n.advance_game_time(float(d.balance["damage"]["lifeboat_s"]) + 1.0)
+	n.advance_game_time(10.0 * DAY)
+	check(n.state.insurance["loan_cr"] < loan and n.state.credits >= float(d.ship_economy["insurance"]["fallback"]["loan_keep_cr"]) - 1e-6, "The loan is repaid gently, never past the floor")
+	# Broke with no cover: no debt spiral, never stuck.
+	var br := fresh()
+	br.state.credits = 0.0
+	br.apply({"type": "cancel_insurance"})
+	_wreck(br)
+	br.advance_game_time(30.0 * DAY)
+	check(br.state.credits >= 0.0 and br.state.location["status"] == "docked", "A broke, uninsured pilot is rescued and still solvent")
+	# A void policy (no WoF) pays nothing; the loan fallback applies.
+	var v := fresh()
+	v.state.ship["wof"]["valid_until_t"] = v.state.time_s - DAY
+	var vev := _wreck(v)
+	check(vev["cover"] == "" and vev["loan"] == loan and v.state.credits == float(d.balance["start"]["credits"]), "A void policy pays nothing: Commons loan")
+	# Lapse and auto-renew.
+	var l := fresh()
+	l.state.credits = 50000.0
+	l.state.insurance["policy"]["auto_renew"] = false
+	l.advance_game_time((float(d.ship_economy["start"]["insurance_paid_days"]) + 1.0) * DAY)
+	check(Insurance.status(l.state, l.data)["state"] == "lapsed", "An unpaid policy lapses")
+	check(l.take_events().any(func(e): return e["type"] == "insurance_lapsed"), "and says so")
+	var ar := fresh()
+	ar.state.credits = 50000.0
+	ar.state.ship["wof"]["valid_until_t"] = ar.state.time_s + 400.0 * DAY
+	ar.advance_game_time(40.0 * DAY)
+	check(Insurance.status(ar.state, ar.data)["state"] == "active" and ar.state.credits < 50000.0, "An auto-renewing policy is renewed at port and paid for")
+	var pr := fresh()
+	pr.state.credits = 0.0
+	pr.state.ship["wof"]["valid_until_t"] = pr.state.time_s + 400.0 * DAY
+	pr.advance_game_time(40.0 * DAY)
+	check(Insurance.status(pr.state, pr.data)["state"] == "lapsed", "A pilot who cannot pay lets it lapse (not debt)")
+
+
+func test_ship_economy_saves() -> void:
+	var sim := fresh()
+	var s := sim.state
+	s.credits = 80000.0
+	sim.apply({"type": "buy_insurance", "plan": "standard"})
+	Condition.set_condition(s.ship, "drive.0", 0.1)
+	sim.advance_game_time(100.0 * DAY)
+	Insurance.record_claim(s, "collision", 500.0)
+	s.insurance["loan_cr"] = 1234.0
+	s.ship["damage"] = {"radiator.0": 0.2}
+	var back := SaveIO.from_text(SaveIO.to_text(s))
+	check(back != null and back.to_dict() == s.to_dict(), "Wear, faults, WoF and insurance round-trip exactly")
+	check(back.ship["wear"] == s.ship["wear"] and back.ship["faults"] == s.ship["faults"] and back.ship["wof"] == s.ship["wof"] and back.insurance == s.insurance, "each piece is intact")
+	# Resumed games keep ticking identically.
+	var other := Sim.new()
+	other.load_state(back)
+	sim.advance_game_time(30.0 * DAY)
+	other.advance_game_time(30.0 * DAY)
+	check(other.state.to_dict() == sim.state.to_dict(), "A loaded game ages the same as the one it came from")
+	# An old save has no wear, no WoF and no policy: sensible defaults at the first tick.
+	var old := fresh()
+	var d := old.state.to_dict()
+	d["ship"].erase("wear")
+	d["ship"].erase("use")
+	d["ship"].erase("faults")
+	d["ship"].erase("wof")
+	d.erase("insurance")
+	var legacy := GameState.new()
+	legacy.load_dict(d)
+	check(Condition.condition(legacy.ship, "drive.0") == 1.0 and Fitness.valid(legacy, old.data), "An old ship counts as new and fit")
+	var lsim := Sim.new()
+	lsim.load_state(legacy)
+	lsim.advance_game_time(3600.0)
+	check(legacy.ship.has("wof") and Fitness.valid(legacy, lsim.data) and Insurance.status(legacy, lsim.data)["state"] == "active", "and is given a WoF and starter cover")
+	check(lsim.apply({"type": "service", "slot": "drive.0"}) != "", "with nothing to service")
+	# Determinism: the same commands give the same state.
+	var a := fresh()
+	var b := fresh()
+	for x in [a, b]:
+		x.state.credits = 90000.0
+		x.apply({"type": "refit", "swaps": [{"slot": "cargo.0", "module": "cargo_pod_m"}], "services": [{"slot": "drive.0", "level": "overhaul"}], "inspect": true})
+		x.apply({"type": "depart", "to": "halo_depot"})
+		x.advance_game_time(5.0 * DAY)
+	check(a.state.to_dict() == b.state.to_dict(), "The ship economy is deterministic")

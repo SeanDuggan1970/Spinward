@@ -182,3 +182,19 @@ A full pass with the bot and the new `tools/balance_probe.gd` is in [2026-10-clo
 
 - The bot takes no jobs, hitchhikers or vouchers, so it only feels favours through the shared sim random stream (the new system draws from `rng_state`, which shifts NPC and market rolls). Before/after, 180 days, 20 seeds: mean 95,532 cr before, 91,173 after (median 105,797 vs 83,646; spread 35k to 160k either way). That is inside the seed noise this file already warns about; nothing in the trading path changed.
 - Not measured by the bot, to check by hand: how often offers come in kind (`in_kind.chance` x `client_mult`: about 6 to 20% by kind and operator), whether the 0.85 `cash_offset` makes vouchers feel fair, and whether a +6% thrust / +8% heat Overdrive map throttles a stock Mule's radiators (it can).
+
+
+## Ship economy: wear, service, WoF, insurance (Oct 2026)
+
+Bot, 180 days, 3 seeds (`docs/balance/2026-10-ship-economy-tuned.md`). The bot now keeps its ship (`upkeep=1`: overhaul under 30% condition, service under 55%, renew the WoF inside 14 days; insurance auto-renews).
+
+| | Mean end credits | First upgrade |
+|---|---|---|
+| Before (flat 50% resale, no upkeep) | 123,072 | day 28.7 |
+| First pass (premiums 1.0/1.6/2.4%, service 3.5%) | 100,688 | day 37.3 |
+| Tuned (premiums 0.7/1.1/1.7%, service 2.5%) | 108,994 | day 37.3 |
+
+- Progression is about 11% slower at day 180 and the first upgrade comes about 9 days later. Seed spread is wide (88k to 126k), so treat the 11% as roughly 5 to 15%.
+- Yard upkeep is only about 4k in 180 days and premiums about 3k. Most of the first-upgrade delay is the labour, the days in port and the inspection that now come with each refit, on top of the unchanged 15k trading reserve.
+- Starting conditions are 0.70 to 0.85, so nothing needs a yard for the first month.
+- Knobs: `service.cost_frac`, `overhaul.cost_frac`, `insurance.plans.*.rate`, `wear.kinds.*`, `kinds.*.labour_cr`.

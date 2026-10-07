@@ -4,9 +4,12 @@
 ## it), and below it how she flies now against how she would after.
 ## Middle: the slots. Pick one to see what this yard has for it.
 ## Right: the options for that slot, each with what it changes, then the bill: every
-## part, its trade-in, the total and what you'd have left. "Put it together" makes it so.
+## part, its trade-in by condition, the fitting labour, any service or inspection done
+## in the same visit, the days in port, what it does to the Warrant of Fitness and the
+## insurance, the total and what you'd have left. "Put it together" makes it so.
 ##
-## Prices come from ShipyardSystem.quote (the same sums the install command charges).
+## Prices come from ShipyardSystem.quote over ShipBill.quote: the same bill the refit
+## command charges.
 extends Control
 
 const UI := preload("res://view/ui/ui_kit.gd")
@@ -16,6 +19,8 @@ const Models := preload("res://view/flight/models.gd")
 const Livery := preload("res://view/flight/livery.gd")
 const ShipRig := preload("res://view/flight/ship_rig.gd")
 const SkyKit := preload("res://view/flight/sky.gd")
+const Condition := preload("res://sim/condition.gd")
+const Favours := preload("res://sim/favours.gd")
 
 ## Order and names of the slot kinds, nose to tail.
 const KINDS := [["command", "Crew"], ["cargo", "Bays"], ["tank", "Tanks"], ["drive", "Drive"], ["radiator", "Radiators"]]
@@ -25,6 +30,8 @@ signal closed
 var sim
 ## Proposed changes: {slot: module_id}.
 var plan := {}
+## Yard work in the same visit: {service_all: "service" | "overhaul", inspect: true}.
+var extra := {}
 var selected := ""
 var _slots_box: VBoxContainer
 var _options_box: VBoxContainer
@@ -234,7 +241,7 @@ func _slot_title(slot: String) -> String:
 
 
 func _refresh() -> void:
-	var q := ShipyardSystem.quote(sim.state, sim.data, plan)
+	var q := ShipyardSystem.quote(sim.state, sim.data, plan, extra)
 	_show_ship(q["trial"])
 	_fill_stats(sim.state.ship, q["trial"])
 	_fill_slots(q)
@@ -257,9 +264,17 @@ func _fill_slots(q: Dictionary) -> void:
 		var b := Button.new()
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.text = "%s\n%s" % [_slot_title(slot), d.modules[planned]["name"]]
+		var cond := Condition.condition(sim.state.ship, slot)
 		if planned != fitted:
 			b.text += "\n  replacing %s" % d.modules[fitted]["name"]
 			UI.tint_button(b, UI.AMBER)
+		else:
+			var fault := Condition.fault_loss(sim.state.ship, slot) > 0.0
+			b.text += "\n  condition %d%%%s" % [int(round(cond * 100.0)), ", fault" if fault else ""]
+			if cond < 0.4 or fault:
+				UI.tint_button(b, UI.WARN)
+		for t in _tunes_on(slot):
+			b.text += "\n  tune: %s" % Favours.tune_name(d, t["id"])
 		if slot == selected:
 			b.add_theme_stylebox_override("normal", UI.box(Color("343a40"), UI.AMBER, 2, 6))
 		b.pressed.connect(func():
@@ -299,8 +314,13 @@ func _fill_options() -> void:
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.autowrap_mode = TextServer.AUTOWRAP_WORD
 		b.custom_minimum_size = Vector2(240, 0)
-		var price := "fitted now" if m == fitted else "%s, less %s trade-in: %s" % [UI.money(float(line.get("part", 0.0))), UI.money(float(line.get("trade_in", 0.0))), UI.money(float(line.get("net", 0.0)))]
+		var price := "fitted now (condition %d%%)" % int(round(Condition.condition(sim.state.ship, selected) * 100.0))
+		if m != fitted:
+			price = "%s + %s fitting, less %s trade-in: %s" % [UI.money(float(line.get("part", 0.0))), UI.money(float(line.get("labour", 0.0))), UI.money(float(line.get("trade_in", 0.0))), UI.money(float(line.get("net", 0.0)))]
 		b.text = "%s\n%s\n%s" % [module["name"], _module_summary(module), price]
+		if m != fitted:
+			for t in _tunes_on(selected):
+				b.text += "\nloses the tune: %s" % Favours.tune_name(d, t["id"])
 		var changes := _deltas(_trial_without(selected), q["trial"])
 		if changes != "":
 			b.text += "\n" + changes
@@ -325,39 +345,52 @@ func _trial_without(slot: String) -> Dictionary:
 	return ShipyardSystem.quote(sim.state, sim.data, rest)["trial"]
 
 
+## The engine tunes on this slot's fitted module (a tune is lost if the module goes).
+func _tunes_on(slot: String) -> Array:
+	return ShipStats.active_tunes(sim.state.ship, sim.data).filter(func(t): return t["slot"] == slot)
+
+
+func _bill_row(text: String, credits: float, colour: Color = UI.TEXT, size: int = 13) -> void:
+	var row := HBoxContainer.new()
+	var what := UI.label(text, colour, size)
+	what.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	what.clip_text = true
+	row.add_child(what)
+	row.add_child(UI.label(("-" if credits < 0.0 else "") + UI.money(absf(credits)), UI.GOOD if credits < 0.0 else colour, size))
+	_bill_box.add_child(row)
+
+
 func _fill_bill(q: Dictionary) -> void:
 	for c in _bill_box.get_children():
 		c.queue_free()
 	var d = sim.data
-	if q["lines"].is_empty():
-		_bill_box.add_child(UI.label("Nothing planned yet. Pick a slot, then something to put in it.", UI.DIM, 13))
+	var bill: Dictionary = q["bill"]
+	if q["lines"].is_empty() and extra.is_empty():
+		_bill_box.add_child(UI.label("Nothing planned yet. Pick a slot, then something to put in it, or have her serviced below.", UI.DIM, 13))
 	for l in q["lines"]:
-		var row := HBoxContainer.new()
-		var what := UI.label("%s: %s" % [_slot_title(l["slot"]), d.modules[l["module"]]["name"]], UI.TEXT, 13)
-		what.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		what.clip_text = true
-		row.add_child(what)
-		row.add_child(UI.label(UI.money(float(l["part"])), UI.TEXT, 13))
-		_bill_box.add_child(row)
+		_bill_row("%s: %s" % [_slot_title(l["slot"]), d.modules[l["module"]]["name"]], float(l["part"]))
+		if l["why"] != "":
+			_bill_box.add_child(UI.label("    " + String(l["why"]), UI.WARN, 12))
+			continue
+		if float(l["labour"]) > 0.0:
+			_bill_row("    fitting labour", float(l["labour"]), UI.DIM, 12)
 		if float(l["trade_in"]) > 0.0:
-			var t := HBoxContainer.new()
-			var tl := UI.label("    trade-in: %s" % d.modules[l["replaced"]]["name"], UI.DIM, 12)
-			tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			tl.clip_text = true
-			t.add_child(tl)
-			t.add_child(UI.label("-" + UI.money(float(l["trade_in"])), UI.GOOD, 12))
-			_bill_box.add_child(t)
+			_bill_row("    trade-in: %s, condition %d%%" % [d.modules[l["replaced"]]["name"], int(round(Condition.condition(sim.state.ship, l["slot"]) * 100.0))], -float(l["trade_in"]), UI.DIM, 12)
+	# Yard work in the same visit, as the bill itemises it.
+	for b in bill["lines"]:
+		var kind := String(b["kind"])
+		if kind == "inspection":
+			_bill_row(String(b["label"]), float(b["credits"]), UI.TEXT, 12)
+		elif kind in ["service", "overhaul"]:
+			# "Service: drive, 70% to 92%", short enough for the column.
+			var parts := String(b["label"]).split(", condition ")
+			_bill_row("%s: %s%s" % [kind.capitalize(), _slot_title(String(b["slot"])).to_lower(), (", " + parts[1]) if parts.size() > 1 else ""], float(b["credits"]), UI.TEXT, 12)
 	var total: float = q["total"]
 	var sep := ColorRect.new()
 	sep.color = UI.PANEL_EDGE
 	sep.custom_minimum_size = Vector2(0, 1)
 	_bill_box.add_child(sep)
-	var tot := HBoxContainer.new()
-	var tl2 := UI.label("TOTAL" if total >= 0.0 else "TOTAL (they pay you)", UI.AMBER, 15)
-	tl2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	tot.add_child(tl2)
-	tot.add_child(UI.label(UI.money(absf(total)), UI.AMBER, 15))
-	_bill_box.add_child(tot)
+	_bill_row("TOTAL" if total >= 0.0 else "TOTAL (they pay you)", absf(total), UI.AMBER, 15)
 	var left := float(sim.state.credits) - total
 	var after := HBoxContainer.new()
 	var al := UI.label("You'd have", UI.DIM, 13)
@@ -365,38 +398,83 @@ func _fill_bill(q: Dictionary) -> void:
 	after.add_child(al)
 	after.add_child(UI.label(UI.money(left), UI.GOOD if left >= 0.0 else UI.WARN, 13))
 	_bill_box.add_child(after)
+	if left < -0.5 and (not q["lines"].is_empty() or not extra.is_empty()):
+		_bill_box.add_child(UI.label("You are %s short: sell cargo, or plan less." % UI.money(-left), UI.WARN, 12))
+	if float(bill["days"]) > 0.0 and (not q["lines"].is_empty() or not extra.is_empty()):
+		_bill_box.add_child(UI.label("In the yard for %.1f days: the clock runs while she's in." % float(bill["days"]), UI.DIM, 12))
+	# What it does to the warrant and the cover.
+	var wof: Dictionary = bill["wof"]
+	if bool(wof["voided_by_refit"]):
+		_bill_box.add_child(UI.label("This refit voids the Warrant of Fitness until she is inspected: tick the inspection below.", UI.WARN, 12))
+	elif bool(extra.get("inspect", false)):
+		_bill_box.add_child(UI.label("Inspection: %s" % ("she would pass" if bool(wof["would_pass"]) else "she would fail (" + "; ".join(wof["issues"]) + ")"), UI.GOOD if bool(wof["would_pass"]) else UI.WARN, 12))
+	var ins: Dictionary = bill["insurance"]
+	if String(ins["plan"]) != "" and absf(float(ins["premium_after"]) - float(ins["premium_before"])) > 0.5:
+		_bill_box.add_child(UI.label("Insurance premium %s to %s a period." % [UI.money(float(ins["premium_before"])), UI.money(float(ins["premium_after"]))], UI.AMBER, 12))
+	if bool(ins["void_after"]) and String(ins["state_before"]) != "void":
+		_bill_box.add_child(UI.label("Your insurance would be void until the warrant is renewed.", UI.WARN, 12))
 	for p in q["problems"]:
 		_bill_box.add_child(UI.label(String(p), UI.WARN, 12))
+	# While she's in: service everything, and an inspection. Two short rows, so the
+	# column keeps its width.
+	var work := HBoxContainer.new()
+	work.add_theme_constant_override("separation", 6)
+	var wl := UI.label("While she's in, service:", UI.DIM, 12)
+	wl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	work.add_child(wl)
+	for level in ["", "service", "overhaul"]:
+		var label := "None" if level == "" else ("All" if level == "service" else "Overhaul")
+		var lb := UI.button(label, func():
+			if level == "":
+				extra.erase("service_all")
+			else:
+				extra["service_all"] = level
+			_refresh())
+		if String(extra.get("service_all", "")) == level:
+			UI.tint_button(lb, UI.AMBER)
+		work.add_child(lb)
+	_bill_box.add_child(work)
 	var buttons := HBoxContainer.new()
-	buttons.alignment = BoxContainer.ALIGNMENT_END
-	buttons.add_child(UI.button("Clear the plan", func():
+	var check := CheckBox.new()
+	check.text = "WoF inspection"
+	check.button_pressed = bool(extra.get("inspect", false))
+	check.toggled.connect(func(on: bool):
+		if on:
+			extra["inspect"] = true
+		else:
+			extra.erase("inspect")
+		_refresh())
+	check.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	buttons.add_child(check)
+	buttons.add_child(UI.button("Clear", func():
 		plan.clear()
-		_refresh(), not plan.is_empty()))
-	var go := UI.button("Put it together", _commit, bool(q["ok"]) and not q["lines"].is_empty())
-	if bool(q["ok"]) and not q["lines"].is_empty():
+		extra.clear()
+		_refresh(), not plan.is_empty() or not extra.is_empty()))
+	var go := UI.button("Put it together", _commit, bool(q["ok"]))
+	if bool(q["ok"]):
 		UI.tint_button(go, UI.GOOD)
 	buttons.add_child(go)
 	_bill_box.add_child(buttons)
 
 
-## Fit the plan, cheapest first, so trade-ins come in before the dearer parts go on.
+## The whole plan as one yard job: the bill shown is the bill charged.
 func _commit() -> void:
-	var q := ShipyardSystem.quote(sim.state, sim.data, plan)
-	var lines: Array = q["lines"].duplicate()
-	lines.sort_custom(func(a, b): return float(a["net"]) < float(b["net"]))
-	var done := 0
-	for l in lines:
-		var why: String = sim.apply({"type": "install_module", "slot": l["slot"], "module": l["module"]})
-		if why != "":
-			_status.text = "Stopped at %s: %s. %d of %d changes made." % [sim.data.modules[l["module"]]["name"], why, done, lines.size()]
-			_status.add_theme_color_override("font_color", UI.WARN)
-			plan.clear()
-			_refresh()
-			return
-		done += 1
-	_status.text = "Put together: %d change%s, %s." % [done, "" if done == 1 else "s", UI.money(float(q["total"]))]
-	_status.add_theme_color_override("font_color", UI.GOOD)
+	var q := ShipyardSystem.quote(sim.state, sim.data, plan, extra)
+	var command := extra.duplicate()
+	command["type"] = "refit"
+	command["swaps"] = q["lines"].map(func(l): return {"slot": l["slot"], "module": l["module"]})
+	var total := float(q["total"])
+	var days := float(q["bill"]["days"])
+	var why: String = sim.apply(command)
+	if why != "":
+		_status.text = "The yard won't take it on: %s." % why
+		_status.add_theme_color_override("font_color", UI.WARN)
+	else:
+		var n: int = q["lines"].size()
+		_status.text = "Put together%s in %.1f days, for %s." % [(": %d change%s" % [n, "" if n == 1 else "s"]) if n > 0 else "", days, UI.money(total)]
+		_status.add_theme_color_override("font_color", UI.GOOD)
 	plan.clear()
+	extra.clear()
 	_refresh()
 
 

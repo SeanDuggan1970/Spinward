@@ -31,6 +31,8 @@ var news: Dictionary = {}
 ## Every control and its default keys and gamepad buttons (data/controls.json); view-only,
 ## built into the InputMap by view/bindings.gd.
 var controls: Dictionary = {}
+## Wear, maintenance, refit, Warrant of Fitness and insurance rules (data/ship_economy.json).
+var ship_economy: Dictionary = {}
 ## Paint schemes for the view (data/liveries.json); the sim never reads them.
 var liveries: Dictionary = {}
 ## tip_ttl_days, verify_tolerance.
@@ -60,6 +62,7 @@ func load_from(root: String) -> void:
 	favours = read_json(root + "/favours.json") if FileAccess.file_exists(root + "/favours.json") else {}
 	news = read_json(root + "/news.json") if FileAccess.file_exists(root + "/news.json") else {}
 	controls = read_json(root + "/controls.json") if FileAccess.file_exists(root + "/controls.json") else {}
+	ship_economy = read_json(root + "/ship_economy.json")
 	locations = places.duplicate()
 	locations.merge(sites)
 	if FileAccess.file_exists(root + "/liveries.json"):
@@ -241,6 +244,7 @@ func validate() -> Array[String]:
 		problems.append("balance.start.place is not a place")
 	if not ships.has(start.get("ship", "")):
 		problems.append("balance.start.ship is not a ship")
+	_validate_ship_economy(problems)
 	# Sites: their own names, real bodies, known abilities and goods.
 	for id in sites:
 		var site: Dictionary = sites[id]
@@ -332,3 +336,30 @@ func validate() -> Array[String]:
 		if not Color.html_is_valid(String(c)):
 			problems.append("livery container colour %s is not a colour" % c)
 	return problems
+
+
+func _validate_ship_economy(problems: Array[String]) -> void:
+	var econ := ship_economy
+	var plans: Dictionary = econ.get("insurance", {}).get("plans", {})
+	if not plans.has(econ.get("start", {}).get("insurance_plan", "")):
+		problems.append("ship_economy.start.insurance_plan is not a plan")
+	for id in plans:
+		for cover in plans[id].get("covers", []):
+			if not cover in ["total_loss", "collision", "cargo"]:
+				problems.append("insurance plan %s: unknown cover %s" % [id, cover])
+	for id in econ.get("module_overrides", {}):
+		if not modules.has(id):
+			problems.append("ship_economy.module_overrides: unknown module %s" % id)
+	for id in econ.get("yards", {}):
+		if id != "default" and not places.has(id):
+			problems.append("ship_economy.yards: unknown place %s" % id)
+	var classes: Dictionary = econ.get("wof", {}).get("port_rules", {})
+	for op in econ.get("wof", {}).get("operator_class", {}):
+		if not classes.has(econ["wof"]["operator_class"][op]):
+			problems.append("ship_economy.wof: operator %s has an unknown traffic class" % op)
+	if not classes.has(econ.get("wof", {}).get("default_class", "")):
+		problems.append("ship_economy.wof.default_class is not a port rule class")
+	for id in modules:
+		var kind: String = modules[id].get("kind", "")
+		if modules[id].get("price", 0) > 0 and not econ.get("kinds", {}).has(kind) and not econ.get("kinds", {}).has("default"):
+			problems.append("module %s: kind %s has no ship_economy.kinds entry" % [id, kind])

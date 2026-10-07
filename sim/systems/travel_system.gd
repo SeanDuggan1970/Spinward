@@ -8,6 +8,7 @@ const Perks := preload("res://sim/perks.gd")
 const Interplanetary := preload("res://sim/interplanetary.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
 const Favours := preload("res://sim/favours.gd")
+const Fitness := preload("res://sim/fitness.gd")
 
 const PERI_WARN_S := 2.0 * 3600.0
 const PERI_CLOSE_S := 600.0
@@ -164,9 +165,38 @@ func _dock(command: Dictionary) -> String:
 		s.credits -= fee
 	s.stats["manual_docks" if manual else "auto_docks"] += 1
 	var place: String = s.location["place"]
+	# Without a valid Warrant of Fitness traffic control charges extra, and at strict
+	# ports will not clear passengers through (all data: ship_economy "wof").
+	var terms := Fitness.dock_terms(s, sim().data, place)
+	if float(terms["surcharge_cr"]) > 0.0:
+		s.credits -= float(terms["surcharge_cr"])
+		s.stats["unfit_surcharges"] = float(s.stats.get("unfit_surcharges", 0.0)) + float(terms["surcharge_cr"])
+		sim().emit("unfit_surcharge", {"place": place, "credits": -float(terms["surcharge_cr"]), "class": terms["class"]})
 	s.location = {"status": "docked", "place": place}
 	sim().emit("docked", {"place": place, "manual": manual, "on_credit": on_credit})
+	if terms["refuse_passengers"]:
+		_turn_away_passengers(place)
 	return ""
+
+
+## Passengers aboard a ship the port will not clear: put ashore, their jobs closed
+## unpaid (outcome "turned_away").
+func _turn_away_passengers(place: String) -> void:
+	var s = sim().state
+	var turned := []
+	for job in s.contracts.get("active", []).duplicate():
+		if job.get("state", "") != "carried" or int(job.get("passengers", 0)) <= 0:
+			continue
+		s.contracts["active"].erase(job)
+		job["outcome"] = "turned_away"
+		job["closed_t"] = s.time_s
+		s.contracts["history"].append(job)
+		var key := String(job.get("stowed", "cabin_t"))
+		s.ship[key] = maxf(0.0, float(s.ship.get(key, 0.0)) - float(job["mass_t"]))
+		s.ship["passengers"] = maxi(0, int(s.ship.get("passengers", 0)) - int(job["passengers"]))
+		turned.append(job["id"])
+	if not turned.is_empty():
+		sim().emit("passengers_refused", {"place": place, "jobs": turned})
 
 
 

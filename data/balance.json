@@ -67,9 +67,6 @@
 		"scanner_default_index": 1,
 		"bump_restitution": 0.3
 	},
-	"shipyard": {
-		"resale_fraction": 0.5
-	},
 	"damage": {
 		"_note": "Collisions (sim/systems/damage_system.gd). Below safe_mps a bump does nothing. Above it, the energy absorbed per kilogram of ship (0.5 v^2, times the share the other body takes) over full_j_per_kg is the damage to the module hit (1 = wrecked); keel_share of that goes to the keel, and a wrecked keel is a lost ship. Damaged drives lose thrust, tanks and pods lose capacity (venting and spilling what no longer fits), radiators reject less heat, habs keep you alive for less long.",
 		"safe_mps": 0.8,

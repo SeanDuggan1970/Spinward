@@ -1,7 +1,10 @@
 ## Headless balance bot. Plays the trading game through the same commands as the
 ## player and writes docs/balance/report.md.
 ##   godot --headless --path . --script res://tools/balance_bot.gd -- [days=180] [upgrade=1] [seeds=5]
-##        [out=res://docs/balance/report.md] [credits=N] [fit=slot:module,slot:module] [legs=1] [nofleets=a,b] [take=0.5]
+##        [out=res://docs/balance/report.md] [upkeep=1] [credits=N] [fit=slot:module,slot:module] [legs=1] [nofleets=a,b] [take=0.5]
+## upkeep: 1 (default) the bot keeps its ship: at a yard it services modules under 55% condition,
+## overhauls those under 30%, and renews its Warrant of Fitness inside 14 days of expiry;
+## 0 lets wear, faults and the WoF run down (what neglect costs). Insurance renews itself.
 ## out: where the report goes (use another path to keep report.md). credits: start credits.
 ## fit: free module swaps before the run, e.g. fit=cargo.0:cargo_pod_m,drive.0:pathfinder_mk2
 ## (to measure what a module is worth: run with and without it). legs=1: print every leg.
@@ -21,6 +24,9 @@ const Market := preload("res://sim/market.gd")
 const Navigation := preload("res://sim/navigation.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
 const ShipyardSystem := preload("res://sim/systems/shipyard_system.gd")
+const ShipBill := preload("res://sim/ship_bill.gd")
+const Condition := preload("res://sim/condition.gd")
+const Fitness := preload("res://sim/fitness.gd")
 
 const DAY := 86400.0
 ## Upgrade wish list in order, with a cash reserve kept for trading.
@@ -40,10 +46,13 @@ var first_upgrade_day := -1.0
 var show_legs := false
 var take_share := 0.5
 var report_path := "res://docs/balance/report.md"
+var upkeep_on := true
+var upkeep_spent := 0.0
+var yard_days := 0.0
 
 
 func _initialize() -> void:
-	var args := {"days": "180", "upgrade": "1", "out": "res://docs/balance/report.md", "credits": "", "fit": "", "legs": "0", "nofleets": "", "take": "0.5"}
+	var args := {"days": "180", "upgrade": "1", "out": "res://docs/balance/report.md", "credits": "", "fit": "", "legs": "0", "nofleets": "", "take": "0.5", "upkeep": "1"}
 	for a in OS.get_cmdline_user_args():
 		var kv := a.split("=")
 		if kv.size() == 2:
@@ -54,6 +63,7 @@ func _initialize() -> void:
 	show_legs = args["legs"] == "1"
 	take_share = float(args["take"])
 	report_path = args["out"]
+	upkeep_on = args["upkeep"] == "1"
 	var runs := []
 	var detail := {}
 	for seed_value in range(1, seeds + 1):
@@ -61,6 +71,8 @@ func _initialize() -> void:
 		milestones = []
 		credit_curve = []
 		first_upgrade_day = -1.0
+		upkeep_spent = 0.0
+		yard_days = 0.0
 		sim = Sim.new()
 		for fleet in String(args["nofleets"]).split(",", false):
 			sim.data.npcs["fleets"].erase(fleet)
@@ -83,7 +95,7 @@ func _initialize() -> void:
 				milestones.append("Day %.1f: bot stuck at %s, stopping" % [(sim.state.time_s - t0) / DAY, sim.state.location.get("place")])
 				break
 		credit_curve.append([(sim.state.time_s - t0) / DAY, sim.state.credits])
-		runs.append({"seed": seed_value, "credits": sim.state.credits, "trips": int(sim.state.stats["trips"]), "first_upgrade": first_upgrade_day})
+		runs.append({"seed": seed_value, "credits": sim.state.credits, "trips": int(sim.state.stats["trips"]), "first_upgrade": first_upgrade_day, "upkeep": upkeep_spent, "yard_days": yard_days, "premiums": float(sim.state.stats.get("premiums_paid", 0.0)), "surcharges": float(sim.state.stats.get("unfit_surcharges", 0.0))})
 		print("BOT_RUN seed=%d credits=%d trips=%d first_upgrade_day=%.1f" % [seed_value, int(sim.state.credits), int(sim.state.stats["trips"]), first_upgrade_day])
 		if seed_value == 1:
 			detail = {"start": start_matrix, "end": route_matrix(), "routes": route_profit, "milestones": milestones, "curve": credit_curve, "state": sim.state, "sim": sim}
@@ -102,6 +114,8 @@ func do_leg(upgrade: bool) -> bool:
 	for good in s.ship["cargo"].keys():
 		if Market.trades(sim.data, here, good):
 			sim.apply({"type": "sell", "good": good, "tonnes": s.ship["cargo"][good]})
+	if upkeep_on:
+		keep_ship()
 	if upgrade:
 		try_upgrades()
 	if sim.apply({"type": "refuel", "fill": true}) != "" and float(s.ship["fuel_t"]) < 0.5:
@@ -220,13 +234,51 @@ func try_upgrades() -> void:
 			continue
 		if _already_better(u[0], u[1]):
 			continue
-		var price := float(sim.data.modules[u[1]]["price"])
+		var price := float(sim.data.modules[u[1]]["price"]) + float(Condition.refit_quote(u[1], s.location["place"], sim.data)["labour_cr"])
 		if s.credits - price < UPGRADE_RESERVE:
 			return
-		if sim.apply({"type": "install_module", "slot": u[0], "module": u[1]}) == "":
+		var t0 := s.time_s
+		if sim.apply({"type": "install_module", "slot": u[0], "module": u[1], "inspect": upkeep_on}) == "":
+			yard_days += (s.time_s - t0) / DAY
 			if first_upgrade_day < 0.0:
 				first_upgrade_day = day()
 			milestones.append("Day %.1f: fitted %s at %s (credits %d)" % [day(), sim.data.modules[u[1]]["name"], name_of(s.location["place"]), int(s.credits)])
+
+
+## Keep the ship at a yard: overhaul the worn-out, service the tired, renew the WoF.
+func keep_ship() -> void:
+	var s := sim.state
+	if not "shipyard" in sim.data.places[s.location["place"]].get("services", []):
+		return
+	var slots: Array = s.ship["modules"].keys()
+	slots.sort()
+	var work := []
+	for slot in slots:
+		var cond := Condition.condition(s.ship, slot)
+		if cond < 0.30:
+			work.append({"slot": slot, "level": "overhaul"})
+		elif cond < 0.55:
+			work.append({"slot": slot, "level": "service"})
+	var wof := Fitness.status(s, sim.data)
+	var inspect: bool = (not wof["valid"]) or float(wof["days_left"]) < 14.0
+	if work.is_empty() and not inspect:
+		return
+	var request := {"services": work, "inspect": inspect}
+	var bill := ShipBill.quote(s, sim.data, request)
+	# Keep a trading reserve: drop the dearest jobs until the bill fits.
+	while not bill["ok"] or s.credits - float(bill["total"]) < 2000.0:
+		if work.is_empty():
+			return
+		work.pop_back()
+		request = {"services": work, "inspect": inspect}
+		bill = ShipBill.quote(s, sim.data, request)
+		if work.is_empty() and not inspect:
+			return
+	var t0 := s.time_s
+	if sim.apply({"type": "refit", "swaps": [], "services": work, "inspect": inspect}) == "":
+		upkeep_spent += float(bill["total"])
+		yard_days += (s.time_s - t0) / DAY
+		milestones.append("Day %.1f: yard visit at %s: %d jobs%s, %d cr, %.1f days" % [day(), name_of(s.location["place"]), work.size(), " + WoF" if inspect else "", int(bill["total"]), float(bill["days"])])
 
 
 func _already_better(slot: String, module_id: String) -> bool:
@@ -279,19 +331,19 @@ func write_report(days: float, upgrade: bool, start_matrix: Array, end_matrix: A
 	lines.append("")
 	lines.append("Generated by `tools/balance_bot.gd` on %s. Do not edit by hand; re-run the bot after changing `data/`." % Time.get_date_string_from_system())
 	lines.append("")
-	lines.append("Run: %d game days, upgrades %s, greedy single-good trader, always auto-docks (pays the fee). This is a **floor**: a player who docks manually, carries mixed cargo or plans two legs ahead will do better." % [int(days), "on" if upgrade else "off"])
+	lines.append("Run: %d game days, upgrades %s, yard upkeep %s, greedy single-good trader, always auto-docks (pays the fee). This is a **floor**: a player who docks manually, carries mixed cargo or plans two legs ahead will do better." % [int(days), "on" if upgrade else "off", "on" if upkeep_on else "off"])
 	lines.append("")
 	lines.append("## Across seeds")
 	lines.append("")
-	lines.append("| Seed | End credits | Trips | First upgrade (game day) |")
-	lines.append("|---|---|---|---|")
+	lines.append("| Seed | End credits | Trips | First upgrade (game day) | Yard upkeep (cr) | Days in yards | Premiums (cr) | Unfit surcharges (cr) |")
+	lines.append("|---|---|---|---|---|---|---|---|")
 	var total := 0.0
 	var ups := []
 	for r in runs:
 		total += float(r["credits"])
 		if r["first_upgrade"] >= 0.0:
 			ups.append(r["first_upgrade"])
-		lines.append("| %d | %d | %d | %s |" % [r["seed"], int(r["credits"]), r["trips"], "%.1f" % r["first_upgrade"] if r["first_upgrade"] >= 0.0 else "none"])
+		lines.append("| %d | %d | %d | %s | %d | %.1f | %d | %d |" % [r["seed"], int(r["credits"]), r["trips"], "%.1f" % r["first_upgrade"] if r["first_upgrade"] >= 0.0 else "none", int(r["upkeep"]), r["yard_days"], int(r["premiums"]), int(r["surcharges"])])
 	ups.sort()
 	lines.append("| **mean / median** | **%d** | | **%s** |" % [int(total / maxf(1.0, runs.size())), "%.1f" % ups[ups.size() / 2] if not ups.is_empty() else "none"])
 	lines.append("")

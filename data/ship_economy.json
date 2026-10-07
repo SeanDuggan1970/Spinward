@@ -1,0 +1,156 @@
+{
+	"_note": "Ship wear, maintenance, refit, Warrant of Fitness and insurance (sim/condition.gd, fitness.gd, insurance.gd, ship_bill.gd and the wear, fitness and insurance systems). Every number here is a tunable; see docs/DESIGN.md 'Wear, refit, WoF and insurance'. Wear is a module's 0..1 fraction used up (condition = 1 - wear), kept apart from collision damage (ship.damage).",
+	"start": {
+		"_note": "A stock second-hand Mule starts part-worn: wear by module kind, days in service, and a Warrant of Fitness with this many days left. The starter policy is the Commons mutual's 'basic' cover, paid for this many days.",
+		"wear": {"command": 0.2, "cargo": 0.3, "tank": 0.25, "drive": 0.3, "radiator": 0.25, "avionics": 0.15},
+		"age_days": 900,
+		"wof_days": 120,
+		"insurance_plan": "basic",
+		"insurance_paid_days": 30
+	},
+	"wear": {
+		"_note": "Wear added per hour (or per event) by what a module actually does. Drivers: hours (in service; docked hours count docked_hours_frac), burn_h (drive lit and pushing: in transit, less on approach), lit_h (reactor lit, modules with reactor_kw), thermal_h (hours lit times radiator load: heat made over heat rejected, capped), loaded_h (hours times how full the hold is), work_h (hours at a site job), dock and landing (per event). A module's own wear_mult (module_overrides) scales it. 'default' covers kinds not listed.",
+		"docked_hours_frac": 0.25,
+		"burn_frac": {"transit": 1.0, "approach": 0.3},
+		"thermal_load_cap": 1.5,
+		"kinds": {
+			"drive": {"burn_h": 0.0002, "lit_h": 0.00005, "hours": 0.000004, "dock": 0.001},
+			"radiator": {"thermal_h": 0.00012, "hours": 0.000004, "dock": 0.0005},
+			"cargo": {"loaded_h": 0.00004, "hours": 0.000005, "dock": 0.002},
+			"tank": {"hours": 0.00001, "dock": 0.002},
+			"command": {"hours": 0.00001, "dock": 0.0015},
+			"avionics": {"hours": 0.00001, "dock": 0.001},
+			"hab": {"hours": 0.00002, "dock": 0.001},
+			"lander": {"hours": 0.000005, "landing": 0.012, "dock": 0.001},
+			"sensor": {"hours": 0.000005, "work_h": 0.0002, "dock": 0.001},
+			"mining": {"hours": 0.000005, "work_h": 0.0004, "dock": 0.001},
+			"default": {"hours": 0.00001, "dock": 0.001}
+		}
+	},
+	"performance": {
+		"_note": "Below onset condition a module's output falls linearly to max_loss at condition 0 (a mild loss: a tired drive pushes a few percent less). Only supply and rating stats are scaled (keys); capacities and loads are not.",
+		"onset": 0.7,
+		"max_loss": 0.12,
+		"keys": ["thrust_n", "reject_mw", "solar_kw", "battery_kwh", "reactor_kw"]
+	},
+	"faults": {
+		"_note": "Small faults: below 'below' condition, each hour a module has chance rate_per_hour * ((below - c) / below)^2 of a fault that costs loss_min..loss_max of its output until it is serviced (stacking to cap per module). A warning, a few percent off; never damage and never a lost ship.",
+		"below": 0.45,
+		"rate_per_hour": 0.002,
+		"loss_min": 0.02,
+		"loss_max": 0.06,
+		"cap": 0.1,
+		"warn_condition": 0.35,
+		"texts": {
+			"drive": ["a thrust-vector actuator is sticking", "the injector fouls and the drive runs rough", "a coil cooling loop is running warm"],
+			"radiator": ["a coolant pump is cavitating", "a radiator panel's hinge has seized part-deployed"],
+			"cargo": ["a pod's door seal is weeping", "a latch is loose and the pod rattles"],
+			"tank": ["a feed valve is sluggish", "a tank heater cycles too often"],
+			"command": ["a cabin fan is failing", "a display panel keeps dropping out"],
+			"avionics": ["the nav computer drops frames", "an inertial unit has drifted"],
+			"default": ["a minor fault is logged"]
+		}
+	},
+	"resale": {
+		"_note": "Trade-in value of a part-worn module = price * lerp(scrap_fraction, new_fraction, condition^condition_exp) * age factor * (1 - damage). The age factor loses age_loss_per_year of value per year in service, to a floor of age_floor. A fresh module trades in near full value; a worn one for scrap.",
+		"new_fraction": 0.92,
+		"scrap_fraction": 0.06,
+		"condition_exp": 1.6,
+		"age_loss_per_year": 0.025,
+		"age_floor": 0.55
+	},
+	"service": {
+		"_note": "Routine service: cheap, a little condition back (to at most cap), clears small faults. cost = basis * cost_frac, at least min_cr, times the yard's rate (jobs that would gain less than min_gain condition and clear no fault are not offered). basis is the module's price or its kind's basis_floor, whichever is higher.",
+		"restore": 0.3,
+		"cap": 0.92,
+		"min_gain": 0.01,
+		"cost_frac": 0.025,
+		"min_cr": 150
+	},
+	"overhaul": {
+		"_note": "Overhaul: dear, near-new (to 'target' condition), clears faults, days in port. cost = basis * cost_frac * (cost_floor_mix + (1 - cost_floor_mix) * wear), at least min_cr, times the yard's rate.",
+		"target": 0.97,
+		"min_gain": 0.01,
+		"cost_frac": 0.25,
+		"cost_floor_mix": 0.35,
+		"min_cr": 800
+	},
+	"refit": {
+		"_note": "Fitting a module takes labour and days on top of the parts. Per module kind: labour_cr, days. The yard's labour rate scales the labour. crew_parallel jobs run at once, so a bundle takes max(longest job, total days / crew_parallel).",
+		"crew_parallel": 2.0
+	},
+	"kinds": {
+		"_note": "Per module kind: basis_floor (what a module is worth for service, overhaul, insurance when its price is 0 or low), service_days, overhaul_days, labour_cr and days (refit).",
+		"drive": {"basis_floor": 40000, "service_days": 0.5, "overhaul_days": 4.0, "labour_cr": 6000, "days": 2.0},
+		"radiator": {"basis_floor": 3000, "service_days": 0.25, "overhaul_days": 2.0, "labour_cr": 1000, "days": 0.5},
+		"cargo": {"basis_floor": 6000, "service_days": 0.25, "overhaul_days": 2.0, "labour_cr": 1200, "days": 0.5},
+		"tank": {"basis_floor": 4000, "service_days": 0.25, "overhaul_days": 2.0, "labour_cr": 1800, "days": 0.75},
+		"command": {"basis_floor": 12000, "service_days": 0.5, "overhaul_days": 3.0, "labour_cr": 8000, "days": 3.0},
+		"avionics": {"basis_floor": 5000, "service_days": 0.25, "overhaul_days": 1.0, "labour_cr": 800, "days": 0.25},
+		"hab": {"basis_floor": 8000, "service_days": 0.25, "overhaul_days": 2.0, "labour_cr": 2500, "days": 1.0},
+		"lander": {"basis_floor": 30000, "service_days": 0.5, "overhaul_days": 3.0, "labour_cr": 4000, "days": 1.5},
+		"sensor": {"basis_floor": 15000, "service_days": 0.25, "overhaul_days": 2.0, "labour_cr": 2000, "days": 0.75},
+		"mining": {"basis_floor": 30000, "service_days": 0.5, "overhaul_days": 2.5, "labour_cr": 3000, "days": 1.0},
+		"default": {"basis_floor": 5000, "service_days": 0.25, "overhaul_days": 2.0, "labour_cr": 1500, "days": 0.5}
+	},
+	"module_overrides": {
+		"_note": "Optional per-module overrides of the kind figures: basis, service_cr, overhaul_cr, labour_cr, refit_days, service_days, overhaul_days, wear_mult.",
+		"pathfinder_mk1": {"wear_mult": 1.0}
+	},
+	"yards": {
+		"_note": "Yard price rates by place id (default for the rest): multipliers on service, overhaul, labour and inspection. Remote yards are dearer.",
+		"default": {"service": 1.0, "overhaul": 1.0, "labour": 1.0, "inspection": 1.0},
+		"kibo_ring": {"service": 1.0, "overhaul": 1.0, "labour": 1.0, "inspection": 1.0},
+		"trojan_yards": {"service": 0.9, "overhaul": 0.85, "labour": 0.8, "inspection": 0.9},
+		"ares_ring": {"service": 1.0, "overhaul": 1.1, "labour": 1.0, "inspection": 1.0},
+		"piazzi_station": {"service": 0.95, "overhaul": 0.9, "labour": 0.9, "inspection": 0.95},
+		"hektor_reach": {"service": 1.1, "overhaul": 1.15, "labour": 1.2, "inspection": 1.1},
+		"landauer_deep": {"service": 1.25, "overhaul": 1.3, "labour": 1.4, "inspection": 1.2}
+	},
+	"wof": {
+		"_note": "Warrant of Fitness: a periodic safety inspection at a yard. Passes when no module is below min_condition or past max_module_damage and the keel is within max_keel_damage; otherwise it lists what must be fixed and no certificate is issued. A pass is valid valid_days. Without a valid WoF (expired, failed, or voided by a refit of refit_voids kinds): effects below. port_rules are by traffic-control class; a place's class is its own 'traffic' field or by operator (operator_class, else default_class).",
+		"valid_days": 180,
+		"warn_days": 21,
+		"inspection_cr": 350,
+		"inspection_days": 0.25,
+		"min_condition": 0.25,
+		"max_module_damage": 0.35,
+		"max_keel_damage": 0.25,
+		"refit_voids": ["drive"],
+		"effects": {"passenger_jobs_refused": true, "insurance_void": true},
+		"default_class": "standard",
+		"operator_class": {
+			"Terran Compact": "strict", "Terran Compact Science": "strict",
+			"Luna Cooperative": "standard", "Mars Accord": "standard", "Kalpana Settlement Trust": "standard",
+			"The Sufficiency": "standard", "Huygens Trust": "standard",
+			"Belt Assembly": "relaxed", "The Commons": "relaxed", "Kernel Settlers": "relaxed", "Independent": "relaxed"
+		},
+		"port_rules": {
+			"strict": {"surcharge_cr": 300, "refuse_passengers": true},
+			"standard": {"surcharge_cr": 100, "refuse_passengers": false},
+			"relaxed": {"surcharge_cr": 0, "refuse_passengers": false}
+		}
+	},
+	"insurance": {
+		"_note": "Policies are bought at any port. Premium per period_days = insured value * plan rate * risk * claims. Insured value = keel_value + each module's basis * its resale factor. A claim for a total loss pays (insured value of the lost ship - insured value of the replacement hull) * payout_frac, less the excess, and cargo cover pays cargo_payout_frac of what the hold cost. Collision cover pays a yard repair above collision_excess_mult * the plan excess. Claims within claim_decay_days each add claim_surcharge to the premium. A void or lapsed policy pays nothing: the Commons fallback hull comes on a loan, repaid at loan_repay_cr_per_day whenever credits are above loan_keep_cr, so no pilot is ever stuck. Plans that cover collision are refused for a ship damaged beyond buy_max_damage.",
+		"period_days": 30,
+		"renew_window_days": 3,
+		"min_premium_cr": 150,
+		"risk_wear_weight": 0.5,
+		"claim_surcharge": 0.25,
+		"claim_decay_days": 365,
+		"max_claim_mult": 2.5,
+		"buy_max_damage": 0.05,
+		"plans": {
+			"basic": {"name": "Commons mutual: total loss", "covers": ["total_loss"], "rate": 0.007, "excess_mult": 1.0, "collision_excess_mult": 0.0, "payout_frac": 0.8, "cargo_payout_frac": 0.0},
+			"standard": {"name": "Terran Compact marine: total loss and collision repair", "covers": ["total_loss", "collision"], "rate": 0.011, "excess_mult": 1.0, "collision_excess_mult": 0.4, "payout_frac": 0.85, "cargo_payout_frac": 0.0},
+			"full": {"name": "Lloyd's of Luna: everything, cargo too", "covers": ["total_loss", "collision", "cargo"], "rate": 0.017, "excess_mult": 0.8, "collision_excess_mult": 0.3, "payout_frac": 0.9, "cargo_payout_frac": 0.9}
+		},
+		"fallback": {
+			"_note": "No cover (none, lapsed or void): the Commons gives you a stock hull on a loan.",
+			"loan_cr": 9000,
+			"loan_repay_cr_per_day": 150,
+			"loan_keep_cr": 500
+		}
+	}
+}

@@ -2,6 +2,8 @@
 ## and the view, so there is one definition of "what this ship can do".
 extends RefCounted
 
+const Condition := preload("res://sim/condition.gd")
+
 
 static func modules_of(ship: Dictionary, data) -> Array:
 	var out := []
@@ -80,7 +82,8 @@ const UNDAMAGED := ["heat_mw", "life_kw", "avionics_kw", "comms_kw", "sensor_kw"
 ## Summed over the modules, each counting for what is left of it after damage
 ## (ship["damage"][slot], 0 sound to 1 wrecked): a holed tank holds less, a hit drive
 ## pushes less, scorched solar wings and reactors make less power. Heat is what a
-## drive makes, so damage doesn't reduce it (see UNDAMAGED).
+## drive makes, so damage doesn't reduce it (see UNDAMAGED). Wear (sim/condition.gd) trims
+## a few percent more off the stats it names in data (performance.keys).
 static func _sum(ship: Dictionary, data, key: String) -> float:
 	var total := 0.0
 	var damage: Dictionary = ship.get("damage", {})
@@ -89,7 +92,8 @@ static func _sum(ship: Dictionary, data, key: String) -> float:
 		var m: Dictionary = data.modules[ship["modules"][slot]]
 		var left := 1.0 if key in UNDAMAGED else 1.0 - clampf(float(damage.get(slot, 0.0)), 0.0, 1.0)
 		var tune: float = tunes.get(slot, NO_TUNE)[key] if not tunes.is_empty() else 1.0
-		total += float(m.get(key, 0.0)) * left * tune
+		# Wear and small faults shave a little off supply and rating stats (Condition.perf).
+		total += float(m.get(key, 0.0)) * left * tune * Condition.perf(ship, slot, key, data)
 	return total
 
 
@@ -122,12 +126,14 @@ static func _tune_factors(ship: Dictionary, data) -> Dictionary:
 	return out
 
 
-## How much the tunes (and crew) change the rate at which parts wear: 1.0 untuned. For
-## the maintenance work to read; nothing in the sim wears parts yet.
-static func wear_mult(ship: Dictionary, data) -> float:
+## How much the tunes and the crew change the rate at which parts wear (1.0 untuned, no
+## one aboard). The wear system reads it per slot: a tune wears only the drive it is on;
+## an engineer aboard eases wear on everything. Without a slot, every tune counts.
+static func wear_mult(ship: Dictionary, data, slot: String = "") -> float:
 	var m := 1.0
 	for t in active_tunes(ship, data):
-		m += float(data.favours["tunes"][t["id"]].get("wear_pct", 0.0))
+		if slot == "" or t["slot"] == slot:
+			m += float(data.favours["tunes"][t["id"]].get("wear_pct", 0.0))
 	for h in ship.get("hikers", []):
 		m *= float(data.favours.get("hitchhikers", {}).get("trades", {}).get(h["trade"], {}).get("wear_mult", 1.0))
 	return m
