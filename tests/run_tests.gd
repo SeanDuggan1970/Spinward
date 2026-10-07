@@ -3655,7 +3655,7 @@ func test_yard_voucher_on_bill() -> void:
 	check(float(plain["voucher"]) == 0.0 and float(plain["service"]) > 500.0, "Without a voucher the service bill is whole (%d cr)" % int(plain["service"]))
 	check(absf(float(bill["voucher"]) - 500.0) < 1e-6, "A 500 cr voucher takes 500 cr off service")
 	check(absf(float(bill["total"]) - (float(plain["total"]) - 500.0)) < 1e-6, "and comes off the total")
-	var line := bill["lines"].filter(func(l): return l["kind"] == "voucher")
+	var line: Array = bill["lines"].filter(func(l): return l["kind"] == "voucher")
 	check(line.size() == 1 and line[0]["label"] == "voucher: -500 cr" and absf(float(line[0]["credits"]) + 500.0) < 1e-6, "as one bill line, 'voucher: -500 cr'")
 	check(Favours.yard_voucher_balance(s, d, "kibo_ring") == 500.0, "Quoting spends nothing")
 	# The inspection fee, labour and parts are not repairs.
