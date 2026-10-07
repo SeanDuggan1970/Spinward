@@ -12,8 +12,20 @@ const OBLIQUITY_J2000 := deg_to_rad(23.439291)
 
 var bodies: Dictionary
 var places: Dictionary
-var _cache_t := NAN
-var _cache: Dictionary = {}
+## Positions are pure in (id, t), so each id remembers the last instant it was asked
+## for. Route planning asks for the same few instants again and again (both ends of a
+## burn, a shared frame body at every track step). Ids are numbered on first use, with
+## parallel arrays per index: the instant and position last found, the parent's index
+## (-1 for the root, -2 for places that need the long way: Lagrange points, towns) and
+## the precomputed elements (see _pre).
+var _idx: Dictionary = {}
+var _ids: Array = []
+var _slot_t := PackedFloat64Array()
+var _slot_p: Array = []
+var _parent := PackedInt32Array()
+var _elements: Array = []
+## The collinear Lagrange roots depend only on the mass ratio and the point.
+var _collinear: Dictionary = {}
 
 
 func _init(body_data: Dictionary, place_data: Dictionary) -> void:
@@ -22,58 +34,85 @@ func _init(body_data: Dictionary, place_data: Dictionary) -> void:
 
 
 func position(id: String, t: float) -> Array:
-	if t != _cache_t:
-		_cache_t = t
-		_cache.clear()
-	if _cache.has(id):
-		return _cache[id]
+	var i: int = _idx.get(id, -1)
+	if i < 0:
+		i = _index(id)
+	return _pos(i, t)
+
+
+func _pos(i: int, t: float) -> Array:
+	if _slot_t[i] == t:
+		return _slot_p[i]
 	var p: Array
-	if bodies.has(id):
-		p = _body_position(id, t)
-	elif places.has(id):
-		p = _place_position(places[id], t)
-	else:
-		assert(false, "Unknown body or place: " + id)
+	var par := _parent[i]
+	if par >= 0:
+		var c := _pos(par, t)
+		var r := _kepler_pre(_elements[i], t)
+		p = [c[0] + r[0], c[1] + r[1], c[2] + r[2]]
+	elif par == -1:
 		p = [0.0, 0.0, 0.0]
-	_cache[id] = p
+	else:
+		p = _place_position(_ids[i], places[_ids[i]], t)
+	_slot_t[i] = t
+	_slot_p[i] = p
 	return p
 
 
-## Central difference. The position cache holds one time at a time, so it is set
-## aside and restored here: otherwise a Lagrange point evaluated at t would be cached
-## under t - 30 s and the result of a lookup could depend on call history.
+## Central difference. The cache is keyed by time, so t +- 30 s never collides with t.
 func velocity(id: String, t: float) -> Array:
 	var h := 30.0
-	var saved_t := _cache_t
-	var saved := _cache
-	_cache_t = NAN
-	_cache = {}
-	var v := V.scale(V.sub(position(id, t + h), position(id, t - h)), 0.5 / h)
-	_cache_t = saved_t
-	_cache = saved
-	return v
+	return V.scale(V.sub(position(id, t + h), position(id, t - h)), 0.5 / h)
 
 
 ## Position of `id` relative to `parent_id`.
 func relative(id: String, parent_id: String, t: float) -> Array:
-	return V.sub(position(id, t), position(parent_id, t))
+	var a := position(id, t)
+	var b := position(parent_id, t)
+	return [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
 
 
-func _body_position(id: String, t: float) -> Array:
-	var body: Dictionary = bodies[id]
-	if not body.has("parent"):
-		return [0.0, 0.0, 0.0]
-	var parent: String = body["parent"]
-	var gm := float(bodies[parent]["gm"]) + float(body.get("gm", 0.0))
-	return V.add(position(parent, t), kepler(body["elements"], gm, t))
+## Number an id on first use (its parent first), with what its position needs.
+func _index(id: String) -> int:
+	var parent_id := ""
+	var pre = null
+	var par := -1
+	if bodies.has(id):
+		var body: Dictionary = bodies[id]
+		if body.has("parent"):
+			parent_id = body["parent"]
+			var gm := float(bodies[parent_id]["gm"]) + float(body.get("gm", 0.0))
+			pre = _pre("b:" + id, body["elements"], gm)
+	elif places.has(id):
+		var where: Dictionary = places[id]["location"]
+		if where["type"] == "orbit":
+			parent_id = where["parent"]
+			pre = _pre("p:" + id, where["elements"], float(bodies[parent_id]["gm"]))
+		else:
+			par = -2
+	else:
+		assert(false, "Unknown body or place: " + id)
+	if parent_id != "":
+		par = _idx.get(parent_id, -1)
+		if par < 0:
+			par = _index(parent_id)
+	var i := _ids.size()
+	_ids.append(id)
+	_slot_t.append(NAN)
+	_slot_p.append(null)
+	_parent.append(par)
+	_elements.append(pre)
+	_idx[id] = i
+	return i
 
 
-func _place_position(place: Dictionary, t: float) -> Array:
+func _place_position(id: String, place: Dictionary, t: float) -> Array:
 	var where: Dictionary = place["location"]
 	match where["type"]:
 		"orbit":
 			var parent: String = where["parent"]
-			return V.add(position(parent, t), kepler(where["elements"], float(bodies[parent]["gm"]), t))
+			var c := position(parent, t)
+			var r := _kepler_pre(_pre("p:" + id, where["elements"], float(bodies[parent]["gm"])), t)
+			return [c[0] + r[0], c[1] + r[1], c[2] + r[2]]
 		"lagrange":
 			var at := lagrange_point(where["system"][0], where["system"][1], where["point"], t)
 			if where.has("offset_km"):
@@ -113,6 +152,59 @@ func surface_point(where: Dictionary, t: float) -> Array:
 	var y := V.cross(pole, x)
 	var d := V.add(V.add(V.scale(x, cos(lat) * cos(lon)), V.scale(y, cos(lat) * sin(lon))), V.scale(pole, sin(lat)))
 	return V.add(c, V.scale(d, r))
+
+
+## Everything kepler() derives from the elements alone (not from t), computed once per
+## element set: [a, e, n, m0 (rad), node0 (deg), node rate, peri0 (deg), peri rate,
+## cos i, sin i, a * sqrt(1 - e^2), equatorial?]. Same arithmetic as kepler(), so the
+## positions are bit-identical.
+var _pre_cache: Dictionary = {}
+
+
+func _pre(key: String, el: Dictionary, gm: float) -> Array:
+	var hit = _pre_cache.get(key)
+	if hit != null:
+		return hit
+	var a := float(el["a_m"])
+	var e := float(el.get("e", 0.0))
+	var n: float
+	if el.has("period_days"):
+		n = TAU / (float(el["period_days"]) * DAY)
+	else:
+		n = sqrt(gm / (a * a * a))
+	var inc := deg_to_rad(float(el.get("i_deg", 0.0)))
+	var pre := [a, e, n, deg_to_rad(float(el.get("m0_deg", 0.0))),
+		float(el.get("node_deg", 0.0)), float(el.get("node_rate_deg_per_day", 0.0)),
+		float(el.get("peri_deg", 0.0)), float(el.get("peri_rate_deg_per_day", 0.0)),
+		cos(inc), sin(inc), a * sqrt(1.0 - e * e), el.get("frame", "ecliptic") == "equatorial"]
+	_pre_cache[key] = pre
+	return pre
+
+
+static func _kepler_pre(k: Array, t: float) -> Array:
+	var e: float = k[1]
+	var days := t / DAY
+	var node := deg_to_rad(k[4] + k[5] * days)
+	var peri := deg_to_rad(k[6] + k[7] * days)
+	var m := fposmod(k[3] + k[2] * t, TAU)
+	var ecc_anomaly := m if e < 0.8 else PI
+	for _i in 30:
+		var step := (ecc_anomaly - e * sin(ecc_anomaly) - m) / (1.0 - e * cos(ecc_anomaly))
+		ecc_anomaly -= step
+		if absf(step) < 1e-13:
+			break
+	var x: float = k[0] * (cos(ecc_anomaly) - e)
+	var y: float = k[10] * sin(ecc_anomaly)
+	var cp := cos(peri); var sp := sin(peri)
+	var cn := cos(node); var sn := sin(node)
+	var ci: float = k[8]
+	var si: float = k[9]
+	var xp := x * cp - y * sp
+	var yp := x * sp + y * cp
+	var r := [xp * cn - yp * ci * sn, xp * sn + yp * ci * cn, yp * si]
+	if k[11]:
+		r = equatorial_to_ecliptic(r)
+	return r
 
 
 ## Keplerian elements -> position relative to the focus.
@@ -171,7 +263,10 @@ func lagrange_point(primary: String, secondary: String, point: String, t: float)
 			var h := V.normalized(V.cross(rel, V.sub(velocity(secondary, t), velocity(primary, t))))
 			return V.add(p0, V.rotate(rel, h, deg_to_rad(60.0 if point == "L4" else -60.0)))
 		"L1", "L2", "L3":
-			var x := collinear_point(mu, point)
+			var key := "%s|%s|%s" % [primary, secondary, point]
+			if not _collinear.has(key):
+				_collinear[key] = collinear_point(mu, point)
+			var x: float = _collinear[key]
 			# x is measured from the barycentre in units of the separation; primary sits at -mu.
 			return V.add(p0, V.scale(u, (x + mu) * dist))
 	assert(false, "Unknown Lagrange point " + point)

@@ -15,8 +15,9 @@ static func modules_of(ship: Dictionary, data) -> Array:
 static func dry_mass_t(ship: Dictionary, data) -> float:
 	var hull: Dictionary = data.ships[ship["hull"]]
 	var total := float(data.modules[hull["spine"]]["mass_t"])
-	for m in modules_of(ship, data):
-		total += float(m["mass_t"])
+	var modules: Dictionary = ship.get("modules", {})
+	for slot in modules:
+		total += float(data.modules[modules[slot]]["mass_t"])
 	return total
 
 
@@ -88,12 +89,17 @@ static func _sum(ship: Dictionary, data, key: String) -> float:
 	var total := 0.0
 	var damage: Dictionary = ship.get("damage", {})
 	var tunes := _tune_factors(ship, data) if key == "thrust_n" or key == "heat_mw" else {}
-	for slot in ship.get("modules", {}):
-		var m: Dictionary = data.modules[ship["modules"][slot]]
-		var left := 1.0 if key in UNDAMAGED else 1.0 - clampf(float(damage.get(slot, 0.0)), 0.0, 1.0)
+	var undamaged := key in UNDAMAGED
+	var modules: Dictionary = ship.get("modules", {})
+	for slot in modules:
+		# A module that does not have the stat adds exactly 0: skip its wear and tune lookups.
+		var base := float(data.modules[modules[slot]].get(key, 0.0))
+		if base == 0.0:
+			continue
+		var left := 1.0 if undamaged else 1.0 - clampf(float(damage.get(slot, 0.0)), 0.0, 1.0)
 		var tune: float = tunes.get(slot, NO_TUNE)[key] if not tunes.is_empty() else 1.0
 		# Wear and small faults shave a little off supply and rating stats (Condition.perf).
-		total += float(m.get(key, 0.0)) * left * tune * Condition.perf(ship, slot, key, data)
+		total += base * left * tune * Condition.perf(ship, slot, key, data)
 	return total
 
 

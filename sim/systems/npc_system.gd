@@ -332,9 +332,9 @@ func _choose_trade(npc: Dictionary, here: String, t: float) -> Dictionary:
 			continue
 		if not Perks.place_open(s, data, to):
 			continue
-		var plan := Navigation.plan(npc["ship"], data, sim().ephemeris, here, to, t)
-		if not plan.get("ok", false) or plan["strand_risk"]:
-			continue
+		# Which goods would pay is plain market arithmetic, so settle that first and plan the
+		# trip (the costly part) only for a place that has something worth carrying there.
+		var paying := []
 		for good in data.places[here]["market"]:
 			if not Market.trades(data, to, good):
 				continue
@@ -344,7 +344,14 @@ func _choose_trade(npc: Dictionary, here: String, t: float) -> Dictionary:
 			var margin := Market.sell_price(s, data, to, good, tonnes) - Market.buy_price(s, data, here, good, tonnes)
 			if margin < float(data.goods[good]["base_price"]) * float(data.npcs["trader_min_margin"]):
 				continue
-			options.append({"to": to, "buy": {good: tonnes}, "rate": margin * tonnes / float(plan["duration_s"])})
+			paying.append([good, tonnes, margin])
+		if paying.is_empty():
+			continue
+		var plan := Navigation.plan(npc["ship"], data, sim().ephemeris, here, to, t)
+		if not plan.get("ok", false) or plan["strand_risk"]:
+			continue
+		for p in paying:
+			options.append({"to": to, "buy": {p[0]: p[1]}, "rate": p[2] * p[1] / float(plan["duration_s"])})
 	if options.is_empty():
 		# Nothing pays: drift to any open port (never a closed place or a ribbon's foot).
 		var places: Array = data.places.keys().filter(func(p): return p != here and Perks.place_open(s, data, p))

@@ -866,6 +866,22 @@ Owner's brief: *the flat 50% resale seems wrong; it should be about wear and tea
 - **The bill.** `ShipBill.quote(state, data, request)` is a pure function (no state change) returning every line (parts, trade-in credit by condition, labour, service, overhaul, inspection), the total, days in port, the effect on the WoF (valid after? would it pass? what must be fixed?) and on the insurance (state and premium before and after), and the ship as it would be. The commands charge exactly the quote. The graphical ship-builder should call this. A **module-condition API** (`Condition.condition`, `restore`, `add_wear`, `clear_faults`) is there for later engine tunes or repair vouchers.
 - **Departures from reality, on purpose:** wear is one number per module (real hardware has many failure modes); a service is a single flat step; the WoF is a gameplay inspection, not an engineering one; cover is simple tiers; faults are mild and never lethal so the hopeful tone holds. Hazards are wear and paperwork, not villains.
 
+## Performance (Oct 2026)
+
+Long skips (time compression, a yard's days in port, a long transit, the headless tests, the balance bot) spend nearly all their time planning NPC trips. The speed-ups are exact: the same inputs give bit-identical state and events, and no number in `data/` changed. What is cached or skipped, and what must not be broken:
+
+- **Ephemeris positions** (`sim/ephemeris.gd`). `position(id, t)` is pure in `(id, t)`. Each id is numbered on first use and remembers the last instant it was asked for, so the same body at the same `t` is found once (a shared frame body at every track step, both ends of a burn). Per-orbit constants (`_pre`: mean motion, trig of the inclination, `a*sqrt(1-e^2)`, the parent index) are derived once per id. The collinear Lagrange roots are cached per system and point. None of this is invalidated: **`bodies` and `places` are read-only once an Ephemeris is built.** If a test or tool edits their elements, build a new Ephemeris. Returned arrays are shared, so never mutate a position in place.
+- **`ShipStats._sum`** skips a module that does not carry the stat (it adds exactly 0), so the wear, damage and tune lookups run only for the few modules that matter. Nothing is memoised across calls, so ship state can change freely between them.
+- **NPC traders** (`npc_system._choose_trade`) decide which goods would pay at a destination (plain market arithmetic) before planning the trip there, and plan only where something would pay. The plan was only ever used for those goods, so the choice is unchanged. Keep planning free of side effects on state and RNG, or this reordering stops being exact.
+- **`OrbitMech.lambert` and `kepler`** compute the Stumpff terms inline (no array or lambda per iteration), and Lambert's bisection stops once its bracket is one float wide (its remaining passes cannot change it).
+- **`V` (v3.gd)** inlines `length`, `distance`, `normalized`, `lerp` and `rotate` with the same arithmetic in the same order.
+- **Events** (`Sim.emit`) are trimmed in batches (at twice the cap), not by copying the whole list on every emit once nothing has drained it (headless runs). `take_events()` still returns only the newest `MAX_PENDING_EVENTS`.
+- **Market integration** reads each place's market once per step.
+
+What is left is `Navigation.plan` (about 2 ms a local trip, mostly the 97-step `_avoid_list` tracks and `solve_duration`'s bisection) and `Interplanetary.prepare`/`dress` (about 5 to 8 ms), plus `Navigation.port_tracks`. Cutting those further needs changes in `navigation.gd` and `interplanetary.gd`.
+
+Tools: `tools/time_tests.gd` times each test function (`ONLY=test_a,test_b` to pick). `tools/determinism_hash.gd` prints hashes of `state.to_dict()` and the events after a fixed scripted game, with player route plans; run it before and after any speed change and diff the `DET` lines.
+
 ## Milestones
 
 - **M0 – Foundation:** done.

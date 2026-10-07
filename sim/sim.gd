@@ -136,7 +136,9 @@ func advance_game_time(game_seconds: float) -> void:
 ## at_time: when it happened, if not now (systems that process scheduled events in a long tick).
 func emit(event_type: String, payload: Dictionary = {}, at_time: float = NAN) -> void:
 	_events.append({"type": event_type, "time_s": state.time_s if is_nan(at_time) else at_time, "data": payload})
-	if _events.size() > MAX_PENDING_EVENTS:
+	# Trim in batches: slicing on every emit past the cap copied the whole list each time.
+	# take_events() returns only the newest MAX_PENDING_EVENTS, as the eager trim did.
+	if _events.size() > 2 * MAX_PENDING_EVENTS:
 		_events = _events.slice(_events.size() - MAX_PENDING_EVENTS)
 
 
@@ -144,4 +146,6 @@ func emit(event_type: String, payload: Dictionary = {}, at_time: float = NAN) ->
 func take_events() -> Array[Dictionary]:
 	var out := _events
 	_events = []
+	if out.size() > MAX_PENDING_EVENTS:
+		out = out.slice(out.size() - MAX_PENDING_EVENTS)
 	return out
