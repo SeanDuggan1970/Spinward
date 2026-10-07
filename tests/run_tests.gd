@@ -65,6 +65,7 @@ func _initialize() -> void:
 	test_tips()
 	test_docking_help()
 	test_trajectories()
+	test_routes_clear_of_bodies()
 	test_gravity_routes()
 	test_saves_and_determinism()
 	test_light_time()
@@ -629,6 +630,95 @@ func test_trajectories() -> void:
 			check(off > 5.0e6, "Trips to moving targets curve (%s bows %.0f km)" % [to, off / 1000.0])
 		check(plan["throttle"] > 0.0 and plan["throttle"] <= 1.0, "%s throttle in range" % to)
 	print("TRAJECTORIES  " + "  |  ".join(lines))
+
+
+func test_routes_clear_of_bodies() -> void:
+	# The hardest routes found by tools/route_clearance.gd: no path may pass through a
+	# body or its air (Interplanetary.clearance), or cross Saturn's main rings. Selene
+	# Ring skims the Moon at 52 km; the Titan and Sun cases were blocked on worn, tuned
+	# or particular-day ships.
+	var sim := fresh()
+	var d := sim.data
+	var hull: Dictionary = d.ships["deep_freighter"]
+	var drive := ""
+	for slot in hull["modules"]:
+		if d.modules.get(hull["modules"][slot], {}).has("thrust_n"):
+			drive = slot
+	var base := {"hull": "deep_freighter", "modules": hull["modules"].duplicate(), "cargo": {}, "fuel_t": 400.0, "name": "Clearance"}
+	var worn := base.duplicate(true)
+	Condition.set_condition(worn, drive, 0.3)
+	var lean := base.duplicate(true)
+	lean["tunes"] = [{"id": "lean_burn_map", "slot": drive, "module": base["modules"][drive], "source": "test"}, {"id": "nozzle_polish", "slot": drive, "module": base["modules"][drive], "source": "test"}]
+	var cases := [
+		[base, "huygens_port", "plume_watch", 500],
+		[worn, "landauer_deep", "huygens_port", 97],
+		[lean, "plume_watch", "huygens_port", 97],
+		[worn, "valhalla_station", "huygens_port", 0],
+		[worn, "valhalla_station", "plume_watch", 0],
+		[base, "hektor_reach", "valhalla_station", 365],
+		[base, "selene_ring", "kibo_ring", 0],
+		[base, "kibo_ring", "selene_ring", 97],
+		[base, "selene_ring", "shackleton_port", 37],
+		[worn, "shackleton_port", "selene_ring", 151],
+		[lean, "selene_ring", "halo_depot", 211],
+		[base, "selene_ring", "kernel_l5", 300],
+	]
+	var eph = sim.ephemeris
+	var bodies := ["sun", "earth", "moon", "jupiter", "callisto", "saturn", "titan", "enceladus", "iapetus"]
+	var pole := V.normalized(V.cross(V.sub(eph.position("titan", 0.0), eph.position("saturn", 0.0)), V.sub(eph.position("titan", 86400.0), eph.position("saturn", 86400.0))))
+	for c in cases:
+		var a: String = c[1]
+		var b: String = c[2]
+		var t: float = sim.state.time_s + float(c[3]) * DAY
+		var plan := Navigation.plan(c[0], d, eph, a, b, t)
+		check(plan.has("from_pos"), "%s -> %s plans" % [a, b])
+		if not plan.has("from_pos"):
+			continue
+		var loc := {"status": "transit", "from": a, "to": b, "frame": plan["frame"], "depart_t": t, "arrive_t": plan["arrive_t"],
+			"burn_s": plan["burn_s"], "from_pos": plan["from_pos"], "to_pos": plan["to_pos"], "from_vel": plan.get("from_vel"),
+			"to_vel": plan.get("to_vel"), "from_rot": plan.get("from_rot"), "to_rot": plan.get("to_rot"), "rot_axis": plan.get("rot_axis"),
+			"rot_angle": plan.get("rot_angle", 0.0), "samples": plan.get("samples"), "around": plan.get("around"),
+			"around_r": plan.get("around_r", 0.0), "avoid": plan.get("avoid")}
+		if plan.get("samples") == null:
+			var start: float = t + (float(plan["duration_s"]) - float(plan["burn_s"])) * 0.5
+			var tracks := Navigation.port_tracks(eph, a, b, plan["frame"], t, start, start + float(plan["burn_s"]), float(plan["arrive_t"]))
+			loc["pre_track"] = tracks[0]
+			loc["post_track"] = tracks[1]
+		var p_start: Array = eph.position(a, t)
+		var p_end: Array = eph.position(b, float(plan["arrive_t"]))
+		var worst := 0.0
+		var worst_body := ""
+		for i in 241:
+			var ti := lerpf(t, float(plan["arrive_t"]), float(i) / 240.0)
+			var here := V.add(eph.position(plan["frame"], ti), Navigation.transit_position(loc, ti))
+			for id in bodies:
+				var cb: Array = eph.position(id, ti)
+				var need := Interplanetary.clearance(d, id)
+				var gap := need - V.distance(here, cb)
+				if gap <= worst:
+					continue
+				if V.distance(p_start, eph.position(id, t)) < need * 1.01 and V.distance(here, p_start) < need * 2.0:
+					continue
+				if V.distance(p_end, eph.position(id, float(plan["arrive_t"]))) < need * 1.01 and V.distance(here, p_end) < need * 2.0:
+					continue
+				worst = gap
+				worst_body = id
+		check(worst_body == "", "%s -> %s (day %d) stays clear of %s (%.0f km inside)" % [a, b, c[3], worst_body, worst / 1000.0])
+		if plan["frame"] == "saturn":
+			var rs := float(d.bodies["saturn"]["radius_m"])
+			var prev := 0.0
+			var prev_rel := []
+			var crossed := false
+			for i in 241:
+				var ti := lerpf(t, float(plan["arrive_t"]), float(i) / 240.0)
+				var rel: Array = Navigation.transit_position(loc, ti)
+				var side := V.dot(rel, pole)
+				if i > 0 and signf(side) != signf(prev) and prev != 0.0:
+					var rr := V.length(V.lerp(prev_rel, rel, prev / (prev - side))) / rs
+					crossed = crossed or (rr > 1.11 and rr < 2.27)
+				prev = side
+				prev_rel = rel
+			check(not crossed, "%s -> %s keeps out of Saturn's rings" % [a, b])
 
 
 func test_gravity_routes() -> void:

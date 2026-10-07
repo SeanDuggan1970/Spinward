@@ -39,6 +39,8 @@ const TRACK_STEPS := 96
 const PORT_STEPS := 24
 const TRACK_MARGIN_M := 3000.0
 const FUEL_SAMPLES := 24
+## Steps at which a straight run is tested against the bodies it must avoid.
+const AROUND_STEPS := 256
 
 
 ## The chain of bodies a place hangs from, nearest first.
@@ -120,6 +122,24 @@ static func _angle_about(a: Array, b: Array, k: Array) -> float:
 	return atan2(V.dot(k, V.cross(ua, ub)), V.dot(ua, ub))
 
 
+## The angle (rad, signed about axis) the rotating body sweeps between two times: the
+## sum of short steps, so a burn that spans more than half its orbit counts the extra
+## turns (a single atan2 wraps, and the "rotating" frame then turned at the wrong rate
+## and the body swept past a ship that was meant to stay put beside it).
+static func _swept_angle(data, eph, body: String, frame: String, t0: float, t1: float, m0: Array, axis: Array) -> float:
+	var period_s := float(data.bodies[body].get("elements", {}).get("period_days", 0.0)) * 86400.0
+	var steps := 1
+	if period_s > 0.0:
+		steps = clampi(ceili((t1 - t0) / (0.25 * period_s)), 1, 64)
+	var total := 0.0
+	var prev := m0
+	for k in range(1, steps + 1):
+		var cur: Array = eph.relative(body, frame, lerpf(t0, t1, float(k) / float(steps)))
+		total += _angle_about(prev, cur, axis)
+		prev = cur
+	return total
+
+
 ## Returns {ok, reason, distance_m, duration_s, burn_s, fuel_t, arrive_t, from_pos,
 ## from_vel, to_pos, to_vel, frame, ...}. Works for any ship dict (player or NPC).
 ## from_pos/to_pos are trip-frame positions at the start and end of the burn; in a
@@ -161,7 +181,7 @@ static func plan(ship: Dictionary, data, eph, from_place: String, to_place: Stri
 			for _i in 40:
 				var arrive := depart + burn
 				to_pos = eph.relative(to_place, frame, arrive)
-				angle = _angle_about(m0, eph.relative(rot_body, frame, arrive), axis)
+				angle = _swept_angle(data, eph, rot_body, frame, depart, arrive, m0, axis)
 				to_rot = V.rotate(to_pos, axis, -angle)
 				var need := sqrt(6.0 * maxf(V.distance(from_pos, to_rot), 1.0) / accel)
 				if need <= burn:
@@ -173,8 +193,10 @@ static func plan(ship: Dictionary, data, eph, from_place: String, to_place: Stri
 			# a body (or its air), fly round it instead (_around).
 			for i in extra["avoid"].size():
 				var a: Array = extra["avoid"][i]
-				for k in range(1, 32):
-					var s := float(k) / 32.0
+				# Fine steps: near the start the smoothstep creeps, so a run that leaves from
+				# the far side of a body must be caught within its first few kilometres.
+				for k in range(1, AROUND_STEPS):
+					var s := float(k) / float(AROUND_STEPS)
 					var h := s * s * (3.0 - 2.0 * s)
 					if V.distance(V.lerp(from_pos, to_rot, h), _track(a, s)) < float(a[1]) * 1.15:
 						extra["around"] = i
@@ -287,12 +309,27 @@ static func _port_track(track: Array, t0: float, t1: float, t: float) -> Array:
 	return V.lerp(track[i], track[i + 1], x - float(i))
 
 
-## Where an avoided body is at fraction s of the burn (its track, interpolated).
+## Where an avoided body is at fraction s of the burn: a Catmull-Rom curve through its
+## track. (Straight chords between steps cut inside a moon's orbit by hundreds of km
+## when the burn spans a good part of it, and that is where the path must stay clear.)
 static func _track(a: Array, s: float) -> Array:
 	var track: Array = a[0]
-	var x := clampf(s, 0.0, 1.0) * float(track.size() - 1)
-	var i := mini(int(x), track.size() - 2)
-	return V.lerp(track[i], track[i + 1], x - float(i))
+	var last := track.size() - 1
+	var x := clampf(s, 0.0, 1.0) * float(last)
+	var i := mini(int(x), last - 1)
+	var u := x - float(i)
+	var p1: Array = track[i]
+	var p2: Array = track[i + 1]
+	var p0: Array = track[i - 1] if i > 0 else V.sub(V.scale(p1, 2.0), p2)
+	var p3: Array = track[i + 2] if i + 2 <= last else V.sub(V.scale(p2, 2.0), p1)
+	var u2 := u * u
+	var u3 := u2 * u
+	var out := []
+	for k in 3:
+		out.append(0.5 * (2.0 * float(p1[k]) + (float(p2[k]) - float(p0[k])) * u
+			+ (2.0 * float(p0[k]) - 5.0 * float(p1[k]) + 4.0 * float(p2[k]) - float(p3[k])) * u2
+			+ (3.0 * float(p1[k]) - float(p0[k]) - 3.0 * float(p2[k]) + float(p3[k])) * u3))
+	return out
 
 
 ## A run round a body in the rotating frame, at fraction s of the burn: the direction

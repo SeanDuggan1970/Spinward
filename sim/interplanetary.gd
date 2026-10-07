@@ -47,6 +47,12 @@ const CLEAR_MIN_M := 20.0e3
 ## Climb-out and capture spirals: samples along each, and the hand-off radius as a
 ## multiple of the station's own orbit and of the world's radius.
 const SPIRAL_SAMPLES := 32
+## A quick plan's free-fall path is sampled every 1/40 of the trip, closer where it swings
+## fast about the Sun: at most this many radians a step, and at most this many steps.
+const STEP_TURN := 0.05
+const MAX_CONIC_SAMPLES := 400
+## A path bent clear of the Sun rides this multiple of its clearance.
+const SUN_BEND := 1.05
 const HANDOFF_ORBITS := 2.5
 const HANDOFF_RADII := 25.0
 
@@ -266,6 +272,7 @@ static func dress(samples: Array, data, eph, from_place: String, to_place: Strin
 	samples = _clean(samples)
 	if samples.size() < 2:
 		return samples
+	samples = _bend_from_sun(samples, clearance(data, "sun"))
 	var out := []
 	# Velocities where the spirals meet the transfer, so the path joins smoothly.
 	var join_out = null
@@ -441,6 +448,70 @@ static func _seg_index(samples: Array, t: float) -> int:
 	return lo
 
 
+## The free-fall path of a candidate transfer, n + 1 samples [t, pos, vel, thrust].
+static func _conic_samples(pick: Dictionary, job: Dictionary, n: int) -> Array:
+	var t1 := float(job["t1"])
+	var tof := float(pick["tof"])
+	var samples := []
+	if pick.get("deep", false):
+		# Out along the line, thrusting, coasting, braking.
+		var line := V.sub(pick["r_b"], pick["r_a"])
+		for k in n + 1:
+			var f := float(k) / float(n)
+			var shape := f * f * (3.0 - 2.0 * f)
+			samples.append([t1 + tof * f, V.add(pick["r_a"], V.scale(line, shape)), V.scale(line, 6.0 * f * (1.0 - f) / tof), [0.0, 0.0, 0.0]])
+	else:
+		var sol := OM.lambert(pick["r_a"], pick["r_b"], tof, job["mu"], V.cross(pick["r_a"], pick["v_a"]))
+		# Even steps of tof / n, but never wider than STEP_TURN radians of swing about the
+		# Sun (r / v is how long that takes): a pass close to the Sun is fast, and a Hermite
+		# curve through samples a few days apart would cut straight through it.
+		var dt := 0.0
+		var step_max := tof / float(n)
+		var count := 0
+		while true:
+			var st := OM.kepler(pick["r_a"], sol[0], dt, job["mu"])
+			samples.append([t1 + dt, st[0], st[1], [0.0, 0.0, 0.0]])
+			if dt >= tof or count >= MAX_CONIC_SAMPLES:
+				break
+			count += 1
+			var step := minf(step_max, STEP_TURN * V.length(st[0]) / maxf(V.length(st[1]), 1.0))
+			dt = minf(dt + maxf(step, tof * 1e-5), tof)
+		samples[-1][0] = t1 + tof
+	return samples
+
+
+## Samples bent clear of the Sun: a point inside the clearance is pushed radially out
+## to SUN_BEND x the clearance, and its velocity is rebuilt from its neighbours so the
+## path stays smooth. A transfer's times and propellant are untouched (the arc is the
+## shape of the path, as with Navigation's runs round a body); only samples that would
+## pass through the Sun move.
+static func _bend_from_sun(samples: Array, clear: float) -> Array:
+	var target := clear * SUN_BEND
+	var lifted := []
+	var out := []
+	for i in samples.size():
+		var smp: Array = samples[i]
+		var p: Array = smp[1]
+		var d := V.length(p)
+		if d < target and d > 1.0:
+			p = V.scale(p, target / d)
+			lifted.append(i)
+		out.append([smp[0], p, smp[2], smp[3]])
+	if lifted.is_empty():
+		return samples
+	var touched := {}
+	for i in lifted:
+		for j in range(maxi(i - 1, 0), mini(i + 2, out.size())):
+			touched[j] = true
+	for j in touched:
+		var a: Array = out[maxi(j - 1, 0)]
+		var b: Array = out[mini(j + 1, out.size() - 1)]
+		var dt := float(b[0]) - float(a[0])
+		if absf(dt) > 1e-3:
+			out[j] = [out[j][0], out[j][1], V.scale(V.sub(b[1], a[1]), 1.0 / dt), out[j][3]]
+	return out
+
+
 ## Quick estimate for boards and NPCs (no flight): the fastest affordable candidate,
 ## or the cheapest if none is. In Navigation.plan's shape, with a free-fall conic path.
 static func quick(ship: Dictionary, data, eph, from_place: String, to_place: String, t: float) -> Dictionary:
@@ -454,22 +525,10 @@ static func quick(ship: Dictionary, data, eph, from_place: String, to_place: Str
 		if result["reason"] == "":
 			result["reason"] = "beyond this ship: no transfer it can fly"
 		return result
-	var t1 := float(job["t1"])
+	# The fastest candidate keeps its time and propellant; dress() bends its path clear
+	# of the Sun if the arc would pass through it.
+	var samples := _conic_samples(pick, job, 40)
 	var tof := float(pick["tof"])
-	var samples := []
-	if pick.get("deep", false):
-		# Out along the line, thrusting, coasting, braking.
-		var line := V.sub(pick["r_b"], pick["r_a"])
-		for k in 41:
-			var f := float(k) / 40.0
-			var shape := f * f * (3.0 - 2.0 * f)
-			samples.append([t1 + tof * f, V.add(pick["r_a"], V.scale(line, shape)), V.scale(line, 6.0 * f * (1.0 - f) / tof), [0.0, 0.0, 0.0]])
-	else:
-		var sol := OM.lambert(pick["r_a"], pick["r_b"], tof, job["mu"], V.cross(pick["r_a"], pick["v_a"]))
-		for k in 41:
-			var dt := tof * float(k) / 40.0
-			var st := OM.kepler(pick["r_a"], sol[0], dt, job["mu"])
-			samples.append([t1 + dt, st[0], st[1], [0.0, 0.0, 0.0]])
 	var arrive := t + float(pick["duration_s"])
 	samples = dress(samples, data, eph, from_place, to_place, t, arrive, float(job["accel"]))
 	var fuel_t := float(pick["fuel_t"])

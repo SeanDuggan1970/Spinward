@@ -40,11 +40,17 @@ func _initialize() -> void:
 	var days := [0.0, 97.0, 211.0]
 	var options := true
 	var variant := "base"
+	var only_from := ""
+	var only_to := ""
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("days="):
 			days = []
 			for d in a.trim_prefix("days=").split(","):
 				days.append(float(d))
+		if a.begins_with("from="):
+			only_from = a.trim_prefix("from=")
+		if a.begins_with("to="):
+			only_to = a.trim_prefix("to=")
 		if a.begins_with("ship="):
 			variant = a.trim_prefix("ship=")
 		if a.begins_with("options="):
@@ -70,7 +76,7 @@ func _initialize() -> void:
 	for v in variant.split(","):
 		_apply_variant(ship, v)
 		print("-- ship variant: %s" % v)
-		_run(ship, ports, days, options)
+		_run(ship, ports if only_from == "" else [only_from], days, options, ports if only_to == "" else [only_to])
 	print("checked %d routes" % checked)
 	print("ROUTES_CLEAR" if violations == 0 else "ROUTES_BLOCKED %d" % violations)
 	quit(0 if violations == 0 else 1)
@@ -94,13 +100,13 @@ func _apply_variant(ship: Dictionary, v: String) -> void:
 		Condition.set_condition(ship, drive, 1.0)
 
 
-func _run(ship: Dictionary, ports: Array, days: Array, options: bool) -> void:
+func _run(ship: Dictionary, ports: Array, days: Array, options: bool, dests: Array) -> void:
 	var data = sim.data
 	var t0: float = sim.state.time_s
 	for day in days:
 		var t: float = t0 + float(day) * 86400.0
 		for a in ports:
-			for b in ports:
+			for b in dests:
 				if a == b:
 					continue
 				var plan := Navigation.plan(ship, data, sim.ephemeris, a, b, t)
