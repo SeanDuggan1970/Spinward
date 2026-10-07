@@ -15,6 +15,7 @@
 extends "res://sim/systems/system.gd"
 
 const Favours := preload("res://sim/favours.gd")
+const Fitness := preload("res://sim/fitness.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
 
 const DAY := 86400.0
@@ -122,17 +123,24 @@ func _set_down(place: String) -> void:
 	var s = sim().state
 	var data = sim().data
 	var patience := float(data.favours["hitchhikers"]["patience_days"]) * DAY
+	# A strict port will not clear passengers through for a ship with no valid Warrant of
+	# Fitness (the rule contract passengers meet in the travel system): hitchhikers go
+	# ashore here, with no fare.
+	var refused: bool = Fitness.dock_terms(s, data, place)["refuse_passengers"]
 	for h in s.ship.get("hikers", []).duplicate():
-		if h["to"] != place and s.time_s - float(h["boarded_t"]) < patience:
+		if h["to"] != place and s.time_s - float(h["boarded_t"]) < patience and not refused:
 			continue
 		s.ship["hikers"].erase(h)
 		s.ship["passengers"] = maxi(0, int(s.ship.get("passengers", 0)) - 1)
 		s.ship["cabin_t"] = maxf(0.0, float(s.ship.get("cabin_t", 0.0)) - float(data.favours["hitchhikers"]["mass_t"]))
-		s.credits += float(h["fare"])
+		var fare := 0.0 if refused else float(h["fare"])
+		s.credits += fare
+		if refused:
+			sim().emit("hitchhiker_refused", {"name": h["name"], "place": place, "text": "%s is not cleared through here: the ship has no valid Warrant of Fitness." % h["name"]})
 		var tune := ""
-		if h["gift"] != "" and Favours.install_tune(s.ship, data, h["gift"], "%s, a tinkerer you gave a ride" % h["name"], s.time_s) == "":
+		if not refused and h["gift"] != "" and Favours.install_tune(s.ship, data, h["gift"], "%s, a tinkerer you gave a ride" % h["name"], s.time_s) == "":
 			tune = h["gift"]
-		sim().emit("hitchhiker_left", {"name": h["name"], "trade": h["trade"], "place": place, "text": h["lines"]["leave"], "fare": h["fare"], "tune": tune})
+		sim().emit("hitchhiker_left", {"name": h["name"], "trade": h["trade"], "place": place, "text": h["lines"]["leave"], "fare": fare, "tune": tune})
 
 
 func _maybe_hiker(place: String) -> void:
@@ -169,6 +177,11 @@ func _accept(command: Dictionary) -> String:
 	if h.is_empty():
 		return "nobody here is asking for a ride"
 	var cfg: Dictionary = data.favours["hitchhikers"]
+	# A hitchhiker sits in a passenger berth like any passenger, so the same rule holds:
+	# no ride without a valid Warrant of Fitness (a pilot who is unfit says so).
+	var unfit := Fitness.passenger_job_block(s, data)
+	if unfit != "":
+		return unfit
 	if s.ship.get("hikers", []).size() >= int(cfg["max_aboard"]):
 		return "you already have as many hitchhikers as the galley can feed"
 	if Favours.free_berths(s, data) < 1:

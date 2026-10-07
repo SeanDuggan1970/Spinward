@@ -8,10 +8,13 @@
 ##   services: [{slot, level}],             level "service" or "overhaul"
 ##   service_all: "service" | "overhaul",   the same for every module not being swapped
 ##   inspect: bool,                         a Warrant of Fitness inspection after the work
+##   use_voucher: bool,                     (default true) repair vouchers pay towards service and overhaul
 ## }
 ## quote() returns {
 ##   ok, problems: [text], place, lines: [{kind, slot, label, credits}],   credits > 0 is paid by the player
-##   parts, trade_in, labour, service, overhaul, inspection, total,        total = what the player pays net
+##   parts, trade_in, labour, service, overhaul, inspection, voucher, total,   total = what the player pays net;
+##                                                                         voucher (>= 0) is what repair vouchers took off
+##                                                                         service and overhaul (a line "voucher: -X cr")
 ##   days,                                                                 days in port, game time passes
 ##   afford,                                                               total <= credits
 ##   wof: {before, after, would_pass, issues, voided_by_refit},
@@ -21,6 +24,7 @@
 extends RefCounted
 
 const Condition := preload("res://sim/condition.gd")
+const Favours := preload("res://sim/favours.gd")
 const Fitness := preload("res://sim/fitness.gd")
 const Insurance := preload("res://sim/insurance.gd")
 const Perks := preload("res://sim/perks.gd")
@@ -131,7 +135,14 @@ static func quote(state, data, request: Dictionary) -> Dictionary:
 		Fitness.certify(trial, state.time_s + days * 86400.0, data)
 	if lines.is_empty() and problems.is_empty():
 		problems.append("nothing to do")
-	var total: float = totals["parts"] - totals["trade_in"] + totals["labour"] + totals["service"] + totals["overhaul"] + totals["inspection"]
+	# A repair voucher from this yard's operator pays towards service and overhaul (not parts,
+	# labour or the inspection fee): one line, what the bill's "voucher: -X cr" shows.
+	var voucher := 0.0
+	if bool(request.get("use_voucher", true)) and at_yard:
+		voucher = minf(Favours.yard_voucher_balance(state, data, place), totals["service"] + totals["overhaul"])
+		if voucher > 0.0:
+			lines.append({"kind": "voucher", "slot": "", "label": "voucher: -%d cr" % int(ceil(voucher)), "credits": -voucher})
+	var total: float = totals["parts"] - totals["trade_in"] + totals["labour"] + totals["service"] + totals["overhaul"] + totals["inspection"] - voucher
 	if ShipStats.cargo_t(trial) > ShipStats.cargo_capacity_t(trial, data) + 1e-9:
 		problems.append("sell some cargo first")
 	trial["fuel_t"] = minf(float(trial.get("fuel_t", 0.0)), ShipStats.fuel_capacity_t(trial, data))
@@ -147,7 +158,7 @@ static func quote(state, data, request: Dictionary) -> Dictionary:
 	return {
 		"ok": problems.is_empty(), "problems": problems, "place": place, "lines": lines,
 		"parts": totals["parts"], "trade_in": totals["trade_in"], "labour": totals["labour"], "service": totals["service"],
-		"overhaul": totals["overhaul"], "inspection": totals["inspection"], "total": total, "days": days,
+		"overhaul": totals["overhaul"], "inspection": totals["inspection"], "voucher": voucher, "total": total, "days": days,
 		"afford": total <= state.credits + 1e-6,
 		"wof": {"before": w_before, "after": w_after, "would_pass": would["pass"], "issues": would["issues"], "voided_by_refit": voids and not inspect},
 		"insurance": {"state_before": ins_before["state"], "state_after": ins_after["state"], "plan": plan_id, "premium_before": prem_before, "premium_after": prem_after, "void_after": ins_after["state"] == "void"},

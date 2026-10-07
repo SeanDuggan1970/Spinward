@@ -198,3 +198,16 @@ Bot, 180 days, 3 seeds (`docs/balance/2026-10-ship-economy-tuned.md`). The bot n
 - Yard upkeep is only about 4k in 180 days and premiums about 3k. Most of the first-upgrade delay is the labour, the days in port and the inspection that now come with each refit, on top of the unchanged 15k trading reserve.
 - Starting conditions are 0.70 to 0.85, so nothing needs a yard for the first month.
 - Knobs: `service.cost_frac`, `overhaul.cost_frac`, `insurance.plans.*.rate`, `wear.kinds.*`, `kinds.*.labour_cr`.
+
+
+## The three systems together (2026-10-07)
+
+Full write-up: [2026-10-07-economy-together.md](2026-10-07-economy-together.md). Bot: 365 days, seeds 1 to 4, careful / lazy / neglect upkeep.
+
+- Before tuning a pilot who never maintained the ship earned within 2.4% of one who did (12% max thrust loss was too mild). Now `performance.max_loss` 0.12 to 0.28 and `faults.rate_per_hour` 0.002 to 0.004: gross per day careful 1,650, lazy 1,598, neglect 1,467; upkeep 5.2%, 8.4%, 4.5% of gross. Lazy upkeep is 60% above careful.
+- `insurance.renew_window_days` 3 to 10: a 3-day trip could straddle the window and lapse cover (1 to 2 a year). Now 0.
+- Tunes: `overdrive_map.wear_pct` 0.1 to 0.4, `lean_burn_map.wear_pct` 0 to -0.15; `value_cr` nozzle_polish 1500 to 500, lean_burn_map 2600 to 1000, regen_retune 3200 to 2200 (fuel is about 42 cr a trip, so efficiency tunes save almost nothing; speed is what pays).
+- Repair vouchers now come off service and overhaul bills (`voucher: -X cr`); hitchhikers need a valid WoF.
+- Premiums scale with insured value (0.79% per 30 days on `basic`), about 2 to 3% of income; left as is.
+- No run of any strategy went below the 10,000 cr start.
+- The bot gained `upkeep=2`, `jobs=1`, `hikers=1`, `seed0=`, `tsv=1`, and ticks the sim after docking (before, insurance never renewed and no hitchhiker ever asked).

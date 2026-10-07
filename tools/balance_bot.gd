@@ -4,7 +4,12 @@
 ##        [out=res://docs/balance/report.md] [upkeep=1] [credits=N] [fit=slot:module,slot:module] [legs=1] [nofleets=a,b] [take=0.5]
 ## upkeep: 1 (default) the bot keeps its ship: at a yard it services modules under 55% condition,
 ## overhauls those under 30%, and renews its Warrant of Fitness inside 14 days of expiry;
-## 0 lets wear, faults and the WoF run down (what neglect costs). Insurance renews itself.
+## 0 lets wear, faults and the WoF run down (what neglect costs); 2 only renews the WoF and
+## overhauls what the inspection would fail (a lazy but legal pilot). Insurance renews itself.
+## jobs=1: takes courier/package jobs on the board bound for the leg's destination, and spends
+## yard vouchers on service when at a yard. hikers=1: takes any hitchhiker with a free berth
+## (use fit=cargo.1:passenger_berths to have berths). seed0=N: first seed (to run seeds in parallel
+## processes). tsv=1: print one machine-readable ECON_RUN line per seed.
 ## out: where the report goes (use another path to keep report.md). credits: start credits.
 ## fit: free module swaps before the run, e.g. fit=cargo.0:cargo_pod_m,drive.0:pathfinder_mk2
 ## (to measure what a module is worth: run with and without it). legs=1: print every leg.
@@ -27,6 +32,7 @@ const ShipyardSystem := preload("res://sim/systems/shipyard_system.gd")
 const ShipBill := preload("res://sim/ship_bill.gd")
 const Condition := preload("res://sim/condition.gd")
 const Fitness := preload("res://sim/fitness.gd")
+const Favours := preload("res://sim/favours.gd")
 
 const DAY := 86400.0
 ## Upgrade wish list in order, with a cash reserve kept for trading.
@@ -49,10 +55,20 @@ var report_path := "res://docs/balance/report.md"
 var upkeep_on := true
 var upkeep_spent := 0.0
 var yard_days := 0.0
+var upkeep_mode := 1
+var jobs_on := false
+var hikers_on := false
+var cost := {}
+var counts := {}
+var min_credits := 0.0
+var voucher_cr := 0.0
+var kind_value := {}
+var job_values := {}
+var days_total := 0.0
 
 
 func _initialize() -> void:
-	var args := {"days": "180", "upgrade": "1", "out": "res://docs/balance/report.md", "credits": "", "fit": "", "legs": "0", "nofleets": "", "take": "0.5", "upkeep": "1"}
+	var args := {"days": "180", "upgrade": "1", "out": "res://docs/balance/report.md", "credits": "", "fit": "", "legs": "0", "nofleets": "", "take": "0.5", "upkeep": "1", "jobs": "0", "hikers": "0", "seed0": "1", "tsv": "0"}
 	for a in OS.get_cmdline_user_args():
 		var kv := a.split("=")
 		if kv.size() == 2:
@@ -63,16 +79,24 @@ func _initialize() -> void:
 	show_legs = args["legs"] == "1"
 	take_share = float(args["take"])
 	report_path = args["out"]
-	upkeep_on = args["upkeep"] == "1"
+	upkeep_mode = int(args["upkeep"])
+	upkeep_on = upkeep_mode != 0
+	jobs_on = args["jobs"] == "1"
+	hikers_on = args["hikers"] == "1"
+	days_total = days
 	var runs := []
 	var detail := {}
-	for seed_value in range(1, seeds + 1):
+	for seed_value in range(int(args["seed0"]), int(args["seed0"]) + seeds):
 		route_profit = {}
 		milestones = []
 		credit_curve = []
 		first_upgrade_day = -1.0
 		upkeep_spent = 0.0
 		yard_days = 0.0
+		cost = {"service": 0.0, "overhaul": 0.0, "inspection": 0.0, "labour": 0.0, "parts": 0.0, "voucher": 0.0}
+		counts = {}
+		kind_value = {}
+		job_values = {}
 		sim = Sim.new()
 		for fleet in String(args["nofleets"]).split(",", false):
 			sim.data.npcs["fleets"].erase(fleet)
@@ -86,18 +110,22 @@ func _initialize() -> void:
 			sim.state.ship["fuel_t"] = ShipStats.fuel_capacity_t(sim.state.ship, sim.data)
 		var start_matrix := route_matrix()
 		var t0 := sim.state.time_s
+		min_credits = sim.state.credits
 		var next_sample := t0
 		while sim.state.time_s - t0 < days * DAY:
 			if sim.state.time_s >= next_sample:
 				credit_curve.append([(sim.state.time_s - t0) / DAY, sim.state.credits])
 				next_sample += 10.0 * DAY
+			min_credits = minf(min_credits, sim.state.credits)
 			if not do_leg(upgrade):
 				milestones.append("Day %.1f: bot stuck at %s, stopping" % [(sim.state.time_s - t0) / DAY, sim.state.location.get("place")])
 				break
 		credit_curve.append([(sim.state.time_s - t0) / DAY, sim.state.credits])
 		runs.append({"seed": seed_value, "credits": sim.state.credits, "trips": int(sim.state.stats["trips"]), "first_upgrade": first_upgrade_day, "upkeep": upkeep_spent, "yard_days": yard_days, "premiums": float(sim.state.stats.get("premiums_paid", 0.0)), "surcharges": float(sim.state.stats.get("unfit_surcharges", 0.0))})
+		if args["tsv"] == "1":
+			print("ECON_RUN " + JSON.stringify(econ_row(seed_value)))
 		print("BOT_RUN seed=%d credits=%d trips=%d first_upgrade_day=%.1f" % [seed_value, int(sim.state.credits), int(sim.state.stats["trips"]), first_upgrade_day])
-		if seed_value == 1:
+		if detail.is_empty():
 			detail = {"start": start_matrix, "end": route_matrix(), "routes": route_profit, "milestones": milestones, "curve": credit_curve, "state": sim.state, "sim": sim}
 	route_profit = detail["routes"]
 	milestones = detail["milestones"]
@@ -125,6 +153,10 @@ func do_leg(upgrade: bool) -> bool:
 	var best := best_trade(here, true)
 	if best.is_empty():
 		return false
+	if hikers_on:
+		take_hikers()
+	if jobs_on:
+		take_jobs(here, best["to"])
 	if best["good"] != "":
 		var tonnes: float = best["tonnes"]
 		while tonnes > 0.05 and sim.apply({"type": "buy", "good": best["good"], "tonnes": tonnes}) != "":
@@ -139,6 +171,9 @@ func do_leg(upgrade: bool) -> bool:
 			return false
 	sim.advance_game_time(float(s.location["arrive_t"]) - s.time_s + 1.0)
 	sim.apply({"type": "dock"})
+	# A real pilot spends a moment docked: the sim ticks (insurance renews, hitchhikers ask).
+	sim.advance_game_time(60.0)
+	count_events()
 	var to: String = s.location["place"]
 	var income := 0.0
 	for good in s.ship["cargo"].keys():
@@ -238,7 +273,14 @@ func try_upgrades() -> void:
 		if s.credits - price < UPGRADE_RESERVE:
 			return
 		var t0 := s.time_s
+		var uq := ShipBill.quote(s, sim.data, {"swaps": [{"slot": u[0], "module": u[1]}], "inspect": upkeep_on})
 		if sim.apply({"type": "install_module", "slot": u[0], "module": u[1], "inspect": upkeep_on}) == "":
+			cost["labour"] += float(uq["labour"])
+			cost["parts"] += float(uq["parts"]) - float(uq["trade_in"])
+			cost["inspection"] += float(uq["inspection"])
+			counts["refits"] = int(counts.get("refits", 0)) + 1
+			counts["premium_after_refit"] = float(uq["insurance"]["premium_after"])
+			counts["premium_before_refit"] = float(uq["insurance"]["premium_before"])
 			yard_days += (s.time_s - t0) / DAY
 			if first_upgrade_day < 0.0:
 				first_upgrade_day = day()
@@ -255,10 +297,20 @@ func keep_ship() -> void:
 	var work := []
 	for slot in slots:
 		var cond := Condition.condition(s.ship, slot)
-		if cond < 0.30:
+		if upkeep_mode == 2:
+			# lazy but legal: only what an inspection would fail
+			if cond < float(sim.data.ship_economy["wof"]["min_condition"]) + 0.03:
+				work.append({"slot": slot, "level": "overhaul"})
+		elif cond < 0.30:
 			work.append({"slot": slot, "level": "overhaul"})
 		elif cond < 0.55:
 			work.append({"slot": slot, "level": "service"})
+	# A repair voucher is only good at this operator's yards: use it on whatever is tired.
+	if upkeep_mode == 1 and Favours.yard_voucher_balance(s, sim.data, s.location["place"]) >= 300.0:
+		for slot in slots:
+			var c2 := Condition.condition(s.ship, slot)
+			if c2 >= 0.30 and c2 < 0.85:
+				work.append({"slot": slot, "level": "service"})
 	var wof := Fitness.status(s, sim.data)
 	var inspect: bool = (not wof["valid"]) or float(wof["days_left"]) < 14.0
 	if work.is_empty() and not inspect:
@@ -277,14 +329,76 @@ func keep_ship() -> void:
 	var t0 := s.time_s
 	if sim.apply({"type": "refit", "swaps": [], "services": work, "inspect": inspect}) == "":
 		upkeep_spent += float(bill["total"])
+		for k in ["service", "overhaul", "inspection"]:
+			cost[k] += float(bill[k])
+		cost["voucher"] += float(bill["voucher"])
+		counts["yard_visits"] = int(counts.get("yard_visits", 0)) + 1
 		yard_days += (s.time_s - t0) / DAY
 		milestones.append("Day %.1f: yard visit at %s: %d jobs%s, %d cr, %.1f days" % [day(), name_of(s.location["place"]), work.size(), " + WoF" if inspect else "", int(bill["total"]), float(bill["days"])])
+
+
+func count_events() -> void:
+	for e in sim.take_events():
+		var ty: String = e["type"]
+		if ty in ["module_fault", "wof_lapsed", "insurance_lapsed", "insurance_void", "hitchhiker_asks", "hitchhiker_boarded", "hitchhiker_left", "hitchhiker_refused", "favour_granted", "voucher_used", "unfit_surcharge", "passengers_refused", "condition_low"]:
+			counts[ty] = int(counts.get(ty, 0)) + 1
+		if ty == "contract_delivered" and job_values.has(int(e["data"].get("id", -1))):
+			var iv: Dictionary = job_values[int(e["data"]["id"])]
+			kind_value[iv["form"]] = float(kind_value.get(iv["form"], 0.0)) + float(iv["value_cr"])
+			counts["jobs_delivered"] = int(counts.get("jobs_delivered", 0)) + 1
+		elif ty == "contract_delivered":
+			counts["jobs_delivered"] = int(counts.get("jobs_delivered", 0)) + 1
+		if ty == "hitchhiker_left" and float(e["data"].get("fare", 0.0)) > 0.0:
+			counts["hiker_fares"] = float(counts.get("hiker_fares", 0.0)) + float(e["data"]["fare"])
+
+
+func take_hikers() -> void:
+	var s := sim.state
+	for h in s.favours.get("waiting", {}).get(s.location["place"], []).duplicate():
+		if sim.apply({"type": "accept_hitchhiker", "id": h["id"]}) == "":
+			continue
+
+
+## Takes a package/courier job bound where the bot is going anyway, if it fits.
+func take_jobs(here: String, to: String) -> void:
+	var s := sim.state
+	for o in s.contracts["board"].get(here, []).duplicate():
+		if o["to"] != to or o["pickup"] != "" or int(o.get("passengers", 0)) > 0:
+			continue
+		counts["jobs_seen"] = int(counts.get("jobs_seen", 0)) + 1
+		var has_kind: bool = o.has("in_kind")
+		if has_kind:
+			counts["jobs_in_kind_offered"] = int(counts.get("jobs_in_kind_offered", 0)) + 1
+		if sim.apply({"type": "accept_contract", "id": o["id"]}) == "":
+			counts["jobs_taken"] = int(counts.get("jobs_taken", 0)) + 1
+			counts["job_cash"] = float(counts.get("job_cash", 0.0)) + float(o["reward"])
+			if has_kind:
+				job_values[int(o["id"])] = o["in_kind"]
+
+
+func econ_row(seed_value: int) -> Dictionary:
+	var st := sim.state
+	var row := {"seed": seed_value, "days": days_total, "credits": int(st.credits), "min_credits": int(min_credits), "trips": int(st.stats["trips"]),
+		"premiums": int(st.stats.get("premiums_paid", 0.0)), "surcharges": int(st.stats.get("unfit_surcharges", 0.0)), "yard_days": snappedf(yard_days, 0.1),
+		"first_upgrade": first_upgrade_day, "loan": int(st.insurance.get("loan_cr", 0.0)), "kind_value": kind_value.duplicate()}
+	for k in cost:
+		row["cost_" + k] = int(cost[k])
+	for k in counts:
+		row[k] = counts[k]
+	var m := {}
+	for slot in st.ship["modules"]:
+		m[slot] = snappedf(Condition.condition(st.ship, slot), 0.01)
+	row["end_condition"] = m
+	return row
 
 
 func _already_better(slot: String, module_id: String) -> bool:
 	var current: String = sim.state.ship["modules"].get(slot, "")
 	if current == "":
 		return false
+	# Berths the pilot fitted on purpose (fit=) stay: the bot does not swap them for a bigger pod.
+	if int(sim.data.modules[current].get("berths", 0)) > 0:
+		return true
 	return float(sim.data.modules[current]["price"]) >= float(sim.data.modules[module_id]["price"])
 
 

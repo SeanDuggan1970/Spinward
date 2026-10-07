@@ -87,7 +87,7 @@
 			"isp_pct": 0.02,
 			"heat_pct": 0.0,
 			"wear_pct": 0.0,
-			"value_cr": 1500,
+			"value_cr": 500,
 			"note": "Less scatter in the exhaust: a couple of per cent on fuel."
 		},
 		"lean_burn_map": {
@@ -95,8 +95,8 @@
 			"thrust_pct": -0.02,
 			"isp_pct": 0.05,
 			"heat_pct": -0.03,
-			"wear_pct": 0.0,
-			"value_cr": 2600,
+			"wear_pct": -0.15,
+			"value_cr": 1000,
 			"note": "Gentler and thriftier: more efficient, a little less push, and cooler."
 		},
 		"overdrive_map": {
@@ -104,7 +104,7 @@
 			"thrust_pct": 0.06,
 			"isp_pct": 0.0,
 			"heat_pct": 0.08,
-			"wear_pct": 0.1,
+			"wear_pct": 0.4,
 			"value_cr": 2200,
 			"note": "Pushes harder than the book says. The radiators and the maintenance schedule will notice."
 		},
@@ -114,7 +114,7 @@
 			"isp_pct": 0.03,
 			"heat_pct": 0.05,
 			"wear_pct": 0.0,
-			"value_cr": 3200,
+			"value_cr": 2200,
 			"note": "A proper yard job: better on both counts, at the price of a warmer drive."
 		}
 	},

@@ -112,6 +112,9 @@ func _initialize() -> void:
 	test_wof()
 	test_insurance()
 	test_ship_economy_saves()
+	test_yard_voucher_on_bill()
+	test_hitchhikers_and_wof()
+	test_upkeep_bites()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -3729,3 +3732,165 @@ func test_ship_economy_saves() -> void:
 		x.apply({"type": "depart", "to": "halo_depot"})
 		x.advance_game_time(5.0 * DAY)
 	check(a.state.to_dict() == b.state.to_dict(), "The ship economy is deterministic")
+
+
+## A repair voucher pays towards service and overhaul through the ship bill ("voucher: -X cr").
+func test_yard_voucher_on_bill() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	s.credits = 100000.0
+	_dock_at(sim, "kibo_ring")
+	var op := Favours.operator_of(d, "kibo_ring")
+	Favours.ensure(s)
+	s.favours["vouchers"] = [{"id": 90, "form": "yard", "operator": op, "value_cr": 500.0, "expires_t": s.time_s + 30.0 * DAY}]
+	s.favours["seq"] = 90
+	for slot in s.ship["modules"]:
+		Condition.set_condition(s.ship, slot, 0.4)
+	var plain := ShipBill.quote(s, d, {"service_all": "service", "use_voucher": false})
+	var bill := ShipBill.quote(s, d, {"service_all": "service"})
+	check(float(plain["voucher"]) == 0.0 and float(plain["service"]) > 500.0, "Without a voucher the service bill is whole (%d cr)" % int(plain["service"]))
+	check(absf(float(bill["voucher"]) - 500.0) < 1e-6, "A 500 cr voucher takes 500 cr off service")
+	check(absf(float(bill["total"]) - (float(plain["total"]) - 500.0)) < 1e-6, "and comes off the total")
+	var line: Array = bill["lines"].filter(func(l): return l["kind"] == "voucher")
+	check(line.size() == 1 and line[0]["label"] == "voucher: -500 cr" and absf(float(line[0]["credits"]) + 500.0) < 1e-6, "as one bill line, 'voucher: -500 cr'")
+	check(Favours.yard_voucher_balance(s, d, "kibo_ring") == 500.0, "Quoting spends nothing")
+	# The inspection fee, labour and parts are not repairs.
+	var inspect_only := ShipBill.quote(s, d, {"inspect": true})
+	check(float(inspect_only["voucher"]) == 0.0, "A voucher does not pay the inspection fee")
+	# Only that operator's yards; only live vouchers.
+	var other := ""
+	for id in d.places:
+		if "shipyard" in d.places[id].get("services", []) and Favours.operator_of(d, id) != op:
+			other = id
+			break
+	check(other != "" and float(ShipBill.quote(s, d, {"place": other, "service_all": "service"})["voucher"]) == 0.0, "A voucher is no good at another operator's yard")
+	s.favours["vouchers"][0]["expires_t"] = s.time_s - 1.0
+	check(float(ShipBill.quote(s, d, {"service_all": "service"})["voucher"]) == 0.0, "An expired voucher is no good")
+	s.favours["vouchers"][0]["expires_t"] = s.time_s + 30.0 * DAY
+	# Committing charges exactly the bill and spends the voucher.
+	var before: float = s.credits
+	check(sim.apply({"type": "service", "slot": "all"}) == "", "Service the whole ship")
+	check(absf((before - s.credits) - (float(plain["total"]) - 500.0)) < 1e-6, "The yard is paid the bill less the voucher (%d cr)" % int(before - s.credits))
+	check(s.favours["vouchers"].is_empty(), "A used-up voucher is gone")
+	check(sim.take_events().any(func(e): return e["type"] == "voucher_used" and e["data"].has("left") and e["data"].has("spent") and e["data"].has("place")), "and says so (with what the view reads: spent, left, place)")
+	# A big voucher pays the whole job and keeps the rest (soonest-expiring first).
+	s.favours["vouchers"] = [
+		{"id": 91, "form": "yard", "operator": op, "value_cr": 400.0, "expires_t": s.time_s + 90.0 * DAY},
+		{"id": 92, "form": "yard", "operator": op, "value_cr": 400.0, "expires_t": s.time_s + 10.0 * DAY}]
+	for slot in s.ship["modules"]:
+		Condition.set_condition(s.ship, slot, 0.4)
+	var q2 := ShipBill.quote(s, d, {"services": [{"slot": "drive.0", "level": "service"}]})
+	var spend := minf(800.0, float(q2["service"]))
+	check(absf(float(q2["voucher"]) - spend) < 1e-6, "Two vouchers add up")
+	sim.apply({"type": "service", "slot": "drive.0"})
+	var left := 0.0
+	for v in s.favours["vouchers"]:
+		left += float(v["value_cr"])
+	check(absf(left - (800.0 - spend)) < 1e-6, "and what is left stays on them (%d cr)" % int(left))
+	if spend < 800.0 and not s.favours["vouchers"].is_empty():
+		check(int(s.favours["vouchers"][0]["id"]) == 91, "the sooner-expiring one went first")
+	# Damage repair by use_voucher still works and says where else a voucher helps.
+	s.favours["vouchers"] = [{"id": 93, "form": "yard", "operator": op, "value_cr": 500.0, "expires_t": s.time_s + 30.0 * DAY}]
+	s.ship["damage"] = {}
+	check(sim.apply({"type": "use_voucher", "id": 93}) == "nothing to repair", "use_voucher mends collision damage only: with none it keeps the voucher")
+	check(Favours.yard_voucher_balance(s, d, "kibo_ring") == 500.0, "(and the voucher is still there for the bill)")
+
+
+## Hitchhikers are passengers: no ride without a valid Warrant of Fitness, and a strict
+## port puts them ashore (unpaid) as it does contract passengers.
+func test_hitchhikers_and_wof() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	d.favours["hitchhikers"]["chance"] = 1.0
+	d.favours["hitchhikers"]["cooldown_days"] = 0.0
+	s.ship["modules"]["cargo.1"] = "passenger_berths"
+	_dock_at(sim, "trojan_yards")
+	s.favours["last_dock"] = ""
+	sim.advance_game_time(60.0)
+	var waiting: Array = s.favours["waiting"].get("trojan_yards", [])
+	check(not waiting.is_empty(), "Someone asks for a ride")
+	if waiting.is_empty():
+		return
+	var h: Dictionary = waiting[0]
+	var valid_until: float = s.ship["wof"]["valid_until_t"]
+	s.ship["wof"]["valid_until_t"] = s.time_s - 1.0
+	check(not Fitness.valid(s, d), "(the Warrant of Fitness has lapsed)")
+	var why := String(sim.apply({"type": "accept_hitchhiker", "id": h["id"]}))
+	check(why == Fitness.passenger_job_block(s, d) and why != "", "No hitchhikers without a valid Warrant of Fitness (same rule as passengers)")
+	check(s.ship.get("hikers", []).is_empty() and int(s.ship.get("passengers", 0)) == 0, "and nobody boards")
+	s.ship["wof"]["valid_until_t"] = valid_until
+	check(sim.apply({"type": "accept_hitchhiker", "id": h["id"]}) == "", "With a valid one they come aboard")
+	# Expired in flight: a strict port puts them ashore without a fare; a relaxed one does not.
+	s.ship["hikers"][0]["fare"] = 250.0
+	s.ship["hikers"][0]["to"] = "kibo_ring"
+	s.ship["wof"]["valid_until_t"] = s.time_s - 1.0
+	sim.take_events()
+	s.location = {"status": "approach", "place": "kibo_ring"}
+	var credits: float = s.credits
+	sim.apply({"type": "dock"})
+	sim.advance_game_time(60.0)
+	check(Fitness.dock_terms(s, d, "kibo_ring")["refuse_passengers"], "(Kibo Ring is a strict port)")
+	check(s.ship.get("hikers", []).is_empty() and int(s.ship.get("passengers", 0)) == 0, "A strict port puts the hitchhiker ashore without a valid WoF")
+	var gap := credits - s.credits
+	check(gap > 0.0 and gap < 1000.0, "and they pay no fare (the ship only paid fees: %d cr)" % int(gap))
+	check(sim.take_events().any(func(e): return e["type"] == "hitchhiker_refused"), "and it is said why")
+	var relaxed := fresh()
+	relaxed.state.ship["modules"]["cargo.1"] = "passenger_berths"
+	relaxed.state.ship["hikers"] = [{"id": 1, "name": "Test Rider", "trade": "cook", "to": "trojan_yards", "from": "kibo_ring", "fare": 200.0, "gift": "", "boarded_t": 0.0, "mid_sent": true, "lines": {"board": "", "mid": "", "leave": "bye"}}]
+	relaxed.state.ship["passengers"] = 1
+	relaxed.state.ship["wof"]["valid_until_t"] = relaxed.state.time_s - 1.0
+	relaxed.state.location = {"status": "approach", "place": "trojan_yards"}
+	relaxed.apply({"type": "dock"})
+	relaxed.advance_game_time(60.0)
+	check(not Fitness.dock_terms(relaxed.state, relaxed.data, "trojan_yards")["refuse_passengers"] and relaxed.state.ship.get("hikers", []).is_empty(), "A relaxed port lets them off at their stop")
+	check(relaxed.take_events().any(func(e): return e["type"] == "hitchhiker_left" and float(e["data"]["fare"]) == 200.0), "and they pay the fare")
+
+
+## Upkeep that matters: a tired drive costs real speed, a tune's wear is real, insurance
+## renews early enough that short trips do not lapse it, and tunes are priced at what they save.
+func test_upkeep_bites() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var ship: Dictionary = s.ship.duplicate(true)
+	Condition.set_condition(ship, "drive.0", 0.9)
+	var fresh_a := ShipStats.accel_mps2(ship, d)
+	Condition.set_condition(ship, "drive.0", 0.0)
+	var worn_a := ShipStats.accel_mps2(ship, d)
+	var loss := float(d.ship_economy["performance"]["max_loss"])
+	check(loss >= 0.25 and absf(worn_a / fresh_a - (1.0 - loss)) < 0.02, "A worn-out drive pushes %d%% less than a fresh one (%.4f vs %.4f)" % [int(round(loss * 100.0)), worn_a, fresh_a])
+	# Tunes: Overdrive wears its drive faster, lean-burn slower, in the wear system itself.
+	var wear := {}
+	for tune in ["", "overdrive_map", "lean_burn_map"]:
+		var t := fresh()
+		t.state.credits = 100000.0
+		t.state.ship["tunes"] = []
+		if tune != "":
+			check(Favours.install_tune(t.state.ship, t.data, tune, "test", 0.0) == "", "Fit %s" % tune)
+		t.state.ship["wear"]["drive.0"] = 0.0
+		check(t.apply({"type": "depart", "to": "halo_depot"}) == "", "Depart (%s)" % tune)
+		t.advance_game_time(86400.0)
+		wear[tune] = float(t.state.ship["wear"]["drive.0"])
+	check(wear[""] > 0.0 and wear["overdrive_map"] > wear[""] * 1.3, "Overdrive wears its drive about 40%% faster (%.5f vs %.5f)" % [wear["overdrive_map"], wear[""]])
+	check(wear["lean_burn_map"] < wear[""] * 0.95, "Lean-burn is gentler on it (%.5f)" % wear["lean_burn_map"])
+	# Every tune is still big enough to be offered as a reward in kind.
+	for id in d.favours["tunes"]:
+		check(float(d.favours["tunes"][id]["value_cr"]) >= float(d.favours["in_kind"]["min_value_cr"]), "Tune %s is priced above the in-kind minimum" % id)
+	# Insurance renews at a dock inside the window, and adds to the paid time rather than wasting it.
+	var r := fresh()
+	r.state.credits = 50000.0
+	var pol: Dictionary = r.state.insurance["policy"]
+	var window := float(d.ship_economy["insurance"]["renew_window_days"])
+	check(window >= 7.0, "The renewal window is a week or more (%d days)" % int(window))
+	var before: float = pol["paid_until_t"]
+	r.state.insurance["policy"]["paid_until_t"] = r.state.time_s + (window - 1.0) * DAY
+	before = r.state.insurance["policy"]["paid_until_t"]
+	r.advance_game_time(60.0)
+	check(r.state.insurance["policy"]["paid_until_t"] > before + 29.0 * DAY - 120.0, "A docked ship inside the window renews, from the old expiry")
+	var far := fresh()
+	far.state.insurance["policy"]["paid_until_t"] = far.state.time_s + (window + 5.0) * DAY
+	var far_before: float = far.state.insurance["policy"]["paid_until_t"]
+	far.advance_game_time(60.0)
+	check(far.state.insurance["policy"]["paid_until_t"] == far_before, "and does not renew too early")
