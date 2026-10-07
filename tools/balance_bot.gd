@@ -125,7 +125,7 @@ func _initialize() -> void:
 		if args["tsv"] == "1":
 			print("ECON_RUN " + JSON.stringify(econ_row(seed_value)))
 		print("BOT_RUN seed=%d credits=%d trips=%d first_upgrade_day=%.1f" % [seed_value, int(sim.state.credits), int(sim.state.stats["trips"]), first_upgrade_day])
-		if seed_value == 1:
+		if detail.is_empty():
 			detail = {"start": start_matrix, "end": route_matrix(), "routes": route_profit, "milestones": milestones, "curve": credit_curve, "state": sim.state, "sim": sim}
 	route_profit = detail["routes"]
 	milestones = detail["milestones"]
@@ -396,6 +396,9 @@ func _already_better(slot: String, module_id: String) -> bool:
 	var current: String = sim.state.ship["modules"].get(slot, "")
 	if current == "":
 		return false
+	# Berths the pilot fitted on purpose (fit=) stay: the bot does not swap them for a bigger pod.
+	if int(sim.data.modules[current].get("berths", 0)) > 0:
+		return true
 	return float(sim.data.modules[current]["price"]) >= float(sim.data.modules[module_id]["price"])
 
 
