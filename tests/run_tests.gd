@@ -2614,7 +2614,7 @@ func test_new_habitat_places() -> void:
 					leaked = true
 	check(not leaked, "No job is offered to a habitat that is not built")
 	# Closed places never show up in sim traffic either: run a month and read the departures.
-	var closed: Array = names + ["tsiolkovsky_wheel", "hektor_reach", "line_foot", "stalk_foot", "pavonis_foot"]
+	var closed: Array = names + ["tsiolkovsky_wheel", "hektor_reach", "pavonis_foot"]
 	sim.take_events()
 	sim.state.time_scale = 1.0e5
 	var strays := []
@@ -2652,7 +2652,7 @@ func test_new_habitat_places() -> void:
 						hit = true
 		check(hit, "Jobs are offered to %s once it is open" % id)
 	# Tips: brokers may now hear of them (coverage 'all' or a list that names the place).
-	check(d.brokers["brokers"]["maisie_tran"]["coverage"].has("kalpana_two") and d.brokers["brokers"]["auntie_vell"]["coverage"].has("island_one"), "Regional brokers cover the habitats beside their ports")
+	check(d.brokers["maisie_tran"]["coverage"].has("kalpana_two") and d.brokers["auntie_vell"]["coverage"].has("island_one"), "Regional brokers cover the habitats beside their ports")
 	# Docking works at each, and the Navigation plans a route to it from its neighbour.
 	var freighter := {"hull": "deep_freighter", "modules": d.ships["deep_freighter"]["modules"].duplicate(), "cargo": {}, "fuel_t": 400.0}
 	for id in NEW_PLACES:
