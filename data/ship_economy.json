@@ -64,7 +64,7 @@
 		"restore": 0.3,
 		"cap": 0.92,
 		"min_gain": 0.01,
-		"cost_frac": 0.035,
+		"cost_frac": 0.025,
 		"min_cr": 150
 	},
 	"overhaul": {
@@ -142,9 +142,9 @@
 		"max_claim_mult": 2.5,
 		"buy_max_damage": 0.05,
 		"plans": {
-			"basic": {"name": "Commons mutual: total loss", "covers": ["total_loss"], "rate": 0.010, "excess_mult": 1.0, "collision_excess_mult": 0.0, "payout_frac": 0.8, "cargo_payout_frac": 0.0},
-			"standard": {"name": "Terran Compact marine: total loss and collision repair", "covers": ["total_loss", "collision"], "rate": 0.016, "excess_mult": 1.0, "collision_excess_mult": 0.4, "payout_frac": 0.85, "cargo_payout_frac": 0.0},
-			"full": {"name": "Lloyd's of Luna: everything, cargo too", "covers": ["total_loss", "collision", "cargo"], "rate": 0.024, "excess_mult": 0.8, "collision_excess_mult": 0.3, "payout_frac": 0.9, "cargo_payout_frac": 0.9}
+			"basic": {"name": "Commons mutual: total loss", "covers": ["total_loss"], "rate": 0.007, "excess_mult": 1.0, "collision_excess_mult": 0.0, "payout_frac": 0.8, "cargo_payout_frac": 0.0},
+			"standard": {"name": "Terran Compact marine: total loss and collision repair", "covers": ["total_loss", "collision"], "rate": 0.011, "excess_mult": 1.0, "collision_excess_mult": 0.4, "payout_frac": 0.85, "cargo_payout_frac": 0.0},
+			"full": {"name": "Lloyd's of Luna: everything, cargo too", "covers": ["total_loss", "collision", "cargo"], "rate": 0.017, "excess_mult": 0.8, "collision_excess_mult": 0.3, "payout_frac": 0.9, "cargo_payout_frac": 0.9}
 		},
 		"fallback": {
 			"_note": "No cover (none, lapsed or void): the Commons gives you a stock hull on a loan.",
