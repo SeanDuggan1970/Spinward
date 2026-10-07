@@ -1417,13 +1417,13 @@
 		},
 		"station": {
 			"type": "cylinder",
-			"hub_radius_m": 4000,
-			"hub_length_m": 32000,
+			"hub_radius_m": 400,
+			"hub_length_m": 3200,
 			"ring_radius_m": 0,
 			"ring_tube_m": 0,
 			"spokes": 0,
-			"spin_rpm": 0.47,
-			"port_radius_m": 40,
+			"spin_rpm": 1.5,
+			"port_radius_m": 20,
 			"colour": "offwhite"
 		},
 		"services": [
