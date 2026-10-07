@@ -2331,9 +2331,12 @@ func test_time_ramps() -> void:
 	s.time_scale = 100.0
 	check(sim.apply({"type": "depart", "to": "halo_depot"}) == "", "Depart for the ramp test")
 	check(s.time_scale == 1.0, "Departure starts at x1 (%.0f)" % s.time_scale)
-	for _i in 300:
+	for _i in 200:
 		sim.tick(0.05)
-	check(s.time_scale == 1000.0, "Fifteen seconds out, time has stepped up to x1000 (%.0f)" % s.time_scale)
+	check(s.time_scale == 1.0, "Ten seconds out, still at x1 to watch the port fall away (%.0f)" % s.time_scale)
+	for _i in 500:
+		sim.tick(0.05)
+	check(s.time_scale == 1000.0, "Thirty-five seconds out, time has stepped up to x1000 (%.0f)" % s.time_scale)
 	s.time_scale = 100000.0
 	var last_scale := -1.0
 	var seen_slow := false

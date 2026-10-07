@@ -651,8 +651,9 @@ func _process(_dt: float) -> void:
 
 func _depart(to: String, route_id: String) -> void:
 	var plan_t: float = _last_plan_t.get(to, sim.state.time_s)
-	if sim.apply({"type": "depart", "to": to, "route": route_id, "plan_t": plan_t}) == "":
-		sim.apply({"type": "set_time_scale", "scale": 1000})
+	# Time is left to the departure ramp (travel_system): x1 while we back off the
+	# port and turn to the burn, then up to the default.
+	sim.apply({"type": "depart", "to": to, "route": route_id, "plan_t": plan_t})
 
 
 func _shipyard_tab() -> Control:

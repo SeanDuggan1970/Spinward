@@ -18,7 +18,7 @@
 		],
 		"arrival_scale": 1,
 		"_departure_note": "Leaving port: time drops to x1 while the ship backs off the port, then steps up. Each step is [game seconds since departure, scale]; a pilot who changes the scale meanwhile keeps theirs.",
-		"departure_ramp": [[8, 10], [23, 100], [173, 1000]],
+		"departure_ramp": [[20, 10], [80, 100], [380, 1000]],
 		"_approach_note": "Coming in: time is capped as the port nears, so the last of the approach is seen at x1. Each cap is [game seconds before arrival, highest scale].",
 		"approach_caps": [[172800, 100000], [14400, 10000], [3600, 1000], [600, 100], [60, 10], [10, 1]]
 	},

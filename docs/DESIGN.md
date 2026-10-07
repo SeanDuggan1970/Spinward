@@ -742,7 +742,7 @@ Sean (2026-10-07): a ship passing in front of a gas giant has no depth cues, "th
 
 **Leaving and arriving like a film.**
 - **Time** (`travel_system._time_ramps`, data in `balance.time`):
-  - Departure drops to x1 while the ship backs off the port, then steps up (`departure_ramp`, x10, x100, x1000 within about 11 s), unless the pilot picks a scale of their own.
+  - Departure drops to x1 while the ship backs off the port, then steps up (`departure_ramp`: 20 s at x1, then x10 and x100 for a few seconds each, x1000 about 30 s out), unless the pilot picks a scale of their own. After backing out nose-first, the ship turns to point along its first burn and holds there until the drive lights.
   - Coming in, time is capped ever lower as the port nears (`approach_caps`), so the last ten seconds play at x1.
 - **The ship view** (`follow_view.gd`) shows the ports at each end for the first and last 20 minutes of the trip.
   - Leaving: the port sits off the nose, docking face toward us, and falls away as we back out nose-first, turn and go.

@@ -36,8 +36,9 @@ const STATION_RANGE_M := 30000.0
 ## Ports are drawn for the first and last game seconds of a trip: leaving, backing
 ## out and pulling away; arriving, closing in to where the approach takes over.
 const PORT_WINDOW_S := 1200.0
-## Leaving, the ship backs off the port nose-first for this long before it turns.
-const BACKOUT_S := 45.0
+## Leaving, the ship backs off the port nose-first for this long (game seconds, at x1),
+## then turns to point along its first burn and holds there until the drive lights.
+const BACKOUT_S := 12.0
 
 var sim
 var camera: Camera3D
@@ -69,6 +70,8 @@ var _stations: Dictionary = {}
 ## [the way we leave, the way we arrive] (view space), for the trip departed at _corridor_key.
 var _corridor := [Vector3.FORWARD, Vector3.FORWARD]
 var _corridor_key := -1.0
+var _first_burn_t := INF
+var _first_burn_dir := Vector3.FORWARD
 ## Free camera, about the ship's middle: yaw, pitch (radians), distance (metres).
 var _yaw := 0.6
 var _pitch := 0.25
@@ -285,9 +288,12 @@ func _update_world(dt: float) -> void:
 	var thrust: Array = Navigation.transit_accel(loc, t)
 	_thrusting = V.length(thrust) > 1e-6
 	var forward := Vector3(thrust[0], thrust[2], -thrust[1]).normalized() if _thrusting else -_basis.z
-	# Backing off the port, nose to it; coming in on the last stretch, nose to it too.
+	# Backing off the port, nose to it; then round to the first burn's direction, held
+	# until the drive lights; coming in on the last stretch, nose to the port.
 	if elapsed < BACKOUT_S:
 		forward = -_corridor[0]
+	elif not _thrusting and t < _first_burn_t:
+		forward = _first_burn_dir
 	elif left < PORT_WINDOW_S and not _thrusting:
 		forward = _corridor[1]
 	var want := Basis.looking_at(forward, Vector3.UP if absf(forward.y) < 0.98 else Vector3.RIGHT)
@@ -342,6 +348,16 @@ func _corridors(loc: Dictionary) -> void:
 		if out != Vector3.ZERO and inward != Vector3.ZERO:
 			break
 	_corridor = [out if out != Vector3.ZERO else Vector3.FORWARD, inward if inward != Vector3.ZERO else Vector3.FORWARD]
+	# When and which way the drive first lights, so the ship can be lined up for it.
+	_first_burn_t = INF
+	_first_burn_dir = _corridor[0]
+	for k in 400:
+		var tk := lerpf(t0, t1, float(k) / 400.0)
+		var a: Array = Navigation.transit_accel(loc, tk)
+		if V.length(a) > 1e-6:
+			_first_burn_t = tk
+			_first_burn_dir = Vector3(a[0], a[2], -a[1]).normalized()
+			break
 
 
 ## How far the ship is from a port's docking face tau seconds after leaving it (or
