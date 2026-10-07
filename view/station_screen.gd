@@ -662,7 +662,12 @@ func _shipyard_tab() -> Control:
 	var d = sim.data
 	var stock: Array = ShipyardSystem.yard_stock(s, d)
 	var resale := float(d.balance["shipyard"]["resale_fraction"])
-	parts[1].add_child(UI.label("Swap bolt-on modules. Your old module is taken in part-exchange at %d%% of its price." % int(resale * 100), UI.DIM, 13))
+	# The ship builder: plan the whole refit on screen, with the ship and the bill, then
+	# put it together. The quick swaps below still work for one change at a time.
+	var open := UI.button("Open the ship builder: plan a refit, see her and the bill", _open_builder)
+	UI.tint_button(open, UI.AMBER)
+	parts[1].add_child(open)
+	parts[1].add_child(UI.label("Or swap one module at a time below. Your old module is taken in part-exchange at %d%% of its price." % int(resale * 100), UI.DIM, 13))
 	var slots: Array = s.ship["modules"].keys()
 	slots.sort()
 	for slot in slots:
@@ -683,6 +688,12 @@ func _shipyard_tab() -> Control:
 			p[1].add_child(row)
 		parts[1].add_child(p[0])
 	return parts[0]
+
+
+func _open_builder() -> void:
+	var b := preload("res://view/ship_builder_screen.gd").new(sim)
+	b.closed.connect(refresh)
+	add_child(b)
 
 
 func _module_stats(m: Dictionary) -> String:

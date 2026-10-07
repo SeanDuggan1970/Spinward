@@ -789,6 +789,17 @@ Sean's direction: "we will let players remap in the future and use other control
 - **Small things are carried by hand** (`hand_items` in `data/contracts.json`): letters, papers, a diplomatic pouch, a briefcase, a data cube. They take no hold space, only their few kilograms of mass. Courier, pickup and long-haul jobs draw them alongside freight, and the card says "carried by hand (no hold space)".
 - **The cabin.** Passengers ride in their berths and take no hold space either. Cabin loads (`ship.cabin_t`) count toward the ship's mass but not the hold (`ShipStats.cargo_t`). A job remembers where it was stowed, so jobs taken in older saves come off the hold as they went on.
 
+## The ship builder (Oct 2026)
+
+`view/ship_builder_screen.gd`, opened from the Shipyard tab. You plan a whole refit on screen, then put it together.
+- **The ship in 3D**, rebuilt as the plan changes and turning slowly; drag to turn it, wheel to zoom.
+- **How she flies, now and after:** acceleration and delta-v on full tanks, hold, propellant, heat, life support, berths, dry mass. Green arrows for better, red for worse.
+- **The slots**, nose to tail. A planned change is amber, with what it replaces.
+- **What this yard has** for the chosen slot: each part with its price, its trade-in and the net cost, and what it would change.
+- **The bill:** every part and trade-in, the total, and what you'd have left, then "Put it together".
+- **One pricing rule.** The bill comes from `ShipyardSystem.quote`, the same sums the install command charges (a test holds them equal). Parts go on cheapest first, so trade-ins come in before the dearer parts are paid for.
+- **To come:** wear, condition-based trade-ins, labour and the warrant of fitness will add their lines to the bill.
+
 ## Milestones
 
 - **M0 – Foundation:** done.

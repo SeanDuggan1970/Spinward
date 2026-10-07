@@ -9,6 +9,7 @@ const Ephemeris := preload("res://sim/ephemeris.gd")
 const Market := preload("res://sim/market.gd")
 const Navigation := preload("res://sim/navigation.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
+const ShipyardSystem := preload("res://sim/systems/shipyard_system.gd")
 const V := preload("res://sim/v3.gd")
 const ProjectSystem := preload("res://sim/systems/project_system.gd")
 const RoutePlanner := preload("res://sim/route_planner.gd")
@@ -89,6 +90,7 @@ func _initialize() -> void:
 	test_ship_audio()
 	test_time_ramps()
 	test_cabin_and_berths()
+	test_refit_quote()
 	test_controls()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
@@ -2570,3 +2572,26 @@ func test_cabin_and_berths() -> void:
 	var hold2 := ShipStats.cargo_t(s2.ship)
 	check(sim2.apply({"type": "accept_contract", "id": 9003}) == "", "Passengers board into berths")
 	check(absf(ShipStats.cargo_t(s2.ship) - hold2) < 1e-9 and int(s2.ship["passengers"]) == 3, "Passengers take berths, not hold space")
+
+
+## The ship builder's bill (ShipyardSystem.quote) is what the yard then charges: the
+## same parts, trade-ins and total, refused lines say why, and a plan that would leave
+## cargo without a hold is stopped.
+func test_refit_quote() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	s.credits = 200000.0
+	var plan := {"cargo.1": "passenger_berths", "tank.0": "tank_m"}
+	var q := ShipyardSystem.quote(s, d, plan)
+	check(q["lines"].size() == 2 and q["ok"], "A two-part refit at Kibo Ring is quoted and possible")
+	check(ShipStats.berths(q["trial"], d) == 6, "The trial ship has the berths")
+	var before := float(s.credits)
+	for l in q["lines"]:
+		check(sim.apply({"type": "install_module", "slot": l["slot"], "module": l["module"]}) == "", "Fit %s" % l["module"])
+	check(absf((before - float(s.credits)) - float(q["total"])) < 0.01, "The yard charges what the bill said (%.0f vs %.0f)" % [before - float(s.credits), float(q["total"])])
+	var bad := ShipyardSystem.quote(s, d, {"drive.0": "pathfinder_mk3"})
+	check(not bad["ok"] and String(bad["lines"][0]["why"]) == "not sold here", "A part this yard doesn't stock is refused, with the reason")
+	s.ship["cargo"]["water_ice"] = 25.0
+	var full := ShipyardSystem.quote(s, d, {"cargo.0": "passenger_berths"})
+	check(not full["ok"] and not full["problems"].is_empty(), "A refit that would leave cargo without a hold is stopped")

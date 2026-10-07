@@ -1039,6 +1039,17 @@ func _market_shot(dir: String) -> void:
 			var again := st._tabs.get_child(1) as ScrollContainer
 			print("SCROLL after refresh: ", again.scroll_vertical)
 			_shot(dir + "/departures-after-refresh.png")
+		# The ship builder with a refit planned: berths in a bay, a bigger tank.
+		var builder := preload("res://view/ship_builder_screen.gd").new(sim)
+		st.add_child(builder)
+		for _i in 4:
+			await get_tree().process_frame
+		builder.plan = {"cargo.1": "passenger_berths", "tank.0": "tank_m"}
+		builder.selected = "cargo.1"
+		builder._refresh()
+		for _i in 20:
+			await get_tree().process_frame
+		_shot(dir + "/ship-builder.png")
 	_quit()
 
 

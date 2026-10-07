@@ -53,6 +53,47 @@ static func fits(module: Dictionary, slot: String) -> bool:
 	return slot.split(".")[0] in mounts(module)
 
 
+## The bill for a set of proposed changes {slot: module_id} at this yard, before any is
+## made (the ship builder shows it; _install charges the same). One line per change:
+## the part at this yard's price, the trade-in for what comes out, and whether it can
+## be done here. Also the total, the trial ship the changes would make, and anything
+## that stops the whole refit (a hold too full for the new layout).
+static func quote(state, data, changes: Dictionary) -> Dictionary:
+	var stock := yard_stock(state, data)
+	var resale := float(data.balance["shipyard"]["resale_fraction"])
+	var mult := Perks.yard_mult(state, String(state.location.get("place", "")))
+	var trial: Dictionary = state.ship.duplicate(true)
+	var lines := []
+	var total := 0.0
+	var slots := changes.keys()
+	slots.sort()
+	for slot in slots:
+		var module_id: String = changes[slot]
+		var old_id: String = trial["modules"].get(slot, "")
+		if module_id == old_id:
+			continue
+		var module: Dictionary = data.modules[module_id]
+		var line := {"slot": slot, "module": module_id, "replaced": old_id,
+			"part": float(module["price"]) * mult,
+			"trade_in": float(data.modules[old_id]["price"]) * resale if old_id != "" else 0.0, "why": ""}
+		if not module_id in stock:
+			line["why"] = "not sold here"
+		elif not fits(module, slot) or not slot in slot_names(state, data, slot.split(".")[0]):
+			line["why"] = "does not fit that slot"
+		line["net"] = float(line["part"]) - float(line["trade_in"])
+		total += float(line["net"])
+		trial["modules"][slot] = module_id
+		if trial.has("damage"):
+			trial["damage"].erase(slot)
+		lines.append(line)
+	var problems := []
+	if ShipStats.cargo_t(trial) > ShipStats.cargo_capacity_t(trial, data) + 1e-9:
+		problems.append("sell some cargo first: the new layout holds %.0f t" % ShipStats.cargo_capacity_t(trial, data))
+	trial["fuel_t"] = minf(float(trial["fuel_t"]), ShipStats.fuel_capacity_t(trial, data))
+	return {"lines": lines, "total": total, "trial": trial, "problems": problems,
+		"ok": problems.is_empty() and lines.all(func(l): return l["why"] == "") and total <= float(state.credits) + 1e-6}
+
+
 ## {slot: "cargo.1", module: "cargo_pod_m"}. The old module is sold back at resale value.
 func _install(command: Dictionary) -> String:
 	var s = sim().state
