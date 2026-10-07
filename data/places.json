@@ -1340,7 +1340,8 @@
 			"habitat_modules": 0.6,
 			"electronics": 0.3,
 			"medical": 0.25,
-			"refined_metals": 0.5
+			"refined_metals": 0.5,
+			"food": 3.0
 		},
 		"recipes": []
 	},
@@ -1394,7 +1395,9 @@
 			"oxygen": 1.5,
 			"machine_parts": 0.6,
 			"habitat_modules": 0.3,
-			"electronics": 0.4
+			"electronics": 0.4,
+			"food": 1.5,
+			"medical": 0.1
 		},
 		"recipes": []
 	},
@@ -1452,7 +1455,8 @@
 			"electronics": 0.8,
 			"medical": 0.4,
 			"habitat_modules": 0.6,
-			"refined_metals": 1.5
+			"refined_metals": 1.5,
+			"food": 3.0
 		},
 		"recipes": []
 	},
