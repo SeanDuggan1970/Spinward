@@ -11,7 +11,7 @@
 			"reliability": 0.82,
 			"noise": 0.08,
 			"price": 260,
-			"coverage": ["clarke_exchange", "kalpana_one", "halo_depot", "kibo_ring"],
+			"coverage": ["clarke_exchange", "kalpana_one", "kalpana_two", "halo_depot", "kibo_ring"],
 			"short": ["\"{place} is crying out for {good}, love. Paying about {price} a tonne, last I heard.\"", "\"Word from the {place} crews: {good} at {price} and nobody's bringing it.\""],
 			"glut": ["\"Don't haul {good} to {place}. They're drowning in it. Could pick it up there for {price}, though.\""]
 		},
@@ -44,7 +44,7 @@
 			"reliability": 0.75,
 			"noise": 0.1,
 			"price": 150,
-			"coverage": ["kernel_l5", "trojan_yards", "farside_array", "halo_depot"],
+			"coverage": ["kernel_l5", "island_one", "trojan_yards", "tsiolkovsky_wheel", "farside_array", "halo_depot"],
 			"short": ["\"The Yards folk were in last night moaning about {good}. {place}'s paying {price}, they said.\"", "\"Between us? {place} is short of {good}. {price} a tonne. Eat something, you look thin.\""],
 			"glut": ["\"{place} has more {good} than it knows what to do with. You'd get it for {price}.\""]
 		}

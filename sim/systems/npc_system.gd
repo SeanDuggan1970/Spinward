@@ -346,8 +346,8 @@ func _choose_trade(npc: Dictionary, here: String, t: float) -> Dictionary:
 				continue
 			options.append({"to": to, "buy": {good: tonnes}, "rate": margin * tonnes / float(plan["duration_s"])})
 	if options.is_empty():
-		var places: Array = data.places.keys()
-		places.erase(here)
+		# Nothing pays: drift to any open port (never a closed place or a ribbon's foot).
+		var places: Array = data.places.keys().filter(func(p): return p != here and Perks.place_open(s, data, p))
 		return {"to": places[_rng.randi_range(0, places.size() - 1)], "buy": {}}
 	options.sort_custom(func(a, b): return a["rate"] > b["rate"])
 	var pool := mini(int(data.npcs["trader_choice_pool"]), options.size())

@@ -692,6 +692,166 @@
 				6,
 				30
 			]
+		},
+		"island_haulers": {
+			"operator": "Kernel Settlers",
+			"hull": "drone_freighter",
+			"behaviour": "route",
+			"count": 1,
+			"names": [
+				"Second Harvest"
+			],
+			"commission_project": "island_one",
+			"commission_days": [
+				0
+			],
+			"route": [
+				{
+					"at": "trojan_yards",
+					"buy": [
+						"machine_parts",
+						"habitat_modules"
+					],
+					"to": "island_one"
+				},
+				{
+					"at": "island_one",
+					"buy": [
+						"food"
+					],
+					"to": "trojan_yards"
+				}
+			],
+			"fill": 0.8,
+			"dwell_hours": [
+				10,
+				24
+			]
+		},
+		"kalpana_two_ferries": {
+			"operator": "Kalpana Settlement Trust",
+			"hull": "courier",
+			"behaviour": "route",
+			"count": 1,
+			"names": [
+				"Kalpana Ferry Meera"
+			],
+			"commission_project": "kalpana_two",
+			"commission_days": [
+				0
+			],
+			"route": [
+				{
+					"at": "kibo_ring",
+					"buy": [
+						"food",
+						"medical"
+					],
+					"to": "kalpana_two"
+				},
+				{
+					"at": "kalpana_two",
+					"buy": [
+						"food"
+					],
+					"to": "clarke_exchange"
+				},
+				{
+					"at": "clarke_exchange",
+					"buy": [],
+					"to": "kibo_ring"
+				}
+			],
+			"fill": 0.9,
+			"dwell_hours": [
+				6,
+				14
+			],
+			"flyby_chance": 0.1,
+			"flyby_alt_km": [
+				150,
+				400
+			]
+		},
+		"concord_tenders": {
+			"operator": "Belt Assembly",
+			"hull": "deep_freighter",
+			"behaviour": "route",
+			"count": 1,
+			"names": [
+				"Valley Light"
+			],
+			"commission_project": "concord_pair",
+			"commission_days": [
+				0
+			],
+			"route": [
+				{
+					"at": "piazzi_station",
+					"buy": [
+						"water_ice",
+						"refined_metals"
+					],
+					"to": "concord_pair"
+				},
+				{
+					"at": "concord_pair",
+					"buy": [
+						"food"
+					],
+					"to": "piazzi_station"
+				}
+			],
+			"fill": 0.8,
+			"dwell_hours": [
+				10,
+				30
+			]
+		},
+		"ring_tankers": {
+			"operator": "Luna Cooperative",
+			"hull": "lunar_tanker",
+			"behaviour": "route",
+			"count": 1,
+			"names": [
+				"Ring Keeper"
+			],
+			"commission_project": "selene_ring",
+			"commission_days": [
+				0
+			],
+			"route": [
+				{
+					"at": "shackleton_port",
+					"buy": [
+						"water_ice",
+						"food"
+					],
+					"to": "selene_ring"
+				},
+				{
+					"at": "selene_ring",
+					"buy": [
+						"refined_metals"
+					],
+					"to": "clarke_exchange"
+				},
+				{
+					"at": "clarke_exchange",
+					"buy": [],
+					"to": "shackleton_port"
+				}
+			],
+			"fill": 0.8,
+			"dwell_hours": [
+				10,
+				24
+			],
+			"flyby_chance": 0.05,
+			"flyby_alt_km": [
+				300,
+				800
+			]
 		}
 	},
 	"chatter": {

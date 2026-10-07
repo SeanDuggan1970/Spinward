@@ -9,6 +9,7 @@
 ## with the player is updated. Randomness comes from the shared saved generator.
 extends "res://sim/systems/system.gd"
 
+const Perks := preload("res://sim/perks.gd")
 const Market := preload("res://sim/market.gd")
 const Contracts := preload("res://sim/contracts.gd")
 
@@ -34,6 +35,9 @@ func start_game() -> void:
 	# starts with stale but useful guidance; from then on, knowledge has to be earned.
 	var age := float(sim().data.brokers_meta["logbook_age_days"]) * DAY
 	for place in sim().data.places:
+		# A place not open yet has no board to have copied.
+		if not Perks.place_open(s, sim().data, place):
+			continue
 		var prices := {}
 		for good in sim().data.places[place].get("market", {}):
 			prices[good] = [Market.buy_price(s, sim().data, place, good), Market.sell_price(s, sim().data, place, good)]

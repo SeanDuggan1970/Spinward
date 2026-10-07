@@ -168,3 +168,11 @@ A full pass with the bot and the new `tools/balance_probe.gd` is in [2026-10-clo
 - The "first upgrade day" median swings between day 14 and day 38 across near-identical builds, so treat it with 20 or more seeds (`seeds=20`).
 - The bot gained options: `out=`, `credits=`, `fit=`, `nofleets=`, `take=` and `legs=1`. Use `out=` so `report.md` is not overwritten.
 - No balance numbers were changed in that pass; the report ends with 14 suggestions (file, key, current, suggested, reasoning).
+
+## Four new habitat places (Island One, Kalpana Two, Concord, Selene Ring)
+
+- Bot, 5 seeds, 180 days: mean 72.9k credits, median first upgrade day 17.5 (spread day 10 to 41). The bot never sees the new places: its sim opens none of the projects, so this run mostly checks nothing else moved. It needs a mode that finishes the projects early.
+- The static price-gap table in `report.md` has them in its top rows at their best-case ends: Concord food (about 1,300 cr/t, 220% margin) and Kalpana Two medical to the Moon. Concord's gap is mostly a long haul from the Belt, so it is the Belt's food, not a Earth-Moon loop. Their food now has some local consumption so stock does not sit at the cap.
+- Watch: Kalpana One to Kalpana Two is a 760 m hop, and Kernel to Island One 3 km. Spread, docking time and fee limit it, but a short-hop loop could pay too well once both are open.
+- Route clearance: 1,554 routes between every non-foot place at three dates, all clear (`ROUTES_CLEAR`).
+- Dock trial: all new places dock, 200 to 295 s. Concord at full size (4 km radius) did not dock in 900 s because the scene spawns you three hub radii out, so its model is a tenth scale.

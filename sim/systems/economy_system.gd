@@ -43,6 +43,12 @@ func _integrate(days: float) -> void:
 	var cap_mult := float(e["max_stock_mult"])
 	for place in sim().data.places:
 		var p: Dictionary = sim().data.places[place]
+		if not sim().state.markets.has(place):
+			# A place added since this save was made: open its market at target.
+			var fresh := {}
+			for good in p.get("market", {}):
+				fresh[good] = Market.target(sim().data, place, good)
+			sim().state.markets[place] = fresh
 		var stock: Dictionary = sim().state.markets[place]
 		var mods: Dictionary = sim().state.place_mods.get(place, {})
 		var produce_mult := float(mods.get("produces_mult", 1.0))

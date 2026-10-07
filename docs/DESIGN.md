@@ -62,15 +62,15 @@ The system should feel like a place where big things are being built. Each tier 
 | Lunar space elevator (the Luna Line) | Halo Depot, L1 | 1 | **In** (set piece) | Regolith and ice delivered to L1 |
 | Kalpana One (Globus settlement drum) | Equatorial LEO | 1 | **In** (place) | A settlement market of 3,000 people |
 | Megatelescope array | Farside Array, L2 | 1 | **In** (place + set piece) | Remote science market, no fuel |
-| Bernal sphere (Island One) | Beside The Kernel, L5 | 1–2 | **In** (set piece, under construction) | Habitat-module demand; grows over the campaign |
+| Bernal sphere (Island One) | 3 km from The Kernel, L5 | 1–2 | **In** (set piece, then a port) | Habitat-module demand while building; then a food-and-farm market of 10,000 |
 | Piazzi Stalk (Ceres elevator) | Ceres equator | 2 | **In** (on the body) | Why ice and volatiles are cheap at Piazzi |
 | Pavonis Line (Mars elevator) | Pavonis Mons | 2 | **In** (project, lets down in stages) | Ares Ring output x1.5 when finished |
-| Concord Pair (O'Neill cylinders, 8 x 32 km) | Over Ceres | 2-3 | **In** (project set piece) | Piazzi's market x1.8 |
+| Concord Pair (O'Neill cylinders, 8 x 32 km) | Over Ceres, 120 km from Piazzi | 2-3 | **In** (project set piece, then a port) | Piazzi's market x1.8; Concord feeds the Belt and drinks Ceres' ice |
 | Landauer Deep (the minds' cold core) | Iapetus | 2 | **In** (port + project) | The Sufficiency's home; electronics and parts |
 | Starshade | Valhalla | 2 | **In** (set piece) | Exoplanet science; lore |
 | Solar sail freighters | Clarke to Mars | 2 | **In** (project builds the fleet) | Propellant-free bulk freight, slowly |
 | Stanford torus (the Tsiolkovsky Wheel) | L4, 12 km from Trojan Yards | 2 | **In** (project, then a port) | A town of 10,000; a big food market |
-| Orbital ring (the Selene Ring) | Lunar equator, 52 km up | 3 | **In** (project, built in arcs) | Shackleton output x1.6 |
+| Orbital ring (the Selene Ring) | Lunar equator, 52 km up | 3 | **In** (project, built in arcs, then a junction port) | Shackleton output x1.6; the ring's junction smelts regolith to metal |
 | Earth–Mars cycler (Aldrin cycler) | Earth–Mars | 2 | Planned | A moving station you catch on its schedule |
 | Space farms | Kernel, Belt | 2–3 | Partly in (Kernel food) | Food chain away from Earth |
 | Lofstrom loop (launch loop) | Earth equator | 2 | Planned (backdrop) | Cheaper Earth-to-orbit freight |
@@ -647,6 +647,43 @@ Sean's direction (2026-10-05): add a Stanford torus and an orbital ring; ships c
     - The insurance pool finds you a stock Mule for a 3,000 cr excess.
     - Cargo and carried jobs go down with the ship; story favours are offered again.
 - **HUD and capture:** the HUD has a HULL row and a proximity alert for rocks on your course. `--crash=<dir>` shoots a rock strike and a wreck.
+
+## Places the projects build (Oct 2026)
+
+Sean's direction (2026-10-07): "when new stations and bases come online they need to be actually selectable in the destinations."
+
+A place with `opens_with: <project>` in `data/places.json` is closed (`Perks.place_open`) until the project is done, then is a normal port. Four more habitats now work this way, each with its own market, built from the project's description:
+
+| Place | Project | Where | Model | Trade it brings |
+|---|---|---|---|---|
+| Island One | `island_one` | L5, 3 km off The Kernel | cylinder 250 m radius, 500 m long (see below) | Food and oxygen out; water, volatiles, parts and habitat modules in. A second food source at L5 for the Kernel and Trojan. |
+| Kalpana Two | `kalpana_two` | Kalpana One's orbit, 760 m ahead | cylinder 250 x 325 m, turning the other way | Food and medicine out; water, oxygen, parts, electronics in. It shares Kalpana One's fuel dock, so no pump. |
+| Concord | `concord_pair` | Over Ceres, 10 degrees round from Piazzi (about 120 km) | dock model 1/10 scale: cylinder 400 m radius, 3.2 km long (real: 4 km, 32 km) | The Belt's first big farm: 10 t/day of food out, 10 t/day of Ceres ice and volatiles, parts and refined metal in. |
+| Selene Ring | `selene_ring` | Lunar orbit at 52 km altitude | wheel 400 m radius at lunar gravity | Regolith, refined metal and a little helium-3 out; water, food, parts in. Refined metal from the Moon is new for Clarke, the Kernel and Trojan. |
+
+**Departures from the real thing, on purpose** (kept here because there is no RESEARCH entry for each):
+- **Island One is a Bernal sphere, but the station model only has wheel, cylinder and stanford.** It is built as a squat drum (radius 250 m, length 500 m, the same diameter) until a sphere type exists. The unfinished sphere in the sky (`bernal_frame`) is the real shape.
+- **Concord is one cylinder at a tenth of its size.** The pair is two, counter-rotating, each 4 km radius and 32 km long; the dock scene spawns you three hub radii out, and at full size the autopilot could not dock in 15 minutes (`--dock-trial` failed). The dockable model is the first cylinder at 1/10 scale, and the second is not modelled there. The set piece shows both at full size from Piazzi. The set piece shows both from Piazzi.
+- **Kalpana Two's spin is negative** (`spin_rpm: -1.89`): it turns the opposite way to its sister. If the docking scene mishandles a negative rate, make it positive and note it.
+- **The Selene Ring is a Keplerian orbit at 52 km.** A real orbital ring's sheath stands still and its cable moves faster than orbit; a ship cannot match that, so the junction co-orbits like any station.
+- **Places beside a port sit on its orbit**, a few hundred metres to a few km ahead. Hops between them are very short (Kalpana One to Kalpana Two is 760 m). Trade between them is bounded by the spread, the docking fee and the time to dock, but watch the balance bot for it.
+
+**What honours "open" now** (everything that lists places goes through `Perks.place_open`):
+- **Departures** (station screen), the system map and the orbit view's markers and labels.
+- **Job boards:** both ends of an offer (`Contracts.make_offer`), and rumours (`tip_system`).
+- **NPC traffic:** traders (`_choose_trade`, including the "nothing pays, so drift" fallback, which used to pick from every place, closed or not), and fixed-route fleets. A fleet that serves a project's place sets `commission_project`, so its ships stay out of service until the project is done and then run on their `commission_days`. New fleets: `island_haulers`, `kalpana_two_ferries`, `concord_tenders`, `ring_tankers`. They only carry goods the destination is short of.
+- **The Spaceline:** each project's `complete` story says the place is open to visitors.
+- **Tips and brokers:** regional brokers' `coverage` lists include the new places (Maisie Tran: Kalpana Two; Auntie Vell: Island One and the Tsiolkovsky Wheel). The old logbook has no board for a place that is not open, so a new place says "No price board on file" until you have seen it. Brokers with `coverage: "all"` pick them up on their own.
+- **Markets:** closed places' markets still run from day one, so they open warm. A save from before a place existed grows its market at target on the next tick.
+- **Docking:** every place with a `station` block gets a flight scene. `--dock-trial` flies the autopilot into every non-foot place, open or not, so new places are covered automatically.
+- **Tools:** `tools/route_clearance.gd` checks every route between every non-foot place, open or not.
+
+To add the next one, copy an entry (`tsiolkovsky_wheel` for a lagrange spot, `kalpana_two` for an orbit), set `opens_with`, give it a `station` block and a market whose flows only name goods on it, add a `complete` story to `data/news.json`, add a `commission_project` fleet if it should have traffic, and add it to a broker's `coverage` if that broker lists places by name. `test_new_habitat_places` shows what to check.
+
+**Considered and not added:**
+- **Valhalla science ring** (`valhalla_deep_ring`): Valhalla Station already exists as a place and the ring is its expansion, with a private, invitation-only project, so nothing new to dock at. Visitor passes by reputation are a later job for contracts.
+- **Landauer Deep's second core** (`second_core`): Landauer Deep is already open (day 60, `opens_after_days`). The second core is its own interior; a second dock would only repeat it.
+- **Tharsis greenhouses** (`ares_greenhouses`): the greenhouses are on Pavonis Mons, which is Pavonis Foot (`opens_with: pavonis_line`, `foot_of: ares_ring`). It already has a food market; ships cannot land there, you ride the ribbon. Ares Ring's produces x1.6 is the project's effect.
 
 ## The ship view in transit (Oct 2026)
 
