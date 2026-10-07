@@ -665,7 +665,13 @@ func test_routes_clear_of_bodies() -> void:
 	]
 	var eph = sim.ephemeris
 	var bodies := ["sun", "earth", "moon", "jupiter", "callisto", "saturn", "titan", "enceladus", "iapetus"]
-	var pole := V.normalized(V.cross(V.sub(eph.position("titan", 0.0), eph.position("saturn", 0.0)), V.sub(eph.position("titan", 86400.0), eph.position("saturn", 86400.0))))
+	# Saturn's ring-plane normal, in the ecliptic frame, from the pole's RA and Dec.
+	var sat: Dictionary = d.bodies["saturn"]
+	var ra := deg_to_rad(float(sat.get("pole_ra_deg", 0.0)))
+	var dec := deg_to_rad(float(sat.get("pole_dec_deg", 90.0)))
+	var eq := [cos(dec) * cos(ra), cos(dec) * sin(ra), sin(dec)]
+	var obl := deg_to_rad(23.4393)
+	var pole := [eq[0], eq[1] * cos(obl) + eq[2] * sin(obl), -eq[1] * sin(obl) + eq[2] * cos(obl)]
 	for c in cases:
 		var a: String = c[1]
 		var b: String = c[2]
