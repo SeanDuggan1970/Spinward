@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ \"$(uname -s 2>/dev/null)\" = Linux ] && bash \"${CLAUDE_PROJECT_DIR:-.}/tools/setup.sh\" >&2; exit 0"
+          }
+        ]
+      }
+    ]
+  }
+}
