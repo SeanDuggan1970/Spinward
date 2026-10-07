@@ -168,3 +168,8 @@ A full pass with the bot and the new `tools/balance_probe.gd` is in [2026-10-clo
 - The "first upgrade day" median swings between day 14 and day 38 across near-identical builds, so treat it with 20 or more seeds (`seeds=20`).
 - The bot gained options: `out=`, `credits=`, `fit=`, `nofleets=`, `take=` and `legs=1`. Use `out=` so `report.md` is not overwritten.
 - No balance numbers were changed in that pass; the report ends with 14 suggestions (file, key, current, suggested, reasoning).
+
+## Favours (rewards in kind, hitchhikers, tunes), 2026-10-07
+
+- The bot takes no jobs, hitchhikers or vouchers, so it only feels favours through the shared sim random stream (the new system draws from `rng_state`, which shifts NPC and market rolls). Before/after, 180 days, 20 seeds: mean 95,532 cr before, 91,173 after (median 105,797 vs 83,646; spread 35k to 160k either way). That is inside the seed noise this file already warns about; nothing in the trading path changed.
+- Not measured by the bot, to check by hand: how often offers come in kind (`in_kind.chance` x `client_mult`: about 6 to 20% by kind and operator), whether the 0.85 `cash_offset` makes vouchers feel fair, and whether a +6% thrust / +8% heat Overdrive map throttles a stock Mule's radiators (it can).
