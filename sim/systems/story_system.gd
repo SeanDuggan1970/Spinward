@@ -99,7 +99,9 @@ func _fire(beat: Dictionary) -> void:
 
 
 ## A favour: a fixed job on the local board, offered by name (shown first, with the
-## beat's message as its opener).
+## beat's message as its opener). It is open to any pilot whatever their standing
+## (-50 is the floor): giving one up or letting it fail costs standing with the
+## client, and a favour gated at 0 would then be offered again but never takeable.
 func _favour(spec: Dictionary, beat: Dictionary) -> Dictionary:
 	var s = sim().state
 	var data = sim().data
@@ -112,7 +114,7 @@ func _favour(spec: Dictionary, beat: Dictionary) -> Dictionary:
 		"id": int(s.contracts["seq"]), "kind": "package", "client": spec["client"], "issued_at": here, "pickup": "", "to": spec["to"],
 		"item": spec["item"], "mass_t": float(spec["mass_t"]), "passengers": 0, "reward": float(spec["reward"]),
 		"window_s": days * float(spec.get("slack", 1.8)) * DAY, "expires_t": s.time_s + 60.0 * DAY,
-		"min_rep": 0.0, "rep": float(spec.get("rep", 5.0)), "channel": "approach", "hidden": false,
+		"min_rep": -50.0, "rep": float(spec.get("rep", 5.0)), "channel": "approach", "hidden": false,
 		"opener": beat.get("message", ""), "favour": beat["id"],
 	}
 	var board: Array = s.contracts["board"].get(here, [])

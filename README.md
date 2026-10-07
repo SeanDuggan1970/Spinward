@@ -127,6 +127,12 @@ To regenerate [docs/balance/report.md](docs/balance/report.md) after changing an
 .tools/godot/Godot_v4.7.2-stable_win64_console.exe --headless --path . --script res://tools/balance_bot.gd -- days=180 upgrade=1
 ```
 
+The bot also takes `seeds=N`, `credits=N`, `fit=slot:module,...` (free modules, to measure what one is worth), `nofleets=id,id` (leave NPC fleets out), `legs=1` (print every leg) and `out=<path>` (write the report elsewhere, so `report.md` stays put). For the numbers the bot can't give (elevators, collisions, projects, outer freight, loops), run the probe; it prints tables and writes nothing:
+
+```powershell
+.tools/godot/Godot_v4.7.2-stable_win64_console.exe --headless --path . --script res://tools/balance_probe.gd -- sections=elevators,collisions
+```
+
 To capture screenshots of every screen into a folder (needs a window):
 
 ```powershell

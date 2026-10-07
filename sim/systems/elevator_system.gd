@@ -4,7 +4,8 @@
 ## climber container and your ship left docked above. Up: back to the port and your
 ## ship. Ships cannot fly to a foot (Perks.place_open), so the ribbon is the only way
 ## in. A line still being built ("project") takes no passengers. The fare is a seat
-## plus so much a tonne for whatever is in your hold.
+## plus so much a tonne for whatever is in your hold; the way up never turns anyone away
+## for want of it (see blocked).
 extends "res://sim/systems/system.gd"
 
 const ShipStats := preload("res://sim/ship_stats.gd")
@@ -51,7 +52,10 @@ static func blocked(data, state, place: String) -> String:
 	var line: Dictionary = here["line"]
 	if line.has("project") and not state.projects.get(line["project"], {}).get("done", false):
 		return "%s is still being built" % line["name"]
-	if state.credits < fare(data, state, place):
+	# Only the way down needs the fare in hand. Nothing at the foot earns money, so a pilot
+	# who arrives with less than the fare would be stuck there for good; the ride up goes on
+	# credit instead, as emergency fuel does.
+	if here["down"] and state.credits < fare(data, state, place):
 		return "the fare is %d cr" % int(ceil(fare(data, state, place)))
 	return ""
 

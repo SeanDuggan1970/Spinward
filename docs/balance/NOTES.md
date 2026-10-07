@@ -150,3 +150,13 @@ From Halo Depot, 2061-03-01, at full tanks.
 3. Consider a "market data" upgrade. The co-pilot currently has perfect price knowledge, and knowing prices at a distance could be something you earn.
 4. Pace check once Sean plays: is about 2.5 game days per trip at ×1000 (about 3–4 real minutes) right? Shorter overhead hours, or ×10,000 as a default, would speed it up.
 5. Measure how long hand-docking takes in real play, and tune the tug fee to that.
+
+## Cloud report, 2026-10-06
+
+A full pass with the bot and the new `tools/balance_probe.gd` is in [2026-10-cloud-report.md](2026-10-cloud-report.md). Findings that matter for tuning:
+
+- Income is flat at about 1,000 cr/day after day 60 (about 1,450 before). Extra cargo and tanks earn almost nothing, because buying more than about a quarter of a port's stock moves the price against you.
+- Outer-system freight pays 150 to 860 cr/day against about 1,000 to 1,450 at home; at least five projects stall for lack of goods the player must bring.
+- The "first upgrade day" median swings between day 14 and day 38 across near-identical builds, so treat it with 20 or more seeds (`seeds=20`).
+- The bot gained options: `out=`, `credits=`, `fit=`, `nofleets=`, `take=` and `legs=1`. Use `out=` so `report.md` is not overwritten.
+- No balance numbers were changed in that pass; the report ends with 14 suggestions (file, key, current, suggested, reasoning).

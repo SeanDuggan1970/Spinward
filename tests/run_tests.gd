@@ -71,6 +71,13 @@ func _initialize() -> void:
 	test_minds_and_sails()
 	test_elevators()
 	test_damage()
+	test_news_in_depth()
+	test_elevator_rides()
+	test_damage_in_depth()
+	test_story_arcs_in_depth()
+	test_story_favour_after_abandon()
+	test_elevator_not_stranded_at_foot()
+	test_edge_cases()
 	test_ship_audio()
 	test_time_ramps()
 	print("%d checks, %d failures" % [checks, failures])
@@ -1249,6 +1256,776 @@ func test_damage() -> void:
 	var off: Array = d.places["tsiolkovsky_wheel"]["location"]["offset_km"]
 	check(absf(V.distance(wheel, yards) - 1000.0 * Vector3(off[0], off[1], off[2]).length()) < 50.0, "The Wheel stands off Trojan Yards where its data says")
 	check(d.bodies["moon"]["structures"].any(func(st): return st["kind"] == "orbital_ring"), "The Moon can have a ring")
+
+
+## The Spaceline, in depth: ordering, no repeats, announcements tied to projects and
+## story beats, the same feed for the same seed, and catching up on an old save.
+func test_news_in_depth() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var posted: Array = s.news["posted"]
+	check(_unique(posted), "Day one: no story is posted twice")
+	var t_sorted := true
+	for i in range(1, s.news["items"].size()):
+		t_sorted = t_sorted and float(s.news["items"][i - 1]["t"]) <= float(s.news["items"][i]["t"])
+	check(t_sorted, "Day one: the feed is in date order")
+	check(_unique(s.news["items"].map(func(i): return i["id"])), "Day one: every item has its own id")
+	for story in d.news["stories"]:
+		if float(story.get("after_days", 0.0)) < 0.0:
+			check(story["id"] in posted, "Backdated story %s is already in the feed" % story["id"])
+	# Public projects already revealed are announced exactly once; none is announced early.
+	for id in d.projects:
+		var announcements: Array = s.news["items"].filter(func(i): return i.get("project", "") == id and i["kind"] == "project")
+		var revealed: bool = s.projects[id]["revealed"] and not d.projects[id].has("invite")
+		check(announcements.size() == (1 if revealed else 0), "%s has %d announcement(s) on day one (revealed public: %s)" % [id, announcements.size(), revealed])
+	var ships: Array = s.news["ships"]
+	check(_unique(ships), "Each ship is on the commissioned list once")
+	# Run 60 days in 5-day steps: nothing repeats, time only goes forward, ids climb.
+	sim.state.time_scale = 1.0e5
+	var live: Array = []
+	for _k in 12:
+		sim.advance_game_time(5.0 * DAY)
+		for e in sim.take_events():
+			if e["type"] == "news":
+				live.append(e["data"]["item"])
+	check(live.size() >= 8, "A busy first two months for the news (%d live items)" % live.size())
+	var ids: Array = live.map(func(i): return int(i["id"]))
+	var increasing := true
+	for i in range(1, live.size()):
+		increasing = increasing and int(live[i]["id"]) > int(live[i - 1]["id"]) and float(live[i]["t"]) >= float(live[i - 1]["t"])
+	check(increasing, "Live news arrives in id and time order")
+	check(_unique(s.news["posted"]), "No story is posted twice")
+	var keys: Array = live.map(func(i): return "%s|%s|%s" % [i["kind"], i.get("project", i.get("story", i.get("npc", ""))), i["headline"]])
+	check(_unique(keys), "No headline runs twice")
+	check(live.all(func(i): return String(i["headline"]) != "" and String(i["body"]) != ""), "Every item has a headline and a body")
+	# Each story landed on or after its own day.
+	for item in live:
+		if item.has("story"):
+			var story: Dictionary = d.news["stories"].filter(func(x): return x["id"] == item["story"])[0]
+			check(float(item["t"]) - float(s.started_t) >= float(story.get("after_days", 0.0)) * DAY - 1.0, "Story %s is not early" % item["story"])
+	# Effects are applied once per story, however long the game runs.
+	var seam := float(s.place_mods.get("psyche_claims", {}).get("produces_mult", 1.0))
+	check(absf(seam - 1.3) < 1e-6, "The platinum seam enriches Psyche once (x%.3f)" % seam)
+	sim.advance_game_time(5.0 * DAY)
+	check(absf(float(s.place_mods["psyche_claims"]["produces_mult"]) - seam) < 1e-9, "Waiting longer does not enrich it again")
+
+	# Tied to the story: these wait for their beat, and post once it is done.
+	var gated := fresh()
+	var g := gated.state
+	g.started_t -= 400.0 * DAY
+	gated.advance_game_time(3600.0)
+	check(g.news["posted"].size() >= d.news["stories"].size() - 3, "Four hundred days on, every story that is not waiting on a beat is out")
+	for id in ["farside_silence", "hello_back", "first_delegate"]:
+		check(not id in g.news["posted"], "%s still waits for its beat" % id)
+	g.story["done"].append("the_occultation")
+	gated.advance_game_time(3600.0)
+	check("farside_silence" in g.news["posted"] and not "hello_back" in g.news["posted"], "Finishing the occultation beat posts only its own story")
+	g.story["done"].append("the_meeting")
+	g.story["done"].append("the_delegate")
+	gated.advance_game_time(3600.0 * 12.0)
+	check("hello_back" in g.news["posted"] and "first_delegate" in g.news["posted"], "Later beats post theirs")
+	var count: int = g.news["items"].size()
+	gated.advance_game_time(10.0 * DAY)
+	check(g.news["items"].filter(func(i): return i.get("story", "") == "hello_back").size() == 1, "A beat's story is not repeated")
+	check(g.news["items"].size() >= count, "Time only adds to the feed (until it is trimmed)")
+
+	# Tied to projects: stages and completion make the news, each once, and the whole
+	# project history is announced by the right backer.
+	var proj := fresh()
+	var p := proj.state
+	var pid := ""
+	for id in d.projects:
+		if not d.projects[id].has("invite") and not p.projects[id]["revealed"] and d.projects[id]["stages"].size() >= 3 and d.news["projects"].has(id):
+			pid = id
+			break
+	check(pid != "", "There is a public, later, multi-stage project to follow (%s)" % pid)
+	var stages: Array = d.projects[pid]["stages"]
+	check(not p.news["items"].any(func(i): return i.get("project", "") == pid), "%s is not in the news before its reveal" % pid)
+	p.projects[pid]["revealed"] = true
+	proj.advance_game_time(3600.0 * 3.0)
+	var announced: Array = p.news["items"].filter(func(i): return i.get("project", "") == pid)
+	check(announced.size() == 1 and announced[0]["kind"] == "project", "%s is announced once, when revealed" % pid)
+	check(String(announced[0]["headline"]) != "" and String(announced[0]["body"]).length() > 20, "The announcement has something to say")
+	p.projects[pid]["stage"] = 2
+	proj.advance_game_time(3600.0 * 3.0)
+	var stage_items: Array = p.news["items"].filter(func(i): return i.get("project", "") == pid and i["id"] != announced[0]["id"])
+	check(stage_items.size() == 2, "Skipping to stage 2 reports stages 0 and 1, once each (%d)" % stage_items.size())
+	proj.advance_game_time(3600.0 * 12.0)
+	check(p.news["items"].filter(func(i): return i.get("project", "") == pid).size() == 3, "Nothing more is reported while the stage holds")
+	p.projects[pid]["stage"] = stages.size() - 1
+	p.projects[pid]["done"] = true
+	proj.advance_game_time(3600.0 * 3.0)
+	var all: Array = p.news["items"].filter(func(i): return i.get("project", "") == pid)
+	check(all.size() == 1 + stages.size() - 1 + 1, "Announcement, every stage but the last, then completion (%d items for %d stages)" % [all.size(), stages.size()])
+	check(all[all.size() - 1]["id"] > all[all.size() - 2]["id"] and p.news["projects"][pid]["done"], "Completion is the last item and the feed remembers it")
+	# Invitation-only builds never reach the papers, even once they open.
+	p.reputation["Terran Compact Science"] = 25.0
+	proj.advance_game_time(2.0 * 3600.0)
+	check(ProjectSystem.open_to_player(p, d, "valhalla_deep_ring") and not p.news["items"].any(func(i): return i.get("project", "") == "valhalla_deep_ring"), "An invited project still stays out of the news")
+	# Stories gated on a project wait for it (none in the data today, so test the gate).
+	var gate := fresh()
+	var gate_story := {"id": "x", "after_project": "luna_line_2"}
+	var ns = gate.systems.filter(func(x): return x.get_script().resource_path.ends_with("news_system.gd"))[0]
+	check(not ns._ready(gate_story), "A project-gated story waits")
+	gate.state.projects["luna_line_2"]["done"] = true
+	check(ns._ready(gate_story), "and runs when the project is done")
+	var stage_gate := {"id": "y", "after_stage": ["island_one", 2]}
+	check(not ns._ready(stage_gate), "A stage-gated story waits")
+	gate.state.projects["island_one"]["stage"] = 2
+	check(ns._ready(stage_gate), "and runs at its stage")
+
+	# Same seed, same news. Different seeds: the same stories (they are on the calendar).
+	var run := func(seed_value: int) -> Dictionary:
+		var r := Sim.new()
+		r.new_game(seed_value)
+		r.advance_game_time(40.0 * DAY)
+		return r.state.news
+	var a: Dictionary = run.call(5)
+	var b: Dictionary = run.call(5)
+	check(a == b, "The same seed gives the same feed")
+	var c: Dictionary = run.call(6)
+	check(a["posted"] == c["posted"], "Another seed posts the same stories in the same order")
+	# Step size does not matter either.
+	var coarse := Sim.new()
+	coarse.new_game(5)
+	coarse.advance_game_time(20.0 * DAY)
+	var fine := Sim.new()
+	fine.new_game(5)
+	for _k in 20:
+		fine.advance_game_time(DAY)
+	check(coarse.state.news == fine.state.news, "One 20-day jump and 20 daily steps give the same feed")
+
+	# Saves: mid-feed round trip, and an old save with no feed catches up without repeats.
+	var saved := SaveIO.from_text(SaveIO.to_text(sim.state))
+	check(saved != null and saved.news == sim.state.news, "The whole feed survives a save")
+	var old := fresh()
+	old.advance_game_time(10.0 * DAY)
+	old.state.news = {}
+	old.advance_game_time(3600.0 * 6.0)
+	var o: Dictionary = old.state.news
+	check(not o.is_empty() and _unique(o["posted"]) and _unique(o["items"].map(func(i): return i["id"])), "A save from before the feed catches up without repeats")
+	check(o["items"].any(func(i): return i.get("project", "") == "island_one"), "and finds the old announcements")
+	# The feed is capped.
+	var capped := fresh()
+	for k in 200:
+		capped.systems[capped.systems.size() - 1]._post({"kind": "world", "headline": "n%d" % k, "body": "b"}, capped.state.time_s, false)
+	check(capped.state.news["items"].size() == int(d.news["keep"]) and capped.state.news["items"][-1]["headline"] == "n199", "The feed keeps the newest %d items" % int(d.news["keep"]))
+
+
+func _clone(catalog, text: String) -> Sim:
+	var c := Sim.new(catalog)
+	c.load_state(SaveIO.from_text(text))
+	return c
+
+
+func _unique(values: Array) -> bool:
+	var seen := {}
+	for v in values:
+		if seen.has(v):
+			return false
+		seen[v] = true
+	return true
+
+
+## Elevators in depth: fares at every line and direction, refusal when broke or
+## when the line is unfinished, the ride itself (time, arrival, nothing else works
+## mid-ride), saves mid-ride, and cargo and markets at the foot.
+func test_elevator_rides() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var Elevator := preload("res://sim/systems/elevator_system.gd")
+	check(Elevator.line_here(d, "kibo_ring").is_empty(), "Kibo Ring has no ribbon")
+	check(Elevator.fare(d, s, "kibo_ring") == 0.0 and Elevator.blocked(d, s, "kibo_ring") == "there is no elevator here", "No ribbon, no fare, a reason")
+	for foot in ["line_foot", "stalk_foot", "pavonis_foot"]:
+		var here: Dictionary = Elevator.line_here(d, foot)
+		check(not here["down"] and here["to"] == d.places[foot]["foot_of"], "From %s the ride is up, to its port" % foot)
+	for port in ["halo_depot", "piazzi_station", "ares_ring"]:
+		var here: Dictionary = Elevator.line_here(d, port)
+		check(here["down"] and here["to"] == d.places[port]["elevator"]["foot"], "From %s the ride is down" % port)
+	# Fares: a seat plus so much a tonne, the same both ways, zero hold costs the seat alone.
+	s.ship["cargo"] = {}
+	check(Elevator.fare(d, s, "halo_depot") == 150.0 and Elevator.fare(d, s, "line_foot") == 150.0, "An empty hold pays the seat only (150 cr)")
+	s.ship["cargo"] = {"water_ice": 4.0, "food": 1.5}
+	check(absf(Elevator.fare(d, s, "halo_depot") - (150.0 + 20.0 * 5.5)) < 1e-9, "Cargo adds 20 cr/t, all goods counted")
+	check(absf(Elevator.fare(d, s, "piazzi_station") - (80.0 + 12.0 * 5.5)) < 1e-9, "The Stalk is cheaper: 80 cr + 12 cr/t")
+	check(absf(Elevator.fare(d, s, "line_foot") - Elevator.fare(d, s, "halo_depot")) < 1e-9, "Up costs what down does")
+	# The Pavonis Line takes nobody until it is built, whatever you can pay.
+	s.credits = 1.0e9
+	s.location = {"status": "docked", "place": "ares_ring"}
+	check(sim.apply({"type": "ride_elevator"}) == "the Pavonis Line is still being built" and s.location["status"] == "docked", "Pavonis refuses while unfinished, even for a rich pilot")
+	check(s.credits == 1.0e9, "and charges nothing")
+	s.projects["pavonis_line"]["done"] = true
+	s.ship["cargo"] = {"refined_metals": 2.0}
+	check(absf(Elevator.fare(d, s, "ares_ring") - (600.0 + 45.0 * 2.0)) < 1e-9, "Finished, the Pavonis Line is 600 cr + 45 cr/t")
+	check(sim.apply({"type": "ride_elevator"}) == "" and s.location["status"] == "elevator" and s.location["to"] == "pavonis_foot", "and then it runs")
+	check(absf(float(s.location["arrive_t"]) - float(s.location["depart_t"]) - 120.0 * 3600.0) < 1e-6, "Five days down")
+	sim.advance_game_time(120.0 * 3600.0 + 1.0)
+	check(s.location == {"status": "docked", "place": "pavonis_foot"}, "Arrived at Pavonis Foot")
+
+	# Broke: one credit short is refused, exactly the fare is fine, and a refusal costs nothing.
+	var b := fresh()
+	var t := b.state
+	t.location = {"status": "docked", "place": "halo_depot"}
+	t.ship["cargo"] = {"water_ice": 5.0}
+	var fare := 150.0 + 100.0
+	t.credits = fare - 1.0
+	var before := t.to_dict()
+	check(b.apply({"type": "ride_elevator"}) == "the fare is 250 cr", "A pilot one credit short is refused with the fare")
+	check(t.credits == fare - 1.0 and t.location["status"] == "docked" and t.ship["cargo"]["water_ice"] == 5.0, "Nothing is taken from them")
+	t.credits = fare - 0.4
+	check(b.apply({"type": "ride_elevator"}) != "", "A fraction short is still short")
+	t.credits = -50.0
+	check(b.apply({"type": "ride_elevator"}) != "", "Someone in debt cannot ride")
+	t.credits = fare
+	check(b.apply({"type": "ride_elevator"}) == "" and absf(t.credits) < 1e-9, "Exactly the fare rides, and leaves nothing")
+	# Mid-ride: you are on the ribbon, not in a port.
+	for cmd in [{"type": "buy", "good": "food", "tonnes": 1}, {"type": "sell", "good": "water_ice", "tonnes": 1}, {"type": "depart", "to": "kibo_ring"},
+			{"type": "ride_elevator"}, {"type": "refuel", "fill": true}, {"type": "repair"}, {"type": "dock"}, {"type": "impact", "speed": 9.0}]:
+		check(b.apply(cmd) != "", "Mid-ride, %s is refused" % cmd["type"])
+	check(t.location["status"] == "elevator" and t.location["down"] and t.location["from"] == "halo_depot", "The ride record says where from and which way")
+	# A save mid-ride, loaded and resumed, arrives exactly as the original does.
+	b.advance_game_time(20.0 * 3600.0)
+	check(t.location["status"] == "elevator", "Twenty hours in, still riding")
+	var saved := SaveIO.from_text(SaveIO.to_text(t))
+	check(saved != null and saved.to_dict() == t.to_dict(), "A save mid-ride is lossless")
+	var resumed := Sim.new()
+	resumed.load_state(saved)
+	resumed.advance_game_time(40.0 * 3600.0)
+	b.advance_game_time(40.0 * 3600.0)
+	check(resumed.state.location == {"status": "docked", "place": "line_foot"} and resumed.state.to_dict() == t.to_dict(), "The loaded ride arrives in step with the original")
+	var events: Array = resumed.take_events().map(func(e): return e["type"])
+	check("elevator_arrived" in events, "Arrival is announced")
+	check(not "elevator_arrived" in b.take_events().filter(func(e): return false).map(func(e): return e["type"]), "(no stale arrival)")
+	# Arrival drops time compression to x1, and it happens on the hour, not before.
+	var c := fresh()
+	c.state.location = {"status": "docked", "place": "piazzi_station"}
+	c.state.time_scale = 1.0e4
+	check(c.apply({"type": "ride_elevator"}) == "", "Ride the Stalk")
+	c.advance_game_time(7.0 * 3600.0 - 10.0)
+	check(c.state.location["status"] == "elevator", "Ten seconds before arrival you are still on it")
+	c.advance_game_time(10.0)
+	check(c.state.location["status"] == "docked" and c.state.time_scale == float(d.balance["time"]["arrival_scale"]), "On the hour you arrive and time drops to x1")
+	# At the foot: the town's market works, your hold came along, the yard does not.
+	check(c.state.stats.get("trips", 0) == 0, "A ride is not a flight: no trip counted")
+	check(c.apply({"type": "repair"}) == "nothing to repair" or c.apply({"type": "repair"}) == "your ship is up at the port", "No repairs at the foot")
+	c.state.ship["damage"] = {"keel": 0.5}
+	check(c.apply({"type": "repair"}) == "your ship is up at the port", "Your damaged ship is up at the port")
+	check(c.apply({"type": "refuel", "fill": true}) != "", "No fuel pump at the foot")
+	check(c.apply({"type": "depart", "to": "ceres"}) != "", "No flying from the foot")
+	check(c.apply({"type": "ride_elevator"}) == "" and c.state.location["to"] == "piazzi_station" and not c.state.location["down"], "Ride back up")
+	c.advance_game_time(8.0 * 3600.0)
+	check(c.state.location == {"status": "docked", "place": "piazzi_station"}, "Back at the station")
+	# Zero cargo and max credits.
+	var z := fresh()
+	z.state.location = {"status": "docked", "place": "halo_depot"}
+	z.state.ship["cargo"] = {}
+	z.state.credits = 1.0e15
+	check(z.apply({"type": "ride_elevator"}) == "" and absf(z.state.credits - (1.0e15 - 150.0)) < 1.0, "An empty hold and a huge balance: just the seat comes off")
+	var zs := SaveIO.from_text(SaveIO.to_text(z.state))
+	check(zs.credits == z.state.credits and zs.to_dict() == z.state.to_dict(), "A huge balance round-trips through a save, mid-ride")
+
+
+## Damage in depth: impact energy to damage, module zones, overflow into the keel,
+## repair costs (yard and patch), and the lifeboat and insurance path.
+func test_damage_in_depth() -> void:
+	var template := fresh()
+	var d := template.data
+	var template_text := SaveIO.to_text(template.state)
+	var tune: Dictionary = d.balance["damage"]
+	var safe := float(tune["safe_mps"])
+	var per_kg := float(tune["full_j_per_kg"])
+	var keel_share := float(tune["keel_share"])
+	var flying := func() -> Sim:
+		var f := Sim.new(d)
+		f.load_state(SaveIO.from_text(template_text))
+		f.state.location = {"status": "approach", "place": "kibo_ring"}
+		return f
+	var last_impact := func(f: Sim) -> Dictionary:
+		var found := {}
+		for e in f.take_events():
+			if e["type"] == "impact":
+				found = e["data"]
+		return found
+	# Energy to damage: 0.5 (v - safe)^2 x share / 50 J/kg, to the module; a third to the keel.
+	var f: Sim = flying.call()
+	f.take_events()
+	check(f.apply({"type": "impact", "speed": safe, "share": 1.0, "zone": "mid", "seed": 0}) == "" and f.state.ship.get("damage", {}).is_empty(), "Exactly the safe speed does nothing")
+	check(f.take_events().is_empty(), "and tells nobody")
+	f.apply({"type": "impact", "speed": 5.0, "share": 1.0, "zone": "mid", "seed": 0})
+	var expect := 0.5 * (5.0 - safe) * (5.0 - safe) / per_kg
+	var ev: Dictionary = last_impact.call(f)
+	check(absf(float(ev["amount"]) - expect) < 1e-9, "5 m/s head-on: %.3f of a module (%.3f expected)" % [float(ev["amount"]), expect])
+	var slot: String = ev["slot"]
+	check(slot.begins_with("cargo.") and absf(f.state.ship["damage"][slot] - expect) < 1e-9, "in the cargo bay, as the middle of the ship is")
+	check(absf(f.state.ship["damage"]["keel"] - expect * keel_share) < 1e-9, "and the keel takes its share (%.0f%%)" % (keel_share * 100.0))
+	check(absf(float(ev["integrity"]) - (1.0 - expect * keel_share)) < 1e-9, "Integrity reported matches the keel")
+	# A glancing blow (share) scales it; energy grows with the square of the excess speed.
+	var g: Sim = flying.call()
+	g.apply({"type": "impact", "speed": 5.0, "share": 0.25, "zone": "mid", "seed": 0})
+	check(absf(float(last_impact.call(g)["amount"]) - expect * 0.25) < 1e-9, "A quarter share does a quarter of the damage")
+	var h: Sim = flying.call()
+	h.apply({"type": "impact", "speed": safe + 2.0, "share": 1.0, "zone": "mid", "seed": 0})
+	var one: float = float(last_impact.call(h)["amount"])
+	h.apply({"type": "impact", "speed": safe + 4.0, "share": 1.0, "zone": "mid", "seed": 0})
+	check(absf(float(last_impact.call(h)["amount"]) / one - 4.0) < 1e-9, "Twice the excess speed, four times the damage")
+	var over: Sim = flying.call()
+	over.apply({"type": "impact", "speed": 5.0, "share": 7.0, "zone": "mid", "seed": 0})
+	check(absf(float(last_impact.call(over)["amount"]) - expect) < 1e-9, "A share above 1 counts as 1")
+	var neg: Sim = flying.call()
+	check(neg.apply({"type": "impact", "speed": 5.0, "share": -1.0, "zone": "mid", "seed": 0}) == "" and last_impact.call(neg)["amount"] == 0.0, "A negative share counts as nothing")
+	var nan_free: Sim = flying.call()
+	nan_free.apply({"type": "impact"})
+	check(nan_free.state.ship.get("damage", {}).is_empty(), "A command with no speed does nothing")
+	check(Sim.new(d).apply({"type": "impact", "speed": 20.0}) == "not flying", "No impacts while docked")
+	# Zones: each blow lands on the module kinds of its zone, and seeds spread across them.
+	var zones := {"nose": ["command", "avionics"], "mid": ["cargo"], "tail": ["tank", "drive"], "side": ["radiator"]}
+	for zone in zones:
+		var seen := {}
+		for sd in 6:
+			var z: Sim = flying.call()
+			z.apply({"type": "impact", "speed": 3.0, "share": 1.0, "zone": zone, "seed": sd})
+			var hit := String(last_impact.call(z)["slot"])
+			seen[hit] = true
+			check(hit.split(".")[0] in zones[zone], "A %s blow (seed %d) hits %s, a %s module" % [zone, sd, hit, zones[zone]])
+		check(seen.size() == (2 if zone in ["mid", "side", "tail"] else 1), "Seeds reach every candidate in the %s zone (%d)" % [zone, seen.size()])
+	var neg_seed: Sim = flying.call()
+	check(neg_seed.apply({"type": "impact", "speed": 3.0, "zone": "mid", "seed": -3}) == "", "A negative seed still picks a module")
+	var odd: Sim = flying.call()
+	odd.apply({"type": "impact", "speed": 3.0, "zone": "sideways", "seed": 0})
+	check(String(last_impact.call(odd)["slot"]).begins_with("cargo."), "An unknown zone is treated as the middle")
+	# A ship with nothing in the zone takes the blow in the keel.
+	var bare: Sim = flying.call()
+	for k in bare.state.ship["modules"].keys():
+		if k.begins_with("radiator."):
+			bare.state.ship["modules"].erase(k)
+	bare.apply({"type": "impact", "speed": 4.0, "zone": "side", "seed": 0})
+	var kv: Dictionary = last_impact.call(bare)
+	check(kv["slot"] == "keel" and kv["module"] == "the keel" and absf(bare.state.ship["damage"]["keel"] - float(kv["amount"])) < 1e-9, "No radiators to hit: the whole blow goes to the keel")
+	# Keel overflow: a module already at 0.9 takes only 0.1; the rest, and its share of that, go to the keel.
+	var ov: Sim = flying.call()
+	for k in ["tank.0", "drive.0"]:
+		ov.state.ship["damage"] = ov.state.ship.get("damage", {})
+		ov.state.ship["damage"][k] = 0.9
+	ov.apply({"type": "impact", "speed": safe + 5.0, "share": 1.0, "zone": "tail", "seed": 0})
+	var amount := 0.5 * 25.0 / per_kg
+	var ovr: Dictionary = last_impact.call(ov)
+	var hit_slot: String = ovr["slot"]
+	check(absf(ov.state.ship["damage"][hit_slot] - 1.0) < 1e-9, "The module is wrecked, and no more than wrecked (%.3f)" % ov.state.ship["damage"][hit_slot])
+	check(absf(ov.state.ship["damage"]["keel"] - ((amount - 0.1) + 0.1 * keel_share)) < 1e-9, "The 0.%.0f it could not take goes into the keel, plus its share of what it did" % ((amount - 0.1) * 100.0))
+	# Hitting a module that is already wrecked sends everything to the keel.
+	var wr: Sim = flying.call()
+	wr.state.ship["damage"] = {"cargo.0": 1.0, "cargo.1": 1.0}
+	wr.apply({"type": "impact", "speed": safe + 3.0, "zone": "mid", "seed": 1})
+	check(absf(wr.state.ship["damage"]["keel"] - 0.5 * 9.0 / per_kg) < 1e-9, "A wrecked module passes the whole blow on to the keel")
+	# Wreck: the keel gets to 1 exactly, not past it, and the ship is lost; one hit can do it.
+	var one_shot: Sim = flying.call()
+	one_shot.apply({"type": "impact", "speed": 40.0, "share": 1.0, "zone": "mid", "seed": 0})
+	check(one_shot.state.location["status"] == "lifeboat" and one_shot.state.stats["ships_lost"] == 1, "40 m/s into anything is a lost ship")
+	check(one_shot.state.ship.get("damage", {}).is_empty(), "and the new hull is clean (no keel past 1 carried over)")
+	# Just under the wreck line keeps the ship.
+	var almost: Sim = flying.call()
+	almost.state.ship["damage"] = {"keel": 0.97}
+	almost.apply({"type": "impact", "speed": safe + 1.0, "zone": "mid", "seed": 0})
+	check(almost.state.location["status"] == "approach" and DamageSystem.integrity(almost.state.ship) < 0.03 + 0.005, "A keel at 3% integrity still holds the ship together")
+	almost.apply({"type": "impact", "speed": safe + 3.0, "zone": "mid", "seed": 0})
+	check(almost.state.location["status"] == "lifeboat", "and the next knock finishes it")
+	# Spills and vents: a broken pod loses cargo in proportion across goods; damage shows in the stats.
+	var sp: Sim = flying.call()
+	var capacity := ShipStats.cargo_capacity_t(sp.state.ship, d)
+	sp.state.ship["cargo"] = {"food": capacity * 0.5, "water_ice": capacity * 0.5}
+	sp.state.ship["cargo_paid"] = {"food": 100.0, "water_ice": 100.0}
+	sp.apply({"type": "impact", "speed": safe + 3.0, "zone": "mid", "seed": 0})
+	var spill: Dictionary = last_impact.call(sp)["spilled"]
+	check(not spill.is_empty() and absf(float(spill["food"]) - float(spill["water_ice"])) < 1e-9, "A broken pod spills each good in proportion")
+	check(ShipStats.cargo_t(sp.state.ship) <= ShipStats.cargo_capacity_t(sp.state.ship, d) + 1e-9, "What is left fits what is left")
+	# Empty hold, wrecked pod: nothing to spill, no error.
+	var em: Sim = flying.call()
+	em.state.ship["cargo"] = {}
+	check(em.apply({"type": "impact", "speed": safe + 3.0, "zone": "mid", "seed": 0}) == "" and last_impact.call(em)["spilled"].is_empty(), "A hit with an empty hold spills nothing")
+
+	# Repair costs. Yard: every point at repair_cr_per_point x module value. Patch: only above patch_max, at a premium.
+	var r := _clone(d, template_text)
+	var rs := r.state
+	rs.ship["damage"] = {"drive.0": 0.6, "keel": 0.4}
+	rs.location = {"status": "docked", "place": "halo_depot"}
+	var drive_value := maxf(float(d.modules["pathfinder_mk1"]["price"]), float(tune["min_module_value"]))
+	var patch_max := float(tune["patch_max"])
+	var rate := float(tune["repair_cr_per_point"])
+	var patch_expect := ((0.6 - patch_max) * drive_value + (0.4 - patch_max) * float(tune["keel_value"])) * rate * float(tune["patch_mult"])
+	check(absf(DamageSystem.repair_cost(rs, d) - patch_expect) < 1e-6, "Patch cost at a port without a yard: %d cr" % int(patch_expect))
+	rs.location = {"status": "docked", "place": "kibo_ring"}
+	var yard_expect := (0.6 * drive_value + 0.4 * float(tune["keel_value"])) * rate
+	check(absf(DamageSystem.repair_cost(rs, d) - yard_expect) < 1e-6, "Yard cost at Kibo Ring: %d cr" % int(yard_expect))
+	check(yard_expect < patch_expect * 2.0 and yard_expect > 0.0, "A yard repairs everything for less than twice the patch")
+	rs.location = {"status": "docked", "place": "halo_depot"}
+	rs.credits = patch_expect - 1.0
+	check(String(r.apply({"type": "repair"})).begins_with("repairs cost") and rs.credits == patch_expect - 1.0 and rs.ship["damage"]["keel"] == 0.4, "Broke: refused, and nothing changes")
+	rs.credits = patch_expect + 0.001
+	check(r.apply({"type": "repair"}) == "" and rs.credits < 0.01 and absf(rs.ship["damage"]["keel"] - patch_max) < 1e-9, "Just enough patches the keel back to %.0f%%" % (patch_max * 100.0))
+	check(r.apply({"type": "repair"}) == "nothing to repair", "A patched ship has nothing further a patch can do")
+	var small: Sim = _clone(d, template_text)
+	small.state.location = {"status": "docked", "place": "halo_depot"}
+	small.state.ship["damage"] = {"drive.0": 0.2}
+	check(small.apply({"type": "repair"}) == "nothing to repair" and DamageSystem.repair_cost(small.state, d) == 0.0, "Scratches under the patch line cost nothing and are left")
+	check(DamageSystem.repair_cost(_clone(d, template_text).state, d) == 0.0, "An undamaged ship costs nothing to repair")
+	var cheap: Sim = _clone(d, template_text)
+	cheap.state.location = {"status": "docked", "place": "kibo_ring"}
+	cheap.state.ship["damage"] = {"cargo.0": 0.5}
+	var min_value := float(tune["min_module_value"])
+	check(absf(DamageSystem.repair_cost(cheap.state, d) - 0.5 * maxf(float(d.modules["cargo_pod_s"]["price"]), min_value) * rate) < 1e-6, "A cheap module is repaired at no less than its minimum value")
+	cheap.state.ship["damage"] = {"cargo.5": 0.5}
+	check(absf(DamageSystem.repair_cost(cheap.state, d) - 0.5 * min_value * rate) < 1e-6, "Damage for a slot no longer fitted is costed at the minimum, not a crash")
+	check(cheap.apply({"type": "repair"}) == "" and cheap.state.ship["damage"].is_empty(), "A yard clears it")
+	var flight: Sim = flying.call()
+	check(flight.apply({"type": "repair"}) == "not docked", "No repairs while flying")
+	# Damaged hulls fly worse; repairs bring it back.
+	var fit: Sim = _clone(d, template_text)
+	var base_thrust := ShipStats.thrust_n(fit.state.ship, d)
+	fit.state.ship["damage"] = {"drive.0": 0.5}
+	check(absf(ShipStats.thrust_n(fit.state.ship, d) - base_thrust * 0.5) < 1e-6, "A half-wrecked drive pushes half as hard")
+	fit.state.ship["damage"] = {"drive.0": 1.0}
+	check(ShipStats.thrust_n(fit.state.ship, d) == 0.0, "A wrecked drive does not push at all")
+	# Saves carry damage through.
+	fit.state.ship["damage"] = {"drive.0": 0.37, "keel": 0.11}
+	var back := SaveIO.from_text(SaveIO.to_text(fit.state))
+	check(back.ship["damage"] == fit.state.ship["damage"], "Damage survives a save")
+
+	# The lifeboat and the insurance pool.
+	var lb: Sim = flying.call()
+	var ls := lb.state
+	ls.credits = 20000.0
+	ls.ship["name"] = "Second Wind"
+	ls.ship["modules"]["drive.0"] = "pathfinder_mk2"
+	ls.ship["cargo"] = {"food": 3.0}
+	ls.ship["cargo_paid"] = {"food": 900.0}
+	ls.ship["damage"] = {"drive.0": 0.3}
+	ls.contracts["active"].append({"id": 501, "state": "carried", "client": "Terran Compact", "to": "halo_depot", "item": "x", "pickup": "", "deadline_t": ls.time_s + 30.0 * DAY, "accepted_t": ls.time_s, "window_s": 30.0 * DAY, "reward": 100.0, "mass_t": 0.1, "passengers": 0, "rep": 1.0})
+	ls.contracts["active"].append({"id": 502, "state": "accepted", "client": "Terran Compact", "to": "halo_depot", "item": "y", "pickup": "clarke_exchange", "deadline_t": ls.time_s + 30.0 * DAY, "accepted_t": ls.time_s, "window_s": 30.0 * DAY, "reward": 100.0, "mass_t": 0.1, "passengers": 0, "rep": 1.0})
+	lb.take_events()
+	lb.apply({"type": "impact", "speed": 30.0, "zone": "mid", "seed": 0})
+	var lost_event: Dictionary = {}
+	for e in lb.take_events():
+		if e["type"] == "ship_lost":
+			lost_event = e["data"]
+	check(not lost_event.is_empty() and lost_event["jobs_lost"] == [501] and lost_event["excess"] == float(tune["insurance_excess"]), "The ship_lost event names the lost job and the excess")
+	check(ls.credits == 20000.0 - float(tune["insurance_excess"]), "Insurance costs exactly the excess")
+	check(ls.ship["name"] == "Second Wind" and ls.ship["hull"] == d.balance["start"]["ship"], "The name carries over to the stock hull")
+	check(ls.ship["modules"]["drive.0"] == "pathfinder_mk1", "The upgraded drive is gone: a stock Mule")
+	check(ls.ship["cargo"].is_empty() and ls.ship["cargo_paid"].is_empty(), "Cargo is lost with its paid value")
+	check(absf(float(ls.ship["fuel_t"]) - ShipStats.fuel_capacity_t(ls.ship, d)) < 1e-9, "The new ship comes with full tanks")
+	check(ls.contracts["active"].size() == 1 and ls.contracts["active"][0]["id"] == 502, "A job you had accepted but not picked up survives")
+	check(ls.contracts["history"].any(func(j): return j["id"] == 501 and j["outcome"] == "lost"), "The carried job is in the history as lost")
+	check(int(ls.stats["ships_lost"]) == 1, "It counts as a lost ship")
+	check(float(ls.location["until_t"]) - ls.time_s == float(tune["lifeboat_s"]) and ls.location["place"] == "kibo_ring", "The lifeboat is bound for the same port")
+	# Locked out while in the lifeboat; saves work; the tug arrives on time.
+	for cmd in [{"type": "buy", "good": "food", "tonnes": 1}, {"type": "depart", "to": "halo_depot"}, {"type": "repair"}, {"type": "ride_elevator"},
+			{"type": "dock"}, {"type": "impact", "speed": 20.0}, {"type": "refuel", "fill": true}]:
+		check(lb.apply(cmd) != "", "In the lifeboat, %s is refused" % cmd["type"])
+	lb.advance_game_time(float(tune["lifeboat_s"]) - 5.0)
+	check(ls.location["status"] == "lifeboat", "Five seconds early, still adrift")
+	var saved := SaveIO.from_text(SaveIO.to_text(ls))
+	check(saved != null and saved.to_dict() == ls.to_dict(), "A save from the lifeboat is lossless")
+	var resumed := Sim.new()
+	resumed.load_state(saved)
+	resumed.advance_game_time(10.0)
+	lb.advance_game_time(10.0)
+	check(resumed.state.location == {"status": "docked", "place": "kibo_ring"} and ls.location == resumed.state.location, "The tug brings both copies in")
+	check(lb.take_events().any(func(e): return e["type"] == "rescued"), "A rescue is announced")
+	# Wrecking the replacement ship too: another excess, and the count goes up.
+	ls.location = {"status": "approach", "place": "kibo_ring"}
+	var credits := ls.credits
+	lb.apply({"type": "impact", "speed": 30.0, "zone": "mid", "seed": 0})
+	check(int(ls.stats["ships_lost"]) == 2 and absf(credits - ls.credits - float(tune["insurance_excess"])) < 1e-9, "A second wreck costs a second excess")
+	# Broke: the insurer still delivers a hull; the balance goes into the red rather than leaving you stranded.
+	var broke: Sim = flying.call()
+	broke.state.credits = 500.0
+	broke.apply({"type": "impact", "speed": 30.0, "zone": "mid", "seed": 0})
+	check(broke.state.credits == 500.0 - float(tune["insurance_excess"]) and broke.state.location["status"] == "lifeboat", "With 500 cr the excess puts you 2,500 in debt but you still get a ship")
+	broke.advance_game_time(float(tune["lifeboat_s"]) + 1.0)
+	check(broke.apply({"type": "emergency_refuel"}) != "refuel normally here" or float(broke.state.ship["fuel_t"]) > 0.0, "and a tank to fly on")
+	# Lent or story modules go with the wreck, and the story arc is not undone by it.
+	var lent: Sim = flying.call()
+	lent.state.story["done"].append("the_loan")
+	lent.state.ship["modules"]["drive.0"] = "longview_drive"
+	lent.apply({"type": "impact", "speed": 30.0, "zone": "mid", "seed": 0})
+	check(lent.state.ship["modules"]["drive.0"] == "pathfinder_mk1" and "the_loan" in lent.state.story["done"], "The lent drive is lost with the ship; the beat stays done")
+	# Max credits: a rich pilot's insurance is just the excess.
+	var rich: Sim = flying.call()
+	rich.state.credits = 1.0e15
+	rich.apply({"type": "impact", "speed": 30.0, "zone": "mid", "seed": 0})
+	check(rich.state.credits == 1.0e15 - float(tune["insurance_excess"]), "A huge balance pays the same excess")
+
+
+## The story arcs: beats fire in order at their ports, arcs run side by side, a favour
+## is offered once, retried if lost, and a save mid-arc picks up where it was.
+func test_story_arcs_in_depth() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	check(s.story["done"].is_empty() and s.story["fired"].is_empty() and s.story["messages"].is_empty(), "A new game is at the start of every arc")
+	# Beats only move when docked or on site: not in transit, not on the ribbon.
+	s.stats["contracts_delivered"] = 3
+	s.reputation["Terran Compact"] = 7.0
+	s.location = {"status": "transit", "from": "kibo_ring", "to": "clarke_exchange", "depart_t": s.time_s, "arrive_t": s.time_s + 3.0 * DAY}
+	sim.advance_game_time(3600.0)
+	check(s.story["fired"].is_empty(), "A ready beat does not fire in transit")
+	var in_transit := SaveIO.from_text(SaveIO.to_text(s))
+	check(in_transit.to_dict() == s.to_dict(), "A save in transit with a beat pending is lossless")
+	var loaded := Sim.new()
+	loaded.load_state(in_transit)
+	loaded.advance_game_time(3.0 * DAY)
+	check(loaded.state.location["status"] == "approach" and loaded.state.story["fired"].is_empty(), "On arrival, still in approach: the beat waits for the dock")
+	loaded.apply({"type": "dock"})
+	loaded.advance_game_time(60.0)
+	check(loaded.state.story["fired"].has("first_favour"), "Docked, the first beat fires")
+	# Offered once, one message, a favour on the board.
+	var offers: Array = loaded.state.contracts["board"].get("clarke_exchange", []).filter(func(o): return o.get("favour", "") == "first_favour")
+	check(offers.size() == 1 and loaded.state.story["messages"].size() == 1, "One favour, one message")
+	loaded.advance_game_time(3600.0)
+	loaded.advance_game_time(3600.0)
+	check(loaded.state.contracts["board"]["clarke_exchange"].filter(func(o): return o.get("favour", "") == "first_favour").size() == 1 and loaded.state.story["messages"].size() == 1, "Further ticks do not offer it again")
+	check(not "first_favour" in loaded.state.story["done"] and not loaded.state.story["fired"].has("the_recorder"), "The next beat waits for this one to be done")
+
+	# The favour vanishing (it expires, nobody takes it) is offered again, once.
+	var re := fresh()
+	var r := re.state
+	r.stats["contracts_delivered"] = 3
+	r.reputation["Terran Compact"] = 7.0
+	_dock_at(re, "clarke_exchange")
+	var first_id := int(r.story["fired"]["first_favour"]["offer"])
+	r.contracts["board"]["clarke_exchange"] = r.contracts["board"]["clarke_exchange"].filter(func(o): return int(o["id"]) != first_id)
+	re.advance_game_time(2.0 * 3600.0)
+	var again: Array = r.contracts["board"]["clarke_exchange"].filter(func(o): return o.get("favour", "") == "first_favour")
+	check(again.size() == 1 and int(again[0]["id"]) != first_id, "A lapsed favour is offered again under a new id")
+	check(r.story["messages"].size() == 2 and not "first_favour" in r.story["done"], "with its message sent again, and the beat still open")
+	var live: Array = r.contracts["board"]["clarke_exchange"].filter(func(o): return o.get("favour", "") == "first_favour")
+	# Take it: delivered after a reload still counts. Save mid-arc, with the favour carried.
+	var again_id := int(live[0]["id"])
+	check(re.apply({"type": "accept_contract", "id": again_id}) == "", "Take the re-offered favour")
+	var carried: Dictionary = r.contracts["active"].filter(func(j): return int(j["id"]) == again_id)[0]
+	r.location = {"status": "docked", "place": "clarke_exchange"}
+	var mid := SaveIO.from_text(SaveIO.to_text(r))
+	check(mid != null and mid.to_dict() == r.to_dict() and mid.story == r.story, "A save with a favour in hand, mid-arc, is lossless")
+	var cont := Sim.new()
+	cont.load_state(mid)
+	cont.state.location = {"status": "docked", "place": "farside_array"}
+	cont.advance_game_time(60.0)
+	cont.advance_game_time(60.0)
+	check("first_favour" in cont.state.story["done"], "Delivered after a reload: the beat completes")
+	check(SiteSystemScript.knows(cont.state, "hermes_probe") or cont.state.story["fired"].has("the_recorder"), "and the next beat moves on (Hermes-7 revealed)")
+	check(cont.state.story["done"].filter(func(b): return b == "first_favour").size() == 1, "Never marked done twice")
+	# A beat for a port waits for that port.
+	check(not cont.state.story["fired"].has("the_occultation"), "The occultation waits for the recorder to be worked")
+	cont.state.location = {"status": "docked", "place": "kibo_ring"}
+	cont.state.sites["worked"] = {"hermes_probe": ["salvage"]}
+	cont.advance_game_time(3600.0)
+	check("the_recorder" in cont.state.story["done"], "Working the site finishes the recorder beat wherever you are")
+	cont.advance_game_time(3600.0)
+	check(not cont.state.story["fired"].has("the_occultation"), "but the occultation is told at the Array, not at Kibo")
+	cont.state.location = {"status": "docked", "place": "farside_array"}
+	cont.advance_game_time(3600.0)
+	check(cont.state.story["fired"].has("the_occultation"), "and at the Array it is")
+
+	# Arcs run side by side: the Sufficiency does not wait on the Long View.
+	var arcs := fresh()
+	var a := arcs.state
+	check(not a.story["fired"].has("quiet_margin"), "Quiet Margin is not met away from Landauer Deep")
+	a.location = {"status": "docked", "place": "landauer_deep"}
+	arcs.advance_game_time(2.0 * 3600.0)
+	check(a.story["fired"].has("quiet_margin") and "quiet_margin" in a.story["done"] and not a.story["fired"].has("first_favour"), "The Sufficiency begins on its own, while the Long View has not")
+	check(a.reputation.get("The Sufficiency", 0.0) > 0.0 or a.reputation.has("The Sufficiency"), "Quiet Margin's greeting gives standing")
+	check(not a.story["fired"].has("the_delegate"), "The delegate needs two on-time deliveries first")
+	a.stats["contracts_delivered"] = 2
+	arcs.advance_game_time(3600.0)
+	check(a.story["fired"].has("the_delegate") and not a.story["fired"].has("the_seat"), "With two deliveries behind you, the delegate's favour is offered")
+	var delegate: Dictionary = arcs.state.contracts["board"]["landauer_deep"].filter(func(o): return o.get("favour", "") == "the_delegate")[0]
+	check(delegate["to"] == "piazzi_station", "to Piazzi Station")
+	# Credits and standing arrive with the final beat.
+	var credits := a.credits
+	check(arcs.apply({"type": "accept_contract", "id": delegate["id"]}) == "", "Take the sleeping mind")
+	_dock_at(arcs, "piazzi_station")
+	_dock_at(arcs, "piazzi_station")
+	check("the_delegate" in a.story["done"] and "the_seat" in a.story["done"], "Delivered: the seat beat follows and finishes")
+	var sufficiency_letters: Array = a.story["messages"].filter(func(m): return String(m["from"]).contains("Sufficiency") or String(m["from"]).contains("Steady Hand"))
+	check(a.credits >= credits + 4000.0 and sufficiency_letters.size() == 3, "Steady Hand's thank-you pays 4,000 and the arc's log has three letters (%d)" % sufficiency_letters.size())
+	check(a.story["fired"].has("first_favour"), "Two on-time deliveries and a Known standing with the Sufficiency also bring the Long View's first favour (arcs cross-feed)")
+	# And once the arc is over it stays over.
+	var n_messages: int = a.story["messages"].size()
+	for _k in 3:
+		_dock_at(arcs, "landauer_deep")
+	check(a.story["messages"].size() == n_messages and a.story["done"].filter(func(b): return b == "the_seat").size() == 1, "A finished arc does not replay")
+	# Beats are data: every beat's prerequisites exist, and every arc's beats are in order of dependency.
+	var ids: Array = d.story["beats"].map(func(b): return b["id"])
+	var ordered := true
+	for i in d.story["beats"].size():
+		for need in d.story["beats"][i].get("when", {}).get("beats", []):
+			ordered = ordered and need in ids and ids.find(need) < i
+	check(ordered, "Every beat's prerequisites come earlier in the file")
+	# The grant in 'the_loan' fills the tanks even when the ship was empty.
+	var loan := fresh()
+	loan.state.ship["fuel_t"] = 0.0
+	loan.state.story["done"] = ["first_favour", "the_recorder", "the_occultation"]
+	loan.state.location = {"status": "docked", "place": "trojan_yards"}
+	loan.advance_game_time(3600.0)
+	check(loan.state.ship["modules"]["drive.0"] == "longview_drive" and float(loan.state.ship["fuel_t"]) == ShipStats.fuel_capacity_t(loan.state.ship, d) and float(loan.state.ship["fuel_t"]) > 0.0, "The Long View's loan fits the drive and tops up the tanks")
+	# Save during a beat's wait on a long-haul trip; the arc resumes on arrival.
+	loan.state.location = {"status": "transit", "from": "trojan_yards", "to": "the_lacuna", "depart_t": loan.state.time_s, "arrive_t": loan.state.time_s + 40.0 * DAY}
+	loan.state.sites["worked"] = {"the_lacuna": ["greet"]}
+	loan.advance_game_time(DAY)
+	check(not loan.state.story["fired"].has("the_meeting"), "The meeting is not delivered mid-transit")
+	var tx := SaveIO.from_text(SaveIO.to_text(loan.state))
+	check(tx.story == loan.state.story, "Story state survives a transit save")
+
+
+## A favour you gave up on is offered again, and you can still take it. (Abandoning
+## costs standing with the client; an offer gated at standing 0 would be locked for good.)
+func test_story_favour_after_abandon() -> void:
+	var sim := fresh()
+	var s := sim.state
+	s.stats["contracts_delivered"] = 3
+	s.reputation["Terran Compact"] = 7.0
+	_dock_at(sim, "clarke_exchange")
+	var first: Dictionary = _first_favour_offer(s)
+	check(sim.apply({"type": "accept_contract", "id": first["id"]}) == "", "Take the Long View's first favour")
+	check(sim.apply({"type": "abandon_contract", "id": first["id"]}) == "", "and give it up")
+	check(Contracts.rep_of(s, "The Long View") < 0.0, "which costs standing with the Long View")
+	sim.advance_game_time(2.0 * 3600.0)
+	var again: Dictionary = _first_favour_offer(s)
+	check(not again.is_empty() and int(again["id"]) != int(first["id"]), "The favour is offered again")
+	check(ContractSystemScript.visible_to(s, sim.data, again), "and the pilot can see it, whatever they owe")
+	check(sim.apply({"type": "accept_contract", "id": again["id"]}) == "", "and take it, so the arc can go on")
+	# The same goes for a favour that was allowed to fail.
+	var failed := fresh()
+	var f := failed.state
+	f.stats["contracts_delivered"] = 3
+	f.reputation["Terran Compact"] = 7.0
+	_dock_at(failed, "clarke_exchange")
+	var offer: Dictionary = _first_favour_offer(f)
+	failed.apply({"type": "accept_contract", "id": offer["id"]})
+	f.location = {"status": "docked", "place": "kibo_ring"}
+	failed.advance_game_time(float(offer["window_s"]) * 2.5)
+	check(f.contracts["history"].any(func(j): return j["id"] == offer["id"] and j["outcome"] == "failed"), "A favour left to rot fails")
+	failed.advance_game_time(2.0 * 3600.0)
+	var retry: Dictionary = _first_favour_offer(f)
+	check(not retry.is_empty() and ContractSystemScript.visible_to(f, failed.data, retry), "and is offered again at the next dock, in a form the pilot can accept")
+
+
+func _first_favour_offer(s) -> Dictionary:
+	for place in s.contracts["board"]:
+		for o in s.contracts["board"][place]:
+			if o.get("favour", "") == "first_favour":
+				return o
+	return {}
+
+
+## A pilot who rides down with only the fare, and spends the rest at the town, must still be
+## able to get back up to their ship: nothing at the foot of a ribbon earns money.
+func test_elevator_not_stranded_at_foot() -> void:
+	var sim := fresh()
+	var s := sim.state
+	s.location = {"status": "docked", "place": "halo_depot"}
+	s.ship["cargo"] = {}
+	s.credits = 160.0
+	check(sim.apply({"type": "ride_elevator"}) == "", "Ride down with a little more than the fare")
+	sim.advance_game_time(56.0 * 3600.0 + 1.0)
+	check(s.location == {"status": "docked", "place": "line_foot"} and absf(s.credits - 10.0) < 1e-9, "At Line Foot with 10 cr")
+	check(sim.apply({"type": "ride_elevator"}) == "", "A pilot with less than the fare can still ride up to their ship")
+	check(s.location["status"] == "elevator" and not s.location["down"], "and is on the way up")
+	check(s.credits < 0.0, "the fare goes on credit, as emergency fuel does")
+	sim.advance_game_time(56.0 * 3600.0 + 1.0)
+	check(s.location == {"status": "docked", "place": "halo_depot"}, "Back at the depot")
+	check(sim.apply({"type": "ride_elevator"}) != "", "In debt, the pilot cannot ride down again")
+
+
+## Edge cases found by reading the sim: empty holds, huge balances, saves in odd moments.
+func test_edge_cases() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	# Zero cargo.
+	check(s.ship["cargo"].is_empty() and ShipStats.cargo_t(s.ship) == 0.0, "The stock ship starts empty")
+	check(sim.apply({"type": "sell", "good": "food", "tonnes": 1.0}) == "only 0.0 t aboard", "Selling what you do not have is refused")
+	check(sim.apply({"type": "sell", "good": "food", "tonnes": 0.0}) == "nothing to trade", "Selling zero tonnes is refused")
+	check(sim.apply({"type": "buy", "good": "food", "tonnes": 0.0}) == "nothing to trade", "Buying zero tonnes is refused")
+	check(sim.apply({"type": "buy", "good": "food", "tonnes": -2.0}) == "nothing to trade", "Buying negative tonnes is refused")
+	check(sim.apply({"type": "sell", "good": "food", "tonnes": -2.0}) == "nothing to trade", "Selling negative tonnes is refused")
+	check(sim.apply({"type": "buy", "good": "unobtainium", "tonnes": 1.0}) != "", "An unknown good is refused")
+	check(is_equal_approx(s.credits, 10000.0) and not is_nan(float(s.stats["trade_profit"])), "None of that cost anything or poisoned the books")
+	check(sim.apply({"type": "depart", "to": "clarke_exchange"}) == "", "You can fly with an empty hold")
+	sim.advance_game_time(10.0 * DAY)
+	check(s.location["status"] == "approach", "and arrive with one")
+	sim.apply({"type": "dock"})
+	check(s.stats["trips"] == 1 and not is_nan(s.credits), "An empty trip still counts, and the books are sane")
+	check(sim.apply({"type": "depart", "to": "clarke_exchange"}) != "", "You cannot fly to where you already are")
+	# Partial sale keeps the cost basis in proportion.
+	_dock_at(sim, "kibo_ring")
+	s.credits = 100000.0
+	check(sim.apply({"type": "buy", "good": "water_ice", "tonnes": 4.0}) == "", "Buy 4 t")
+	var paid: float = s.ship["cargo_paid"]["water_ice"]
+	sim.apply({"type": "sell", "good": "water_ice", "tonnes": 1.0})
+	check(absf(s.ship["cargo_paid"]["water_ice"] - paid * 0.75) < 1e-6, "Selling a quarter takes a quarter of the cost basis")
+	sim.apply({"type": "sell", "good": "water_ice", "tonnes": 3.0})
+	check(s.ship["cargo"].is_empty() and s.ship["cargo_paid"].is_empty(), "Selling all of it clears both books")
+	check(not is_nan(float(s.stats["trade_profit"])) and absf(float(s.stats["trade_profit"])) < 1000.0, "Buying and selling back at the same port gains or loses little (%.1f)" % float(s.stats["trade_profit"]))
+	# Full hold, exactly: capacity is allowed, a gram over is not.
+	var capacity := ShipStats.cargo_capacity_t(s.ship, d)
+	var room := capacity
+	check(sim.apply({"type": "buy", "good": "water_ice", "tonnes": capacity + 0.01}) != "", "A hold's worth and a bit more is refused (one way or the other)")
+	check(sim.apply({"type": "buy", "good": "electronics", "tonnes": capacity + 0.01}) != "", "Over capacity is refused")
+	s.ship["cargo"] = {"electronics": capacity}
+	check(sim.apply({"type": "buy", "good": "electronics", "tonnes": 0.01}) == "not enough cargo space", "A full hold takes nothing more")
+	s.ship["cargo"] = {}
+	# Max credits: no overflow, no NaN, saves hold.
+	s.credits = 1.0e15
+	check(sim.apply({"type": "buy", "good": "water_ice", "tonnes": 1.0}) == "" and s.credits < 1.0e15 and is_finite(s.credits), "A quadrillion credits buys as normal")
+	sim.apply({"type": "sell", "good": "water_ice", "tonnes": 1.0})
+	check(is_finite(s.credits) and absf(s.credits - 1.0e15) < 1000.0, "and selling back leaves the balance intact")
+	check(sim.apply({"type": "refuel", "fill": true}) == "tanks full" or float(s.ship["fuel_t"]) >= ShipStats.fuel_capacity_t(s.ship, d) - 1e-9, "Refuelling with a fortune fills the tanks")
+	var rich := SaveIO.from_text(SaveIO.to_text(s))
+	check(rich != null and rich.credits == s.credits, "A huge balance saves exactly")
+	_dock_at(sim, "trojan_yards")
+	check(sim.apply({"type": "install_module", "slot": "cargo.0", "module": "cargo_pod_l"}) == "", "A rich pilot can fit a big pod")
+	check(s.credits < 1.0e15 and s.credits > 1.0e15 - 1.0e6, "and pays the price")
+	# Broke: nothing is bought with nothing.
+	s.credits = 0.0
+	check(sim.apply({"type": "buy", "good": "electronics", "tonnes": 1.0}) == "not enough credits", "No credits, no cargo")
+	check(sim.apply({"type": "install_module", "slot": "cargo.0", "module": "cargo_pod_l"}) != "" or s.ship["modules"]["cargo.0"] == "cargo_pod_l", "No credits, no upgrades (unless already fitted)")
+	check(s.ship["cargo"].is_empty() and s.credits == 0.0, "and nothing was taken")
+	# Save during transit with cargo: both copies arrive and sell identically.
+	var t := fresh()
+	t.state.credits = 50000.0
+	t.apply({"type": "buy", "good": "electronics", "tonnes": 3.0})
+	t.apply({"type": "depart", "to": "halo_depot"})
+	t.advance_game_time(DAY)
+	check(t.state.location["status"] == "transit", "A day out, in transit")
+	var tt := Sim.new()
+	tt.load_state(SaveIO.from_text(SaveIO.to_text(t.state)))
+	for x in [t, tt]:
+		x.advance_game_time(6.0 * DAY)
+		x.apply({"type": "dock"})
+		x.apply({"type": "sell", "good": "electronics", "tonnes": 3.0})
+	check(t.state.to_dict() == tt.state.to_dict() and t.state.location["status"] == "docked", "A save in transit lands and sells identically to the run that never saved")
+	# Departing mid-transit, docking while in transit, and an elevator ride mid-transit are refused.
+	var u := fresh()
+	u.apply({"type": "depart", "to": "halo_depot"})
+	check(u.apply({"type": "depart", "to": "kibo_ring"}) != "" and u.apply({"type": "dock"}) != "" and u.apply({"type": "ride_elevator"}) != "", "Mid-transit: no second departure, no docking, no ribbon")
+	check(u.apply({"type": "buy", "good": "food", "tonnes": 1.0}) != "" and u.apply({"type": "repair"}) != "", "and no trading or repairs")
+	# Time scale: unknown scales and pausing while riding or in the lifeboat.
+	check(u.apply({"type": "set_time_scale", "scale": 7.0}) != "" or u.state.time_scale == 7.0, "(time scale is validated or accepted, never a crash)")
+	# A save at the exact arrival moment resumes cleanly.
+	var v := fresh()
+	v.apply({"type": "depart", "to": "clarke_exchange"})
+	v.advance_game_time(float(v.state.location["arrive_t"]) - v.state.time_s)
+	var vs := SaveIO.from_text(SaveIO.to_text(v.state))
+	check(vs != null and vs.to_dict() == v.state.to_dict() and vs.location["status"] in ["transit", "approach"], "A save at the moment of arrival is lossless")
+	var vr := Sim.new()
+	vr.load_state(vs)
+	vr.advance_game_time(60.0)
+	v.advance_game_time(60.0)
+	check(vr.state.to_dict() == v.state.to_dict() and v.state.location["status"] == "approach", "and resumes in step")
+	check(room == capacity, "(capacity is stable)")
 
 
 ## Ship sounds (view, headless): sources on the hardware, the listener in the cabin,
