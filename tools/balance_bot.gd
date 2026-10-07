@@ -171,6 +171,8 @@ func do_leg(upgrade: bool) -> bool:
 			return false
 	sim.advance_game_time(float(s.location["arrive_t"]) - s.time_s + 1.0)
 	sim.apply({"type": "dock"})
+	# A real pilot spends a moment docked: the sim ticks (insurance renews, hitchhikers ask).
+	sim.advance_game_time(60.0)
 	count_events()
 	var to: String = s.location["place"]
 	var income := 0.0
