@@ -29,27 +29,37 @@ static func cross(a: Array, b: Array) -> Array:
 
 
 static func length(a: Array) -> float:
-	return sqrt(dot(a, a))
+	return sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2])
 
 
 static func distance(a: Array, b: Array) -> float:
-	return length(sub(a, b))
+	var x: float = a[0] - b[0]
+	var y: float = a[1] - b[1]
+	var z: float = a[2] - b[2]
+	return sqrt(x * x + y * y + z * z)
 
 
 static func normalized(a: Array) -> Array:
-	var l := length(a)
-	return scale(a, 1.0 / l) if l > 0.0 else [0.0, 0.0, 0.0]
+	var l: float = sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2])
+	if l > 0.0:
+		var k: float = 1.0 / l
+		return [a[0] * k, a[1] * k, a[2] * k]
+	return [0.0, 0.0, 0.0]
 
 
 static func lerp(a: Array, b: Array, t: float) -> Array:
-	return add(a, scale(sub(b, a), t))
+	return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]
 
 
 ## Rotate a about unit axis k by angle (Rodrigues).
 static func rotate(a: Array, k: Array, angle: float) -> Array:
 	var c := cos(angle)
 	var s := sin(angle)
-	return add(add(scale(a, c), scale(cross(k, a), s)), scale(k, dot(k, a) * (1.0 - c)))
+	var cx: float = k[1] * a[2] - k[2] * a[1]
+	var cy: float = k[2] * a[0] - k[0] * a[2]
+	var cz: float = k[0] * a[1] - k[1] * a[0]
+	var d: float = (k[0] * a[0] + k[1] * a[1] + k[2] * a[2]) * (1.0 - c)
+	return [a[0] * c + cx * s + k[0] * d, a[1] * c + cy * s + k[1] * d, a[2] * c + cz * s + k[2] * d]
 
 
 ## Single-precision offset from origin, for rendering near origin only.

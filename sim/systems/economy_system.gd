@@ -39,19 +39,21 @@ func tick(_game_dt: float) -> void:
 
 
 func _integrate(days: float) -> void:
-	var e: Dictionary = sim().data.balance["economy"]
-	var relax := float(e["relaxation_per_day"]) * days
+	var data = sim().data
+	var state = sim().state
+	var e: Dictionary = data.balance["economy"]
+	var relax := minf(float(e["relaxation_per_day"]) * days, 1.0)
 	var cap_mult := float(e["max_stock_mult"])
-	for place in sim().data.places:
-		var p: Dictionary = sim().data.places[place]
-		if not sim().state.markets.has(place):
+	for place in data.places:
+		var p: Dictionary = data.places[place]
+		if not state.markets.has(place):
 			# A place added since this save was made: open its market at target.
 			var fresh := {}
 			for good in p.get("market", {}):
-				fresh[good] = Market.target(sim().data, place, good)
-			sim().state.markets[place] = fresh
-		var stock: Dictionary = sim().state.markets[place]
-		var mods: Dictionary = sim().state.place_mods.get(place, {})
+				fresh[good] = Market.target(data, place, good)
+			state.markets[place] = fresh
+		var stock: Dictionary = state.markets[place]
+		var mods: Dictionary = state.place_mods.get(place, {})
 		var produce_mult := float(mods.get("produces_mult", 1.0))
 		var consume_mult := float(mods.get("consumes_mult", 1.0))
 		for good in p.get("produces", {}):
@@ -67,9 +69,10 @@ func _integrate(days: float) -> void:
 				stock[good] -= float(recipe["inputs"][good]) * days * run
 			for good in recipe["outputs"]:
 				stock[good] += float(recipe["outputs"][good]) * days * run
+		var market: Dictionary = p.get("market", {})
 		for good in stock:
-			var target := Market.target(sim().data, place, good)
-			stock[good] = clampf(stock[good] + (target - stock[good]) * minf(relax, 1.0), 0.0, target * cap_mult)
+			var target := float(market[good])
+			stock[good] = clampf(stock[good] + (target - stock[good]) * relax, 0.0, target * cap_mult)
 
 
 func _docked_market(command: Dictionary) -> String:

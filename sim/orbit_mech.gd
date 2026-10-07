@@ -30,9 +30,19 @@ static func kepler(r0: Array, v0: Array, dt: float, mu: float) -> Array:
 	var x := sqmu * absf(alpha) * dt if alpha > 1e-12 else sqmu * dt / r0n
 	for _i in 40:
 		var z := alpha * x * x
-		var cs := _stumpff(z)
-		var c: float = cs[0]
-		var s: float = cs[1]
+		var c: float
+		var s: float
+		if z > 1e-8:
+			var sz := sqrt(z)
+			c = (1.0 - cos(sz)) / z
+			s = (sz - sin(sz)) / (sz * sz * sz)
+		elif z < -1e-8:
+			var sz := sqrt(-z)
+			c = (cosh(sz) - 1.0) / (-z)
+			s = (sinh(sz) - sz) / (sz * sz * sz)
+		else:
+			c = 0.5 - z / 24.0
+			s = 1.0 / 6.0 - z / 120.0
 		var x2 := x * x
 		var r := x2 * c + rv / sqmu * x * (1.0 - z * s) + r0n * (1.0 - z * c)
 		var f := rv / sqmu * x2 * c + (1.0 - alpha * r0n) * x2 * x * s + r0n * x - sqmu * dt
@@ -69,6 +79,46 @@ static func circular_speed(mu: float, r: float) -> float:
 	return sqrt(mu / r)
 
 
+## The Stumpff pair C(z), S(z) of _stumpff, and Lambert's y(z), without allocating an
+## array (this is the inner loop of every interplanetary plan).
+static func _lambert_y(z: float, r1n: float, r2n: float, A: float) -> float:
+	var c: float
+	var s_: float
+	if z > 1e-8:
+		var s := sqrt(z)
+		c = (1.0 - cos(s)) / z
+		s_ = (s - sin(s)) / (s * s * s)
+	elif z < -1e-8:
+		var s := sqrt(-z)
+		c = (cosh(s) - 1.0) / (-z)
+		s_ = (sinh(s) - s) / (s * s * s)
+	else:
+		c = 0.5 - z / 24.0
+		s_ = 1.0 / 6.0 - z / 120.0
+	return r1n + r2n + A * (z * s_ - 1.0) / sqrt(c)
+
+
+## The root function of Lambert's time equation at z (-INF where y < 0).
+static func _lambert_f(z: float, r1n: float, r2n: float, A: float, sqmu_dt: float) -> float:
+	var c: float
+	var s_: float
+	if z > 1e-8:
+		var s := sqrt(z)
+		c = (1.0 - cos(s)) / z
+		s_ = (s - sin(s)) / (s * s * s)
+	elif z < -1e-8:
+		var s := sqrt(-z)
+		c = (cosh(s) - 1.0) / (-z)
+		s_ = (sinh(s) - s) / (s * s * s)
+	else:
+		c = 0.5 - z / 24.0
+		s_ = 1.0 / 6.0 - z / 120.0
+	var y := r1n + r2n + A * (z * s_ - 1.0) / sqrt(c)
+	if y < 0.0:
+		return -INF
+	return pow(y / c, 1.5) * s_ + A * sqrt(y) - sqmu_dt
+
+
 ## Lambert's problem (single revolution, universal variables): the velocities that
 ## carry a body from r1 to r2 in dt seconds of free fall around mu. `normal` picks
 ## the sense of motion (prograde about it). Returns [v1, v2], or [] if unsolvable.
@@ -83,32 +133,31 @@ static func lambert(r1: Array, r2: Array, dt: float, mu: float, normal: Array) -
 		return []
 	var A := sin(dth) * sqrt(r1n * r2n / (1.0 - cos_dth))
 	var sqmu := sqrt(mu)
-	var y_of := func(z: float) -> float:
-		var cs := _stumpff(z)
-		return r1n + r2n + A * (z * cs[1] - 1.0) / sqrt(cs[0])
-	var f_of := func(z: float) -> float:
-		var cs := _stumpff(z)
-		var y: float = y_of.call(z)
-		if y < 0.0:
-			return -INF
-		return pow(y / cs[0], 1.5) * cs[1] + A * sqrt(y) - sqmu * dt
+	var sqmu_dt := sqmu * dt
 	var lo := -4.0 * PI * PI
 	var hi := 4.0 * PI * PI - 1e-6
 	# Raise the lower bound until y > 0 (the bracket's feasible region).
 	for _i in 200:
-		if y_of.call(lo) > 0.0:
+		if _lambert_y(lo, r1n, r2n, A) > 0.0:
 			break
 		lo += 0.1
-	if float(f_of.call(hi)) < 0.0:
+	if _lambert_f(hi, r1n, r2n, A, sqmu_dt) < 0.0:
 		return []
+	var lo_tested := false
 	for _i in 80:
 		var mid := 0.5 * (lo + hi)
-		if float(f_of.call(mid)) < 0.0:
+		# Once the bracket is a single step wide, mid is one of its ends, whose sign is
+		# already known (hi was checked above, lo was set on a negative f): nothing more
+		# can change, so the remaining passes are skipped. Same result, fewer solves.
+		if mid == hi or (lo_tested and mid == lo):
+			break
+		if _lambert_f(mid, r1n, r2n, A, sqmu_dt) < 0.0:
 			lo = mid
+			lo_tested = true
 		else:
 			hi = mid
 	var z := 0.5 * (lo + hi)
-	var y: float = y_of.call(z)
+	var y := _lambert_y(z, r1n, r2n, A)
 	var f := 1.0 - y / r1n
 	var g := A * sqrt(y / mu)
 	var gdot := 1.0 - y / r2n
