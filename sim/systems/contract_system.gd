@@ -11,6 +11,7 @@ extends "res://sim/systems/system.gd"
 
 const Contracts := preload("res://sim/contracts.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
+const Fitness := preload("res://sim/fitness.gd")
 
 const DAY := 86400.0
 const KEEP_HISTORY := 30
@@ -152,6 +153,10 @@ func _accept(command: Dictionary) -> String:
 		return "they want someone they know for that one"
 	if s.contracts["active"].size() >= int(data.contracts["board"]["max_active"]):
 		return "you already have as many jobs as you can keep track of"
+	if int(offer.get("passengers", 0)) > 0:
+		var unfit := Fitness.passenger_job_block(s, data)
+		if unfit != "":
+			return unfit
 	var job: Dictionary = offer.duplicate(true)
 	job["accepted_t"] = s.time_s
 	job["deadline_t"] = s.time_s + float(job["window_s"])

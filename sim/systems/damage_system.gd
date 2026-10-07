@@ -11,11 +11,13 @@
 ##   - Some of every hit goes into the keel, and a wrecked keel is a lost ship.
 ##
 ## A lost ship: the crew gets out in the lifeboat, the port's tug brings it in, and
-## the insurance pool finds you a stock hull for the excess. Cargo and carried jobs
-## are gone. Shipyards repair everything; other ports can patch the worst of it.
+## the insurer (or, with no working cover, the Commons on a loan) finds you a stock hull,
+## see _lose_ship. Cargo and carried jobs are gone. Shipyards repair everything; other ports can patch the worst of it.
 extends "res://sim/systems/system.gd"
 
 const ShipStats := preload("res://sim/ship_stats.gd")
+const Insurance := preload("res://sim/insurance.gd")
+const StockShip := preload("res://sim/stock_ship.gd")
 
 ## Which modules can be hit where: nose, middle, tail, or out on the flanks.
 const ZONES := {
@@ -115,30 +117,43 @@ func _impact(command: Dictionary) -> String:
 	return ""
 
 
-## The ship is gone. The crew is in the lifeboat; the insurance pool pays out a stock
-## hull at the port, less the excess. Cargo and carried jobs go with the wreck.
+## The ship is gone. The crew is in the lifeboat. With a working policy that covers a
+## total loss, the insurer pays out the difference in value to the stock hull it
+## replaces you with, less the excess (and the cargo, if cover includes it). With none
+## (no policy, lapsed, or void without a Warrant of Fitness) the Commons gives you a stock
+## hull on a loan, repaid slowly from later earnings, so nobody is stuck for good. Cargo and
+## carried jobs go with the wreck. A claim raises the premium.
 func _lose_ship(place: String) -> void:
 	var s = sim().state
 	var data = sim().data
 	var tune: Dictionary = data.balance["damage"]
 	var start: Dictionary = data.balance["start"]
 	var name: String = s.ship.get("name", start["ship_name"])
-	var hull: Dictionary = data.ships[start["ship"]]
-	var ship := {"name": name, "hull": start["ship"], "modules": hull["modules"].duplicate(), "cargo": {}, "cargo_paid": {}, "fuel_t": 0.0, "damage": {}}
-	ship["fuel_t"] = ShipStats.fuel_capacity_t(ship, data)
+	var lost: Dictionary = s.ship
+	var ship: Dictionary = StockShip.make(data, name, s.time_s)
+	var deal := Insurance.total_loss_settlement(s, data, lost, ship)
+	var loan := 0.0
+	var excess := 0.0
+	if deal["cover"] != "":
+		excess = float(deal["excess"])
+		s.credits += float(deal["payout"]) + float(deal["cargo_payout"]) - excess
+		Insurance.record_claim(s, "total_loss", float(deal["payout"]) + float(deal["cargo_payout"]))
+	else:
+		loan = float(Insurance.rules(data)["fallback"]["loan_cr"])
+		s.insurance["loan_cr"] = float(s.insurance.get("loan_cr", 0.0)) + loan
 	s.ship = ship
-	s.credits -= float(tune["insurance_excess"])
-	var lost := []
+	s.ship.erase("wof_seen")
+	var lost_jobs := []
 	for job in s.contracts.get("active", []).duplicate():
 		if job.get("state", "") == "carried":
 			s.contracts["active"].erase(job)
 			job["outcome"] = "lost"
 			job["closed_t"] = s.time_s
 			s.contracts["history"].append(job)
-			lost.append(job["id"])
+			lost_jobs.append(job["id"])
 	s.stats["ships_lost"] = int(s.stats.get("ships_lost", 0)) + 1
 	s.location = {"status": "lifeboat", "place": place, "until_t": s.time_s + float(tune["lifeboat_s"])}
-	sim().emit("ship_lost", {"place": place, "excess": float(tune["insurance_excess"]), "jobs_lost": lost})
+	sim().emit("ship_lost", {"place": place, "excess": excess, "jobs_lost": lost_jobs, "cover": deal["cover"], "payout": float(deal["payout"]) + float(deal["cargo_payout"]), "loan": loan, "reason": deal.get("reason", "")})
 
 
 ## What it costs to make good every scratch (or, away from a yard, the worst of them).
@@ -168,14 +183,19 @@ func _repair(_command: Dictionary) -> String:
 	var cost := repair_cost(s, data)
 	if cost <= 0.0:
 		return "nothing to repair"
-	if cost > s.credits + 1e-6:
-		return "repairs cost %d cr" % int(ceil(cost))
 	var full := _yard_here(s, data)
+	# Collision cover (and a valid Warrant of Fitness) pays what is above the excess on a
+	# yard repair; patching away from a yard is never claimed.
+	var split := Insurance.repair_split(s, data, cost) if full else {"player": cost, "insurer": 0.0, "claim": false}
+	if float(split["player"]) > s.credits + 1e-6:
+		return "repairs cost %d cr" % int(ceil(float(split["player"])))
 	var patch := float(data.balance["damage"]["patch_max"])
 	for slot in s.ship["damage"].keys():
 		s.ship["damage"][slot] = 0.0 if full else minf(float(s.ship["damage"][slot]), patch)
 		if float(s.ship["damage"][slot]) <= 0.0:
 			s.ship["damage"].erase(slot)
-	s.credits -= cost
-	sim().emit("repaired", {"credits": -cost, "full": full})
+	s.credits -= float(split["player"])
+	if split["claim"]:
+		Insurance.record_claim(s, "collision", float(split["insurer"]))
+	sim().emit("repaired", {"credits": -float(split["player"]), "full": full, "insured": float(split["insurer"])})
 	return ""

@@ -1,23 +1,26 @@
-## The player's ship: starting hull and module swaps at shipyards.
+## The player's ship: starting hull, module swaps, service, overhaul and inspection at
+## shipyards. Every yard job is itemised by ShipBill.quote and takes days in port.
 extends "res://sim/systems/system.gd"
 
 const ShipStats := preload("res://sim/ship_stats.gd")
 const Perks := preload("res://sim/perks.gd")
+const ShipBill := preload("res://sim/ship_bill.gd")
+const StockShip := preload("res://sim/stock_ship.gd")
 
 
 func setup(owner) -> void:
 	super.setup(owner)
 	owner.register("install_module", _install)
+	owner.register("refit", _refit)
+	owner.register("service", _service)
+	owner.register("overhaul", _overhaul)
+	owner.register("inspect", _inspect)
 
 
 func start_game() -> void:
 	var start: Dictionary = sim().data.balance["start"]
-	var hull: Dictionary = sim().data.ships[start["ship"]]
-	var ship := {
-		"name": start["ship_name"], "hull": start["ship"], "modules": hull["modules"].duplicate(),
-		"cargo": {}, "cargo_paid": {}, "fuel_t": 0.0,
-	}
-	ship["fuel_t"] = ShipStats.fuel_capacity_t(ship, sim().data)
+	var ship: Dictionary = StockShip.make(sim().data, start["ship_name"], sim().state.time_s)
+	ship.erase("damage")
 	sim().state.ship = ship
 
 
@@ -53,34 +56,72 @@ static func fits(module: Dictionary, slot: String) -> bool:
 	return slot.split(".")[0] in mounts(module)
 
 
-## {slot: "cargo.1", module: "cargo_pod_m"}. The old module is sold back at resale value.
+## {slot: "cargo.1", module: "cargo_pod_m", inspect?: bool}. The old module goes in
+## part-exchange at its trade-in value (by condition, age and damage), and the yard charges
+## fitting labour and takes days (data/ship_economy.json "refit"). A single swap; "refit"
+## takes several at once. Both charge exactly what ShipBill.quote itemises.
 func _install(command: Dictionary) -> String:
+	return _commit({"swaps": [{"slot": command.get("slot", ""), "module": command.get("module", "")}], "inspect": bool(command.get("inspect", false))})
+
+
+## {swaps: [{slot, module}], services: [{slot, level}], service_all, inspect}: see ShipBill.
+func _refit(command: Dictionary) -> String:
+	return _commit(command)
+
+
+## {slot: "drive.0" | "all", level?: "service" | "overhaul"}.
+func _service(command: Dictionary) -> String:
+	return _service_level(command, String(command.get("level", "service")))
+
+
+func _overhaul(command: Dictionary) -> String:
+	return _service_level(command, "overhaul")
+
+
+func _service_level(command: Dictionary, level: String) -> String:
+	var slot: String = command.get("slot", "all")
+	if slot == "all":
+		return _commit({"service_all": level, "inspect": bool(command.get("inspect", false))})
+	return _commit({"services": [{"slot": slot, "level": level}], "inspect": bool(command.get("inspect", false))})
+
+
+## A Warrant of Fitness inspection: passes and issues a certificate, or lists what must be fixed.
+func _inspect(_command: Dictionary) -> String:
+	return _commit({"inspect": true})
+
+
+func _commit(request: Dictionary) -> String:
 	var s = sim().state
 	var data = sim().data
-	var module_id: String = command.get("module", "")
-	if not module_id in yard_stock(s, data):
-		return "not sold here"
-	var slot: String = command.get("slot", "")
-	var module: Dictionary = data.modules[module_id]
-	if not fits(module, slot) or not slot in slot_names(s, data, slot.split(".")[0]):
-		return "that module does not fit that slot"
-	var old_id: String = s.ship["modules"].get(slot, "")
-	if old_id == module_id:
-		return "already fitted"
-	var refund := 0.0
-	if old_id != "":
-		refund = float(data.modules[old_id]["price"]) * float(data.balance["shipyard"]["resale_fraction"])
-	var cost := float(module["price"]) * Perks.yard_mult(s, s.location["place"]) - refund
-	if cost > s.credits + 1e-6:
-		return "not enough credits"
-	var trial: Dictionary = s.ship.duplicate(true)
-	trial["modules"][slot] = module_id
-	if trial.has("damage"):
-		trial["damage"].erase(slot)
-	if ShipStats.cargo_t(trial) > ShipStats.cargo_capacity_t(trial, data) + 1e-9:
-		return "sell some cargo first"
-	trial["fuel_t"] = minf(float(trial["fuel_t"]), ShipStats.fuel_capacity_t(trial, data))
-	s.ship = trial
-	s.credits -= cost
-	sim().emit("module_installed", {"slot": slot, "module": module_id, "replaced": old_id, "credits": -cost})
+	if s.location.get("status") != "docked":
+		return "not docked"
+	var bill: Dictionary = ShipBill.quote(s, data, request)
+	if not bill["ok"]:
+		return String(bill["problems"][0])
+	if float(bill["total"]) > s.credits + 1e-6:
+		return "not enough credits: %d cr needed" % int(ceil(float(bill["total"])))
+	var before: Dictionary = s.ship
+	s.ship = bill["ship_after"]
+	s.credits -= float(bill["total"])
+	for swap in request.get("swaps", []):
+		var net := 0.0
+		for line in bill["lines"]:
+			if line["slot"] == swap["slot"] and line["kind"] in ["part", "trade_in", "labour"]:
+				net += float(line["credits"])
+		sim().emit("module_installed", {"slot": swap["slot"], "module": swap["module"], "replaced": before["modules"].get(swap["slot"], ""), "credits": -net})
+	for line in bill["lines"]:
+		if line["kind"] in ["service", "overhaul"]:
+			sim().emit("yard_work", {"slot": line["slot"], "level": line["kind"], "credits": -float(line["credits"])})
+	if request.get("inspect", false):
+		var w: Dictionary = s.ship["wof"]
+		sim().emit("wof_issued" if w["result"] == "pass" else "wof_failed", {"issues": w["issues"], "valid_until_t": w["valid_until_t"], "credits": -float(bill["inspection"])})
+		s.ship["wof_seen"] = ""
+	sim().emit("yard_bill", {"total": bill["total"], "days": bill["days"]})
+	# Days in port: game time passes (even if the pilot had paused), and the clock runs
+	# every system. State is settled first, so what ticks sees the finished job.
+	if float(bill["days"]) > 0.0:
+		var was_paused: bool = s.paused
+		s.paused = false
+		sim().advance_game_time(float(bill["days"]) * 86400.0)
+		s.paused = was_paused
 	return ""

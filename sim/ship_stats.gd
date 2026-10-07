@@ -2,6 +2,8 @@
 ## and the view, so there is one definition of "what this ship can do".
 extends RefCounted
 
+const Condition := preload("res://sim/condition.gd")
+
 
 static func modules_of(ship: Dictionary, data) -> Array:
 	var out := []
@@ -77,14 +79,16 @@ const UNDAMAGED := ["heat_mw", "life_kw", "avionics_kw", "comms_kw", "sensor_kw"
 ## Summed over the modules, each counting for what is left of it after damage
 ## (ship["damage"][slot], 0 sound to 1 wrecked): a holed tank holds less, a hit drive
 ## pushes less, scorched solar wings and reactors make less power. Heat is what a
-## drive makes, so damage doesn't reduce it (see UNDAMAGED).
+## drive makes, so damage doesn't reduce it (see UNDAMAGED). Wear (sim/condition.gd) trims
+## a few percent more off the stats it names in data (performance.keys).
 static func _sum(ship: Dictionary, data, key: String) -> float:
 	var total := 0.0
 	var damage: Dictionary = ship.get("damage", {})
 	for slot in ship.get("modules", {}):
 		var m: Dictionary = data.modules[ship["modules"][slot]]
 		var left := 1.0 if key in UNDAMAGED else 1.0 - clampf(float(damage.get(slot, 0.0)), 0.0, 1.0)
-		total += float(m.get(key, 0.0)) * left
+		# Wear and small faults shave a little off supply and rating stats (Condition.perf).
+		total += float(m.get(key, 0.0)) * left * Condition.perf(ship, slot, key, data)
 	return total
 
 

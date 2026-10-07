@@ -278,9 +278,34 @@ func _handle_events() -> void:
 				bits.append("keel %d%%" % int(round(d["integrity"] * 100.0)))
 				notice(". ".join(bits) + ".", UI.WARN)
 			"ship_lost":
-				notice("The keel has failed. Abandon ship! The lifeboat is away; %s's tug is on its way." % sim.data.places[d["place"]]["name"], UI.WARN)
+				var cover := "Insurance (%s) pays %s, less the %s excess." % [sim.data.ship_economy["insurance"]["plans"][d["cover"]]["name"], UI.money(float(d["payout"])), UI.money(float(d["excess"]))] if d["cover"] != "" else "No working cover (%s): the Commons lends you a hull, %s on the books." % [d["reason"], UI.money(float(d["loan"]))]
+				notice("The keel has failed. Abandon ship! The lifeboat is away; %s's tug is on its way. %s" % [sim.data.places[d["place"]]["name"], cover], UI.WARN)
 			"rescued":
-				notice("The tug brought the lifeboat into %s. The insurance pool has found you a Mule; the excess was %s." % [sim.data.places[d["place"]]["name"], UI.money(float(sim.data.balance["damage"]["insurance_excess"]))], UI.AMBER)
+				notice("The tug brought the lifeboat into %s. There is a second-hand Mule waiting for you." % sim.data.places[d["place"]]["name"], UI.AMBER)
+				refresh = true
+			"wof_issued":
+				notice("Warrant of Fitness issued: good for %d days." % int(sim.data.ship_economy["wof"]["valid_days"]), UI.GOOD)
+				refresh = true
+			"wof_failed":
+				notice("Failed inspection. To fix: " + "; ".join(d["issues"]), UI.WARN)
+				refresh = true
+			"wof_expiring":
+				notice("Your Warrant of Fitness runs out in %d days: get an inspection at a shipyard." % int(d["days_left"]), UI.AMBER)
+			"wof_lapsed":
+				notice("Your Warrant of Fitness is no longer valid: some ports charge extra, passenger jobs are refused and your insurance is void.", UI.WARN)
+			"insurance_lapsed":
+				notice("Your insurance has lapsed: renew it at any port.", UI.WARN)
+			"insurance_void":
+				notice("Your insurance is void without a valid Warrant of Fitness.", UI.WARN)
+			"unfit_surcharge":
+				notice("Traffic control charged %s extra: no valid Warrant of Fitness." % UI.money(-float(d["credits"])), UI.AMBER)
+			"passengers_refused":
+				notice("Traffic control would not clear your passengers without a Warrant of Fitness: they were put ashore.", UI.WARN)
+			"module_fault":
+				notice("Fault: %s on the %s (%d%% down) until it is serviced." % [d["text"], d["module"], int(round(float(d["loss"]) * 100.0))], UI.AMBER)
+			"condition_low":
+				notice("The %s is badly worn (%d%%): it wants servicing." % [d["module"], int(round(float(d["condition"]) * 100.0))], UI.AMBER)
+			"yard_bill":
 				refresh = true
 			"repaired":
 				notice(("Repaired at the yard for %s." if d["full"] else "Patched up for %s: a yard will do the rest.") % UI.money(-float(d["credits"])), UI.GOOD)
