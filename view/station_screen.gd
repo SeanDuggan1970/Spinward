@@ -35,6 +35,8 @@ var _tab_index := 0
 static var keep_reserve := true
 ## Route plotting in progress: {to: {task, box, key, plan_t}}; box.options is filled by the worker.
 var _plotting: Dictionary = {}
+## Rebuilt lists being held at their old scroll position: [scroll bar, callable, frames left].
+var _scroll_holds: Array = []
 
 
 class _ResultBox:
@@ -96,6 +98,12 @@ func refresh() -> void:
 	about.autowrap_mode = TextServer.AUTOWRAP_WORD
 	about.custom_minimum_size = Vector2(200, 0)
 	_header.add_child(about)
+	# Rebuilding a tab (as plotting a route does, several times a second) must not throw
+	# its list back to the top: note where each list was scrolled, and hold it there.
+	var scrolled := {}
+	for c in _tabs.get_children():
+		if c is ScrollContainer:
+			scrolled[String(c.name)] = (c as ScrollContainer).scroll_vertical
 	for c in _tabs.get_children():
 		_tabs.remove_child(c)
 		c.queue_free()
@@ -114,11 +122,29 @@ func refresh() -> void:
 			_tabs.add_child(_shipyard_tab())
 	_tab_index = mini(keep_tab, _tabs.get_tab_count() - 1)
 	_tabs.current_tab = _tab_index
+	for c in _tabs.get_children():
+		if c is ScrollContainer and int(scrolled.get(String(c.name), 0)) > 0:
+			_hold_scroll(c, int(scrolled[String(c.name)]))
 	for c in _side.get_children():
 		c.queue_free()
 	_side.add_child(_ship_panel(place_id))
 	_side.custom_minimum_size = Vector2(300, 0)
 	_wrap_long(_tabs)
+
+
+## Put a rebuilt list back where it was scrolled. The new list has no height until it
+## is laid out (later this frame, before it is drawn), so the position is set again
+## each time its scroll bar's range changes, for a few frames, then let go.
+func _hold_scroll(scroll: ScrollContainer, value: int) -> void:
+	var bar := scroll.get_v_scroll_bar()
+	var put := _put_scroll.bind(scroll, value)
+	bar.changed.connect(put)
+	_scroll_holds.append([bar, put, 6])
+	scroll.scroll_vertical = value
+
+
+func _put_scroll(scroll: ScrollContainer, value: int) -> void:
+	scroll.scroll_vertical = value
 
 
 ## Long single-line labels set a container's minimum width and push panels off the
@@ -593,6 +619,11 @@ func _plot(place_id: String, to: String) -> void:
 
 
 func _process(_dt: float) -> void:
+	for hold in _scroll_holds:
+		hold[2] -= 1
+		if hold[2] <= 0 and is_instance_valid(hold[0]) and (hold[0] as ScrollBar).changed.is_connected(hold[1]):
+			(hold[0] as ScrollBar).changed.disconnect(hold[1])
+	_scroll_holds = _scroll_holds.filter(func(hold): return hold[2] > 0 and is_instance_valid(hold[0]))
 	var done := []
 	for to in _plotting:
 		var p: Dictionary = _plotting[to]

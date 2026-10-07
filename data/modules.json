@@ -1,5 +1,5 @@
 {
-	"_note": "Ships are a spine plus bolt-on modules. mass_t is dry mass. Drives: thrust_n and isp_s set acceleration and propellant use; heat_mw must be rejected by radiators or thrust is throttled. 'mounts' lists the slot kinds a module fits (default: its own kind), so long-haul refits can trade cargo bays for tanks, life support, berths, a lander or a rig. life_support_days and berths add up across modules; crewless ships need none. 'look' feeds the kit-bash renderer (view/flight/ship_builder.gd): command shape 'cockpit' or 'drone'; cargo shape 'cage' (open frame of half-length containers), 'container' (standard 2.4 x 2.6 x 6 m boxes, containers = [across, high, long]), 'bulk' (hopper), 'cradle' (open flatbed for outsize loads); 'hab' (passenger can or long-duration hab, mounted behind the crew); 'lander', 'sensor' and 'mining' ride in the cargo section; tanks of any slot cluster ahead of the drives; spine truss_m is the keel's width; drive coils is the number of field coils on the nozzle.",
+	"_note": "Ships are a spine plus bolt-on modules. mass_t is dry mass. Drives: thrust_n and isp_s set acceleration and propellant use; heat_mw must be rejected by radiators or thrust is throttled. 'mounts' lists the slot kinds a module fits (default: its own kind), so long-haul refits can trade cargo bays for tanks, life support, berths, a lander or a rig. life_support_days and berths add up across modules; crewless ships need none. 'look' feeds the kit-bash renderer (view/flight/ship_builder.gd): command shape 'cockpit' or 'drone'; cargo shape 'cage' (open frame of half-length containers), 'container' (standard 2.4 x 2.6 x 6 m boxes, containers = [across, high, long]), 'bulk' (hopper), 'cradle' (open flatbed for outsize loads); 'hab' (passenger can or long-duration hab, mounted behind the crew); 'lander', 'sensor' and 'mining' ride in the cargo section; tanks of any slot cluster ahead of the drives; spine truss_m is the keel's width; drive coils is the number of field coils on the nozzle. Power (sim/power.gd, balance.json 'power'), in kW and kWh: solar_kw is the output of a module's solar wings at 1 AU (falls with the square of the distance from the Sun); battery_kwh the storage; reactor_kw the electrical output of a fusion drive's reactor while it is lit; life_kw, avionics_kw, comms_kw, sensor_kw and mining_kw what a module draws (sensors and the rig draw a standby fraction until they work). Damage cuts what a module supplies, not what it draws.",
 	"mule_spine": {
 		"name": "Mule truss spine",
 		"kind": "spine",
@@ -50,7 +50,12 @@
 			],
 			"colour": "offwhite"
 		},
-		"life_support_days": 120
+		"life_support_days": 120,
+		"solar_kw": 24,
+		"battery_kwh": 600,
+		"life_kw": 5.0,
+		"avionics_kw": 2.5,
+		"comms_kw": 2.0
 	},
 	"drone_core": {
 		"name": "Commons drone core",
@@ -66,7 +71,11 @@
 			],
 			"colour": "dark"
 		},
-		"crewless": true
+		"crewless": true,
+		"solar_kw": 10,
+		"battery_kwh": 250,
+		"avionics_kw": 4.0,
+		"comms_kw": 2.0
 	},
 	"passenger_pod": {
 		"name": "24-seat passenger can",
@@ -83,7 +92,8 @@
 			],
 			"colour": "offwhite"
 		},
-		"berths": 24
+		"berths": 24,
+		"life_kw": 3.0
 	},
 	"cargo_pod_s": {
 		"name": "10 t cargo cage",
@@ -236,7 +246,8 @@
 			],
 			"colour": "grey",
 			"coils": 2
-		}
+		},
+		"reactor_kw": 300
 	},
 	"pathfinder_mk2": {
 		"name": "Pathfinder Mk2 fusion drive",
@@ -255,7 +266,8 @@
 			],
 			"colour": "grey",
 			"coils": 3
-		}
+		},
+		"reactor_kw": 500
 	},
 	"pathfinder_mk3": {
 		"name": "Pathfinder Mk3 fusion drive (D-He3)",
@@ -274,7 +286,8 @@
 			],
 			"colour": "grey",
 			"coils": 4
-		}
+		},
+		"reactor_kw": 1200
 	},
 	"radiator_panel": {
 		"name": "1.5 MW radiator panel",
@@ -338,7 +351,8 @@
 				0.5
 			],
 			"colour": "dark"
-		}
+		},
+		"avionics_kw": 1.0
 	},
 	"hab_extended": {
 		"name": "Long-duration hab (300 days)",
@@ -357,7 +371,8 @@
 				6.5
 			],
 			"colour": "offwhite"
-		}
+		},
+		"life_kw": 2.5
 	},
 	"passenger_berths": {
 		"name": "Passenger berths (6)",
@@ -377,7 +392,8 @@
 				5.0
 			],
 			"colour": "offwhite"
-		}
+		},
+		"life_kw": 1.2
 	},
 	"lander_bay": {
 		"name": "Lander bay, Bramble-class lander",
@@ -416,7 +432,8 @@
 				3.0
 			],
 			"colour": "offwhite"
-		}
+		},
+		"sensor_kw": 6.0
 	},
 	"mining_rig": {
 		"name": "Prospecting and mining rig",
@@ -435,7 +452,8 @@
 				7.0
 			],
 			"colour": "orange"
-		}
+		},
+		"mining_kw": 45.0
 	},
 	"longview_drive": {
 		"name": "Long View drive (lent)",
@@ -456,7 +474,8 @@
 			],
 			"colour": "dark",
 			"coils": 6
-		}
+		},
+		"reactor_kw": 900
 	},
 	"sleep_berth": {
 		"name": "Long-sleep berth (lent)",
@@ -476,7 +495,8 @@
 				6.0
 			],
 			"colour": "offwhite"
-		}
+		},
+		"life_kw": 1.5
 	},
 	"solar_sail": {
 		"name": "Lightfoot sail",
@@ -546,7 +566,12 @@
 				4.5
 			],
 			"colour": "offwhite"
-		}
+		},
+		"solar_kw": 10,
+		"battery_kwh": 120,
+		"life_kw": 4.0,
+		"avionics_kw": 3.0,
+		"comms_kw": 1.5
 	},
 	"kestrel_pod": {
 		"name": "Kestrel passenger pod",
@@ -563,7 +588,8 @@
 				9.4
 			],
 			"colour": "offwhite"
-		}
+		},
+		"life_kw": 1.5
 	},
 	"kestrel_tanks": {
 		"name": "Kestrel propellant spheres",

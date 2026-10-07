@@ -360,7 +360,7 @@ func _annunciators(g, r: Dictionary) -> void:
 	var peri := float(loc.get("peri_t", -1.0))
 	var left := [
 		["HULL", alerts["HULL"]], ["FUEL LOW", alerts["FUEL LOW"]], ["HEAT", alerts["HEAT"]],
-		["DRIVE", alerts["DRIVE"]], ["LIFE SUP", ls_level], ["", 0],
+		["DRIVE", alerts["DRIVE"]], ["LIFE SUP", ls_level], ["POWER", alerts["POWER"]],
 	]
 	var right := [
 		["BURN", AV.GREEN if phase in ["ACCELERATING", "BRAKING", "BURNING ACROSS"] else 0],

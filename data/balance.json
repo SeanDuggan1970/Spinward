@@ -82,5 +82,34 @@
 		"patch_mult": 1.6,
 		"insurance_excess": 3000.0,
 		"lifeboat_s": 25.0
+	},
+	"power": {
+		"_note": "Ship electrical power (sim/power.gd, sim/systems/power_system.gd). Supply: the reactor on the drives while lit (in transit and on approach, while a site job runs, or when ordered with the 'reactor' command) and the crew section's solar wings, scaled by 1/au^2 (capped at solar_factor_max close to the Sun). Docked ships plug into shore_kw. Loads come from module data; radiator pumps draw pump_kw_per_mw for every MW of heat rejected, and the heat a lit reactor makes is its drives' heat_mw times heat_frac for the phase. A deficit drains the battery. Below shed_comms_below of charge (only while in deficit) comms and sensors shed, below shed_mining_below the rig too, and below life_warn_below life support gets a red warning first; shed_release_margin is the hysteresis. Sensors and rig draw standby_frac of their load until a job needs them. Gameplay departures (reactor fuel is free, a flat battery never hurts the crew) are recorded in docs/DESIGN.md.",
+		"shore_kw": 200.0,
+		"solar_factor_max": 4.0,
+		"pump_kw_per_mw": 1.5,
+		"standby_frac": 0.1,
+		"heat_frac": {
+			"transit": 1.0,
+			"approach": 0.3,
+			"work": 0.15
+		},
+		"shed_comms_below": 0.25,
+		"shed_mining_below": 0.12,
+		"life_warn_below": 0.06,
+		"shed_release_margin": 0.05
+	},
+	"cockpit": {
+		"_note": "Cockpit alert thresholds (view/ui/cockpit_pages.gd): they colour lamps and gauges only; the rules live in the sim. Fuel and hull are fractions of nominal; heat is the ratio of heat made to heat rejected; damage is a module's 0-1 damage; power_caution_frac and power_caution_hours light the POWER caution while the battery is discharging below that charge or within that many hours of empty.",
+		"fuel_caution": 0.2,
+		"fuel_warning": 0.05,
+		"hull_caution": 0.7,
+		"hull_warning": 0.4,
+		"heat_caution": 1.0,
+		"heat_warning": 1.5,
+		"damage_caution": 0.3,
+		"damage_warning": 0.7,
+		"power_caution_frac": 0.5,
+		"power_caution_hours": 24.0
 	}
 }
