@@ -29,6 +29,7 @@ func start_game() -> void:
 	s.contracts = {"board": {}, "next_t": {}, "active": [], "history": [], "seq": 0, "last_dock": ""}
 	s.reputation = {}
 	s.ship["parcels_t"] = 0.0
+	s.ship["cabin_t"] = 0.0
 	s.ship["passengers"] = 0
 	_on_docked()
 
@@ -171,21 +172,51 @@ func _room_for(job: Dictionary) -> String:
 	var data = sim().data
 	if int(job["passengers"]) > 0:
 		if free_berths(s, data) < int(job["passengers"]):
-			return "no berths: fit passenger berths (%d needed, %d free)" % [int(job["passengers"]), free_berths(s, data)]
+			var yards := berth_yards(data)
+			return "no berths: fit passenger berths (%d needed, %d free)%s" % [int(job["passengers"]), free_berths(s, data),
+				(". Sold at " + ", ".join(yards)) if not yards.is_empty() else ""]
+	elif in_cabin(job):
+		return ""
 	elif ShipStats.cargo_t(s.ship) + float(job["mass_t"]) > ShipStats.cargo_capacity_t(s.ship, data) + 1e-9:
 		return "no room in the hold for %.2f t" % float(job["mass_t"])
 	return ""
 
 
+## Rides in the cabin, not the hold: passengers (in their berths) and anything small
+## enough to carry by hand. Its mass still counts; it takes no hold space.
+static func in_cabin(job: Dictionary) -> bool:
+	return int(job.get("passengers", 0)) > 0 or bool(job.get("hand", false))
+
+
+## The ports whose shipyards sell passenger berths (any module with berths), by name.
+static func berth_yards(data) -> Array:
+	var out := []
+	for id in data.places:
+		var place: Dictionary = data.places[id]
+		if not "shipyard" in place.get("services", []):
+			continue
+		for m in place.get("shipyard_stock", []):
+			if int(data.modules[m].get("berths", 0)) > 0:
+				out.append(String(place["name"]))
+				break
+	return out
+
+
+## Aboard: in the cabin (cabin_t: mass, no hold space) or the hold (parcels_t). The job
+## remembers where it went, so it comes off the same way (jobs loaded by older builds
+## went in the hold).
 func _load(job: Dictionary) -> void:
 	var s = sim().state
-	s.ship["parcels_t"] = float(s.ship.get("parcels_t", 0.0)) + float(job["mass_t"])
+	var key := "cabin_t" if in_cabin(job) else "parcels_t"
+	job["stowed"] = key
+	s.ship[key] = float(s.ship.get(key, 0.0)) + float(job["mass_t"])
 	s.ship["passengers"] = int(s.ship.get("passengers", 0)) + int(job["passengers"])
 
 
 func _unload(job: Dictionary) -> void:
 	var s = sim().state
-	s.ship["parcels_t"] = maxf(0.0, float(s.ship.get("parcels_t", 0.0)) - float(job["mass_t"]))
+	var key := String(job.get("stowed", "parcels_t"))
+	s.ship[key] = maxf(0.0, float(s.ship.get(key, 0.0)) - float(job["mass_t"]))
 	s.ship["passengers"] = maxi(0, int(s.ship.get("passengers", 0)) - int(job["passengers"]))
 
 

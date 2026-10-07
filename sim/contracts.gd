@@ -105,6 +105,7 @@ static func make_offer(data, eph, state, rng: RandomNumberGenerator, place: Stri
 	var heads := 0
 	var mass := 0.0
 	var item := ""
+	var hand := false
 	if spec.get("per_head", false):
 		var c: Array = spec["count"]
 		heads = rng.randi_range(int(c[0]), int(c[1]))
@@ -112,10 +113,20 @@ static func make_offer(data, eph, state, rng: RandomNumberGenerator, place: Stri
 		item = who[rng.randi() % who.size()]
 		mass = 0.1 * heads
 	else:
-		var m: Array = spec["mass_t"]
-		mass = snappedf(rng.randf_range(float(m[0]), float(m[1])), 0.05)
+		# Freight for the hold, or something small enough to carry in the cabin (no hold
+		# space, a few kilograms), in proportion to how many of each the kind lists.
 		var items: Array = spec["items"]
-		item = items[rng.randi() % items.size()]
+		var hand_items: Array = spec.get("hand_items", [])
+		var pick := rng.randi() % (items.size() + hand_items.size())
+		if pick < items.size():
+			var m: Array = spec["mass_t"]
+			mass = snappedf(rng.randf_range(float(m[0]), float(m[1])), 0.05)
+			item = items[pick]
+		else:
+			var hm: Array = spec["hand_mass_t"]
+			mass = snappedf(rng.randf_range(float(hm[0]), float(hm[1])), 0.001)
+			item = hand_items[pick - items.size()]
+			hand = true
 	var urgency := 1.0 + float(spec["urgency"]) * maxf(0.0, float(slack_range[1]) - slack)
 	# Work that had to go long-haul pays like it.
 	if long_haul and spec.get("range", "local") != "long_haul":
@@ -125,7 +136,7 @@ static func make_offer(data, eph, state, rng: RandomNumberGenerator, place: Stri
 	var od: Array = data.contracts["board"]["offer_days"]
 	return {
 		"kind": kind, "client": client_of(data, place), "issued_at": place, "pickup": pickup, "to": to,
-		"item": item, "mass_t": mass, "passengers": heads, "reward": snappedf(reward, 50.0),
+		"item": item, "mass_t": mass, "passengers": heads, "hand": hand, "reward": snappedf(reward, 50.0),
 		"window_s": days * slack * DAY, "expires_t": t + rng.randf_range(float(od[0]), float(od[1])) * DAY,
 		"min_rep": float(spec.get("min_rep", 0.0)), "rep": float(spec["rep"]), "channel": channel,
 		"hidden": channel == "rumour", "quick_days": days,

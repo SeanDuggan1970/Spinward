@@ -783,6 +783,12 @@ Sean's direction: "we will let players remap in the future and use other control
 - **Analog flight:** thrust, strafe, pitch, yaw and roll read action strength (0 to 1, after the deadzone), so a half-pushed stick is half a push. Keys give exactly 0 or 1 as before, and two keys on different thrust axes still make a unit vector, so keyboard flight is unchanged. A half-pulled trigger gives half the RCS acceleration.
 - **Departures and gaps:** the lander and elevator view are still digital (a stick past its deadzone counts as a full push); lander and flight keys now follow physical key position rather than the typed letter; a mouse is not rebindable (it drives menus and the free camera); and "Anywhere" has no gamepad quick save, load or sound toggle by default (bindable on the page).
 
+## Passengers and hand-carried parcels (Oct 2026)
+
+- **Passenger berths** (6 berths, a cargo-slot module) are sold at five yards: Kibo Ring, Trojan Yards, Ares Ring, Piazzi Station and Hektor Reach. Before, only Kibo Ring sold them, and nothing said where to look. A passenger job you can't take yet now names the yards that sell berths.
+- **Small things are carried by hand** (`hand_items` in `data/contracts.json`): letters, papers, a diplomatic pouch, a briefcase, a data cube. They take no hold space, only their few kilograms of mass. Courier, pickup and long-haul jobs draw them alongside freight, and the card says "carried by hand (no hold space)".
+- **The cabin.** Passengers ride in their berths and take no hold space either. Cabin loads (`ship.cabin_t`) count toward the ship's mass but not the hold (`ShipStats.cargo_t`). A job remembers where it was stowed, so jobs taken in older saves come off the hold as they went on.
+
 ## Milestones
 
 - **M0 – Foundation:** done.

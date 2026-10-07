@@ -26,7 +26,8 @@ static func fuel_capacity_t(ship: Dictionary, data) -> float:
 	return _sum(ship, data, "fuel_t")
 
 
-## Freight aboard, including contract parcels and passengers (parcels_t).
+## Freight in the hold, including contract parcels stowed there (parcels_t). Passengers
+## and hand-carried parcels ride in the cabin (cabin_t) and take no hold space.
 static func cargo_t(ship: Dictionary) -> float:
 	var total := float(ship.get("parcels_t", 0.0))
 	for g in ship.get("cargo", {}):
@@ -34,8 +35,10 @@ static func cargo_t(ship: Dictionary) -> float:
 	return total
 
 
+## Everything aboard that has mass: the hold, plus what rides in the cabin (cabin_t:
+## passengers and hand-carried parcels, which take no hold space).
 static func total_mass_t(ship: Dictionary, data) -> float:
-	return dry_mass_t(ship, data) + cargo_t(ship) + float(ship.get("fuel_t", 0.0))
+	return dry_mass_t(ship, data) + cargo_t(ship) + float(ship.get("cabin_t", 0.0)) + float(ship.get("fuel_t", 0.0))
 
 
 ## Thrust after heat limits: drives throttle down when radiators cannot keep up.

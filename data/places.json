@@ -299,7 +299,8 @@
 			"radiator_array",
 			"lander_bay",
 			"mining_rig",
-			"hab_extended"
+			"hab_extended",
+			"passenger_berths"
 		],
 		"market": {
 			"regolith": 600,
@@ -566,7 +567,8 @@
 			"hab_extended",
 			"lander_bay",
 			"mining_rig",
-			"survey_pod"
+			"survey_pod",
+			"passenger_berths"
 		],
 		"market": {
 			"deuterium": 6,
@@ -692,7 +694,8 @@
 			"tank_l",
 			"mining_rig",
 			"lander_bay",
-			"radiator_array"
+			"radiator_array",
+			"passenger_berths"
 		],
 		"features": [
 			"oneill_pair"
@@ -990,7 +993,8 @@
 			"lander_bay",
 			"mining_rig",
 			"survey_pod",
-			"radiator_array"
+			"radiator_array",
+			"passenger_berths"
 		],
 		"market": {
 			"water_ice": 300,

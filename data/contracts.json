@@ -46,17 +46,26 @@
 				"sealed ice-core samples",
 				"replacement gyros for a stranded tug",
 				"a wedding cake (do not ask)",
-				"legal papers that must be signed by hand",
-				"an urn, going home",
 				"seed stock for the farm modules",
-				"a kidney on a chip",
-				"a diplomatic pouch",
 				"a crate of real coffee",
 				"dialysis unit spares",
 				"an old violin in a pressure case",
-				"a reactor controller, re-flashed",
+				"a reactor controller, re-flashed"
+			],
+			"hand_items": [
+				"legal papers that must be signed by hand",
+				"a kidney on a chip",
+				"a diplomatic pouch",
 				"a box of letters, written on paper",
-				"calibration masters for a telescope"
+				"an urn, going home",
+				"calibration masters for a telescope",
+				"a briefcase that is never to leave your sight",
+				"a data cube too sensitive to transmit",
+				"a ring, for a proposal"
+			],
+			"hand_mass_t": [
+				0.002,
+				0.03
 			]
 		},
 		"passenger": {
@@ -105,13 +114,20 @@
 			"min_rep": 6.0,
 			"items": [
 				"a prototype radiator",
-				"a patient for treatment",
+				"a patient in a medical cryo-pod",
 				"a crate the sender will not describe",
 				"the station's only spare pump",
 				"a survey team's samples",
-				"a sculpture for the Kernel's commons",
+				"a sculpture for the Kernel's commons"
+			],
+			"hand_items": [
 				"medical scans that cannot go by radio",
-				"a court witness"
+				"a sealed envelope for the station master",
+				"a court witness's sworn testimony, on paper"
+			],
+			"hand_mass_t": [
+				0.002,
+				0.03
 			]
 		},
 		"long_haul": {
@@ -134,10 +150,18 @@
 				"a crate of reactor-grade spares",
 				"a vintage of Martian wine, the first",
 				"fusion fuel samples for assay",
+				"a refurbished heart for a Valhalla surgeon"
+			],
+			"hand_items": [
 				"a court order with a seal on it",
-				"a refurbished heart for a Valhalla surgeon",
 				"survey data too big to send",
-				"a child's birthday present, promised"
+				"a child's birthday present, promised",
+				"the only copy of a novel",
+				"an heirloom watch"
+			],
+			"hand_mass_t": [
+				0.002,
+				0.03
 			]
 		}
 	},
@@ -186,5 +210,6 @@
 			100.0,
 			"One of their own"
 		]
-	]
+	],
+	"_hand_note": "hand_items are small enough to carry in the cabin (letters, papers, a briefcase, data): they take no hold space, only their own few kilograms of mass (hand_mass_t). Passengers ride in berths and take no hold space either."
 }

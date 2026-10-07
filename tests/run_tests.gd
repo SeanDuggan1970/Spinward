@@ -88,6 +88,7 @@ func _initialize() -> void:
 	test_cockpit_alerts()
 	test_ship_audio()
 	test_time_ramps()
+	test_cabin_and_berths()
 	test_controls()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
@@ -866,8 +867,12 @@ func test_contracts() -> void:
 	if offer.is_empty():
 		return
 	var before := ShipStats.cargo_t(s.ship)
+	var mass_before := ShipStats.total_mass_t(s.ship, sim.data)
 	check(sim.apply({"type": "accept_contract", "id": offer["id"]}) == "", "Take the package job")
-	check(absf(ShipStats.cargo_t(s.ship) - before - float(offer["mass_t"])) < 1e-9, "The parcel's mass is aboard")
+	# In the hold, or carried by hand in the cabin (no hold space): its mass is aboard either way.
+	var in_hold := 0.0 if bool(offer.get("hand", false)) else float(offer["mass_t"])
+	check(absf(ShipStats.cargo_t(s.ship) - before - in_hold) < 1e-9, "The parcel is stowed where it belongs")
+	check(absf(ShipStats.total_mass_t(s.ship, sim.data) - mass_before - float(offer["mass_t"])) < 1e-9, "The parcel's mass is aboard")
 	var credits := s.credits
 	_dock_at(sim, offer["to"])
 	check(absf(s.credits - credits - float(offer["reward"])) < 1e-6, "On-time delivery pays in full (%s)" % offer["reward"])
@@ -2514,3 +2519,51 @@ func _actions_in_views(dir_path: String) -> Dictionary:
 			found[m.get_string(2)] = true
 	found.erase("ui_cancel")
 	return found
+
+
+## Passengers ride in berths, and small things (letters, papers, a briefcase, data) are
+## carried by hand: neither takes hold space, though their mass counts. Berths are sold
+## at more than one yard, and a pilot short of them is told where.
+func test_cabin_and_berths() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var yards := ContractSystemScript.berth_yards(d)
+	check(yards.size() >= 3, "Passenger berths are sold at several yards (%s)" % ", ".join(yards))
+	var hand := 0
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 5
+	for _i in 200:
+		var o := Contracts.make_offer(d, sim.ephemeris, s, rng, "kibo_ring", "package", "board")
+		if bool(o.get("hand", false)):
+			hand += 1
+			check(float(o["mass_t"]) < 0.05, "A hand-carried parcel weighs kilograms (%.3f t)" % float(o["mass_t"]))
+	check(hand > 20 and hand < 180, "Some courier jobs are hand-carried, most are freight (%d of 200)" % hand)
+	# A full hold still takes a letter, but not a crate.
+	s.ship["cargo"]["water_ice"] = ShipStats.cargo_capacity_t(s.ship, d)
+	var letter := {"id": 9001, "kind": "package", "client": "Terran Compact", "issued_at": "kibo_ring", "pickup": "", "to": "halo_depot",
+		"item": "a box of letters", "mass_t": 0.01, "passengers": 0, "hand": true, "reward": 1000.0, "window_s": 9.0 * DAY,
+		"expires_t": s.time_s + DAY, "min_rep": -100.0, "rep": 1.0, "channel": "board", "hidden": false, "quick_days": 2.0}
+	var crate := letter.duplicate()
+	crate["id"] = 9002
+	crate["hand"] = false
+	crate["mass_t"] = 1.0
+	s.contracts["board"]["kibo_ring"] = [letter, crate]
+	var hold_before := ShipStats.cargo_t(s.ship)
+	var mass_before := ShipStats.total_mass_t(s.ship, sim.data)
+	check(sim.apply({"type": "accept_contract", "id": 9001}) == "", "A full hold still takes a letter")
+	check(absf(ShipStats.cargo_t(s.ship) - hold_before) < 1e-9, "The letter takes no hold space")
+	check(absf(ShipStats.total_mass_t(s.ship, d) - mass_before - 0.01) < 1e-9, "but its mass counts")
+	check(sim.apply({"type": "accept_contract", "id": 9002}) != "", "A full hold refuses a crate")
+	# Passengers: berths, not the hold.
+	var sim2 := fresh()
+	var s2 := sim2.state
+	s2.ship["modules"]["cargo.1"] = "passenger_berths"
+	var job := Contracts.make_offer(d, sim2.ephemeris, s2, rng, "kibo_ring", "passenger", "board")
+	job["id"] = 9003
+	job["min_rep"] = -100.0
+	job["passengers"] = 3
+	s2.contracts["board"]["kibo_ring"] = [job]
+	var hold2 := ShipStats.cargo_t(s2.ship)
+	check(sim2.apply({"type": "accept_contract", "id": 9003}) == "", "Passengers board into berths")
+	check(absf(ShipStats.cargo_t(s2.ship) - hold2) < 1e-9 and int(s2.ship["passengers"]) == 3, "Passengers take berths, not hold space")

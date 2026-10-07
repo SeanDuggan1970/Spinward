@@ -468,6 +468,8 @@ func _contracts_tab(place_id: String) -> Control:
 func _cargo_words(job: Dictionary) -> String:
 	if int(job["passengers"]) > 0:
 		return "%s (%d aboard)" % [job["item"], int(job["passengers"])]
+	if bool(job.get("hand", false)):
+		return "%s, carried by hand (no hold space)" % job["item"]
 	return "%s, %.2f t" % [job["item"], float(job["mass_t"])]
 
 
@@ -502,8 +504,9 @@ func _offer_card(place_id: String, offer: Dictionary) -> Control:
 	p[1].add_child(UI.label("Allow %s  ·  %s  ·  pays %s  ·  %s" % [UI.duration(due), est, UI.money(float(offer["reward"])), offer["client"]], colour, 13))
 	var why := ""
 	if int(offer["passengers"]) > 0 and ContractSystem.free_berths(s, d) < int(offer["passengers"]):
-		why = "needs %d berths (fit passenger berths)" % int(offer["passengers"])
-	elif offer["pickup"] == "" and ShipStats.cargo_t(s.ship) + float(offer["mass_t"]) > ShipStats.cargo_capacity_t(s.ship, d) + 1e-9:
+		var yards := ContractSystem.berth_yards(d)
+		why = "needs %d berths: fit passenger berths in a cargo slot%s" % [int(offer["passengers"]), (" (sold at %s)" % ", ".join(yards)) if not yards.is_empty() else ""]
+	elif offer["pickup"] == "" and not ContractSystem.in_cabin(offer) and ShipStats.cargo_t(s.ship) + float(offer["mass_t"]) > ShipStats.cargo_capacity_t(s.ship, d) + 1e-9:
 		why = "no room in the hold"
 	var row := HBoxContainer.new()
 	var hint := UI.label(why, UI.WARN, 12)
