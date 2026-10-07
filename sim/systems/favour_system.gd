@@ -215,7 +215,7 @@ func _use_voucher(command: Dictionary) -> String:
 		return "that voucher is good at %s yards: %s" % [v["operator"], ", ".join(Favours.yard_names(data, v["operator"]))]
 	var spent := Favours.repair_service(s, data, float(v["value_cr"]))
 	if spent <= 0.0:
-		return "no collision damage to repair (vouchers also come off service and overhaul bills at this yard)"
+		return "nothing to repair"
 	v["value_cr"] = float(v["value_cr"]) - spent
 	if float(v["value_cr"]) < 1.0:
 		s.favours["vouchers"].erase(v)

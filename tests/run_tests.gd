@@ -3696,7 +3696,8 @@ func test_yard_voucher_on_bill() -> void:
 	# Damage repair by use_voucher still works and says where else a voucher helps.
 	s.favours["vouchers"] = [{"id": 93, "form": "yard", "operator": op, "value_cr": 500.0, "expires_t": s.time_s + 30.0 * DAY}]
 	s.ship["damage"] = {}
-	check(String(sim.apply({"type": "use_voucher", "id": 93})).contains("service and overhaul"), "use_voucher with nothing damaged points at service and overhaul")
+	check(sim.apply({"type": "use_voucher", "id": 93}) == "nothing to repair", "use_voucher mends collision damage only: with none it keeps the voucher")
+	check(Favours.yard_voucher_balance(s, d, "kibo_ring") == 500.0, "(and the voucher is still there for the bill)")
 
 
 ## Hitchhikers are passengers: no ride without a valid Warrant of Fitness, and a strict
