@@ -19,6 +19,7 @@ extends SceneTree
 const Sim := preload("res://sim/sim.gd")
 const Navigation := preload("res://sim/navigation.gd")
 const TravelSystem := preload("res://sim/systems/travel_system.gd")
+const Condition := preload("res://sim/condition.gd")
 const V := preload("res://sim/v3.gd")
 const Interplanetary := preload("res://sim/interplanetary.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
@@ -38,11 +39,14 @@ var checked := 0
 func _initialize() -> void:
 	var days := [0.0, 97.0, 211.0]
 	var options := true
+	var variant := "base"
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("days="):
 			days = []
 			for d in a.trim_prefix("days=").split(","):
 				days.append(float(d))
+		if a.begins_with("ship="):
+			variant = a.trim_prefix("ship=")
 		if a.begins_with("options="):
 			options = a.trim_prefix("options=") == "1"
 	sim = Sim.new()
@@ -63,6 +67,35 @@ func _initialize() -> void:
 		var p: Dictionary = data.places[id]
 		if not p.has("foot_of"):
 			ports.append(id)
+	for v in variant.split(","):
+		_apply_variant(ship, v)
+		print("-- ship variant: %s" % v)
+		_run(ship, ports, days, options)
+	print("checked %d routes" % checked)
+	print("ROUTES_CLEAR" if violations == 0 else "ROUTES_BLOCKED %d" % violations)
+	quit(0 if violations == 0 else 1)
+
+
+## Variants: base, tuned (strongest thrust tunes), lean (strongest Isp tunes), worn (drive at 0.3).
+func _apply_variant(ship: Dictionary, v: String) -> void:
+	ship.erase("tunes")
+	var drive := ""
+	for slot in ship["modules"]:
+		if sim.data.modules.get(ship["modules"][slot], {}).has("thrust_n"):
+			drive = slot
+	if v == "tuned" or v == "lean":
+		var ids := ["overdrive_map", "injector_retime"] if v == "tuned" else ["lean_burn_map", "nozzle_polish"]
+		ship["tunes"] = []
+		for id in ids:
+			ship["tunes"].append({"id": id, "slot": drive, "module": ship["modules"][drive], "source": "audit"})
+	if v == "worn":
+		Condition.set_condition(ship, drive, 0.3)
+	else:
+		Condition.set_condition(ship, drive, 1.0)
+
+
+func _run(ship: Dictionary, ports: Array, days: Array, options: bool) -> void:
+	var data = sim.data
 	var t0: float = sim.state.time_s
 	for day in days:
 		var t: float = t0 + float(day) * 86400.0
@@ -77,9 +110,6 @@ func _initialize() -> void:
 					for o in TravelSystem.plan_for(ship, data, sim.ephemeris, a, b, t):
 						if o.get("samples") != null:
 							_check(_sampled(o, a, b, t, ship), String(o["id"]), a, b, day)
-	print("checked %d routes" % checked)
-	print("ROUTES_CLEAR" if violations == 0 else "ROUTES_BLOCKED %d" % violations)
-	quit(0 if violations == 0 else 1)
 
 
 func _location(plan: Dictionary, a: String, b: String, t: float) -> Dictionary:
