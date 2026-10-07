@@ -108,19 +108,19 @@ func _physics_process(dt: float) -> void:
 	var accel := -up * gm / (pos - centre).length_squared()
 	var alt_now := (pos - centre).length() - radius
 	var sink := -vel.dot(up)
-	var firing := fuel > 0.0 and (Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_SPACE) or (autopilot and sink > clampf(alt_now * 0.04, 1.2, 12.0)))
+	var firing := fuel > 0.0 and (Input.is_action_pressed("lander_main") or (autopilot and sink > clampf(alt_now * 0.04, 1.2, 12.0)))
 	if firing:
 		accel += up * MAIN_ACCEL
 		fuel -= dt
 	var side := Vector3.ZERO
 	if fuel > 0.0:
-		if Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT):
+		if Input.is_action_pressed("lander_left"):
 			side.x -= 1.0
-		if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT):
+		if Input.is_action_pressed("lander_right"):
 			side.x += 1.0
-		if Input.is_key_pressed(KEY_Q) or Input.is_key_pressed(KEY_UP):
+		if Input.is_action_pressed("lander_forward"):
 			side.z -= 1.0
-		if Input.is_key_pressed(KEY_E) or Input.is_key_pressed(KEY_DOWN):
+		if Input.is_action_pressed("lander_back"):
 			side.z += 1.0
 	if autopilot and fuel > 0.0:
 		var drift := vel - up * vel.dot(up)
@@ -160,7 +160,7 @@ func _set_legs(amount: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if done and _result_t > 0.8 and event is InputEventKey and event.pressed and not event.echo:
+	if done and _result_t > 0.8 and (event is InputEventKey or event is InputEventJoypadButton) and event.pressed and not event.echo:
 		finished.emit(landed)
 
 

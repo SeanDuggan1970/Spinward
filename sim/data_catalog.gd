@@ -26,7 +26,8 @@ var story: Dictionary = {}
 var contracts: Dictionary = {}
 ## The Spaceline news feed (data/news.json).
 var news: Dictionary = {}
-## The keys, for the controls page (data/controls.json); view-only.
+## Every control and its default keys and gamepad buttons (data/controls.json); view-only,
+## built into the InputMap by view/bindings.gd.
 var controls: Dictionary = {}
 ## Paint schemes for the view (data/liveries.json); the sim never reads them.
 var liveries: Dictionary = {}

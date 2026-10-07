@@ -3,6 +3,7 @@
 extends Control
 
 const UI := preload("res://view/ui/ui_kit.gd")
+const Bindings := preload("res://view/bindings.gd")
 
 var sim
 var view
@@ -48,7 +49,7 @@ func _draw() -> void:
 		var label := "DIRECTOR  ·  " + String(view.shot_label)
 		var lw := _font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
 		draw_string(_font, Vector2(w - lw - 24, 72), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(UI.TEXT, 0.7))
-		draw_string(_font, Vector2(16, h - 82), "Drag or wheel to take the camera    M  next view    [ ]  time compression    P  pause", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, UI.DIM)
+		draw_string(_font, Vector2(16, h - 82), "Drag or wheel to take the camera    %s  next view    %s %s  time compression    %s  pause" % [Bindings.hint_of("transit_view"), Bindings.key_of("time_slower"), Bindings.key_of("time_faster"), Bindings.key_of("pause")], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, UI.DIM)
 	else:
 		draw_string(_font, Vector2(w - 220, 72), "FREE CAMERA", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(UI.TEXT, 0.7))
-		draw_string(_font, Vector2(16, h - 82), "Drag  orbit    Wheel  zoom    Arrows  orbit    leave it a few seconds for the director    M  next view", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, UI.DIM)
+		draw_string(_font, Vector2(16, h - 82), "Drag  orbit    Wheel  zoom    %s  orbit    leave it a few seconds for the director    %s  next view" % [Bindings.key_of("transit_look_left") + " " + Bindings.key_of("transit_look_right"), Bindings.hint_of("transit_view")], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, UI.DIM)

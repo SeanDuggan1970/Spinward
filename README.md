@@ -30,7 +30,7 @@ In transit the ship view shows your ship in the real sky. Drag to orbit and use 
 
 The ship has sound, heard as the crew would through the hull: the drive's rumble from the stern, attitude jets knocking, the frame creaking as she turns, pumps, and the servos on the panels and dish. Press F2 to turn it off.
 
-Press **F1** anywhere for the controls page (keyboard for now; remapping and gamepads later, from `data/controls.json`).
+Press **F1** anywhere (or Back on a gamepad) for the controls page. Click a key or gamepad cell, or pick it with the d-pad and press A, then press the new key or button to rebind it; changes are saved in `user://settings.cfg`. A gamepad works out of the box, and the defaults for both are in `data/controls.json`.
 
 Fly carefully: ships collide with stations, other ships and drifting rocks. Hits break the module they land on, strain the keel and can wreck the ship (the lifeboat and insurance get you home). The Tsiolkovsky Wheel, a Stanford torus, goes up at L4, and an orbital ring can be built round the Moon.
 

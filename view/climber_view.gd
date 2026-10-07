@@ -11,6 +11,7 @@ extends Node3D
 
 const V := preload("res://sim/v3.gd")
 const Kit := preload("res://view/flight/kit.gd")
+const Bindings := preload("res://view/bindings.gd")
 const SkyKit := preload("res://view/flight/sky.gd")
 const UI := preload("res://view/ui/ui_kit.gd")
 
@@ -168,14 +169,9 @@ func weight_g(h: float) -> float:
 
 
 func _process(dt: float) -> void:
-	if Input.is_key_pressed(KEY_LEFT):
-		look_yaw += dt * 0.8
-	if Input.is_key_pressed(KEY_RIGHT):
-		look_yaw -= dt * 0.8
-	if Input.is_key_pressed(KEY_UP):
-		look_pitch = minf(look_pitch + dt * 0.8, 1.4)
-	if Input.is_key_pressed(KEY_DOWN):
-		look_pitch = maxf(look_pitch - dt * 0.8, -1.5)
+	look_yaw += Input.get_axis("climber_look_right", "climber_look_left") * dt * 0.8
+	var tilt := Input.get_axis("climber_look_down", "climber_look_up")
+	look_pitch = clampf(look_pitch + tilt * dt * 0.8, -1.5, 1.4)
 	_update(dt)
 
 
@@ -212,7 +208,7 @@ func _update(dt: float) -> void:
 		"You weigh     %.3f g" % maxf(weight_g(h), 0.0),
 		"%s in       %s" % [to_name, UI.duration(left)],
 		"",
-		"[ ]  time    P  pause    arrows  look",
+		"%s %s  time    %s  pause    %s %s  look" % [Bindings.key_of("time_slower"), Bindings.key_of("time_faster"), Bindings.key_of("pause"), Bindings.key_of("climber_look_left"), Bindings.key_of("climber_look_right")],
 	]
 	_hud.text = "\n".join(lines)
 

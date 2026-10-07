@@ -21,6 +21,7 @@ const Perks := preload("res://sim/perks.gd")
 const SiteSystemScript := preload("res://sim/systems/site_system.gd")
 const EconomySystemScript := preload("res://sim/systems/economy_system.gd")
 const NpcSystem := preload("res://sim/systems/npc_system.gd")
+const Bindings := preload("res://view/bindings.gd")
 const DamageSystem := preload("res://sim/systems/damage_system.gd")
 const Power := preload("res://sim/power.gd")
 const CockpitPages := preload("res://view/ui/cockpit_pages.gd")
@@ -87,6 +88,7 @@ func _initialize() -> void:
 	test_cockpit_alerts()
 	test_ship_audio()
 	test_time_ramps()
+	test_controls()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -2348,3 +2350,167 @@ func test_time_ramps() -> void:
 	for _i in 300:
 		sim2.tick(0.05)
 	check(sim2.state.time_scale == 10.0, "The pilot's own x10 stands (%.0f)" % sim2.state.time_scale)
+
+
+## Where the controls test keeps its own settings, apart from the player's.
+const TEST_SETTINGS := "user://test_settings.cfg"
+
+## What every action was bound to before remapping existed: the defaults must not move.
+const ORIGINAL_KEYS := {
+	"controls_page": ["F1"], "pause": ["P"], "sound": ["F2"], "time_slower": ["BracketLeft"],
+	"time_faster": ["BracketRight"], "quick_save": ["F5"], "quick_load": ["F9"],
+	"flight_forward": ["W"], "flight_back": ["S"], "flight_strafe_left": ["A"], "flight_strafe_right": ["D"],
+	"flight_up": ["R"], "flight_down": ["F"], "flight_boost": ["Shift"], "flight_brake": ["X"],
+	"flight_pitch_up": ["Up"], "flight_pitch_down": ["Down"], "flight_yaw_left": ["Left"], "flight_yaw_right": ["Right"],
+	"flight_roll_left": ["Q"], "flight_roll_right": ["E"], "flight_assist": ["Z"], "flight_spin_match": ["V"],
+	"flight_scanner": ["G"], "flight_view": ["C"], "flight_computer": ["K"], "flight_tug": ["T"], "flight_keys": ["H"],
+	"transit_view": ["M"], "transit_look_left": ["Left"], "transit_look_right": ["Right"], "transit_look_up": ["Up"],
+	"transit_look_down": ["Down"], "transit_telescope": ["Z"], "transit_centre": ["C"],
+	"lander_main": ["W", "Space"], "lander_left": ["A", "Left"], "lander_right": ["D", "Right"],
+	"lander_forward": ["Q", "Up"], "lander_back": ["E", "Down"],
+	"climber_look_left": ["Left"], "climber_look_right": ["Right"], "climber_look_up": ["Up"], "climber_look_down": ["Down"],
+	"title_start": ["Space", "Enter", "KP Enter"], "title_load": ["L"], "title_quit": ["Escape"],
+}
+
+
+func _remove_test_settings() -> void:
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_SETTINGS))
+
+
+func test_controls() -> void:
+	_remove_test_settings()
+	var catalog: Dictionary = DataCatalog.load_default().controls
+	var b = Bindings.new(catalog)
+	check(b.problems().is_empty(), "Controls catalogue is sound: %s" % str(b.problems()))
+	check(b.actions.size() >= ORIGINAL_KEYS.size(), "Controls list every action")
+
+	# Defaults: every original key binding is where it was, and every spec is a real event.
+	var moved := []
+	for id in ORIGINAL_KEYS:
+		var want := []
+		for k in ORIGINAL_KEYS[id]:
+			want.append(Bindings.canonical("key:" + k))
+		if not b.actions.has(id) or b.specs(id, "key") != want:
+			moved.append(id)
+	check(moved.is_empty(), "Every original key binding is unchanged: %s" % str(moved))
+	var round_trips := true
+	for id in b.actions:
+		for kind in ["key", "pad"]:
+			for spec in b.specs(id, kind):
+				var ev := Bindings.event_for(spec)
+				if ev is InputEventKey or ev is InputEventJoypadButton:
+					ev.pressed = true
+				round_trips = round_trips and ev != null and b.spec_of(ev, 0.5) == spec
+				if ev == null or b.spec_of(ev, 0.5) != spec:
+					push_error("CONTROLS: %s does not round-trip" % spec)
+	check(round_trips, "Every default spec becomes an event and back to the same spec")
+	check(Bindings.event_for("key:NotAKey") == null and Bindings.event_for("pad:zz") == null and Bindings.event_for("junk") == null, "Bad specs are not bindings")
+	check(b.specs("flight_forward", "pad") == ["pad:rt+"] and b.specs("flight_strafe_left", "pad") == ["pad:lx-"] and b.specs("pause", "pad") == ["pad:start"], "Gamepad defaults: triggers thrust, left stick strafes, Start pauses")
+	check(Bindings.spec_text("key:BracketLeft") == "[" and Bindings.spec_text("pad:rt+") == "RT" and Bindings.spec_text("key:W") == "W", "Bindings read as text")
+
+	# The InputMap: every action resolves, with the events and deadzones from data.
+	b.apply()
+	var resolved := true
+	for id in b.actions:
+		var count: int = b.specs(id, "key").size() + b.specs(id, "pad").size()
+		if not InputMap.has_action(id) or InputMap.action_get_events(id).size() != count:
+			resolved = false
+			push_error("CONTROLS: %s did not resolve" % id)
+	check(resolved, "Every action in controls.json resolves in the InputMap")
+	check(is_equal_approx(InputMap.action_get_deadzone("flight_strafe_left"), float(catalog["gamepad"]["deadzone"])), "Sticks use the deadzone from data")
+	check(is_equal_approx(InputMap.action_get_deadzone("flight_forward"), float(catalog["gamepad"]["trigger_deadzone"])), "Triggers use their own deadzone")
+	Input.action_press("flight_forward", 0.5)
+	check(is_equal_approx(Input.get_action_strength("flight_forward"), 0.5), "An action can be analog")
+	Input.action_release("flight_forward")
+
+	# Every action the views ask for is in the catalogue.
+	var wanted := _actions_in_views("res://view")
+	var missing := []
+	for id in wanted:
+		if not b.actions.has(id):
+			missing.append(id)
+	check(wanted.size() > 20 and missing.is_empty(), "Every action named in view code is in controls.json: %s" % str(missing))
+
+	# Override, save, load.
+	var r: Dictionary = b.rebind("flight_boost", "key:B")
+	check(r["ok"] and b.specs("flight_boost", "key") == ["key:B"] and b.is_changed("flight_boost"), "Rebinding replaces the keyboard binding")
+	check(b.specs("flight_boost", "pad") == ["pad:a"], "A keyboard rebind leaves the gamepad one alone")
+	r = b.rebind("flight_boost", "pad:rb")
+	check(r["ok"] and b.specs("flight_boost", "pad") == ["pad:rb"] and b.specs("flight_roll_right", "pad") == ["pad:a"], "A gamepad rebind swaps with the control that had it")
+	b.apply()
+	check(InputMap.action_has_event("flight_boost", Bindings.event_for("key:B")) and not InputMap.action_has_event("flight_boost", Bindings.event_for("key:Shift")), "A rebind reaches the InputMap")
+	check(b.save(TEST_SETTINGS) == OK, "Settings save")
+	var again = Bindings.new(catalog)
+	check(again.load_file(TEST_SETTINGS) and again.overrides == b.overrides, "Saved settings load back as saved")
+	check(again.specs("flight_boost", "key") == ["key:B"] and again.specs("flight_assist", "key") == ["key:Z"], "A loaded override applies and the rest stay default")
+	check(not Bindings.new(catalog).load_file("user://no_such_settings.cfg"), "No settings file means defaults")
+
+	# A hand-edited file cannot break anything.
+	var cfg := ConfigFile.new()
+	cfg.load(TEST_SETTINGS)
+	cfg.set_value("controls", "no_such_action.key", PackedStringArray(["key:Q"]))
+	cfg.set_value("controls", "pause.key", PackedStringArray(["key:NotAKey", "pad:a", "key:O"]))
+	cfg.set_value("controls", "sound.pad", "garbage")
+	cfg.set_value("other", "volume", 0.5)
+	cfg.save(TEST_SETTINGS)
+	var rough = Bindings.new(catalog)
+	rough.load_file(TEST_SETTINGS)
+	check(rough.specs("pause", "key") == ["key:O"] and rough.specs("sound", "pad") == [] and not rough.overrides.has("no_such_action"), "Bad entries in the settings file are dropped")
+	check(rough.save(TEST_SETTINGS) == OK and ConfigFile.new().load(TEST_SETTINGS) == OK, "Saving keeps the rest of the file")
+	var kept := ConfigFile.new()
+	kept.load(TEST_SETTINGS)
+	check(kept.get_value("other", "volume", 0.0) == 0.5, "Other settings in the file survive a save")
+
+	# Conflicts.
+	var c = Bindings.new(catalog)
+	r = c.rebind("flight_forward", "key:A")
+	check(r["ok"] and r["swapped"] == ["flight_strafe_left"] and c.specs("flight_forward", "key") == ["key:A"] and c.specs("flight_strafe_left", "key") == ["key:W"], "A key in use on the same screen swaps")
+	check(r["message"].begins_with("Swapped"), "The swap says so: %s" % r["message"])
+	check(c.conflicts().is_empty(), "After a swap nothing doubles up: %s" % str(c.conflicts()))
+	r = c.rebind("lander_main", "key:Z")
+	check(r["ok"] and r["swapped"].is_empty() and c.specs("flight_assist", "key") == ["key:Z"], "A key used only on another screen does not swap")
+	r = c.rebind("lander_left", "key:Escape")
+	check(not r["ok"] and r["message"].begins_with("Refused") and c.specs("lander_left", "key") == ["key:A", "key:Left"], "A reserved key is refused and nothing changes")
+	var before: Dictionary = c.overrides.duplicate(true)
+	r = c.rebind("flight_forward", "key:P")
+	check(not r["ok"] and r["message"].begins_with("Refused") and c.overrides == before, "A swap that would clash elsewhere is refused whole: %s" % r["message"])
+	var d = Bindings.new(catalog)
+	r = d.rebind("pause", "key:Space")
+	check(r["ok"] and r["swapped"].size() == 2 and d.specs("pause", "key") == ["key:Space"] and d.specs("lander_main", "key") == ["key:W", "key:P"] and d.conflicts().is_empty(), "An anywhere control swaps with every screen that had the key: %s" % str(d.conflicts()))
+	r = c.rebind("flight_forward", "key:A")
+	check(r["ok"] and r["swapped"].is_empty(), "Rebinding to what it already has is a no-op")
+	c.clear("flight_brake", "key")
+	check(c.specs("flight_brake", "key").is_empty() and c.text("flight_brake", "key") == "unbound", "A control can be unbound")
+	check(not c.rebind("nope", "key:Q")["ok"] and not c.rebind("pause", "key:NotAKey")["ok"], "Unknown actions and bad specs are refused")
+
+	# Reset.
+	c.reset_all()
+	check(not c.has_changes() and c.specs("flight_forward", "key") == ["key:W"], "Reset puts every default back")
+	check(c.save(TEST_SETTINGS) == OK and ConfigFile.new().load(TEST_SETTINGS) == OK, "A reset saves")
+	var cleared = Bindings.new(catalog)
+	check(not cleared.load_file(TEST_SETTINGS) and not cleared.has_changes(), "A saved reset leaves no overrides")
+	c.apply()
+	_remove_test_settings()
+
+
+## Action names the view code asks the Input singleton or an event for.
+func _actions_in_views(dir_path: String) -> Dictionary:
+	var found := {}
+	var single := RegEx.create_from_string("(?:is_action_pressed|is_action_released|is_action|get_action_strength|is_action_just_pressed|_input_axis|key_of|hint_of)\\(\"(\\w+)\"(?:,\\s*\"(\\w+)\")?")
+	var axis := RegEx.create_from_string("get_axis\\(\"(\\w+)\",\\s*\"(\\w+)\"")
+	var dir := DirAccess.open(dir_path)
+	for sub in dir.get_directories():
+		found.merge(_actions_in_views(dir_path + "/" + sub))
+	for f in dir.get_files():
+		if not f.ends_with(".gd"):
+			continue
+		var src := FileAccess.get_file_as_string(dir_path + "/" + f)
+		for m in single.search_all(src):
+			found[m.get_string(1)] = true
+			if m.get_string(2) != "" and m.get_string(0).begins_with("_input_axis"):
+				found[m.get_string(2)] = true
+		for m in axis.search_all(src):
+			found[m.get_string(1)] = true
+			found[m.get_string(2)] = true
+	found.erase("ui_cancel")
+	return found

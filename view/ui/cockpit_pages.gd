@@ -119,7 +119,12 @@ static func systems(g, sim, keys: Array, wrecked: bool = false) -> void:
 	var tune: Dictionary = data.balance["cockpit"]
 	var fcol := AV.RED if ff < float(tune["fuel_warning"]) else (AV.AMBER if ff < float(tune["fuel_caution"]) else AV.GREEN)
 	g.bar(Vector2(x0, y), col_w, "PROP", ff, "%d%%" % int(round(ff * 100.0)), fcol, fuel_cap / fuel_nom if fuel_cap < fuel_nom - 1e-6 else -1.0)
-	g.text(Vector2(x0, y + 13), "%.2f t  BURN %s" % [fuel, "--" if burn_s == INF else _hm(burn_s)], 11, AV.WHITE)
+	g.text(Vector2(x0, y + 13), "%.2f t BURN %s" % [fuel, "--" if burn_s == INF else _hm(burn_s)], 11, AV.WHITE)
+	# Life support on the same line, at the column's right edge (the panel has no
+	# room below the gauges: the soft keys sit there).
+	var ls := ShipStats.life_support_days(ship, data)
+	var ls_nom := nominal(ship, data, "life_support_days")
+	g.text(Vector2(x0 + col_w, y + 13), "L/S " + ("--" if ls == INF else "%d d" % int(ls)), 11, AV.WHITE if ls == INF or ls >= ls_nom - 0.5 else AV.AMBER, 1)
 	var heat := ShipStats.heat_ratio(ship, data)
 	var hcol := AV.RED if heat > float(tune["heat_warning"]) else (AV.AMBER if heat > float(tune["heat_caution"]) else AV.GREEN)
 	g.bar(Vector2(x0, y + 32), col_w, "RAD", minf(heat, 1.0) if heat != INF else 1.0, "--" if heat == INF else "%d%%" % int(round(heat * 100.0)), hcol)
@@ -136,9 +141,6 @@ static func systems(g, sim, keys: Array, wrecked: bool = false) -> void:
 	var cargo_nom := maxf(nominal(ship, data, "cargo_t"), 1e-6)
 	g.bar(Vector2(x1, y + 14), col_w, "HOLD", cargo / cargo_nom, "%.0f/%.0f t" % [cargo, cargo_cap], AV.WHITE if cargo_cap >= cargo_nom - 1e-6 else AV.AMBER, cargo_cap / cargo_nom if cargo_cap < cargo_nom - 1e-6 else -1.0)
 	_power(g, sim, Vector2(x1, y + 28), col_w, tune)
-	var ls := ShipStats.life_support_days(ship, data)
-	var ls_nom := nominal(ship, data, "life_support_days")
-	g.row(Vector2(x1, y + 63), "L/S", "UNCREWED" if ls == INF else "%d d" % int(ls), AV.WHITE if ls == INF or ls >= ls_nom - 0.5 else AV.AMBER)
 	g.soft_keys(keys)
 
 

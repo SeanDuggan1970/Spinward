@@ -22,6 +22,7 @@ const Autopilot := preload("res://view/flight/autopilot.gd")
 const ShipAudio := preload("res://view/audio/ship_audio.gd")
 const Livery := preload("res://view/flight/livery.gd")
 const Kit := preload("res://view/flight/kit.gd")
+const Bindings := preload("res://view/bindings.gd")
 const COMMS_KEEP := 40
 
 const QUICKSAVE := "user://quicksave.json"
@@ -49,6 +50,7 @@ func _ready() -> void:
 	theme = UI.make_theme()
 	sim = Sim.new()
 	sim.new_game(1)
+	Bindings.install(sim.data.controls)
 	_layer = Control.new()
 	_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(_layer)
@@ -413,7 +415,7 @@ func notice(text: String, colour: Color = UI.TEXT) -> void:
 func show_controls() -> void:
 	if is_instance_valid(_controls):
 		return
-	_controls = load("res://view/controls_page.gd").new(sim.data)
+	_controls = load("res://view/controls_page.gd").new(Bindings.current)
 	_controls.was_paused = sim.state.paused
 	if not _title:
 		sim.apply({"type": "set_paused", "paused": true})
@@ -539,32 +541,51 @@ func _fade_in(seconds: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F1:
+	if event.is_action_pressed("controls_page"):
 		show_controls()
 		return
-	if _title or not (event is InputEventKey and event.pressed and not event.echo):
+	if _title or event.is_echo():
 		return
-	match event.keycode:
-		KEY_P:
-			sim.apply({"type": "set_paused", "paused": not sim.state.paused})
-		KEY_BRACKETRIGHT, KEY_BRACKETLEFT:
-			var scales: Array = sim.data.balance["time"]["scales"]
-			var i := scales.find(sim.state.time_scale) + (1 if event.keycode == KEY_BRACKETRIGHT else -1)
-			sim.apply({"type": "set_time_scale", "scale": scales[clampi(i, 0, scales.size() - 1)]})
-		KEY_F2:
-			var muted := not AudioServer.is_bus_mute(0)
-			AudioServer.set_bus_mute(0, muted)
-			notice("Sound off." if muted else "Sound on.", UI.DIM)
-		KEY_F5:
-			notice("Saved." if SaveIO.save(sim.state, QUICKSAVE) == OK else "Save failed.", UI.GOOD)
-		KEY_F9:
-			var loaded := SaveIO.load_file(QUICKSAVE)
-			if loaded:
-				sim.load_state(loaded)
-				_mode = ""
-				notice("Loaded quick save.", UI.GOOD)
-			else:
-				notice("No quick save to load.", UI.WARN)
+	if event.is_action_pressed("pause"):
+		sim.apply({"type": "set_paused", "paused": not sim.state.paused})
+	elif _time_step(event) != 0:
+		var scales: Array = sim.data.balance["time"]["scales"]
+		var i := scales.find(sim.state.time_scale) + _time_step(event)
+		sim.apply({"type": "set_time_scale", "scale": scales[clampi(i, 0, scales.size() - 1)]})
+	elif event.is_action_pressed("sound"):
+		var muted := not AudioServer.is_bus_mute(0)
+		AudioServer.set_bus_mute(0, muted)
+		notice("Sound off." if muted else "Sound on.", UI.DIM)
+	elif event.is_action_pressed("quick_save"):
+		notice("Saved." if SaveIO.save(sim.state, QUICKSAVE) == OK else "Save failed.", UI.GOOD)
+	elif event.is_action_pressed("quick_load"):
+		var loaded := SaveIO.load_file(QUICKSAVE)
+		if loaded:
+			sim.load_state(loaded)
+			_mode = ""
+			notice("Loaded quick save.", UI.GOOD)
+		else:
+			notice("No quick save to load.", UI.WARN)
+
+
+## -1 to slow time down, +1 to speed it up, 0 if this is not a time key. Transit and elevator
+## add gamepad bumpers of their own, because in flight the bumpers roll the ship.
+func _time_step(event: InputEvent) -> int:
+	var slower := ["time_slower"]
+	var faster := ["time_faster"]
+	if _mode == "transit":
+		slower.append("transit_time_slower")
+		faster.append("transit_time_faster")
+	elif _mode == "elevator":
+		slower.append("climber_time_slower")
+		faster.append("climber_time_faster")
+	for n in faster:
+		if event.is_action_pressed(n):
+			return 1
+	for n in slower:
+		if event.is_action_pressed(n):
+			return -1
+	return 0
 
 
 ## Headless end-to-end check: every screen builds and the full loop runs.
@@ -603,9 +624,45 @@ func _smoke() -> void:
 		flight._physics_process(1.0 / 60.0)
 	ok = ok and flight.docked and sim.state.stats["manual_docks"] == 1
 	print("SMOKE flight docked=%s contacts=%d" % [flight.docked, flight.bumps])
+	# Keys read as full pushes and a half-pulled trigger as half, through the same actions.
+	Input.action_press("flight_forward", 0.5)
+	Input.action_press("flight_pitch_up")
+	var pushed: Dictionary = flight.read_controls()
+	Input.action_release("flight_forward")
+	Input.action_release("flight_pitch_up")
+	var analog: bool = is_equal_approx(pushed["thrust"].z, -0.5) and pushed["stick"].x == 1.0 and flight.read_controls()["thrust"] == Vector3.ZERO
+	print("SMOKE flight analog=%s" % analog)
+	ok = ok and analog
 	_sync_mode()
 	await get_tree().process_frame
 	ok = ok and _screen is StationScreen
+	# The controls page builds, rebinds, swaps, refuses and resets, all against a scratch file.
+	var page = load("res://view/controls_page.gd").new(Bindings.current)
+	page.settings_path = "user://smoke_settings.cfg"
+	add_child(page)
+	await get_tree().process_frame
+	var pressed := func(code: int) -> InputEventKey:
+		var e := InputEventKey.new()
+		e.physical_keycode = code
+		e.pressed = true
+		return e
+	page._begin("flight_boost", "key")
+	page._input(pressed.call(KEY_B))
+	var b = Bindings.current
+	var rebound: bool = b.specs("flight_boost", "key") == ["key:B"] and InputMap.action_has_event("flight_boost", Bindings.event_for("key:B"))
+	page._begin("flight_forward", "key")
+	page._input(pressed.call(KEY_A))
+	rebound = rebound and b.specs("flight_strafe_left", "key") == ["key:W"]
+	page._begin("flight_forward", "key")
+	page._input(pressed.call(KEY_ESCAPE))
+	rebound = rebound and b.specs("flight_forward", "key") == ["key:A"]
+	page._on_reset()
+	page._on_reset()
+	rebound = rebound and not b.has_changes() and InputMap.action_has_event("flight_boost", Bindings.event_for("key:Shift"))
+	print("SMOKE controls page rebound=%s" % rebound)
+	ok = ok and rebound
+	page.queue_free()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://smoke_settings.cfg"))
 	print("SMOKE_OK " if ok else "SMOKE_FAIL ", sim.state.date_string())
 	_quit(0 if ok else 1)
 
@@ -956,6 +1013,32 @@ func _market_shot(dir: String) -> void:
 	for _i in 12:
 		await get_tree().process_frame
 	_shot(dir + "/market.png")
+	# The controls page (F1) over the station, and the Departures tab scrolled down.
+	show_controls()
+	for _i in 12:
+		await get_tree().process_frame
+	_shot(dir + "/controls.png")
+	if is_instance_valid(_controls):
+		_controls.queue_free()
+	for _i in 4:
+		await get_tree().process_frame
+	if _screen is StationScreen:
+		var st: StationScreen = _screen
+		st._tabs.current_tab = 1
+		for _i in 6:
+			await get_tree().process_frame
+		var scroll := st._tabs.get_child(1) as ScrollContainer
+		if scroll:
+			scroll.scroll_vertical = 400
+			for _i in 4:
+				await get_tree().process_frame
+			print("SCROLL before refresh: ", scroll.scroll_vertical)
+			st.refresh()
+			for _i in 3:
+				await get_tree().process_frame
+			var again := st._tabs.get_child(1) as ScrollContainer
+			print("SCROLL after refresh: ", again.scroll_vertical)
+			_shot(dir + "/departures-after-refresh.png")
 	_quit()
 
 
