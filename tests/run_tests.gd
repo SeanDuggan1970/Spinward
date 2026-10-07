@@ -18,6 +18,7 @@ const Interplanetary := preload("res://sim/interplanetary.gd")
 const Contracts := preload("res://sim/contracts.gd")
 const ContractSystemScript := preload("res://sim/systems/contract_system.gd")
 const Perks := preload("res://sim/perks.gd")
+const Favours := preload("res://sim/favours.gd")
 const SiteSystemScript := preload("res://sim/systems/site_system.gd")
 const EconomySystemScript := preload("res://sim/systems/economy_system.gd")
 const NpcSystem := preload("res://sim/systems/npc_system.gd")
@@ -89,6 +90,10 @@ func _initialize() -> void:
 	test_ship_audio()
 	test_time_ramps()
 	test_cabin_and_berths()
+	test_favours_in_kind()
+	test_hitchhikers()
+	test_engine_tunes()
+	test_favours_saves()
 	test_controls()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
@@ -117,7 +122,8 @@ func test_clock_and_commands() -> void:
 	sim.tick(5.0)
 	check(sim.state.time_s == before, "Paused clock does not move")
 	check(sim.state.command_count == 2, "Only accepted commands are counted")
-	var types := sim.take_events().map(func(e): return e["type"])
+	# (Someone at the dock may ask for a ride meanwhile: that is a favour event, not a clock one.)
+	var types := sim.take_events().map(func(e): return e["type"]).filter(func(t): return not t.begins_with("hitchhiker"))
 	check(types == ["rejected", "rejected", "time_scale_changed", "paused_changed"], "Events emitted for the view")
 	check(sim.take_events().is_empty(), "Events drain once")
 
@@ -2570,3 +2576,328 @@ func test_cabin_and_berths() -> void:
 	var hold2 := ShipStats.cargo_t(s2.ship)
 	check(sim2.apply({"type": "accept_contract", "id": 9003}) == "", "Passengers board into berths")
 	check(absf(ShipStats.cargo_t(s2.ship) - hold2) < 1e-9 and int(s2.ship["passengers"]) == 3, "Passengers take berths, not hold space")
+
+
+# ---- Favours: rewards in kind, hitchhikers, engine tunes ------------------------------
+
+## A port with a shipyard and a port with fuel, and the operator that runs the first.
+func _yard_port(d: DataCatalog) -> String:
+	for id in d.places:
+		if "shipyard" in d.places[id].get("services", []) and "refuel" in d.places[id].get("services", []) and not d.places[id].has("foot_of"):
+			return id
+	return ""
+
+
+## Take and deliver a job that pays `in_kind` (the cash part is `cash`). Returns the credits gained.
+func _deliver_in_kind(sim: Sim, operator: String, in_kind: Dictionary, cash: float, on_time: bool = true) -> void:
+	var s := sim.state
+	_dock_at(sim, "kibo_ring")
+	var job := {"id": 9100 + s.contracts["seq"], "kind": "package", "client": operator, "issued_at": "kibo_ring", "pickup": "", "to": "halo_depot",
+		"item": "a crate of real coffee", "mass_t": 0.1, "passengers": 0, "hand": false, "reward": cash, "window_s": 10 * DAY,
+		"expires_t": s.time_s + 5 * DAY, "min_rep": -100.0, "rep": 2.0, "channel": "board", "hidden": false, "in_kind": in_kind}
+	s.contracts["board"]["kibo_ring"] = [job]
+	check(sim.apply({"type": "accept_contract", "id": job["id"]}) == "", "Take a job paid partly in kind (%s)" % in_kind["form"])
+	if not on_time:
+		s.time_s += 11 * DAY
+	_dock_at(sim, "halo_depot")
+
+
+func test_favours_in_kind() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var yard := _yard_port(d)
+	check(yard != "", "Some port has both a yard and fuel")
+	var op: String = Favours.operator_of(d, yard)
+	# Offers: with the odds at 1 every kind of job can come in kind, with a value beside it.
+	for k in d.favours["in_kind"]["chance"]:
+		d.favours["in_kind"]["chance"][k] = 1.0
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 11
+	var forms := {}
+	var plain_cash := 0.0
+	var in_kind_n := 0
+	for _i in 120:
+		var o := Contracts.make_offer(d, sim.ephemeris, s, rng, "kibo_ring", "long_haul", "board")
+		if o.is_empty() or not o.has("in_kind"):
+			continue
+		in_kind_n += 1
+		forms[o["in_kind"]["form"]] = true
+		check(float(o["in_kind"]["value_cr"]) >= float(d.favours["in_kind"]["min_value_cr"]) and Favours.describe(d, o["in_kind"]).contains("cr"), "An in-kind offer states its credit value")
+		check(float(o["reward"]) > 0.0, "and still pays some cash")
+	check(in_kind_n > 50 and forms.size() >= 4, "With the odds up, offers come in several forms (%d offers, %s)" % [in_kind_n, ",".join(forms.keys())])
+	for k in d.favours["in_kind"]["chance"]:
+		d.favours["in_kind"]["chance"][k] = 0.0
+	var none := 0
+	for _i in 40:
+		var o2 := Contracts.make_offer(d, sim.ephemeris, s, rng, "kibo_ring", "package", "board")
+		none += 1 if o2.has("in_kind") else 0
+	check(none == 0, "With the odds at zero nothing is in kind")
+	# Repair voucher: held, refused away from the client's yards, spent at them, then expires.
+	_deliver_in_kind(sim, op, {"form": "yard", "operator": op, "value_cr": 4000.0, "expires_days": 90.0, "value_cr_shown": 0}, 1000.0)
+	check(s.favours["vouchers"].size() == 1 and s.favours["vouchers"][0]["form"] == "yard", "A repair voucher is held")
+	var vid := int(s.favours["vouchers"][0]["id"])
+	s.ship["damage"] = {"drive.0": 0.2, "keel": 0.1}
+	_dock_at(sim, "kibo_ring")
+	var credits := s.credits
+	var away := Favours.operator_of(d, "kibo_ring") != op
+	if away:
+		check(sim.apply({"type": "use_voucher", "id": vid}) != "", "A voucher is no good at another operator's yard")
+	_dock_at(sim, yard)
+	check(sim.apply({"type": "use_voucher", "id": vid}) == "", "Spend the voucher at the client's yard")
+	check(s.ship["damage"].is_empty(), "It mends the damage (%s)" % str(s.ship["damage"]))
+	check(absf(s.credits - credits) < 1e-6, "for no credits")
+	var left := 0.0
+	for v in s.favours["vouchers"]:
+		left += float(v["value_cr"])
+	check(left < 4000.0 and left > 0.0, "and what it did not use is kept (%d cr left)" % int(left))
+	check(sim.apply({"type": "use_voucher", "id": vid}) == "nothing to repair", "Nothing to repair, nothing spent")
+	s.time_s += 100 * DAY
+	sim.advance_game_time(60.0)
+	check(s.favours["vouchers"].is_empty(), "Vouchers expire")
+	# Fuel discount, free refuel and free docking at the client's ports.
+	var fuel_cap := ShipStats.fuel_capacity_t(s.ship, d)
+	var pay := {}
+	for mode in ["none", "discount", "free"]:
+		var sm := fresh()
+		sm.state.credits = 100000.0
+		if mode == "discount":
+			_deliver_in_kind(sm, op, {"form": "fuel", "operator": op, "days": 30.0, "discount": 0.25, "value_cr": 1200.0}, 1000.0)
+		elif mode == "free":
+			_deliver_in_kind(sm, op, {"form": "refuel", "operator": op, "tonnes": 3.0, "expires_days": 60.0, "value_cr": 1800.0}, 1000.0)
+		_dock_at(sm, yard)
+		sm.state.ship["fuel_t"] = fuel_cap - 3.0
+		var before: float = sm.state.credits
+		check(sm.apply({"type": "refuel", "tonnes": 3.0}) == "", "Refuel (%s)" % mode)
+		pay[mode] = before - sm.state.credits
+		if mode == "free":
+			check(sm.state.favours["vouchers"].is_empty(), "Free refuelling is used up")
+	check(pay["none"] > 0.0 and absf(pay["discount"] - pay["none"] * 0.75) < pay["none"] * 0.01, "A 25%% fuel discount takes a quarter off (%.1f vs %.1f)" % [pay["discount"], pay["none"]])
+	check(absf(pay["free"]) < 1e-6, "Three free tonnes cover a three-tonne refuel")
+	var tug := {}
+	for mode in ["none", "pass"]:
+		var sd := fresh()
+		if mode == "pass":
+			_deliver_in_kind(sd, op, {"form": "docking", "operator": op, "days": 30.0, "discount": 1.0, "value_cr": 600.0}, 1000.0)
+		sd.state.location = {"status": "approach", "place": yard}
+		var before2: float = sd.state.credits
+		sd.apply({"type": "dock"})
+		tug[mode] = before2 - sd.state.credits
+	check(tug["none"] > 0.0 and absf(tug["pass"]) < 1e-6, "A docking pass makes the tug free (%.0f vs %.0f)" % [tug["pass"], tug["none"]])
+	# A favour owed is standing.
+	var sf := fresh()
+	_deliver_in_kind(sf, op, {"form": "favour", "operator": op, "rep": 8.0, "value_cr": 1200.0}, 1000.0)
+	check(Contracts.rep_of(sf.state, op) >= 8.0 + 2.0 - 1e-6, "A favour owed adds to standing (%.1f)" % Contracts.rep_of(sf.state, op))
+	# Late: the in-kind part is scaled down with the pay; a tune is paid as cash instead.
+	var sl := fresh()
+	_deliver_in_kind(sl, op, {"form": "yard", "operator": op, "value_cr": 4000.0, "expires_days": 90.0, "value_cr_shown": 0}, 1000.0, false)
+	check(absf(float(sl.state.favours["vouchers"][0]["value_cr"]) - 4000.0 * 0.5) < 1e-6, "A late delivery halves the voucher too")
+	var st := fresh()
+	var thrust0 := ShipStats.thrust_n(st.state.ship, st.data)
+	_deliver_in_kind(st, op, {"form": "tune", "operator": op, "tune": "injector_retime", "value_cr": 1800.0}, 1000.0)
+	check(ShipStats.thrust_n(st.state.ship, st.data) > thrust0, "A tune paid in kind is fitted on delivery")
+	var st2 := fresh()
+	var cr0: float = st2.state.credits
+	_deliver_in_kind(st2, op, {"form": "tune", "operator": op, "tune": "injector_retime", "value_cr": 1800.0}, 1000.0, false)
+	check(ShipStats.thrust_n(st2.state.ship, st2.data) == thrust0 and st2.state.credits > cr0 + 500.0, "A late tune is paid in credits instead")
+	# Odds are data: client multipliers and per-kind chances come from favours.json.
+	check(float(sim.data.favours["in_kind"]["client_mult"].get("Belt Assembly", 1.0)) > float(sim.data.favours["in_kind"]["client_mult"].get("Terran Compact", 1.0)), "Odds differ by client (data)")
+
+
+func test_hitchhikers() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	d.favours["hitchhikers"]["chance"] = 1.0
+	d.favours["hitchhikers"]["cooldown_days"] = 0.0
+	# Someone asks at the dock.
+	_dock_at(sim, "kibo_ring")
+	s.favours["last_dock"] = ""
+	sim.advance_game_time(60.0)
+	var waiting: Array = s.favours["waiting"].get("kibo_ring", [])
+	check(not waiting.is_empty(), "Someone is asking for a ride at the dock")
+	if waiting.is_empty():
+		return
+	var h: Dictionary = waiting[0]
+	check(h["name"] != "" and d.favours["hitchhikers"]["trades"].has(h["trade"]) and h["to"] != "kibo_ring", "A hitchhiker has a name, a trade and a destination (%s, %s)" % [h["name"], h["trade"]])
+	# No berth, no ride.
+	s.ship["modules"].erase("cargo.1")
+	check(ShipStats.berths(s.ship, d) == 0, "(the Mule has no berths)")
+	check(String(sim.apply({"type": "accept_hitchhiker", "id": h["id"]})).begins_with("no berths"), "No berth, no ride")
+	check(s.ship.get("hikers", []).is_empty() and int(s.ship.get("passengers", 0)) == 0, "and nobody boards")
+	s.ship["modules"]["cargo.1"] = "passenger_berths"
+	sim.take_events()
+	var mass := ShipStats.total_mass_t(s.ship, d)
+	check(sim.apply({"type": "accept_hitchhiker", "id": h["id"]}) == "", "With a berth they come aboard")
+	check(s.ship["hikers"].size() == 1 and int(s.ship["passengers"]) == 1 and absf(ShipStats.total_mass_t(s.ship, d) - mass - 0.1) < 1e-9, "They take a berth and weigh a little")
+	check(not s.favours["waiting"]["kibo_ring"].any(func(w): return int(w["id"]) == int(h["id"])), "and are no longer waiting")
+	var boarded := sim.take_events().filter(func(e): return e["type"] == "hitchhiker_boarded")
+	check(boarded.size() == 1 and String(boarded[0]["data"]["text"]).contains(h["name"]), "They say something on boarding (comms)")
+	# Helping, by trade.
+	var trades: Dictionary = d.favours["hitchhikers"]["trades"]
+	var set_trade := func(trade: String) -> void:
+		s.ship["hikers"][0]["trade"] = trade
+		s.ship["hikers"][0]["gift"] = ""
+	set_trade.call("engineer")
+	s.ship["damage"] = {"drive.0": 0.03, "keel": 0.2}
+	check(sim.apply({"type": "depart", "to": h["to"]}) == "", "Depart with a hitchhiker aboard")
+	sim.advance_game_time(3600.0)
+	var healed: float = 0.03 - float(s.ship["damage"].get("drive.0", 0.0))
+	check(healed > 0.0 and absf(healed - float(trades["engineer"]["heal_per_day"]) / 24.0) < 1e-6, "An engineer mends a little each hour in flight (%.5f)" % healed)
+	check(float(s.ship["damage"]["keel"]) == 0.2, "but not the keel")
+	check(ShipStats.wear_mult(s.ship, d) < 1.0, "and cuts wear (for maintenance to read)")
+	# Navigator: a thriftier burn than the same trip without.
+	var base := fresh()
+	base.state.ship["modules"]["cargo.1"] = "passenger_berths"
+	var tank_base: float = base.state.ship["fuel_t"]
+	base.apply({"type": "depart", "to": h["to"]})
+	var nav := fresh()
+	nav.state.ship["modules"]["cargo.1"] = "passenger_berths"
+	nav.state.ship["hikers"] = [h.duplicate(true)]
+	nav.state.ship["hikers"][0]["trade"] = "navigator"
+	nav.state.ship["passengers"] = 1
+	var tank0: float = nav.state.ship["fuel_t"]
+	nav.apply({"type": "depart", "to": h["to"]})
+	var burn_base := tank_base - float(base.state.ship["fuel_t"])
+	var burn_nav: float = tank0 - float(nav.state.ship["fuel_t"])
+	check(burn_base > 0.0 and absf(burn_nav - burn_base * (1.0 - float(trades["navigator"]["fuel_trim"]))) < 1e-9, "A navigator trims the burn (%.4f t vs %.4f t)" % [burn_nav, burn_base])
+	# Cook: life support stretches. Pilot: the tug is cheaper.
+	var ls := ShipStats.life_support_days(s.ship, d)
+	set_trade.call("cook")
+	var ls_cook := ShipStats.life_support_days(s.ship, d)
+	if ls != INF:
+		check(absf(ls_cook / ls - float(trades["cook"]["life_support_mult"])) < 1e-9 or ls == ls_cook, "A cook stretches life support (%.1f to %.1f days)" % [ls, ls_cook])
+	var tugs := {}
+	for who in ["none", "pilot"]:
+		var sp := fresh()
+		sp.state.ship["modules"]["cargo.1"] = "passenger_berths"
+		if who == "pilot":
+			sp.state.ship["hikers"] = [{"name": "Test Pilot", "trade": "pilot", "to": "halo_depot", "from": "kibo_ring", "fare": 0.0, "gift": "", "boarded_t": 0.0, "mid_sent": true, "lines": {"board": "", "mid": "", "leave": ""}}]
+		sp.state.location = {"status": "approach", "place": "kibo_ring"}
+		var c0: float = sp.state.credits
+		sp.apply({"type": "dock"})
+		tugs[who] = c0 - sp.state.credits
+	check(tugs["pilot"] > 0.0 and absf(tugs["pilot"] - tugs["none"] * float(trades["pilot"]["tug_mult"])) < 1e-6, "A pilot talks the tug fee down (%.0f vs %.0f)" % [tugs["pilot"], tugs["none"]])
+	# Halfway they speak, and at their stop they leave (paying the fare; a tinkerer may leave a tune).
+	s.ship["hikers"][0]["gift"] = "nozzle_polish"
+	s.ship["hikers"][0]["fare"] = 150.0
+	s.ship["hikers"][0]["to"] = h["to"]
+	s.ship["damage"] = {}
+	sim.take_events()
+	sim.advance_game_time(float(s.location["arrive_t"]) - s.time_s - 60.0)
+	var lines := sim.take_events().filter(func(e): return e["type"] == "hitchhiker_line")
+	check(lines.size() == 1, "A hitchhiker has a word to say midway (%d)" % lines.size())
+	sim.advance_game_time(120.0)
+	check(sim.apply({"type": "dock"}) == "", "Arrive and dock")
+	sim.advance_game_time(60.0)
+	var left := sim.take_events().filter(func(e): return e["type"] == "hitchhiker_left")
+	check(left.size() == 1 and String(left[0]["data"]["text"]).contains(h["name"]), "They leave with a parting line")
+	check(s.ship["hikers"].is_empty() and int(s.ship["passengers"]) == 0 and absf(float(s.ship["cabin_t"])) < 1e-9, "and the berth and mass come free")
+	check(ShipStats.active_tunes(s.ship, d).size() == 1 and s.ship["tunes"][0]["id"] == "nozzle_polish", "A tinkerer leaves a tune on the drive")
+	# Not going anywhere near their stop: they ride on (until their patience runs out).
+	var wait2 := fresh()
+	wait2.data.favours["hitchhikers"]["chance"] = 1.0
+	wait2.state.ship["modules"]["cargo.1"] = "passenger_berths"
+	wait2.advance_game_time(60.0)
+	var h2: Dictionary = wait2.state.favours["waiting"]["kibo_ring"][0]
+	wait2.apply({"type": "accept_hitchhiker", "id": h2["id"]})
+	var other: String = "halo_depot" if h2["to"] != "halo_depot" else "kernel_l5"
+	_dock_at(wait2, other)
+	check(wait2.state.ship["hikers"].size() == 1, "A hitchhiker stays aboard at ports that are not their stop")
+	# Waiting hitchhikers give up, and the galley holds only so many.
+	var wait3 := fresh()
+	wait3.data.favours["hitchhikers"]["chance"] = 1.0
+	wait3.advance_game_time(60.0)
+	wait3.state.time_s += 30 * DAY
+	wait3.state.location = {"status": "transit_test"}
+	wait3.advance_game_time(60.0)
+	check(wait3.state.favours["waiting"].get("kibo_ring", []).is_empty(), "Nobody waits forever")
+
+
+func test_engine_tunes() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var ship: Dictionary = s.ship
+	var thrust0 := ShipStats.thrust_n(ship, d)
+	var ve0 := ShipStats.exhaust_velocity(ship, d)
+	var acc0 := ShipStats.accel_mps2(ship, d)
+	var heat0 := ShipStats.heat_ratio(ship, d)
+	var key0: String = sim.route_key("clarke_exchange")
+	var plan0 := Navigation.plan(ship, d, sim.ephemeris, "kibo_ring", "clarke_exchange", s.time_s)
+	check(plan0["ok"], "A baseline plan exists")
+	check(Favours.install_tune(ship, d, "nozzle_polish", "test", 0.0) == "", "Fit a tune")
+	var ve1 := ShipStats.exhaust_velocity(ship, d)
+	var spec: Dictionary = d.favours["tunes"]["nozzle_polish"]
+	check(absf(ve1 / ve0 - (1.0 + float(spec["isp_pct"]))) < 1e-9, "Isp rises by the tune's share (%.4f)" % (ve1 / ve0))
+	check(ShipStats.thrust_n(ship, d) == thrust0, "and thrust is unchanged")
+	var plan1 := Navigation.plan(ship, d, sim.ephemeris, "kibo_ring", "clarke_exchange", s.time_s)
+	var ratio := float(plan1["fuel_t"]) / float(plan0["fuel_t"])
+	check(plan1["ok"] and absf(ratio - 1.0 / (1.0 + float(spec["isp_pct"]))) < 0.003, "A planned route burns that much less fuel (%.4f of before)" % ratio)
+	check(sim.route_key("clarke_exchange") != key0, "Route plans are keyed by the tunes, so they are replanned")
+	# Thrust and heat.
+	check(Favours.install_tune(ship, d, "injector_retime", "test", 0.0) == "", "Fit a second tune")
+	var t2: Dictionary = d.favours["tunes"]["injector_retime"]
+	var thrust1 := ShipStats.thrust_n(ship, d)
+	var heat1 := ShipStats.heat_ratio(ship, d)
+	check(absf(heat1 / heat0 - (1.0 + float(t2["heat_pct"]))) < 1e-9, "Heat follows the trade-off (%.3f)" % (heat1 / heat0))
+	if heat1 <= 1.0:
+		check(absf(thrust1 / thrust0 - (1.0 + float(t2["thrust_pct"]))) < 1e-9 and ShipStats.accel_mps2(ship, d) > acc0, "Thrust and acceleration rise by the tune's share")
+	var plan2 := Navigation.plan(ship, d, sim.ephemeris, "kibo_ring", "clarke_exchange", s.time_s)
+	check(float(plan2["duration_s"]) < float(plan1["duration_s"]), "A planned trip takes less time (%.0f s vs %.0f s)" % [plan2["duration_s"], plan1["duration_s"]])
+	check(Favours.install_tune(ship, d, "overdrive_map", "test", 0.0) != "", "A drive takes only so many tunes")
+	check(Favours.install_tune(ship, d, "nozzle_polish", "test", 0.0) != "", "and the same tune only once")
+	check(ShipStats.wear_mult(ship, d) >= 1.0, "Wear is one for the maintenance work to read")
+	# The tune belongs to its drive: swap the drive and it stops counting.
+	ship["modules"]["drive.0"] = "pathfinder_mk2"
+	check(ShipStats.active_tunes(ship, d).is_empty(), "A tune stays with the drive it was fitted to")
+	var bare := ship.duplicate(true)
+	bare["tunes"] = []
+	check(ShipStats.thrust_n(ship, d) == ShipStats.thrust_n(bare, d) and ShipStats.exhaust_velocity(ship, d) == ShipStats.exhaust_velocity(bare, d), "and the new drive is stock")
+	# A cooler, thriftier tune (negative thrust) is allowed, and a ship with no drive cannot be tuned.
+	var other := fresh()
+	check(Favours.install_tune(other.state.ship, other.data, "lean_burn_map", "test", 0.0) == "" and ShipStats.thrust_n(other.state.ship, other.data) < thrust0, "A lean-burn map trades thrust for efficiency")
+	other.state.ship["modules"].erase("drive.0")
+	other.state.ship["tunes"] = []
+	check(Favours.install_tune(other.state.ship, other.data, "lean_burn_map", "test", 0.0) != "", "No drive, no tune")
+
+
+func test_favours_saves() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	d.favours["hitchhikers"]["chance"] = 1.0
+	sim.advance_game_time(60.0)
+	s.ship["modules"]["cargo.1"] = "passenger_berths"
+	var h: Dictionary = s.favours["waiting"]["kibo_ring"][0]
+	sim.apply({"type": "accept_hitchhiker", "id": h["id"]})
+	Favours.install_tune(s.ship, d, "injector_retime", "a test", s.time_s)
+	s.favours["vouchers"].append({"id": 77, "form": "fuel", "operator": "The Commons", "discount": 0.25, "expires_t": s.time_s + 9 * DAY})
+	sim.advance_game_time(3600.0)
+	var loaded := SaveIO.from_text(SaveIO.to_text(s))
+	check(loaded != null and loaded.to_dict() == s.to_dict(), "Vouchers, hitchhikers and tunes survive a save")
+	check(loaded.ship["hikers"].size() == 1 and loaded.ship["tunes"].size() == 1 and loaded.favours["vouchers"].size() == 1, "(all three are there)")
+	var resumed := Sim.new()
+	resumed.load_state(loaded)
+	resumed.advance_game_time(5 * DAY)
+	sim.advance_game_time(5 * DAY)
+	check(resumed.state.to_dict() == sim.state.to_dict(), "A loaded game with favours continues identically")
+	# A save from before favours: no favours key, no tunes. It loads, plays and gets the defaults.
+	var old := s.to_dict()
+	old.erase("favours")
+	old["ship"].erase("tunes")
+	old["ship"].erase("hikers")
+	var old_state := GameState.new()
+	old_state.load_dict(old)
+	check(old_state.favours.is_empty(), "An old save has no favours")
+	var old_sim := Sim.new()
+	old_sim.load_state(old_state)
+	old_sim.advance_game_time(2 * DAY)
+	check(old_sim.state.favours.has("vouchers") and old_sim.state.favours["vouchers"].is_empty(), "and gets empty ones")
+	check(ShipStats.thrust_n(old_state.ship, old_sim.data) > 0.0 and ShipStats.active_tunes(old_state.ship, old_sim.data).is_empty(), "Old ships are stock")
+	# Determinism: the same commands give the same hitchhikers.
+	var a := fresh()
+	var b := fresh()
+	a.advance_game_time(20 * DAY)
+	b.advance_game_time(20 * DAY)
+	check(a.state.favours == b.state.favours, "Hitchhikers are deterministic")

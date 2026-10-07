@@ -58,10 +58,13 @@ static func heat_ratio(ship: Dictionary, data) -> float:
 static func exhaust_velocity(ship: Dictionary, data) -> float:
 	var thrust := 0.0
 	var weighted := 0.0
-	for m in modules_of(ship, data):
+	var tunes := _tune_factors(ship, data)
+	for slot in ship.get("modules", {}):
+		var m: Dictionary = data.modules[ship["modules"][slot]]
 		if m.has("thrust_n"):
-			thrust += float(m["thrust_n"])
-			weighted += float(m["thrust_n"]) * float(m["isp_s"])
+			var f: Dictionary = tunes.get(slot, NO_TUNE)
+			thrust += float(m["thrust_n"]) * f["thrust_n"]
+			weighted += float(m["thrust_n"]) * f["thrust_n"] * float(m["isp_s"]) * f["isp"]
 	return 0.0 if thrust <= 0.0 else weighted / thrust * float(data.balance["travel"]["g0"])
 
 
@@ -81,11 +84,77 @@ const UNDAMAGED := ["heat_mw", "life_kw", "avionics_kw", "comms_kw", "sensor_kw"
 static func _sum(ship: Dictionary, data, key: String) -> float:
 	var total := 0.0
 	var damage: Dictionary = ship.get("damage", {})
+	var tunes := _tune_factors(ship, data) if key == "thrust_n" or key == "heat_mw" else {}
 	for slot in ship.get("modules", {}):
 		var m: Dictionary = data.modules[ship["modules"][slot]]
 		var left := 1.0 if key in UNDAMAGED else 1.0 - clampf(float(damage.get(slot, 0.0)), 0.0, 1.0)
-		total += float(m.get(key, 0.0)) * left
+		var tune: float = tunes.get(slot, NO_TUNE)[key] if not tunes.is_empty() else 1.0
+		total += float(m.get(key, 0.0)) * left * tune
 	return total
+
+
+## Engine tunes (data/favours.json "tunes"): ship["tunes"] is [{id, slot, module, source}].
+## A tune counts only while the drive it was fitted to is still in that slot. Per drive
+## slot: multipliers on its thrust and heat, and on its Isp (fuel efficiency). Route
+## planning reads thrust and Isp through here, so tuned ships plan and burn differently.
+const NO_TUNE := {"thrust_n": 1.0, "heat_mw": 1.0, "isp": 1.0}
+
+
+static func active_tunes(ship: Dictionary, data) -> Array:
+	var out := []
+	for t in ship.get("tunes", []):
+		if ship.get("modules", {}).get(t["slot"], "") == t["module"] and data.favours.get("tunes", {}).has(t["id"]):
+			out.append(t)
+	return out
+
+
+static func _tune_factors(ship: Dictionary, data) -> Dictionary:
+	var out := {}
+	if ship.get("tunes", []).is_empty():
+		return out
+	for t in active_tunes(ship, data):
+		var spec: Dictionary = data.favours["tunes"][t["id"]]
+		var f: Dictionary = out.get(t["slot"], NO_TUNE).duplicate()
+		f["thrust_n"] += float(spec.get("thrust_pct", 0.0))
+		f["heat_mw"] += float(spec.get("heat_pct", 0.0))
+		f["isp"] += float(spec.get("isp_pct", 0.0))
+		out[t["slot"]] = f
+	return out
+
+
+## How much the tunes (and crew) change the rate at which parts wear: 1.0 untuned. For
+## the maintenance work to read; nothing in the sim wears parts yet.
+static func wear_mult(ship: Dictionary, data) -> float:
+	var m := 1.0
+	for t in active_tunes(ship, data):
+		m += float(data.favours["tunes"][t["id"]].get("wear_pct", 0.0))
+	for h in ship.get("hikers", []):
+		m *= float(data.favours.get("hitchhikers", {}).get("trades", {}).get(h["trade"], {}).get("wear_mult", 1.0))
+	return m
+
+
+## A short signature of the active tunes, for route-plan cache keys ("" if none).
+static func tunes_key(ship: Dictionary) -> String:
+	var ids := []
+	for t in ship.get("tunes", []):
+		ids.append("%s@%s:%s" % [t["id"], t["slot"], t["module"]])
+	return "" if ids.is_empty() else "#" + ",".join(ids)
+
+
+## Sum of a trade effect over the hitchhikers aboard (ship["hikers"]), e.g. "fuel_trim".
+static func crew_sum(ship: Dictionary, data, key: String) -> float:
+	var total := 0.0
+	for h in ship.get("hikers", []):
+		total += float(data.favours.get("hitchhikers", {}).get("trades", {}).get(h["trade"], {}).get(key, 0.0))
+	return total
+
+
+## Product of a trade multiplier over the hitchhikers aboard (1.0 if none has it).
+static func crew_mult(ship: Dictionary, data, key: String) -> float:
+	var m := 1.0
+	for h in ship.get("hikers", []):
+		m *= float(data.favours.get("hitchhikers", {}).get("trades", {}).get(h["trade"], {}).get(key, 1.0))
+	return m
 
 
 ## How many days the crew can be kept alive between ports (INF for uncrewed ships).
@@ -93,7 +162,7 @@ static func life_support_days(ship: Dictionary, data) -> float:
 	for m in modules_of(ship, data):
 		if m.get("crewless", false):
 			return INF
-	var days := _sum(ship, data, "life_support_days")
+	var days := _sum(ship, data, "life_support_days") * crew_mult(ship, data, "life_support_mult")
 	return days if days > 0.0 else INF
 
 

@@ -11,6 +11,7 @@ extends "res://sim/systems/system.gd"
 
 const Contracts := preload("res://sim/contracts.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
+const Favours := preload("res://sim/favours.gd")
 
 const DAY := 86400.0
 const KEEP_HISTORY := 30
@@ -239,9 +240,14 @@ func _deliver(job: Dictionary) -> void:
 	var rep := float(job["rep"]) if on_time else float(late["rep"])
 	_unload(job)
 	s.credits += pay
-	_add_rep(job["client"], rep)
+	# Part of the reward may be in kind (a voucher, a tune, a favour owed).
+	var kind_pay := Favours.grant(s, data, job, 1.0 if on_time else float(late["pay_fraction"]))
+	s.credits += float(kind_pay.get("credits", 0.0))
+	_add_rep(job["client"], rep + float(kind_pay.get("rep", 0.0)))
 	_retire(job, "delivered" if on_time else "late")
-	sim().emit("contract_delivered", {"id": job["id"], "on_time": on_time, "credits": pay, "rep": rep, "client": job["client"]})
+	sim().emit("contract_delivered", {"id": job["id"], "on_time": on_time, "credits": pay + float(kind_pay.get("credits", 0.0)), "rep": rep, "client": job["client"]})
+	if not kind_pay.is_empty():
+		sim().emit("favour_granted", {"id": job["id"], "form": kind_pay["form"], "text": kind_pay["text"], "client": job["client"]})
 
 
 func _check_failures() -> void:

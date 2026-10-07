@@ -1,0 +1,187 @@
+{
+	"_note": "Favours: rewards in kind, hitchhikers and engine tunes (sim/favours.gd, sim/systems/favour_system.gd). in_kind: some contract offers pay part of the reward in something other than credits. chance is per contract kind, scaled by client_mult (per operator); kind_share is the share of the reward paid in kind. value_cr is what the card shows beside the offer; the cash part drops by value_cr x cash_offset (below 1: a voucher you can only spend at one client's yards is worth a little more on paper than the cash it replaces, so taking one is a fair deal). Forms: yard (a credit at the client's shipyards, spent on repairs), docking (free tug, days), fuel (a discount on propellant, days), refuel (free tonnes), favour (reputation with the client), tune (an engine tune from tunes, below). value_per_unit turns a target value into days, tonnes or reputation. client_forms overrides a form's weight for one operator. hitchhikers: 'have spacesuit, will travel'. A hitchhiker needs a free berth, pays fare_cr on arrival, and helps by trade while aboard (summed over everyone aboard): heal_per_day (damage mended a day while flying), fuel_trim (share of a departure's propellant saved), tug_mult (multiplies the auto-dock fee), life_support_mult (stretches life support) and wear_mult (for maintenance to read, see ShipStats.wear_mult). A tinkerer may leave a tune from tune_ids on parting. tunes: per-drive modifiers; thrust_pct, isp_pct and heat_pct feed ShipStats (so routes and fuel use follow), wear_pct is for maintenance to read. A tune belongs to the drive module it was fitted to and stops counting if that drive is swapped out.",
+	"in_kind": {
+		"chance": {
+			"package": 0.12,
+			"passenger": 0.1,
+			"pickup": 0.22,
+			"long_haul": 0.3
+		},
+		"client_mult": {
+			"Belt Assembly": 1.6,
+			"Kernel Settlers": 1.5,
+			"The Commons": 1.4,
+			"Luna Cooperative": 1.2,
+			"Mars Accord": 1.0,
+			"Huygens Trust": 1.0,
+			"Kalpana Settlement Trust": 1.2,
+			"The Sufficiency": 1.3,
+			"Terran Compact Science": 0.9,
+			"Terran Compact": 0.6,
+			"Independent": 1.0
+		},
+		"kind_share": [0.35, 0.8],
+		"cash_offset": 0.85,
+		"min_value_cr": 400,
+		"min_cash_share": 0.2,
+		"forms": {
+			"yard": {
+				"weight": 4,
+				"label": "a repair voucher",
+				"expires_days": [60, 120]
+			},
+			"docking": {
+				"weight": 2,
+				"label": "free docking tugs",
+				"value_per_unit": 15.0,
+				"unit_range": [20, 60],
+				"discount": 1.0
+			},
+			"fuel": {
+				"weight": 3,
+				"label": "cheaper propellant",
+				"value_per_unit": 40.0,
+				"unit_range": [20, 60],
+				"discount": 0.25
+			},
+			"refuel": {
+				"weight": 3,
+				"label": "free refuelling",
+				"value_per_unit": 600.0,
+				"unit_range": [2, 12],
+				"expires_days": [60, 120]
+			},
+			"favour": {
+				"weight": 2,
+				"label": "a favour owed",
+				"value_per_unit": 150.0,
+				"unit_range": [3, 12]
+			},
+			"tune": {
+				"weight": 1.5,
+				"label": "an engine tune"
+			}
+		},
+		"client_forms": {
+			"Belt Assembly": {"yard": 5, "refuel": 4, "tune": 2.5},
+			"Kernel Settlers": {"yard": 5, "tune": 2.5, "favour": 3},
+			"The Commons": {"favour": 4, "docking": 3},
+			"Terran Compact": {"favour": 3, "tune": 0.5},
+			"Terran Compact Science": {"favour": 3, "tune": 1.0},
+			"Luna Cooperative": {"fuel": 4, "refuel": 4}
+		}
+	},
+	"tunes": {
+		"injector_retime": {
+			"name": "Injector retime",
+			"thrust_pct": 0.03,
+			"isp_pct": 0.0,
+			"heat_pct": 0.02,
+			"wear_pct": 0.0,
+			"value_cr": 1800,
+			"note": "A tidier injector map: a little more push."
+		},
+		"nozzle_polish": {
+			"name": "Nozzle polish and bore-sight",
+			"thrust_pct": 0.0,
+			"isp_pct": 0.02,
+			"heat_pct": 0.0,
+			"wear_pct": 0.0,
+			"value_cr": 1500,
+			"note": "Less scatter in the exhaust: a couple of per cent on fuel."
+		},
+		"lean_burn_map": {
+			"name": "Lean-burn map",
+			"thrust_pct": -0.02,
+			"isp_pct": 0.05,
+			"heat_pct": -0.03,
+			"wear_pct": 0.0,
+			"value_cr": 2600,
+			"note": "Gentler and thriftier: more efficient, a little less push, and cooler."
+		},
+		"overdrive_map": {
+			"name": "Overdrive map",
+			"thrust_pct": 0.06,
+			"isp_pct": 0.0,
+			"heat_pct": 0.08,
+			"wear_pct": 0.1,
+			"value_cr": 2200,
+			"note": "Pushes harder than the book says. The radiators and the maintenance schedule will notice."
+		},
+		"regen_retune": {
+			"name": "Regenerative-cooling retune",
+			"thrust_pct": 0.02,
+			"isp_pct": 0.03,
+			"heat_pct": 0.05,
+			"wear_pct": 0.0,
+			"value_cr": 3200,
+			"note": "A proper yard job: better on both counts, at the price of a warmer drive."
+		}
+	},
+	"max_tunes_per_drive": 2,
+	"hitchhikers": {
+		"chance": 0.4,
+		"cooldown_days": 3.0,
+		"max_waiting": 2,
+		"wait_days": [3.0, 9.0],
+		"max_aboard": 2,
+		"mass_t": 0.1,
+		"patience_days": 90.0,
+		"long_haul_chance": 0.25,
+		"fare_cr": [0, 300],
+		"fare_step_cr": 50,
+		"names": {
+			"first": ["Ines", "Tomasz", "Aroha", "Dev", "Mina", "Okoye", "Sasha", "Lars", "Yuki", "Beatriz", "Kofi", "Anneke", "Rafi", "Noor", "Callum", "Zhen"],
+			"last": ["Vance", "Okonkwo", "Reyes", "Halvorsen", "Das", "Mbeki", "Larkin", "Petrov", "Tanaka", "Quill", "Marsh", "Abara", "Lindqvist", "Cruz", "Rowe", "Bhatt"]
+		},
+		"trades": {
+			"engineer": {
+				"weight": 3,
+				"label": "engineer",
+				"blurb": "mends small faults while you fly",
+				"heal_per_day": 0.004,
+				"wear_mult": 0.9,
+				"board": ["{name} stows a pressure-suit bag and a toolkit. 'Engineer. Point me at anything that rattles.'"],
+				"mid": ["{name} has been into the panels again. 'Nothing serious. It sounds better already.'"],
+				"leave": ["{name}: 'Thanks for the ride. Your plumbing is a crime, but it is an honest one.'"]
+			},
+			"navigator": {
+				"weight": 3,
+				"label": "navigator",
+				"blurb": "trims propellant on the route",
+				"fuel_trim": 0.03,
+				"board": ["{name} clips in. 'Navigator, out of work and out of patience. I will find you a better line.'"],
+				"mid": ["{name} slides a corrected burn plan across. 'Three per cent. Do not tell the tanker drones.'"],
+				"leave": ["{name}: 'Good flying. You owe me nothing. I mean that, I counted.'"]
+			},
+			"pilot": {
+				"weight": 2,
+				"label": "pilot",
+				"blurb": "talks the tug down on arrival",
+				"tug_mult": 0.5,
+				"board": ["{name} floats in with a battered logbook. 'Pilot. Grounded by paperwork. I will watch your approach.'"],
+				"mid": ["{name} watches your telemetry. 'You hold a good line. Dock approach is the easy part.'"],
+				"leave": ["{name}: 'I had a word with the tug crew on the way out. Fly well.'"]
+			},
+			"cook": {
+				"weight": 2,
+				"label": "cook",
+				"blurb": "keeps life support stretching",
+				"life_support_mult": 1.2,
+				"board": ["{name} sniffs the air handler. 'Cook. I can make anything last longer than it should.'"],
+				"mid": ["{name} has found a use for the algae loop. 'Do not ask what is in it. Eat it.'"],
+				"leave": ["{name}: 'There is a jar of something in the galley. It is a gift. It is also a warning.'"]
+			},
+			"tinkerer": {
+				"weight": 2,
+				"label": "tinkerer",
+				"blurb": "might do something clever to the drive",
+				"tune_chance": 0.7,
+				"tune_ids": ["injector_retime", "nozzle_polish", "lean_burn_map", "overdrive_map"],
+				"board": ["{name} eyes your drive bay a little too long. 'Tinkerer. I fix things that are not broken yet.'"],
+				"mid": ["{name} has a laptop open on a thrust map. 'Hm. No. Hm. Yes, maybe.'"],
+				"leave": ["{name}: 'Left something on your drive controller. It is better than it was. Probably.'"]
+			}
+		}
+	}
+}

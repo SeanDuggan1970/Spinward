@@ -24,6 +24,8 @@ var locations: Dictionary = {}
 var story: Dictionary = {}
 ## Courier contracts and reputation tiers (data/contracts.json).
 var contracts: Dictionary = {}
+## Rewards in kind, hitchhikers and engine tunes (data/favours.json).
+var favours: Dictionary = {}
 ## The Spaceline news feed (data/news.json).
 var news: Dictionary = {}
 ## Every control and its default keys and gamepad buttons (data/controls.json); view-only,
@@ -55,6 +57,7 @@ func load_from(root: String) -> void:
 	contracts = read_json(root + "/contracts.json")
 	sites = read_json(root + "/sites.json") if FileAccess.file_exists(root + "/sites.json") else {}
 	story = read_json(root + "/story.json") if FileAccess.file_exists(root + "/story.json") else {}
+	favours = read_json(root + "/favours.json") if FileAccess.file_exists(root + "/favours.json") else {}
 	news = read_json(root + "/news.json") if FileAccess.file_exists(root + "/news.json") else {}
 	controls = read_json(root + "/controls.json") if FileAccess.file_exists(root + "/controls.json") else {}
 	locations = places.duplicate()

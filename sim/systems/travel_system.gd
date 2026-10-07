@@ -7,6 +7,7 @@ const RoutePlanner := preload("res://sim/route_planner.gd")
 const Perks := preload("res://sim/perks.gd")
 const Interplanetary := preload("res://sim/interplanetary.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
+const Favours := preload("res://sim/favours.gd")
 
 const PERI_WARN_S := 2.0 * 3600.0
 const PERI_CLOSE_S := 600.0
@@ -130,7 +131,8 @@ func _depart(command: Dictionary) -> String:
 	var route := Navigation.plan(s.ship, sim().data, sim().ephemeris, here, to, s.time_s)
 	if not route["ok"]:
 		return route["reason"]
-	s.ship["fuel_t"] = maxf(0.0, float(s.ship["fuel_t"]) - float(route["fuel_t"]))
+	var burn := Favours.route_fuel(s.ship, sim().data, float(route["fuel_t"]))
+	s.ship["fuel_t"] = maxf(0.0, float(s.ship["fuel_t"]) - burn)
 	s.location = {
 		"status": "transit", "from": here, "to": to, "frame": route["frame"],
 		"depart_t": s.time_s, "arrive_t": route["arrive_t"], "burn_s": route["burn_s"],
@@ -142,7 +144,7 @@ func _depart(command: Dictionary) -> String:
 	}
 	_port_waits(s.location)
 	s.time_scale = 1.0
-	sim().emit("departed", {"from": here, "to": to, "arrive_t": route["arrive_t"], "fuel_t": route["fuel_t"]})
+	sim().emit("departed", {"from": here, "to": to, "arrive_t": route["arrive_t"], "fuel_t": burn, "fuel_trimmed_t": float(route["fuel_t"]) - burn})
 	return ""
 
 
@@ -157,7 +159,7 @@ func _dock(command: Dictionary) -> String:
 	if not manual:
 		# The tug always comes; if you cannot pay, the fee goes on your account
 		# (credits go negative) so a pilot can never be stuck outside a port.
-		var fee := 0.0 if Perks.free_docking(s, s.location["place"]) else float(sim().data.balance["docking"]["auto_dock_fee"])
+		var fee := 0.0 if Perks.free_docking(s, s.location["place"]) else float(sim().data.balance["docking"]["auto_dock_fee"]) * Favours.dock_mult(s, sim().data, s.location["place"])
 		on_credit = s.credits < fee
 		s.credits -= fee
 	s.stats["manual_docks" if manual else "auto_docks"] += 1
@@ -195,7 +197,8 @@ func _depart_route(here: String, to: String, route_id: String, plan_t: float) ->
 	if not opt.get("life_ok", true):
 		return "not enough life support for a trip that long"
 	var samples: Array = opt["samples"]
-	s.ship["fuel_t"] = maxf(0.0, float(s.ship["fuel_t"]) - float(opt["fuel_t"]))
+	var burn := Favours.route_fuel(s.ship, data, float(opt["fuel_t"]))
+	s.ship["fuel_t"] = maxf(0.0, float(s.ship["fuel_t"]) - burn)
 	var arrive := float(opt["arrive_t"])
 	var frame: String = opt.get("frame", "earth")
 	if frame == "sun":
@@ -214,7 +217,7 @@ func _depart_route(here: String, to: String, route_id: String, plan_t: float) ->
 		"ramp_stage": 0, "ramp_scale": 1.0,
 	}
 	s.time_scale = 1.0
-	sim().emit("departed", {"from": here, "to": to, "arrive_t": arrive, "fuel_t": opt["fuel_t"], "route": opt["label"]})
+	sim().emit("departed", {"from": here, "to": to, "arrive_t": arrive, "fuel_t": burn, "fuel_trimmed_t": float(opt["fuel_t"]) - burn, "route": opt["label"]})
 	return ""
 
 

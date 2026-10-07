@@ -17,6 +17,7 @@ const NpcSystem := preload("res://sim/systems/npc_system.gd")
 const ProjectSystem := preload("res://sim/systems/project_system.gd")
 const TipSystem := preload("res://sim/systems/tip_system.gd")
 const ContractSystem := preload("res://sim/systems/contract_system.gd")
+const FavourSystem := preload("res://sim/systems/favour_system.gd")
 const SiteSystem := preload("res://sim/systems/site_system.gd")
 const StorySystem := preload("res://sim/systems/story_system.gd")
 const NewsSystem := preload("res://sim/systems/news_system.gd")
@@ -43,7 +44,7 @@ func _init(catalog: DataCatalog = null) -> void:
 	ephemeris = Ephemeris.new(data.bodies, data.locations)
 	state = GameState.new()
 	# Order matters within a tick: the clock moves first, then everything catches up to it.
-	systems = [CalendarSystem.new(), EconomySystem.new(), ShipyardSystem.new(), TravelSystem.new(), NpcSystem.new(), ProjectSystem.new(), TipSystem.new(), ContractSystem.new(), SiteSystem.new(), StorySystem.new(), ElevatorSystem.new(), DamageSystem.new(), PowerSystem.new(), NewsSystem.new()]
+	systems = [CalendarSystem.new(), EconomySystem.new(), ShipyardSystem.new(), TravelSystem.new(), NpcSystem.new(), ProjectSystem.new(), TipSystem.new(), ContractSystem.new(), FavourSystem.new(), SiteSystem.new(), StorySystem.new(), ElevatorSystem.new(), DamageSystem.new(), PowerSystem.new(), NewsSystem.new()]
 	for system in systems:
 		system.setup(self)
 
@@ -69,7 +70,7 @@ func load_state(loaded: GameState) -> void:
 func route_key(to: String, plan_t: float = NAN) -> String:
 	const ShipStats := preload("res://sim/ship_stats.gd")
 	var t := state.time_s if is_nan(plan_t) else plan_t
-	return "%s>%s@%.3f#%.6f" % [state.location.get("place", ""), to, t, ShipStats.total_mass_t(state.ship, data)]
+	return "%s>%s@%.3f#%.6f" % [state.location.get("place", ""), to, t, ShipStats.total_mass_t(state.ship, data)] + ShipStats.tunes_key(state.ship)
 
 
 func store_route_options(key: String, options: Array) -> void:
