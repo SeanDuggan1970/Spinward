@@ -194,7 +194,7 @@
 			},
 			"complete": {
 				"headline": "Island One spins up",
-				"body": "Island One turned for the first time today, and the first residents stepped onto its inside. Someone had already planted a tree."
+				"body": "Island One turned for the first time today, and the first residents stepped onto its inside. Someone had already planted a tree. Open to visitors, three kilometres off the Kernel."
 			}
 		},
 		"luna_line_2": {
@@ -215,6 +215,10 @@
 				"dateline": "Earth orbit",
 				"headline": "Kalpana One will have a sister",
 				"body": "The Kalpana Settlement Trust will build a second drum alongside the first, turning the other way so the pair hold steady together."
+			},
+			"complete": {
+				"headline": "Kalpana Two turns the other way",
+				"body": "Kalpana Two is spun up beside its sister, turning against it, and is open to visitors. Three thousand more people have a window on the Earth. The first thing the new residents did was plant lettuce."
 			}
 		},
 		"ares_greenhouses": {
@@ -250,7 +254,7 @@
 			},
 			"complete": {
 				"headline": "The first ten thousand move into Concord",
-				"body": "The Concord Pair is turning, lit and breathing, and its first ten thousand settlers are home. It has weather. On the first evening, by local custom already, everybody looked up."
+				"body": "The first cylinder of the Concord Pair is turning, lit and breathing, and open to visitors over Ceres. Its first ten thousand settlers are home. It has weather. On the first evening, by local custom already, everybody looked up."
 			}
 		},
 		"lightfoot_sails": {
@@ -294,7 +298,7 @@
 			},
 			"complete": {
 				"headline": "The Moon has a ring",
-				"body": "The last tether of the Selene Ring reached the ground at Mare Smythii this morning. The Moon is now, officially, a ringed world. Earth's night side can see it as a thin bright line."
+				"body": "The last tether of the Selene Ring reached the ground at Mare Smythii this morning. The Moon is now, officially, a ringed world, and the ring's junction is open to visitors. Earth's night side can see it as a thin bright line."
 			}
 		}
 	}

@@ -90,6 +90,7 @@ func _initialize() -> void:
 	test_time_ramps()
 	test_cabin_and_berths()
 	test_controls()
+	test_new_habitat_places()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -2570,3 +2571,118 @@ func test_cabin_and_berths() -> void:
 	var hold2 := ShipStats.cargo_t(s2.ship)
 	check(sim2.apply({"type": "accept_contract", "id": 9003}) == "", "Passengers board into berths")
 	check(absf(ShipStats.cargo_t(s2.ship) - hold2) < 1e-9 and int(s2.ship["passengers"]) == 3, "Passengers take berths, not hold space")
+
+
+## Habitats the megaprojects build get a place you can dock at: shut until their
+## project is done, then in every list that offers destinations (departures, job
+## boards, traffic, tips, news), docked at and routed to like any other port.
+const NEW_PLACES := {
+	"island_one": {"from": "kernel_l5", "fleet": "island_haulers"},
+	"kalpana_two": {"from": "kalpana_one", "fleet": "kalpana_two_ferries"},
+	"concord_pair": {"from": "piazzi_station", "fleet": "concord_tenders"},
+	"selene_ring": {"from": "shackleton_port", "fleet": "ring_tankers"},
+}
+
+
+func test_new_habitat_places() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	# The market of each carries only what it lists; flows name goods it trades.
+	for id in NEW_PLACES:
+		var p: Dictionary = d.places[id]
+		check(p["opens_with"] == id and p.has("station") and p["station"].has("spin_rpm"), "%s is built by its project and has station geometry" % id)
+		var ok := true
+		for flow in ["produces", "consumes"]:
+			for good in p[flow]:
+				ok = ok and p["market"].has(good)
+		check(ok, "%s: every good it makes or uses is on its market" % id)
+		check(not Perks.place_open(s, d, id), "%s is closed before its project is done" % id)
+		check(not s.knowledge.has(id), "%s: no price board on file before it opens" % id)
+		check(String(sim.apply({"type": "depart", "to": id})) != "", "Cannot depart for %s before it is built" % id)
+	# Closed: not offered as a destination, a pickup, a tip or a drift target.
+	s.location = {"status": "docked", "place": "kibo_ring"}
+	var names: Array = NEW_PLACES.keys()
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	var leaked := false
+	for from in ["kibo_ring", "kernel_l5", "kalpana_one", "shackleton_port", "piazzi_station", "ares_ring"]:
+		for _i in 40:
+			for kind in d.contracts["kinds"]:
+				var offer := Contracts.make_offer(d, sim.ephemeris, s, rng, from, kind, "board")
+				if not offer.is_empty() and (offer["to"] in names or offer.get("pickup", "") in names):
+					leaked = true
+	check(not leaked, "No job is offered to a habitat that is not built")
+	# Closed places never show up in sim traffic either: run a month and read the departures.
+	var closed: Array = names + ["tsiolkovsky_wheel", "hektor_reach", "line_foot", "stalk_foot", "pavonis_foot"]
+	sim.take_events()
+	sim.state.time_scale = 1.0e5
+	var strays := []
+	for _i in 30:
+		sim.advance_game_time(DAY)
+		strays.append_array(sim.take_events().filter(func(e): return e["type"] == "npc_departed" and e["data"]["to"] in closed))
+	check(strays.is_empty(), "No ship heads for a closed place (%d did)" % strays.size())
+	for npc in s.npcs:
+		check(not (npc["fleet"] in ["island_haulers", "kalpana_two_ferries", "concord_tenders", "ring_tankers"]) or not NpcSystem.in_service(npc, s.time_s) or npc["trips"] == 0, "%s waits for its project" % npc["name"])
+	# Finish every project: the places open, news says so, and traffic starts.
+	for id in NEW_PLACES:
+		s.projects[id]["done"] = true
+		s.projects[id]["revealed"] = true
+	sim.take_events()
+	var posted_before: int = s.news["items"].size()
+	sim.advance_game_time(3600.0)
+	var headlines: Array = s.news["items"].map(func(i): return i["headline"])
+	for id in NEW_PLACES:
+		check(Perks.place_open(s, d, id), "%s opens when its project is done" % id)
+		check(d.news["projects"][id]["complete"]["headline"] in headlines, "The Spaceline reports %s open" % id)
+	check(s.news["items"].size() > posted_before, "Finishing the habitats made news")
+	# Departures: the list the station screen builds.
+	for id in NEW_PLACES:
+		var from: String = NEW_PLACES[id]["from"]
+		var dests: Array = d.places.keys().filter(func(to): return to != from and Perks.place_open(s, d, to))
+		check(id in dests, "%s is a destination from %s once open" % [id, from])
+	# Job boards: some job from a neighbouring port now goes to it.
+	for id in NEW_PLACES:
+		var hit := false
+		for from in [NEW_PLACES[id]["from"]]:
+			for _i in 80:
+				for kind in d.contracts["kinds"]:
+					var offer := Contracts.make_offer(d, sim.ephemeris, s, rng, from, kind, "board")
+					if not offer.is_empty() and (offer["to"] == id or offer.get("pickup", "") == id):
+						hit = true
+		check(hit, "Jobs are offered to %s once it is open" % id)
+	# Tips: brokers may now hear of them (coverage 'all' or a list that names the place).
+	check(d.brokers["brokers"]["maisie_tran"]["coverage"].has("kalpana_two") and d.brokers["brokers"]["auntie_vell"]["coverage"].has("island_one"), "Regional brokers cover the habitats beside their ports")
+	# Docking works at each, and the Navigation plans a route to it from its neighbour.
+	var freighter := {"hull": "deep_freighter", "modules": d.ships["deep_freighter"]["modules"].duplicate(), "cargo": {}, "fuel_t": 400.0}
+	for id in NEW_PLACES:
+		var from: String = NEW_PLACES[id]["from"]
+		var plan := Navigation.plan(freighter, d, sim.ephemeris, from, id, s.time_s)
+		check(plan.get("ok", false), "A route from %s to %s is planned" % [from, id])
+		var back := Navigation.plan(freighter, d, sim.ephemeris, id, from, s.time_s)
+		check(back.get("ok", false), "A route home from %s is planned" % id)
+		var options := RoutePlanner.plan_options(freighter, d, sim.ephemeris, from, id, s.time_s)
+		check(not options.is_empty() or plan.get("ok", false), "%s has route options" % id)
+		s.ship = freighter.duplicate(true)
+		s.location = {"status": "docked", "place": from}
+		check(sim.apply({"type": "depart", "to": id}) == "", "Depart from %s for %s" % [from, id])
+		sim.advance_game_time(float(s.location["arrive_t"]) - s.time_s + 60.0)
+		check(s.location["status"] == "approach" and s.location["place"] == id, "Arrive on approach at %s" % id)
+		check(sim.apply({"type": "dock"}) == "" and s.location["status"] == "docked" and s.location["place"] == id, "Docked at %s" % id)
+		check(not Market.target(d, id, d.places[id]["market"].keys()[0]) <= 0.0, "%s has a market to trade at" % id)
+	# Its own traffic: the project's fleet is commissioned and flies.
+	for _i in 40:
+		sim.advance_game_time(DAY)
+	for id in NEW_PLACES:
+		var fleet: String = NEW_PLACES[id]["fleet"]
+		var trips := 0
+		for npc in s.npcs:
+			if npc["fleet"] == fleet:
+				trips += int(npc["trips"])
+		check(trips > 0, "%s has made trips once %s is open" % [fleet, id])
+	# A save from before the places existed has no market for them: it grows one.
+	for id in NEW_PLACES:
+		s.markets.erase(id)
+	sim.advance_game_time(DAY)
+	for id in NEW_PLACES:
+		check(s.markets.has(id) and not s.markets[id].is_empty(), "An old save grows a market for %s" % id)

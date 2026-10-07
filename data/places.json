@@ -1,5 +1,5 @@
 {
-	"_note": "Flows are tonnes per game day. market.target is the stock where price equals base price. Recipes run per day while inputs last. Station geometry drives the docking scene. Orbits flagged 'equatorial' are relative to Earth's equator. 'features' add view-only megastructure set pieces (skyhook, power_arrays, elevator, bernal_frame, telescope_array, captured_rock). station.type is 'wheel' (default) or 'cylinder'.",
+	"_note": "Flows are tonnes per game day. market.target is the stock where price equals base price. Recipes run per day while inputs last. Station geometry drives the docking scene. Orbits flagged 'equatorial' are relative to Earth's equator. 'features' add view-only megastructure set pieces (skyhook, power_arrays, elevator, bernal_frame, telescope_array, captured_rock). station.type is 'wheel' (default) or 'cylinder'. Places that a project builds ('opens_with': island_one, kalpana_two, concord_pair, selene_ring, tsiolkovsky_wheel, hektor_reach) stay shut (departures, boards, map, traffic, tips) until the project is done (Perks.place_open); their markets still warm up from day one. A habitat built beside an existing port sits a few km off it (lagrange offset_km, or a slightly different mean anomaly in the same orbit). station.type 'cylinder' is also used for Island One, a Bernal sphere, as a squat drum (no sphere model exists yet).",
 	"kibo_ring": {
 		"name": "Kibo Ring",
 		"operator": "Terran Compact",
@@ -1283,6 +1283,233 @@
 			"machine_parts": 1.0,
 			"habitat_modules": 0.3,
 			"propellant": 2.0
+		},
+		"recipes": []
+	},
+	"island_one": {
+		"name": "Island One",
+		"operator": "Kernel Settlers",
+		"opens_with": "island_one",
+		"description": "The Bernal sphere the Commons drew and everyone built: 500 m across, a window-ribbon round the equator and a whole inner sky, home to ten thousand people three kilometres off the Kernel. Farms in the lower terraces, a lake in the bowl, and a harbour tug that has never once used its harbour. Short of water and spare parts; long on food and goodwill.",
+		"location": {
+			"type": "lagrange",
+			"system": [
+				"earth",
+				"moon"
+			],
+			"point": "L5",
+			"offset_km": [
+				1.7,
+				0.5,
+				-2.6
+			]
+		},
+		"station": {
+			"type": "cylinder",
+			"hub_radius_m": 250,
+			"hub_length_m": 500,
+			"ring_radius_m": 0,
+			"ring_tube_m": 0,
+			"spokes": 0,
+			"spin_rpm": 1.9,
+			"port_radius_m": 12,
+			"colour": "offwhite"
+		},
+		"services": [
+			"market"
+		],
+		"market": {
+			"food": 150,
+			"water_ice": 130,
+			"oxygen": 60,
+			"volatiles": 40,
+			"machine_parts": 30,
+			"habitat_modules": 25,
+			"electronics": 12,
+			"medical": 8,
+			"refined_metals": 20
+		},
+		"produces": {
+			"food": 9.0,
+			"oxygen": 1.5
+		},
+		"consumes": {
+			"water_ice": 4.0,
+			"volatiles": 1.2,
+			"machine_parts": 1.0,
+			"habitat_modules": 0.6,
+			"electronics": 0.3,
+			"medical": 0.25,
+			"refined_metals": 0.5
+		},
+		"recipes": []
+	},
+	"kalpana_two": {
+		"name": "Kalpana Two",
+		"operator": "Kalpana Settlement Trust",
+		"opens_with": "kalpana_two",
+		"description": "Kalpana One's sister drum, turning the other way, 760 m off its flank and joined by a truss: three thousand more people in Earth's magnetic shelter, most of them farmers, since the first drum ran out of room for fields. It shares Kalpana One's fuel dock, so there is no pump of its own.",
+		"location": {
+			"type": "orbit",
+			"parent": "earth",
+			"elements": {
+				"a_m": 6878000.0,
+				"e": 0.0,
+				"i_deg": 0.0,
+				"node_deg": 0.0,
+				"peri_deg": 0.0,
+				"m0_deg": 200.0066,
+				"frame": "equatorial"
+			}
+		},
+		"station": {
+			"type": "cylinder",
+			"hub_radius_m": 250,
+			"hub_length_m": 325,
+			"ring_radius_m": 0,
+			"ring_tube_m": 0,
+			"spokes": 0,
+			"spin_rpm": -1.89,
+			"port_radius_m": 9,
+			"colour": "offwhite"
+		},
+		"services": [
+			"market"
+		],
+		"market": {
+			"food": 100,
+			"water_ice": 90,
+			"oxygen": 50,
+			"machine_parts": 25,
+			"electronics": 15,
+			"medical": 6,
+			"habitat_modules": 12
+		},
+		"produces": {
+			"food": 3.5,
+			"medical": 0.25
+		},
+		"consumes": {
+			"water_ice": 2.5,
+			"oxygen": 1.5,
+			"machine_parts": 0.6,
+			"habitat_modules": 0.3,
+			"electronics": 0.4
+		},
+		"recipes": []
+	},
+	"concord_pair": {
+		"name": "Concord",
+		"operator": "Belt Assembly",
+		"opens_with": "concord_pair",
+		"description": "The first of the Concord Pair, over Ceres: an O'Neill cylinder 8 km across and 32 km long, turning once in two minutes for a full gee on its inside, with valleys, weather and three long windows for a sky. Ten thousand settlers so far, room for half a million. The belt's first farm bigger than a field; it feeds Piazzi, and drinks Ceres' ice by the trainload.",
+		"location": {
+			"type": "orbit",
+			"parent": "ceres",
+			"elements": {
+				"a_m": 669700.0,
+				"e": 0.0,
+				"i_deg": 10.0,
+				"node_deg": 0.0,
+				"peri_deg": 0.0,
+				"m0_deg": 10.0
+			}
+		},
+		"station": {
+			"type": "cylinder",
+			"hub_radius_m": 4000,
+			"hub_length_m": 32000,
+			"ring_radius_m": 0,
+			"ring_tube_m": 0,
+			"spokes": 0,
+			"spin_rpm": 0.47,
+			"port_radius_m": 40,
+			"colour": "offwhite"
+		},
+		"services": [
+			"market"
+		],
+		"market": {
+			"food": 160,
+			"water_ice": 350,
+			"oxygen": 60,
+			"volatiles": 150,
+			"machine_parts": 40,
+			"electronics": 12,
+			"medical": 6,
+			"habitat_modules": 20,
+			"refined_metals": 80
+		},
+		"produces": {
+			"food": 10.0,
+			"oxygen": 1.5
+		},
+		"consumes": {
+			"water_ice": 10.0,
+			"oxygen": 3.0,
+			"volatiles": 3.0,
+			"machine_parts": 2.0,
+			"electronics": 0.8,
+			"medical": 0.4,
+			"habitat_modules": 0.6,
+			"refined_metals": 1.5
+		},
+		"recipes": []
+	},
+	"selene_ring": {
+		"name": "Selene Ring",
+		"operator": "Luna Cooperative",
+		"opens_with": "selene_ring",
+		"description": "A junction on the Moon's orbital ring, 52 km above the equator, where the ring's tethers meet its mass driver. Freight comes up the tethers from the equatorial stations and goes out on magnets, with no rocket in the chain. It melts regolith to metal on the way. The ring turns a rim of its own at lunar gravity, for the crew.",
+		"location": {
+			"type": "orbit",
+			"parent": "moon",
+			"elements": {
+				"a_m": 1789400.0,
+				"e": 0.0,
+				"i_deg": 0.0,
+				"node_deg": 0.0,
+				"peri_deg": 0.0,
+				"m0_deg": 90.0
+			}
+		},
+		"station": {
+			"type": "wheel",
+			"hub_radius_m": 30,
+			"hub_length_m": 200,
+			"ring_radius_m": 400,
+			"ring_tube_m": 25,
+			"spokes": 6,
+			"spin_rpm": 0.61,
+			"port_radius_m": 14,
+			"colour": "grey"
+		},
+		"services": [
+			"market"
+		],
+		"market": {
+			"water_ice": 250,
+			"regolith": 400,
+			"refined_metals": 60,
+			"helium3": 1.5,
+			"machine_parts": 30,
+			"electronics": 8,
+			"food": 40,
+			"medical": 3,
+			"oxygen": 30
+		},
+		"produces": {
+			"regolith": 20.0,
+			"refined_metals": 3.0,
+			"helium3": 0.03
+		},
+		"consumes": {
+			"water_ice": 3.0,
+			"machine_parts": 1.5,
+			"electronics": 0.5,
+			"food": 1.5,
+			"medical": 0.15,
+			"oxygen": 0.5
 		},
 		"recipes": []
 	}
