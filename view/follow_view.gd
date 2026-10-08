@@ -82,6 +82,8 @@ var _turn_accel := 0.1
 var _plume_align := 0.35
 var _lit := false
 var _real_time_scale := 1000.0
+## The drive's acceleration this trip (m/s^2).
+var _drive_mps2 := 0.03
 ## This trip's burns: [start game time, end game time, view direction at the start].
 var _burns: Array = []
 var _puffs: Array = []
@@ -382,7 +384,7 @@ func _update_world(dt: float) -> void:
 	readout["remaining"] = V.distance(here, eph.position(loc["to"], t))
 	readout["dest_dir"] = dest_dir
 	readout["phase"] = ("TURNING" if _omega.length() > 0.02 else "COASTING") if not _thrusting else ("TURNING" if not _lit else ("ACCELERATING" if V.dot(V.normalized(thrust), V.normalized(v_now)) > 0.3 else ("BRAKING" if V.dot(V.normalized(thrust), V.normalized(v_now)) < -0.3 else "BURNING ACROSS")))
-	if app[3] in ["corridor", "hold"]:
+	if app[3] in ["corridor", "hold"] or app[3] == "swing" and not _thrusting:
 		readout["phase"] = "ON APPROACH"
 
 
@@ -437,6 +439,7 @@ func _corridors(loc: Dictionary) -> void:
 	_first_burn_t = float(_burns[0][0]) if not _burns.is_empty() else INF
 	var limits: Array = ShipStats.turn_limits(sim.state.ship, sim.data)
 	_turn_rate = float(limits[0])
+	_drive_mps2 = ShipStats.accel_mps2(sim.state.ship, sim.data)
 	_turn_accel = float(limits[1])
 	_plume_align = deg_to_rad(float(sim.data.balance["turning"]["plume_align_deg"]))
 	_real_time_scale = maxf(1.0, float(sim.data.balance["turning"]["real_time_scale"]))
@@ -455,10 +458,12 @@ func _edge(loc: Dictionary, ta: float, tb: float, lit: bool) -> float:
 	return tb
 
 
-## What the main drive pushes (the trip's thrust), but none on the docking corridor
-## or holding off the port: there the thrusters do the braking.
+## What the main drive pushes (the trip's thrust), but none on the docking corridor,
+## holding off the port, or for a swing gentler than a third of the drive: there
+## the thrusters do the work.
 func _drive_accel(loc: Dictionary, t: float) -> Array:
-	if Navigation.approach_state(loc, t)[3] in ["corridor", "hold"]:
+	var app: Array = Navigation.approach_state(loc, t)
+	if app[3] in ["corridor", "hold"] or app[3] == "swing" and V.length(app[2]) < _drive_mps2 / 3.0:
 		return [0.0, 0.0, 0.0]
 	return Navigation.transit_accel(loc, t)
 

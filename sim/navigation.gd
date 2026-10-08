@@ -30,6 +30,7 @@ extends RefCounted
 const V := preload("res://sim/v3.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
 const Interplanetary := preload("res://sim/interplanetary.gd")
+const OM := preload("res://sim/orbit_mech.gd")
 
 const SOLVE_STEPS := 48
 ## Positions recorded along a trip for each body it keeps clear of (fine enough that
@@ -508,6 +509,8 @@ static func _sampled_accel(location: Dictionary, t: float) -> Array:
 ## Ship position in the trip frame during transit.
 static func transit_position(location: Dictionary, t: float) -> Array:
 	var app = location.get("approach")
+	if app != null and app.has("descent") and t >= float(app["descent"]["t_d"]) and t < float(app["t0"]):
+		return _descent_pos(app, t)
 	if app != null and t >= float(app["t0"]):
 		return V.add(_approach_port(app, t), approach_state(location, t)[0])
 	return _raw_position(location, t)
@@ -535,6 +538,11 @@ static func _raw_position(location: Dictionary, t: float) -> Array:
 ## Ship velocity in the trip frame during transit (m/s).
 static func transit_velocity(location: Dictionary, t: float) -> Array:
 	var app = location.get("approach")
+	if app != null and app.has("descent") and t >= float(app["descent"]["t_d"]) and t < float(app["t0"]):
+		var d: Dictionary = app["descent"]
+		var ta := maxf(t - 1.0, float(d["t_d"]))
+		var tb := minf(t + 1.0, float(d["t_m"]))
+		return V.scale(V.sub(_descent_pos(app, tb), _descent_pos(app, ta)), 1.0 / maxf(tb - ta, 1e-3))
 	if app != null and t >= float(app["t0"]):
 		return V.add(_approach_port_vel(app, t), approach_state(location, t)[1])
 	return _raw_velocity(location, t)
@@ -571,7 +579,7 @@ static func _raw_velocity(location: Dictionary, t: float) -> Array:
 ## The thrust (acceleration) vector during transit (m/s^2); zero outside the burn.
 static func transit_accel(location: Dictionary, t: float) -> Array:
 	var app = location.get("approach")
-	if app != null and t >= float(app["t0"]):
+	if app != null and (t >= float(app["t0"]) or app.has("descent") and t >= float(app["descent"]["t_d"])):
 		return approach_state(location, t)[2]
 	return _raw_accel(location, t)
 
@@ -617,6 +625,9 @@ static func track_id(data, place: String, frame: String) -> String:
 # Every docking port faces sim -Y (view +Z), as the flight scene builds them.
 
 const DOCK_AXIS := [0.0, -1.0, 0.0]
+## The descent's angle table, and the share of it spent coming up to orbital speed.
+const DESCENT_STEPS := 96
+const DESCENT_SPIN_UP := 0.3
 const APPROACH_STEPS := 48
 
 
@@ -655,23 +666,198 @@ static func add_approach(location: Dictionary, data, eph) -> void:
 	for body in body_chain(data, to):
 		if body != "sun":
 			bodies.append(body)
+	# A port in orbit round a body: the trip does not match its orbital motion, so a
+	# descent first sweeps the ship down onto the port's orbit behind it.
+	var place_loc: Dictionary = data.locations[to]["location"]
+	var body: String = String(place_loc.get("parent", "")) if place_loc.get("type") == "orbit" else ""
 	var window := float(cfg["window_s"])
 	while window >= 60.0:
 		var t0 := maxf(t_reach - window, (earliest + t_reach) * 0.5)
 		window *= 0.5
 		if t_reach - t0 < 60.0:
 			return
-		var track := []
-		for k in APPROACH_STEPS + 1:
-			track.append(eph.relative(to, frame, lerpf(t0, t_end, float(k) / float(APPROACH_STEPS))))
-		var port_v0 := V.scale(V.sub(eph.relative(to, frame, t0 + 1.0), eph.relative(to, frame, t0 - 1.0)), 0.5)
-		var r0 := V.sub(_raw_position(location, t0), track[0])
-		var v0 := V.sub(_raw_velocity(location, t0), port_v0)
-		var app := {"t0": t0, "t_reach": t_reach, "t_end": t_end, "track": track,
-			"legs": _approach_legs(r0, v0, t0, t_reach, t_end, geom, data)}
+		var app := {"t0": t0, "t_reach": t_reach, "t_end": t_end, "track": _place_track(eph, to, frame, t0, t_end)}
+		var r0: Array
+		var v0: Array
+		var t_d := maxf(t0 - float(cfg["descent_s"]), (earliest + t0) * 0.5)
+		if body != "":
+			# The port's own orbit, propagated exactly (a sampled track cannot follow a
+			# low orbit closely enough for its velocity), about its body's track.
+			var t_s := t_d if t0 - t_d >= 600.0 else t0
+			app["orbit"] = {"mu": float(data.bodies[body]["gm"]), "t_ref": t0, "t_s": t_s,
+				"r": V.sub(eph.relative(to, frame, t0), eph.relative(body, frame, t0)),
+				"v": V.sub(_place_vel(eph, to, frame, t0), _place_vel(eph, body, frame, t0)),
+				"t_e": t_end, "body_track": _place_track(eph, body, frame, t_s, t_end)}
+		if body != "" and t0 - t_d >= 600.0:
+			var desc := _plan_descent(location, data, eph, app["orbit"], t_d, t0)
+			app["descent"] = desc
+			# The approach takes over where the descent leaves the ship: co-orbiting
+			# behind the port.
+			r0 = V.sub(desc["end_pos"], app["orbit"]["r"])
+			v0 = V.sub(desc["end_vel"], app["orbit"]["v"])
+		else:
+			r0 = V.sub(_raw_position(location, t0), _approach_port(app, t0))
+			v0 = V.sub(_raw_velocity(location, t0), _approach_port_vel(app, t0))
+		app["legs"] = _approach_legs(r0, v0, t0, t_reach, t_end, geom, data)
 		if _approach_clear(app, bodies, data, eph, frame):
 			location["approach"] = app
 			return
+
+
+## A place's positions (trip frame) at APPROACH_STEPS + 1 even steps over [t0, t1].
+static func _place_track(eph, place: String, frame: String, t0: float, t1: float) -> Array:
+	var track := []
+	for k in APPROACH_STEPS + 1:
+		track.append(eph.relative(place, frame, lerpf(t0, t1, float(k) / float(APPROACH_STEPS))))
+	return track
+
+
+static func _place_vel(eph, place: String, frame: String, t: float) -> Array:
+	return V.scale(V.sub(eph.relative(place, frame, t + 1.0), eph.relative(place, frame, t - 1.0)), 0.5)
+
+
+# --- The descent onto a port's orbit ----------------------------------------------
+#
+# From wherever the trip has the ship over [t_d, t_m], relative to the body the port
+# circles, to a point meet_behind_m behind the port on its orbit, moving with it. The
+# path is set in the body's frame by its distance from the body, its angle round it
+# and the tilt of its plane, each eased (a cubic Hermite, matching rates at both
+# ends) from the ship's motion to the port's: it swings round and down onto the
+# orbit the way the fall itself would carry it, and the plane turns over gradually
+# onto the port's. Gravity is real here, so the thrust is what the path needs beyond
+# falling. (The overhead hours still set how long it takes; a real descent from the
+# hand-off to a low orbit takes a small drive a day or more: see docs/DESIGN.md.)
+
+static func _plan_descent(location: Dictionary, data, eph, orbit: Dictionary, t_d: float, t_m: float) -> Dictionary:
+	var cfg: Dictionary = data.balance["approach"]
+	var T := t_m - t_d
+	var body_at := _orbit_body(orbit, t_d)
+	var r0 := V.sub(_raw_position(location, t_d), body_at[0])
+	var v0 := V.sub(_raw_velocity(location, t_d), body_at[1])
+	var rs: Array = orbit["r"]
+	var vs: Array = orbit["v"]
+	var n_s := V.normalized(V.cross(rs, vs))
+	var h0 := V.cross(r0, v0)
+	var n0: Array = V.normalized(h0) if V.length(h0) > 1e-3 * V.length(r0) else n_s
+	# Turn the ship's plane onto the port's about their line of nodes.
+	var L := V.cross(n0, n_s)
+	var tilt := acos(clampf(V.dot(n0, n_s), -1.0, 1.0))
+	if V.length(L) < 1e-9:
+		L = V.normalized(r0)
+		if V.dot(n0, n_s) > 0.0:
+			tilt = 0.0
+	L = V.normalized(L)
+	var m0 := V.cross(n0, L)
+	var m_s := V.cross(n_s, L)
+	# Where it meets the orbit: behind the port, moving with it.
+	var lag := float(cfg["meet_behind_m"]) / maxf(V.length(rs), 1.0)
+	var meet := V.rotate(rs, n_s, -lag)
+	var meet_v := V.rotate(vs, n_s, -lag)
+	var rho0 := V.length(r0)
+	var rhod0 := V.dot(v0, r0) / maxf(rho0, 1.0)
+	var th0 := atan2(V.dot(r0, m0), V.dot(r0, L))
+	var thd0 := V.dot(v0, V.cross(n0, V.normalized(r0))) / maxf(rho0, 1.0)
+	var rho1 := V.length(meet)
+	var th1 := atan2(V.dot(meet, m_s), V.dot(meet, L))
+	var thd1 := V.dot(meet_v, V.cross(n_s, V.normalized(meet))) / maxf(rho1, 1.0)
+	# Falling in, never dip below the orbit on the way (a monotone Hermite).
+	if rho0 > rho1:
+		rhod0 = maxf(rhod0, -3.0 * (rho0 - rho1) / T)
+	# The angle round the body: from the ship's own rate, brought early onto the rate
+	# that orbits at the height it has reached (so gravity carries it round, rather
+	# than the drive holding it up), ending on the port's. Integrated into a table,
+	# then eased by the least angle (+/- half a turn) that brings it in behind the port.
+	var rho := [rho0, rhod0, rho1, 0.0]
+	var mu := float(orbit["mu"])
+	var fit := thd1 / sqrt(mu / (rho1 * rho1 * rho1))
+	var rates := []
+	for k in DESCENT_STEPS + 1:
+		var f := float(k) / float(DESCENT_STEPS)
+		var r := _herm1(rho, f, T)
+		var w := clampf(f / DESCENT_SPIN_UP, 0.0, 1.0)
+		rates.append(lerpf(thd0, sqrt(mu / (r * r * r)) * fit, w * w * (3.0 - 2.0 * w)))
+	var th := [th0]
+	for k in DESCENT_STEPS:
+		th.append(float(th[k]) + (float(rates[k]) + float(rates[k + 1])) * 0.5 * T / float(DESCENT_STEPS))
+	var miss := fposmod(th1 - float(th[-1]) + PI, TAU) - PI
+	var slopes := []
+	for k in DESCENT_STEPS + 1:
+		var f := float(k) / float(DESCENT_STEPS)
+		th[k] = float(th[k]) + miss * f * f * (3.0 - 2.0 * f)
+		# d(angle)/ds, exact: the rate, plus the easing's.
+		slopes.append(float(rates[k]) * T + miss * 6.0 * f * (1.0 - f))
+	return {"t_d": t_d, "t_m": t_m, "axis": L, "m0": m0, "tilt": tilt, "rho": rho, "th": th, "th_ds": slopes,
+		"end_pos": meet, "end_vel": meet_v}
+
+
+## A scalar table at even steps over [0, 1] with its slopes d/ds, read at s by cubic
+## Hermite segments (so the slope is exact at every step, the ends included).
+static func _table(a: Array, slopes: Array, s: float) -> float:
+	var last := a.size() - 1
+	var x := clampf(s, 0.0, 1.0) * float(last)
+	var i := mini(int(x), last - 1)
+	var h := 1.0 / float(last)
+	return _herm1([a[i], slopes[i], a[i + 1], slopes[i + 1]], x - float(i), h)
+
+
+static func _herm1(p: Array, s: float, T: float) -> float:
+	var s2 := s * s
+	var s3 := s2 * s
+	return float(p[0]) * (2.0 * s3 - 3.0 * s2 + 1.0) + float(p[1]) * T * (s3 - 2.0 * s2 + s) + float(p[2]) * (3.0 * s2 - 2.0 * s3) + float(p[3]) * T * (s3 - s2)
+
+
+## Where the descent has the ship at t, relative to the body.
+static func _descent_rel(d: Dictionary, t: float) -> Array:
+	var T := float(d["t_m"]) - float(d["t_d"])
+	var s := clampf((t - float(d["t_d"])) / T, 0.0, 1.0)
+	var rho := _herm1(d["rho"], s, T)
+	var th := _table(d["th"], d["th_ds"], s)
+	var p := V.scale(V.add(V.scale(d["axis"], cos(th)), V.scale(d["m0"], sin(th))), rho)
+	return V.rotate(p, d["axis"], float(d["tilt"]) * s * s * (3.0 - 2.0 * s))
+
+
+static func _descent_pos(app: Dictionary, t: float) -> Array:
+	return V.add(_orbit_body(app["orbit"], t)[0], _descent_rel(app["descent"], t))
+
+
+## [position relative to the port, velocity relative to the port, thrust] on the descent.
+static func _descent_state(app: Dictionary, t: float) -> Array:
+	var d: Dictionary = app["descent"]
+	var o: Dictionary = app["orbit"]
+	var t0 := float(d["t_d"])
+	var t1 := float(d["t_m"])
+	var rel := func(tt: float) -> Array: return V.sub(_descent_rel(d, tt), _orbit_rel(o, tt)[0])
+	var ta := maxf(t - 1.0, t0)
+	var tb := minf(t + 1.0, t1)
+	if tb - ta < 1e-3:
+		ta = tb - 1.0
+	var vel := V.scale(V.sub(rel.call(tb), rel.call(ta)), 1.0 / (tb - ta))
+	# Thrust: the path's acceleration about the body, less the body's pull.
+	var h := 10.0
+	var tc := clampf(t, t0 + h, t1 - h)
+	var acc := V.scale(V.add(V.sub(_descent_rel(d, tc + h), V.scale(_descent_rel(d, tc), 2.0)), _descent_rel(d, tc - h)), 1.0 / (h * h))
+	var r := _descent_rel(d, t)
+	var rn := maxf(V.length(r), 1.0)
+	var pull := V.scale(r, -float(o["mu"]) / (rn * rn * rn))
+	return [rel.call(t), vel, V.sub(acc, pull)]
+
+
+## The port's body on an approach: [position, velocity] in the trip frame.
+static func _orbit_body(o: Dictionary, t: float) -> Array:
+	var t0 := float(o["t_s"])
+	var t1 := maxf(float(o.get("t_e", t0 + 1.0)), t0 + 1.0)
+	var span := t1 - t0
+	var at := func(tt: float) -> Array: return _track([o["body_track"]], clampf((tt - t0) / span, 0.0, 1.0))
+	var ta := maxf(t - 1.0, t0)
+	var tb := minf(t + 1.0, t1)
+	if tb - ta < 1e-3:
+		ta = tb - 1.0
+	return [at.call(t), V.scale(V.sub(at.call(tb), at.call(ta)), 1.0 / (tb - ta))]
+
+
+## The port relative to its body: [position, velocity], on its Kepler orbit.
+static func _orbit_rel(o: Dictionary, t: float) -> Array:
+	return OM.kepler(o["r"], o["v"], t - float(o["t_ref"]), float(o["mu"]))
 
 
 ## Whether an approach keeps out of each body's clearance (Interplanetary.clearance),
@@ -688,6 +874,12 @@ static func _approach_clear(app: Dictionary, bodies: Array, data, eph, frame: St
 				var t := lerpf(float(leg[0]), float(leg[1]), float(k) / 40.0)
 				var here := V.add(_approach_port(app, t), approach_state(loc, t)[0])
 				if V.distance(here, eph.relative(body, frame, t)) < need:
+					return false
+		if app.has("descent"):
+			var d: Dictionary = app["descent"]
+			for k in 121:
+				var t := lerpf(float(d["t_d"]), float(d["t_m"]), float(k) / 120.0)
+				if V.distance(_descent_pos(app, t), eph.relative(body, frame, t)) < need:
 					return false
 	return true
 
@@ -733,12 +925,17 @@ static func _approach_legs(r0: Array, v0: Array, t0: float, t_reach: float, t_en
 
 
 ## Where the ship is relative to its port on the final approach (trip frame axes):
-## [position, velocity, thrust, phase], phase "swing", "hold" or "corridor". Phase ""
-## (and zeros) outside the approach.
+## [position, velocity, thrust, phase], phase "descent" (onto a port's orbit), "swing",
+## "hold" or "corridor". Phase "" (and zeros) outside the approach.
 static func approach_state(location: Dictionary, t: float) -> Array:
 	var zero := [0.0, 0.0, 0.0]
 	var app = location.get("approach")
-	if app == null or t < float(app["t0"]):
+	if app == null:
+		return [zero, zero, zero, ""]
+	if t < float(app["t0"]):
+		if app.has("descent") and t >= float(app["descent"]["t_d"]):
+			var ds := _descent_state(app, t)
+			return [ds[0], ds[1], ds[2], "descent"]
 		return [zero, zero, zero, ""]
 	var legs: Array = app["legs"]
 	for leg in legs:
@@ -760,11 +957,15 @@ static func _hermite_acc(p0: Array, v0: Array, p1: Array, v1: Array, s: float, T
 
 
 static func _approach_port(app: Dictionary, t: float) -> Array:
+	if app.has("orbit"):
+		return V.add(_orbit_body(app["orbit"], t)[0], _orbit_rel(app["orbit"], t)[0])
 	var s := clampf((t - float(app["t0"])) / maxf(float(app["t_end"]) - float(app["t0"]), 1.0), 0.0, 1.0)
 	return _track([app["track"]], s)
 
 
 static func _approach_port_vel(app: Dictionary, t: float) -> Array:
+	if app.has("orbit"):
+		return V.add(_orbit_body(app["orbit"], t)[1], _orbit_rel(app["orbit"], t)[1])
 	# Differenced within the track (one-sided at its ends, where it is clamped).
 	var ta := maxf(t - 1.0, float(app["t0"]))
 	var tb := minf(t + 1.0, float(app["t_end"]))

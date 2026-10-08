@@ -381,6 +381,13 @@ func _handle_events() -> void:
 				refresh = true
 			"departed":
 				notice("Departed for %s%s" % [sim.data.places[d["to"]]["name"], (" via %s" % d["route"]) if d.has("route") else ""] + ("  (your navigator trimmed %.2f t)" % float(d["fuel_trimmed_t"]) if float(d.get("fuel_trimmed_t", 0.0)) > 0.005 else ""), UI.AMBER)
+			"descent_begins":
+				var lines: Array = sim.data.npcs["chatter"]["copilot_descent"]
+				var minutes := int(float(d["corridor_in_s"]) / 60.0)
+				var line: String = String(lines[absi(hash(str(e["time_s"]))) % lines.size()]).format({"port": sim.data.places[d["place"]]["name"],
+					"body": sim.data.bodies[d["body"]]["name"], "in": "%d h %02d min" % [minutes / 60, minutes % 60]})
+				notice(line, UI.AMBER)
+				comms.append("%s  %s" % [_clock(e["time_s"]), line])
 			"periapsis_near", "periapsis":
 				var line := Comms.copilot(sim, "copilot_near" if e["type"] == "periapsis_near" else "copilot_pass", float(d["alt"]), float(d.get("in_s", 0.0)))
 				notice(line, UI.AMBER)

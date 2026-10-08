@@ -178,6 +178,9 @@ func _check(loc: Dictionary, kind: String, a: String, b: String, day: float) -> 
 		for leg in loc["approach"]["legs"]:
 			for i in 41:
 				times.append(lerpf(float(leg[0]), float(leg[1]), float(i) / 40.0))
+		if loc["approach"].has("descent"):
+			for i in 121:
+				times.append(lerpf(float(loc["approach"]["descent"]["t_d"]), float(loc["approach"]["t0"]), float(i) / 120.0))
 		times.sort()
 	for i in times.size():
 		var t: float = times[i]

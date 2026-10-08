@@ -211,7 +211,13 @@ A character, not just a feature. It is the in-world reason the flight is playabl
     - Every docking port faces view +Z (sim -Y), as the flight scene has always built them.
     - Trip time and propellant are unchanged: the approach re-shapes the last stretch, it does not re-plan it.
     - **Clearance:** the window is halved (down to a minute) until the approach clears every body the port hangs from. The route-clearance test samples it closely.
-    - **Known gap:** the trip does not match a low orbit's motion (the overhead hours cover that). For ports in low orbit (Shackleton Port, Clarke Exchange, Ares Ring) the trip is still hundreds to thousands of km off, at km/s, when the approach starts, so the swing's thrust is far beyond any drive. It used to slam into the port at that speed instead. Fixing it needs the gravity-flown terminal phase to target the station rather than its body.
+    - **Descent onto a port in orbit:** the trip itself does not match a low orbit's motion. Before the approach, a port circling a body gets a descent (`_plan_descent`, `balance.approach.descent_s`, four hours).
+      - **The sweep:** from wherever the trip has the ship, it sweeps down onto the port's orbit and meets it 4 km behind, moving with it. No chasing, no ploughing in.
+      - **How it's shaped:** in the body's frame, its distance from the body eases down to the orbit and never dips below it. Its angle round the body is brought early onto the rate that orbits at its present height, so gravity carries it round, then eased to come in behind the port. Its orbital plane tilts over onto the port's.
+      - **Thrust:** what the path needs beyond falling: smooth, about 0.3 to 1.8 m/s² on average.
+      - **In flight:** the co-pilot calls the descent as it begins ("descent_begins"), and time drops to at most x100 so the sweep can be watched (about 2½ minutes).
+      - **The port's own orbit** is propagated exactly (Kepler, from its state when the approach begins), so the approach and docking scene follow a station doing km/s without error.
+    - **Physics bent (low orbits):** a real descent from the hand-off orbit to a low orbit costs a small drive a day or more of thrust (about 3.7 km/s to Kibo Ring; Shackleton Port adds a 90° plane change). We keep the overhead hours instead, so the descent's thrust is 10 to 40 times a Mule's drive. Sean chose this in October 2026 (fun over a spreadsheet); revisit if wanted, with honest descents and longer trips.
     - Saves from before have no approach and keep the trip's own path.
   - Gravity is taken to supply the co-rotation, and the departure/arrival overhead covers climbing out of gravity wells (a deliberate simplification).
 - **Gravity-flown routes** (`sim/orbit_mech.gd`, `sim/gravity_flight.gd`, `sim/route_planner.gd`). The player's trips are flown under real Earth and Moon point gravity, integrated with RK4 at adaptive steps.

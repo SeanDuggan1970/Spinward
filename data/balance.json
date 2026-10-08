@@ -50,8 +50,11 @@
 		"spawn_distance_m": 600.0
 	},
 	"approach": {
-		"_note": "The last part of every trip to a port (sim/navigation.gd add_approach), flown in the port's own frame. Over the last window_s before the ship reaches the port, it swings round from wherever the trip brings it to the corridor entry (corridor_m beyond the handover point, on the docking axis), going wide of the station (its bounding radius plus clear_margin_m) if it comes in from behind (when the cosine between its direction and the axis is under swing_cos). Then it brakes along the corridor from corridor_speed_mps to handover_speed_mps, arriving at the handover point, where the docking scene takes over. Docking ports all face view +Z (sim -Y), as in the flight scene. Trip time and propellant are unchanged.",
+		"_note": "The last part of every trip to a port (sim/navigation.gd add_approach), flown in the port's own frame. Over the last window_s before the ship reaches the port, it swings round from wherever the trip brings it to the corridor entry (corridor_m beyond the handover point, on the docking axis), going wide of the station (its bounding radius plus clear_margin_m) if it comes in from behind (when the cosine between its direction and the axis is under swing_cos). Then it brakes along the corridor from corridor_speed_mps to handover_speed_mps, arriving at the handover point, where the docking scene takes over. Docking ports all face view +Z (sim -Y), as in the flight scene. For a port in orbit round a body, a descent over the descent_s before that sweeps the ship down onto the port's orbit, meeting it meet_behind_m behind the port and moving with it; time drops to at most descent_time_scale for it. Trip time and propellant are unchanged.",
 		"window_s": 1200,
+		"descent_s": 14400,
+		"descent_time_scale": 100,
+		"meet_behind_m": 4000,
 		"corridor_m": 3000,
 		"corridor_speed_mps": 15.0,
 		"handover_speed_mps": 1.0,

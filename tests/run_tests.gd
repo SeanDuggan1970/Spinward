@@ -710,6 +710,9 @@ func test_routes_clear_of_bodies() -> void:
 			for leg in loc["approach"]["legs"]:
 				for i in 41:
 					times.append(lerpf(float(leg[0]), float(leg[1]), float(i) / 40.0))
+			if loc["approach"].has("descent"):
+				for i in 121:
+					times.append(lerpf(float(loc["approach"]["descent"]["t_d"]), float(loc["approach"]["t0"]), float(i) / 120.0))
 		for ti: float in times:
 			var here := V.add(eph.position(plan["frame"], ti), Navigation.transit_position(loc, ti))
 			for id in bodies:
@@ -3983,7 +3986,9 @@ func test_final_approach() -> void:
 		check(end[3] == "corridor", "%s: the last stretch is the docking corridor" % to)
 		# Seamless where it takes over from the trip.
 		var t0 := float(app["t0"])
-		check(V.distance(Navigation._raw_position(loc, t0), Navigation.transit_position(loc, t0)) < 1.0, "%s: no jump where the approach begins" % to)
+		# (After a descent, if there is one; else after the trip itself.)
+		var before: Array = Navigation._descent_pos(app, t0) if app.has("descent") else Navigation._raw_position(loc, t0)
+		check(V.distance(before, Navigation.transit_position(loc, t0)) < 1.0, "%s: no jump where the approach begins" % to)
 		# Never through the station: kept beyond its hub, ring and the margin.
 		var bound := maxf(maxf(float(geom["ring_radius_m"]) + float(geom["ring_tube_m"]), float(geom["hub_radius_m"])), float(geom["hub_length_m"]) * 0.5)
 		var nearest := INF
@@ -3996,6 +4001,41 @@ func test_final_approach() -> void:
 		check(phases.has("swing") and phases.has("corridor"), "%s: swings round, then runs the corridor" % to)
 		if case[1] == "":
 			check(phases.has("hold"), "%s: a quick trip that reaches its port early holds off it" % to)
+	# A port in low orbit: the descent sweeps down onto its orbit and meets it from
+	# behind, moving with it, with no jump where it takes over from the trip.
+	for to in ["shackleton_port", "kibo_ring"]:
+		var sim := fresh()
+		var s := sim.state
+		var d := sim.data
+		s.location = {"status": "docked", "place": "halo_depot"}
+		sim.apply({"type": "depart", "to": to})
+		var loc: Dictionary = s.location
+		var app = loc.get("approach")
+		check(app != null and app.has("descent"), "A trip to %s descends onto its orbit" % to)
+		if app == null or not app.has("descent"):
+			continue
+		var desc: Dictionary = app["descent"]
+		var td := float(desc["t_d"])
+		var t0 := float(app["t0"])
+		check(V.distance(Navigation._raw_position(loc, td), Navigation.transit_position(loc, td)) < 5.0
+			and V.distance(Navigation._raw_velocity(loc, td), Navigation.transit_velocity(loc, td + 1e-3)) < 2.0, "%s: no jump where the descent begins" % to)
+		var meet: Array = Navigation.approach_state(loc, t0 - 1e-3)
+		check(meet[3] == "descent" and V.length(meet[0]) < float(d.balance["approach"]["meet_behind_m"]) * 1.2 and V.length(meet[1]) < 15.0,
+			"%s: the descent meets the port from a few km behind, moving with it (%.0f m, %.1f m/s)" % [to, V.length(meet[0]), V.length(meet[1])])
+		var r_orbit := V.length(app["orbit"]["r"])
+		var lowest := INF
+		var thrust := 0.0
+		for k in 201:
+			var t := lerpf(td, t0, float(k) / 200.0)
+			lowest = minf(lowest, V.length(Navigation._descent_rel(desc, t)))
+			thrust = maxf(thrust, V.length(Navigation.transit_accel(loc, t)))
+		check(lowest > r_orbit * 0.999, "%s: the descent never dips below the port's orbit" % to)
+		check(thrust < 10.0, "%s: the descent's thrust stays bounded (%.2f m/s^2)" % [to, thrust])
+		# The co-pilot calls it as it begins.
+		sim.take_events()
+		sim.advance_game_time(td - s.time_s + 60.0)
+		var types := sim.take_events().map(func(e): return e["type"])
+		check("descent_begins" in types, "%s: the co-pilot calls the descent" % to)
 	# Old saves in transit have no approach, and keep the trip's own path.
 	var old := fresh()
 	old.apply({"type": "depart", "to": "halo_depot"})

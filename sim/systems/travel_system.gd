@@ -29,6 +29,7 @@ func start_game() -> void:
 func tick(_game_dt: float) -> void:
 	var s = sim().state
 	_flyby_moments(s)
+	_descent_moment(s)
 	_time_ramps(s)
 	if s.location.get("status") == "transit" and s.time_s >= float(s.location["arrive_t"]):
 		var place: String = s.location["to"]
@@ -79,6 +80,22 @@ func _time_ramps(s) -> void:
 	for cap in time.get("approach_caps", []):
 		if left <= float(cap[0]) and s.time_scale > float(cap[1]):
 			s.time_scale = float(cap[1])
+
+
+## The co-pilot calls the descent onto a port's orbit as it begins (the approach was
+## planned at departure: Navigation.add_approach).
+func _descent_moment(s) -> void:
+	var loc: Dictionary = s.location
+	if loc.get("status") != "transit" or loc.get("descent_called", false):
+		return
+	var app = loc.get("approach")
+	if app == null or not app.has("descent") or s.time_s < float(app["descent"]["t_d"]):
+		return
+	loc["descent_called"] = true
+	# Slow the clock for it, so the sweep down plays out to be watched.
+	s.time_scale = minf(s.time_scale, float(sim().data.balance["approach"]["descent_time_scale"]))
+	sim().emit("descent_begins", {"place": loc["to"], "body": sim().data.locations[loc["to"]]["location"]["parent"],
+		"corridor_in_s": float(app["t0"]) - s.time_s})
 
 
 ## Flyby drama: slow time for the run-in to periapsis, then for the pass itself,
