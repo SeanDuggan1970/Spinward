@@ -211,3 +211,12 @@ Full write-up: [2026-10-07-economy-together.md](2026-10-07-economy-together.md).
 - Premiums scale with insured value (0.79% per 30 days on `basic`), about 2 to 3% of income; left as is.
 - No run of any strategy went below the 10,000 cr start.
 - The bot gained `upkeep=2`, `jobs=1`, `hikers=1`, `seed0=`, `tsv=1`, and ticks the sim after docking (before, insurance never renewed and no hitchhiker ever asked).
+
+
+## Turning with inertia (2026-10-08)
+
+- New data: `balance.turning` and each hull's `turn_rate_dps` and `turn_accel_dps2` in `ships.json`. Only the transit view reads them (`ShipStats.turn_limits`). No sim system uses them, so the balance bot's numbers can't change and it was not re-run.
+- Mule: 14 °/s and 7.0 °/s² empty with a full tank. Laden with 20 t: 3.6 °/s². A flip (180°) takes about 15 s empty and 17 s laden.
+- Headless check (scratch script, not committed):
+  - Kibo Ring to Halo Depot, x1 to x1000: the ship is lined up before the drive lights, and the plume never hides for misalignment.
+  - Halo Depot to Ares Ring at x100,000: the plume switches 5 times in the voyage. It lights about 16 s late at departure (a 58° turn at x1), and hides briefly at the jump to x100,000 and at a mid-voyage flip.

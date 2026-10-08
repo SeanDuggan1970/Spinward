@@ -197,6 +197,12 @@ A character, not just a feature. It is the in-world reason the flight is playabl
   - Cislunar trips are planned in the frame that rotates with the Earth–Moon line, where stations sit still. The path is a smooth run between two fixed points, so seen from outside it sweeps round with the Moon: a leading arc of about 50,000–70,000 km.
   - The thrust vector varies smoothly. It pushes toward the target, swings across, then brakes. It never exceeds the drive at the ship's mass, and propellant is the thrust actually used.
   - The ship points along the thrust vector in every view.
+  - **Turning with inertia (Oct 2026, roadmap step 1).** In the ship view (`view/follow_view.gd`) the ship swings round with angular momentum, not at a fixed rate. It accelerates, coasts and brakes to stop lined up (`ShipRig.turn_step`).
+    - Each hull has its own turn rate and angular acceleration (`turn_rate_dps`, `turn_accel_dps2` in `data/ships.json`; defaults in `balance.turning`). These figures hold at the hull's stock dry mass, and the acceleration falls with cargo, cabin and fuel aboard (`ShipStats.turn_limits`), so a laden hauler turns slower than a courier.
+    - The ship starts round early enough to be lined up when each burn begins. Before a flip mid-burn it starts half a turn early. The lead is in real seconds, scaled by time compression.
+    - The plume shows only once the nose is within `plume_align_deg` of the thrust. If compression is too high to turn in time, the drive appears to light late. The sim's thrust is unchanged: this is view only.
+    - RCS quads puff at the start and end of each turn: the ones whose torque pushes the way the ship is being swung.
+    - **Physics bent:** the rates (6–30 °/s) are far brisker than a real hauler's RCS could manage, so a turn plays out in seconds on screen.
   - Gravity is taken to supply the co-rotation, and the departure/arrival overhead covers climbing out of gravity wells (a deliberate simplification).
 - **Gravity-flown routes** (`sim/orbit_mech.gd`, `sim/gravity_flight.gd`, `sim/route_planner.gd`). The player's trips are flown under real Earth and Moon point gravity, integrated with RK4 at adaptive steps.
   - **Guidance:** Lambert steering onto the free-fall orbit that reaches the target on time, then coasting, then a terminal phase that matches the destination's motion.

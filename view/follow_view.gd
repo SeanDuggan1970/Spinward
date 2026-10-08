@@ -24,9 +24,17 @@ const Models := preload("res://view/flight/models.gd")
 const Livery := preload("res://view/flight/livery.gd")
 const ShipRig := preload("res://view/flight/ship_rig.gd")
 const ProjectSystem := preload("res://sim/systems/project_system.gd")
+const ShipStats := preload("res://sim/ship_stats.gd")
 
 const SKY_DISTANCE := 60000.0
-const TURN_RATE := 0.9
+## Burning, a thrust direction this far off the present one (radians) is a flip coming:
+## start round early for it.
+const FLIP_ANGLE := 1.05
+## Coasting, start round for the next burn this many real seconds earlier than the turn needs.
+const TURN_MARGIN_S := 1.0
+## RCS puffs: how long each lasts (real seconds), and the least time between puffs from one quad.
+const PUFF_S := 0.45
+const PUFF_GAP_S := 0.12
 ## Hands off this long (real seconds) and the director takes the camera.
 const IDLE_S := 8.0
 const SHOT_S := 11.0
@@ -62,8 +70,21 @@ var _length := 30.0
 var _radius := 6.0
 ## The middle of the ship (model space), what the camera looks at.
 var _pivot := Vector3.ZERO
-var _basis := Basis.IDENTITY
+## The nose (view space) and how fast it is swinging (a world vector, rad per second of
+## turning: real seconds, or faster above balance.turning.real_time_scale).
+var _fwd := Vector3.FORWARD
+var _omega := Vector3.ZERO
 var _ready_basis := false
+## This trip's turn limits (ShipStats.turn_limits) and plume alignment (radians).
+var _turn_rate := 0.2
+var _turn_accel := 0.1
+var _plume_align := 0.35
+var _lit := false
+var _real_time_scale := 1000.0
+## This trip's burns: [start game time, end game time, view direction at the start].
+var _burns: Array = []
+var _puffs: Array = []
+var _puff_mat: StandardMaterial3D
 var _thrusting := false
 var _sun_dir := Vector3.UP
 var _stations: Dictionary = {}
@@ -71,7 +92,6 @@ var _stations: Dictionary = {}
 var _corridor := [Vector3.FORWARD, Vector3.FORWARD]
 var _corridor_key := -1.0
 var _first_burn_t := INF
-var _first_burn_dir := Vector3.FORWARD
 ## Free camera, about the ship's middle: yaw, pitch (radians), distance (metres).
 var _yaw := 0.6
 var _pitch := 0.25
@@ -284,30 +304,52 @@ func _update_world(dt: float) -> void:
 			st["rotor"].rotation.z = fposmod(t * float(entry["rate"]), TAU)
 			entry["dist"] = at.length() if near else INF
 	# Attitude: along the thrust while burning (from toward the target round to braking
-	# against it); coasting, hold it.
+	# against it); coasting, hold it. The ship turns with inertia (ShipRig.turn_step),
+	# so it starts round early enough to be lined up when the drive lights, and swings
+	# through a flip half a turn before the thrust does.
 	var thrust: Array = Navigation.transit_accel(loc, t)
 	_thrusting = V.length(thrust) > 1e-6
-	var forward := Vector3(thrust[0], thrust[2], -thrust[1]).normalized() if _thrusting else -_basis.z
-	# Backing off the port, nose to it; then round to the first burn's direction, held
-	# until the drive lights; coming in on the last stretch, nose to the port.
+	var thrust_dir := _view_dir(thrust)
+	# Game seconds per second of turning: turns play out in real time up to
+	# _real_time_scale, faster above it so the ship keeps up with a voyage's thrust.
+	var speedup := maxf(1.0, float(s.time_scale) / _real_time_scale)
+	var scale := maxf(1.0, float(s.time_scale)) / speedup
+	var forward := _fwd
+	var next := _next_burn(t)
+	# Backing off the port, nose to it; then round to the next burn's direction once it
+	# is due within the time a turn takes; coming in on the last stretch, nose to the port.
 	if elapsed < BACKOUT_S:
 		forward = -_corridor[0]
-	elif not _thrusting and t < _first_burn_t:
-		forward = _first_burn_dir
-	elif left < PORT_WINDOW_S and not _thrusting:
+	elif _thrusting:
+		forward = thrust_dir
+		var lead := ShipRig.turn_time(PI, _turn_rate, _turn_accel) * 0.5 * scale
+		# Look ahead only within this burn: the thrust at its very end can be anything.
+		var t_ahead := minf(t + lead, _burn_end(t) - 2.0)
+		var ahead := _view_dir(Navigation.transit_accel(loc, t_ahead)) if t_ahead > t else Vector3.ZERO
+		if ahead != Vector3.ZERO and ahead.angle_to(thrust_dir) > FLIP_ANGLE:
+			forward = ahead
+	elif next >= 0 and (t < _first_burn_t or float(_burns[next][0]) - t <= (ShipRig.turn_time(_fwd.angle_to(_burns[next][2]), _turn_rate, _turn_accel) + TURN_MARGIN_S) * scale):
+		forward = _burns[next][2]
+	elif left < PORT_WINDOW_S:
 		forward = _corridor[1]
-	var want := Basis.looking_at(forward, Vector3.UP if absf(forward.y) < 0.98 else Vector3.RIGHT)
+	var omega_was := _omega
 	if not _ready_basis:
-		_basis = want
+		_fwd = forward
+		_omega = Vector3.ZERO
 		_ready_basis = true
-	elif dt > 0.0:
-		var from := _basis.get_rotation_quaternion()
-		var to := want.get_rotation_quaternion()
-		var angle := from.angle_to(to)
-		_basis = Basis(from.slerp(to, minf(1.0, TURN_RATE * dt / maxf(angle, 1e-6))))
-	_ship.basis = ShipRig.roll_to_sun(-_basis.z, _sun_dir)
+	elif dt > 0.0 and not s.paused:
+		var step := ShipRig.turn_step(_fwd, _omega, forward, _turn_rate, _turn_accel, dt * speedup)
+		_fwd = step[0]
+		_omega = step[1]
+	_ship.basis = ShipRig.roll_to_sun(_fwd, _sun_dir)
+	if dt > 0.0:
+		_rcs_puffs((_omega - omega_was) / (dt * speedup), dt)
+	# The drive lights once the nose is round to the thrust, and stays lit until it
+	# falls well behind (twice as far), so it doesn't flicker under high compression.
+	var off := _fwd.angle_to(thrust_dir) if _thrusting else PI
+	_lit = _thrusting and off < _plume_align * (2.0 if _lit else 1.0)
 	if _plume:
-		_plume.visible = _thrusting
+		_plume.visible = _lit
 	var dest_dir := SkyKit.dir_between(eph.position(loc["to"], t), here)
 	ShipRig.aim(_rig, _ship.basis, _sun_dir, dest_dir * 1.0e6, dt)
 	var v_now: Array = Navigation.transit_velocity(loc, t)
@@ -316,7 +358,7 @@ func _update_world(dt: float) -> void:
 	readout["eta"] = float(loc["arrive_t"]) - t
 	readout["remaining"] = V.distance(here, eph.position(loc["to"], t))
 	readout["dest_dir"] = dest_dir
-	readout["phase"] = "COASTING" if not _thrusting else ("ACCELERATING" if V.dot(V.normalized(thrust), V.normalized(v_now)) > 0.3 else ("BRAKING" if V.dot(V.normalized(thrust), V.normalized(v_now)) < -0.3 else "BURNING ACROSS"))
+	readout["phase"] = ("TURNING" if _omega.length() > 0.02 else "COASTING") if not _thrusting else ("TURNING" if not _lit else ("ACCELERATING" if V.dot(V.normalized(thrust), V.normalized(v_now)) > 0.3 else ("BRAKING" if V.dot(V.normalized(thrust), V.normalized(v_now)) < -0.3 else "BURNING ACROSS")))
 
 
 ## The trip's corridors, once per trip: [the way we leave, the way we arrive], as
@@ -348,16 +390,100 @@ func _corridors(loc: Dictionary) -> void:
 		if out != Vector3.ZERO and inward != Vector3.ZERO:
 			break
 	_corridor = [out if out != Vector3.ZERO else Vector3.FORWARD, inward if inward != Vector3.ZERO else Vector3.FORWARD]
-	# When and which way the drive first lights, so the ship can be lined up for it.
-	_first_burn_t = INF
-	_first_burn_dir = _corridor[0]
-	for k in 400:
+	# Every burn (when the drive lights and goes out, and which way it first points),
+	# so the ship can be lined up before each one.
+	_burns = []
+	var on := -1.0
+	var was := false
+	for k in 401:
 		var tk := lerpf(t0, t1, float(k) / 400.0)
-		var a: Array = Navigation.transit_accel(loc, tk)
-		if V.length(a) > 1e-6:
-			_first_burn_t = tk
-			_first_burn_dir = Vector3(a[0], a[2], -a[1]).normalized()
+		var lit := V.length(Navigation.transit_accel(loc, tk)) > 1e-6
+		if lit != was:
+			var edge := t0 if k == 0 else _edge(loc, lerpf(t0, t1, float(k - 1) / 400.0), tk, lit)
+			if lit:
+				on = edge
+			else:
+				_burns.append([on, edge])
+		was = lit
+	if was:
+		_burns.append([on, t1])
+	for b in _burns:
+		b.append(_view_dir(Navigation.transit_accel(loc, minf(float(b[0]) + 1.0, float(b[1])))))
+	_first_burn_t = float(_burns[0][0]) if not _burns.is_empty() else INF
+	var limits: Array = ShipStats.turn_limits(sim.state.ship, sim.data)
+	_turn_rate = float(limits[0])
+	_turn_accel = float(limits[1])
+	_plume_align = deg_to_rad(float(sim.data.balance["turning"]["plume_align_deg"]))
+	_real_time_scale = maxf(1.0, float(sim.data.balance["turning"]["real_time_scale"]))
+
+
+## The moment the drive lights (lit) or goes out between ta and tb, to a second or so.
+func _edge(loc: Dictionary, ta: float, tb: float, lit: bool) -> float:
+	for _i in 30:
+		if tb - ta < 1.0:
 			break
+		var tm := (ta + tb) * 0.5
+		if (V.length(Navigation.transit_accel(loc, tm)) > 1e-6) == lit:
+			tb = tm
+		else:
+			ta = tm
+	return tb
+
+
+## A sim vector (heliocentric axes) as a view direction; zero stays zero.
+func _view_dir(a: Array) -> Vector3:
+	return Vector3(a[0], a[2], -a[1]).normalized()
+
+
+## The burn under way at t, or the next to come; -1 if none is left.
+func _next_burn(t: float) -> int:
+	for k in _burns.size():
+		if t < float(_burns[k][1]):
+			return k
+	return -1
+
+
+## When the burn under way at t ends (t itself if none is).
+func _burn_end(t: float) -> float:
+	var k := _next_burn(t)
+	return float(_burns[k][1]) if k >= 0 and t >= float(_burns[k][0]) else t
+
+
+## Puffs from the RCS quads that would push the way the ship is being swung
+## (alpha: angular acceleration, a world vector): as a turn starts and as it stops.
+func _rcs_puffs(alpha: Vector3, dt: float) -> void:
+	var clock := Time.get_ticks_msec() / 1000.0
+	for k in range(_puffs.size() - 1, -1, -1):
+		var p: Dictionary = _puffs[k]
+		var age := clock - float(p["born"])
+		var node: MeshInstance3D = p["node"]
+		if age > PUFF_S or not is_instance_valid(node):
+			if is_instance_valid(node):
+				node.queue_free()
+			_puffs.remove_at(k)
+			continue
+		var u := age / PUFF_S
+		node.position += p["vel"] * dt
+		node.scale = Vector3.ONE * (0.3 + 2.2 * u) * (1.0 - u * u)
+	if alpha.length() < _turn_accel * 0.3:
+		return
+	if _puff_mat == null:
+		_puff_mat = Kit.glow(Color(0.86, 0.9, 0.96), 1.2)
+	var local := (_ship.basis.inverse() * alpha).normalized()
+	for j in _rig.get("rcs", []):
+		var quad: Node3D = j["node"]
+		if not is_instance_valid(quad) or clock < float(j.get("puff_next", 0.0)):
+			continue
+		var out: Vector3 = j["outward"]
+		var lever := _ship.to_local(quad.global_position) - _pivot
+		# A jet pushes against where it points, so its torque is lever x -out.
+		var torque := lever.cross(-out)
+		if torque.length() < 1e-3 or torque.normalized().dot(local) < 0.4:
+			continue
+		j["puff_next"] = clock + PUFF_GAP_S * randf_range(0.8, 1.3)
+		var puff := Kit.sphere(0.25, _puff_mat, quad.global_position + _ship.basis * out * 0.4)
+		add_child(puff)
+		_puffs.append({"node": puff, "born": clock, "vel": _ship.basis * out * randf_range(2.5, 4.0)})
 
 
 ## How far the ship is from a port's docking face tau seconds after leaving it (or
