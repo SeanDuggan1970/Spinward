@@ -21,6 +21,7 @@
 extends RefCounted
 
 const Kit := preload("res://view/flight/kit.gd")
+const ClimberModel := preload("res://view/flight/climber_model.gd")
 const SkyKit := preload("res://view/flight/sky.gd")
 
 
@@ -195,63 +196,83 @@ static func _elevator(parent: Node3D, dirs: Dictionary, station: Dictionary, sec
 	var moon: Vector3 = dirs.get("moon", Vector3(0, 0, -1))
 	var earth: Vector3 = dirs.get("earth", -moon)
 	var anchor := Vector3(-(float(station["hub_radius"]) + 450.0), 120.0, -350.0)
-	# Anchor platform: the elevator's L1 head station, tied to the depot by a cargo truss.
-	parent.add_child(Kit.box(Vector3(90.0, 40.0, 90.0), Kit.mat("orange"), anchor))
-	parent.add_child(Kit.beacon(Color("ff3a2a"), anchor + Vector3(0, 30, 0), 4.0, 1.5, 0.0))
+	# The anchor: a vertical station threaded on the ribbon (after Obayashi's modular
+	# synchronous station), stacked modules along the line with a wide solar array,
+	# tied to the depot by a cargo truss.
+	var st := _facing(moon, anchor)
+	for k in 5:
+		var z := -60.0 + 30.0 * float(k)
+		st.add_child(Kit.cylinder(14.0 if k % 2 == 0 else 11.0, 26.0, Kit.mat("orange" if k % 2 == 0 else "offwhite"), Vector3(0, 0, z), 28))
+		st.add_child(Kit.torus(14.5, 0.8, Kit.mat("steel"), Vector3(0, 0, z + 13.0), 32))
+	for side in [-1.0, 1.0]:
+		st.add_child(Kit.box(Vector3(46.0, 2.0, 2.0), Kit.mat("steel"), Vector3(side * 37.0, 0, 0)))
+		st.add_child(Kit.box(Vector3(60.0, 0.6, 34.0), Kit.paint(Color("1d2b4a"), {"finish": 1, "metallic": 0.35, "roughness": 0.3}), Vector3(side * 88.0, 0, 0)))
+	st.add_child(Kit.beacon(Color("ff3a2a"), Vector3(0, 16.0, 0), 4.0, 1.5, 0.0))
+	parent.add_child(st)
 	var tie := _facing(-anchor, anchor * 0.5)
 	tie.add_child(Kit.box(Vector3(6.0, 6.0, anchor.length()), Kit.mat("steel")))
 	parent.add_child(tie)
+	# The ribbon both ways: widest at the anchor, where it carries the most, between two
+	# guard strands near the station. Toward Earth it runs on 26,000 km to Ballast Point,
+	# far beyond sight.
 	var ribbon := _lit(Color("d6cfbd"), 0.35, 0.4, 0.45)
-	var moonward := 60000.0
-	var earthward := 18000.0
-	var down := _facing(moon, anchor + moon * moonward * 0.5)
-	down.add_child(Kit.box(Vector3(4.0, 0.3, moonward), ribbon))
-	parent.add_child(down)
-	var up := _facing(earth, anchor + earth * earthward * 0.5)
-	up.add_child(Kit.box(Vector3(4.0, 0.3, earthward), ribbon))
-	parent.add_child(up)
-	# Counterweight past L1 on the Earth side: spent climbers and slag, lit for traffic.
-	var cw := anchor + earth * earthward
-	parent.add_child(Kit.box(Vector3(260.0, 180.0, 260.0), Kit.mat("rust"), cw))
-	parent.add_child(Kit.beacon(Color("ff3a2a"), cw + Vector3(0, 120, 0), 18.0, 2.0, 0.3))
+	var reach := 60000.0
+	var wide := 8000.0
+	for dir in [moon, earth]:
+		var d: Vector3 = dir
+		var near := _facing(d, anchor + d * (75.0 + wide * 0.5))
+		near.add_child(Kit.box(Vector3(5.0, 0.3, wide), ribbon))
+		for side in [-1.0, 1.0]:
+			near.add_child(Kit.box(Vector3(0.6, 0.6, wide), Kit.mat("steel"), Vector3(side * 6.0, 0, 0)))
+		parent.add_child(near)
+		var far := _facing(d, anchor + d * (75.0 + wide + (reach - wide) * 0.5))
+		far.add_child(Kit.box(Vector3(3.0, 0.3, reach - wide), ribbon))
+		parent.add_child(far)
 	# Marker lights every 2 km recede toward the Moon like a runway into the dark.
 	for i in range(1, 31):
 		parent.add_child(Kit.beacon(Color("f0a030"), anchor + moon * (2000.0 * i), 3.0 + i * 0.6, 3.0, float(i) * 0.033))
-	# Climbers riding the ribbon, cargo up, empties down.
+	# Climbers in pairs, one up and one down passing together, so the swing each
+	# gives the ribbon cancels: cargo up, empties down.
 	var climbers := []
 	var speeds := []
 	var phases := []
 	for i in 4:
-		var c := Node3D.new()
-		c.add_child(Kit.box(Vector3(16.0, 10.0, 22.0), Kit.mat("yellow")))
-		c.add_child(Kit.beacon(Color.WHITE, Vector3(0, 8, 0), 3.0, 1.0, float(i) * 0.25))
-		c.add_child(Kit.sphere(5.0, Kit.glow(Color("fff0c0"), 3.0), Vector3(0, -8, 0)))
+		var c: Node3D = ClimberModel.build("beam", "yellow", 1.0)["node"]
+		c.basis = _along(moon)
 		parent.add_child(c)
 		climbers.append(c)
-		speeds.append(-120.0 if i % 2 == 0 else 160.0)
-		phases.append(float(i) / 4.0)
-	var anims := [{"kind": "climbers", "nodes": climbers, "start": anchor, "dir": moon, "length": moonward, "speeds": speeds, "phases": phases}]
+		speeds.append(-150.0 if i % 2 == 0 else 150.0)
+		phases.append(0.2 + 0.5 * float(i >> 1))
+	var anims := [{"kind": "climbers", "nodes": climbers, "start": anchor + moon * 75.0, "dir": moon, "length": reach, "speeds": speeds, "phases": phases}]
 	# Luna Line 2: a second ribbon being let down toward the Moon, 80 m alongside.
 	if second > 0.0:
 		var offset := moon.cross(Vector3.UP).normalized() * 80.0 if absf(moon.dot(Vector3.UP)) < 0.98 else Vector3(80, 0, 0)
 		var anchor2 := anchor + offset
-		var reach := moonward * clampf(second * 2.0, 0.05, 1.0)
-		var r2 := _facing(moon, anchor2 + moon * reach * 0.5)
-		r2.add_child(Kit.box(Vector3(4.0, 0.3, reach), ribbon))
+		var reach2 := reach * clampf(second * 2.0, 0.05, 1.0)
+		var r2 := _facing(moon, anchor2 + moon * reach2 * 0.5)
+		r2.add_child(Kit.box(Vector3(4.0, 0.3, reach2), ribbon))
 		parent.add_child(r2)
 		# The spool tip stays lit while the ribbon is still being let down.
 		if second < 0.5:
-			parent.add_child(Kit.beacon(Color("40ff60"), anchor2 + moon * reach, 10.0, 1.2, 0.0))
+			parent.add_child(Kit.beacon(Color("40ff60"), anchor2 + moon * reach2, 10.0, 1.2, 0.0))
 		elif second >= 1.0:
 			var climbers2 := []
-			for i in 3:
-				var c := Node3D.new()
-				c.add_child(Kit.box(Vector3(16.0, 10.0, 22.0), Kit.mat("orange")))
-				c.add_child(Kit.beacon(Color.WHITE, Vector3(0, 8, 0), 3.0, 1.0, float(i) * 0.3))
+			for i in 2:
+				var c: Node3D = ClimberModel.build("beam", "orange", 1.0)["node"]
+				c.basis = _along(moon)
 				parent.add_child(c)
 				climbers2.append(c)
-			anims.append({"kind": "climbers", "nodes": climbers2, "start": anchor2, "dir": moon, "length": moonward, "speeds": [140.0, -110.0, 150.0], "phases": [0.1, 0.45, 0.8]})
+			anims.append({"kind": "climbers", "nodes": climbers2, "start": anchor2, "dir": moon, "length": reach, "speeds": [140.0, -140.0], "phases": [0.6, 0.6]})
 	return anims
+
+
+## A climber's basis on a ribbon laid by _facing(dir, ...): +Y along `dir`, its thin
+## axis (X) on the tape's thin axis, its width axis (Z) across the tape.
+static func _along(dir: Vector3) -> Basis:
+	var f := _facing(dir, Vector3.ZERO)
+	var fb := f.transform.basis
+	f.free()
+	return Basis(fb.y, -fb.z, -fb.x)
 
 
 # --- Island One, a Bernal sphere under construction -------------------------------

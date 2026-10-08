@@ -635,6 +635,13 @@ Sean: the elevators "lack counterweights deeper in space beyond the geostationar
   - **Rewards:** each adds renown, and some add standing with an operator.
   - **Renown gets you noticed:** each point raises the chance a hitchhiker asks and a client approaches you by name (6% and 5% a point, at most 1.8 times). With no badges nothing changes.
   - **On screen:** the Contracts tab lists what you are known for.
+- **The elevator look** (sources in RESEARCH.md §6 and §7):
+  - **Climbers** (`view/flight/climber_model.gd`): after ISEC and Edwards. A truss spine, five opposed wheel pairs pinching the tape (friction drive, no capstan), and two pods hung either side of the ribbon so the load sits on its line. Power comes from a photocell dish under the climber, lit from the foot (`elevator.power` "beam": Luna and Pavonis), or from solar wings ("solar": the Stalk).
+  - **The tape:** widest at the anchor, as the real tapered designs are. It runs between two guard strands tied across every 100 m.
+  - **In the cab:** the tape is 0.4 m wide at the foot, 1.6 m at the anchor and 0.8 m at the counterweight. A slow wave travels along it. Your own wheels turn as you climb, and a faint beam rises from the foot below the dish.
+  - **Climbers pass in pairs,** one up and one down, so the swing each gives the ribbon cancels (as in Red Mars).
+  - **Halo Depot:** the anchor is now a vertical station threaded on the ribbon (after Obayashi), with a wide solar array. The 18 km "counterweight" block is gone: Ballast Point is 26,000 km on, far out of sight.
+  - **From afar:** the ribbon tapers, the anchor is a stacked tower, and the counterweight is a lumpy mass with a warning light.
 - **Bars:** a place with the `bar` service has a `bar` (name, patrons, round_cr). "Buy a round" on the Market tab stands everyone a drink and adds a little standing with the operator. Bars so far: the three counterweights and Line Foot's Earthrise.
 
 ## Saturn, rings and shadows (Oct 2026)
