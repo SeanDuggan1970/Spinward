@@ -612,6 +612,31 @@ Sean's direction (2026-10-05): "make the space elevators rideable".
 - **Climbers:** NPC climber fleets carry goods between each port and its town without propellant, and talk on the comms channel. The Pavonis climbers enter service when the Pavonis Line is finished.
 - **Capture:** `--ride=<dir>` rides each line down and back, shooting the cab and the towns.
 
+## Counterweights and badges (Oct 2026)
+
+Sean: the elevators "lack counterweights deeper in space beyond the geostationary dock. It should be possible to ride a crawler out to the end for no other reason than to experience it"; and "a badge system for getting to hard to reach places or buying everyone in the counterweight bar a drink".
+
+- **Counterweight legs:** each elevator has a `counterweight` leg (places.json): from the anchor, out to a place marked `counterweight` and `foot_of` the anchor. It's reachable only by climber; your ship waits at the anchor.
+
+  | Line | Counterweight | Beyond the anchor | Ride | Fare |
+  |---|---|---|---|---|
+  | The Luna Line | Ballast Point, toward Earth | 26,000 km | 26 h | 120 cr + 15 cr/t |
+  | The Piazzi Stalk | Stalk Top | 550 km | 6 h | 60 cr + 10 cr/t |
+  | The Pavonis Line | Pavonis Ballast (once built) | 7,400 km | 52 h | 300 cr + 30 cr/t |
+
+  - **Where they sit:** a `surface` location with `radius_m`, held out along the ribbon and turning with its world (`Ephemeris.surface_point`).
+  - **What's there:** tiny markets and a bar each.
+  - **The ride view:** it runs on past the anchor. Your weight comes back, pointing outward: 0.17 mg at Ballast Point, a few thousandths of a g on Ceres and Mars. The HUD reads in milligees when slight.
+  - **Fares:** out needs the fare in hand; back in never strands you.
+  - **Buttons:** the departures tab lists every ride from where you are ("Ride down", "Ride out", "Ride in").
+- **Badges** (`data/badges.json`, `sim/badges.gd`, `sim/systems/badge_system.gd`, `state.badges`):
+  - **How they're earned:** by being docked somewhere (`visit`, `visit_all`) or by rounds bought (`rounds`, optionally `at` a bar).
+  - **The first set:** each counterweight, all three, Line Foot, Psyche, Saturn, Jupiter, Hektor, the first round, a round at the Counterweight Bar, and ten rounds.
+  - **Rewards:** each adds renown, and some add standing with an operator.
+  - **Renown gets you noticed:** each point raises the chance a hitchhiker asks and a client approaches you by name (6% and 5% a point, at most 1.8 times). With no badges nothing changes.
+  - **On screen:** the Contracts tab lists what you are known for.
+- **Bars:** a place with the `bar` service has a `bar` (name, patrons, round_cr). "Buy a round" on the Market tab stands everyone a drink and adds a little standing with the operator. Bars so far: the three counterweights and Line Foot's Earthrise.
+
 ## Saturn, rings and shadows (Oct 2026)
 
 Sean: the rings were "very unrealistic and downright ugly"; the planet should cast its shadow on the rings and on moons and ships.

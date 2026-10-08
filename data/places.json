@@ -1,5 +1,5 @@
 {
-	"_note": "Flows are tonnes per game day. market.target is the stock where price equals base price. Recipes run per day while inputs last. Station geometry drives the docking scene. Orbits flagged 'equatorial' are relative to Earth's equator. 'features' add view-only megastructure set pieces (skyhook, power_arrays, elevator, bernal_frame, telescope_array, captured_rock). station.type is 'wheel' (default) or 'cylinder'. Places that a project builds ('opens_with': island_one, kalpana_two, concord_pair, selene_ring, tsiolkovsky_wheel, hektor_reach) stay shut (departures, boards, map, traffic, tips) until the project is done (Perks.place_open); their markets still warm up from day one. A habitat built beside an existing port sits a few km off it (lagrange offset_km, or a slightly different mean anomaly in the same orbit). station.type 'bernal' is a Bernal sphere (Island One: hub_radius_m is the sphere's radius) and 'pair' an O'Neill pair of counter-rotating cylinders (Concord; optional mirror_open_deg, twin_offset_m), both in view/flight/habitats.gd.",
+	"_note": "Flows are tonnes per game day. market.target is the stock where price equals base price. Recipes run per day while inputs last. Station geometry drives the docking scene. Orbits flagged 'equatorial' are relative to Earth's equator. 'features' add view-only megastructure set pieces (skyhook, power_arrays, elevator, bernal_frame, telescope_array, captured_rock). station.type is 'wheel' (default) or 'cylinder'. Places that a project builds ('opens_with': island_one, kalpana_two, concord_pair, selene_ring, tsiolkovsky_wheel, hektor_reach) stay shut (departures, boards, map, traffic, tips) until the project is done (Perks.place_open); their markets still warm up from day one. A habitat built beside an existing port sits a few km off it (lagrange offset_km, or a slightly different mean anomaly in the same orbit). station.type 'bernal' is a Bernal sphere (Island One: hub_radius_m is the sphere's radius) and 'pair' an O'Neill pair of counter-rotating cylinders (Concord; optional mirror_open_deg, twin_offset_m), both in view/flight/habitats.gd. An elevator may have a 'counterweight' leg (place, km and hours beyond the anchor, fare, fare_per_t, via): a place marked 'counterweight' and foot_of the anchor, reached only by climbing out past the anchor; a surface location with radius_m sits that far from the body's centre, turning with it. A place with the 'bar' service has a 'bar' (name, patrons, round_cr): you can buy the room a round (sim/systems/badge_system.gd).",
 	"kibo_ring": {
 		"name": "Kibo Ring",
 		"operator": "Terran Compact",
@@ -194,7 +194,15 @@
 			"hours": 56,
 			"fare": 150,
 			"fare_per_t": 20,
-			"via": "Straight down the ribbon from the depot: 56,000 km, two days and a bit, with the Moon swelling under the floor."
+			"via": "Straight down the ribbon from the depot: 56,000 km, two days and a bit, with the Moon swelling under the floor.",
+			"counterweight": {
+				"place": "ballast_point",
+				"km": 26000,
+				"hours": 26,
+				"fare": 120,
+				"fare_per_t": 15,
+				"via": "Up the ribbon past the anchor, the way you didn't come: 26,000 km more toward Earth to the counterweight, where the floor turns into the ceiling."
+			}
 		}
 	},
 	"shackleton_port": {
@@ -614,7 +622,15 @@
 			"fare": 600,
 			"fare_per_t": 45,
 			"project": "pavonis_line",
-			"via": "The Accord's tender lifts you to the anchor at areostationary, then five days down the ribbon to the summit of Pavonis Mons."
+			"via": "The Accord's tender lifts you to the anchor at areostationary, then five days down the ribbon to the summit of Pavonis Mons.",
+			"counterweight": {
+				"place": "pavonis_ballast",
+				"km": 7400,
+				"hours": 52,
+				"fare": 300,
+				"fare_per_t": 30,
+				"via": "From the anchor at areostationary, outward another 7,400 km to the counterweight: two days of climbing away from Mars, getting heavier the wrong way."
+			}
 		}
 	},
 	"piazzi_station": {
@@ -708,7 +724,15 @@
 			"hours": 7,
 			"fare": 80,
 			"fare_per_t": 12,
-			"via": "A tender takes you across to the Stalk's anchor, 1,190 km out from Ceres' centre, then it is an afternoon down the ribbon."
+			"via": "A tender takes you across to the Stalk's anchor, 1,190 km out from Ceres' centre, then it is an afternoon down the ribbon.",
+			"counterweight": {
+				"place": "stalk_top",
+				"km": 550,
+				"hours": 6,
+				"fare": 60,
+				"fare_per_t": 10,
+				"via": "From the anchor, on out: 550 km more to the counterweight at the Stalk's tip, Ceres shrinking under your boots."
+			}
 		},
 		"hazards": {
 			"rocks": 10,
@@ -1122,7 +1146,8 @@
 			"facing": "earth"
 		},
 		"services": [
-			"market"
+			"market",
+			"bar"
 		],
 		"market": {
 			"regolith": 500,
@@ -1148,7 +1173,12 @@
 			"electronics": 0.2,
 			"water_ice": 1.0
 		},
-		"recipes": []
+		"recipes": [],
+		"bar": {
+			"name": "the Earthrise",
+			"patrons": 30,
+			"round_cr": 9
+		}
 	},
 	"stalk_foot": {
 		"name": "Stalk Foot",
@@ -1514,6 +1544,120 @@
 			"food": 1.5,
 			"medical": 0.15,
 			"oxygen": 0.5
+		},
+		"recipes": []
+	},
+	"ballast_point": {
+		"name": "Ballast Point",
+		"operator": "Luna Cooperative",
+		"foot_of": "halo_depot",
+		"counterweight": true,
+		"description": "The Luna Line's counterweight, 26,000 km past L1 toward Earth: forty thousand tonnes of slag, spent climbers and anything else too heavy to be worth sending down. A crew of six keeps the ribbon's tension and the lights on, and they built the Counterweight Bar out of a climber cab. Up here Earth pulls a hair harder than the Moon: drop a spanner and it drifts, very slowly, to the ceiling. Nobody comes here for any reason but to have come here.",
+		"location": {
+			"type": "surface",
+			"parent": "moon",
+			"facing": "earth",
+			"radius_m": 83737400.0
+		},
+		"services": [
+			"market",
+			"bar"
+		],
+		"bar": {
+			"name": "the Counterweight Bar",
+			"patrons": 9,
+			"round_cr": 12
+		},
+		"market": {
+			"refined_metals": 60,
+			"machine_parts": 6,
+			"food": 8,
+			"medical": 1
+		},
+		"produces": {
+			"refined_metals": 0.6
+		},
+		"consumes": {
+			"food": 0.2,
+			"machine_parts": 0.05,
+			"medical": 0.01
+		},
+		"recipes": []
+	},
+	"stalk_top": {
+		"name": "Stalk Top",
+		"operator": "Belt Assembly",
+		"foot_of": "piazzi_station",
+		"counterweight": true,
+		"description": "The tip of the Piazzi Stalk, 550 km beyond the anchor: a cluster of ice-mining hulks bolted into a counterweight, and a hatch with a sign over it that says THE END. The Belt Assembly keeps a winch crew here and the winch crew keeps a still. Ceres turns below once every nine hours, very small.",
+		"location": {
+			"type": "surface",
+			"parent": "ceres",
+			"lat_deg": 0.0,
+			"lon_deg": 30.0,
+			"day_s": 32667.0,
+			"radius_m": 1737890.0
+		},
+		"services": [
+			"market",
+			"bar"
+		],
+		"bar": {
+			"name": "the Winch Room",
+			"patrons": 5,
+			"round_cr": 10
+		},
+		"market": {
+			"water_ice": 40,
+			"volatiles": 15,
+			"food": 6,
+			"machine_parts": 4
+		},
+		"produces": {
+			"water_ice": 0.5
+		},
+		"consumes": {
+			"food": 0.15,
+			"machine_parts": 0.03
+		},
+		"recipes": []
+	},
+	"pavonis_ballast": {
+		"name": "Pavonis Ballast",
+		"operator": "Mars Accord",
+		"foot_of": "ares_ring",
+		"opens_with": "pavonis_line",
+		"counterweight": true,
+		"description": "The Pavonis Line's counterweight, a captured rock 7,400 km beyond areostationary, hollowed out for the tension crew. Mars is a ruddy coin overhead (or underfoot, depending on how you feel about it). The Accord runs a small observatory here, and the observatory runs a smaller bar.",
+		"location": {
+			"type": "surface",
+			"parent": "mars",
+			"lat_deg": 0.8,
+			"lon_deg": -113.0,
+			"day_s": 88642.0,
+			"radius_m": 27793899.999999996
+		},
+		"services": [
+			"market",
+			"bar"
+		],
+		"bar": {
+			"name": "the Far Side of Up",
+			"patrons": 11,
+			"round_cr": 14
+		},
+		"market": {
+			"regolith": 80,
+			"refined_metals": 20,
+			"food": 8,
+			"electronics": 2
+		},
+		"produces": {
+			"regolith": 0.8
+		},
+		"consumes": {
+			"food": 0.25,
+			"electronics": 0.02
 		},
 		"recipes": []
 	}

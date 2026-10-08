@@ -1,6 +1,6 @@
 # Roadmap (agreed October 2026)
 
-Seven steps, in dependency order: each later step builds on the earlier ones. Mark a
+Eight steps, in dependency order: each later step builds on the earlier ones. Mark a
 step done here when it lands on main.
 
 | # | Step | Depends on | Status |
@@ -11,7 +11,8 @@ step done here when it lands on main.
 | 4 | Humpback cargo lander and pod types | none (can run alongside 2 and 3) | to do |
 | 5 | Satellite missions | 4 | to do |
 | 6 | Detection model and stealth package | 1 | to do |
-| 7 | Secret missions (late game) | 4, 5, 6 | to do |
+| 7 | Secret missions (late game), with free departures | 4, 5, 6 | to do |
+| 8 | Walking about, first person | 3 | to do |
 
 Do visual and feel work locally, where it can be checked by eye. Send sim-heavy work
 (the maths in step 2, the mechanics in step 4, the model in step 6) to cloud jobs on
@@ -100,6 +101,34 @@ Unlocked by reputation and the story arc.
 
 Being caught costs reputation and fines, and impounding is possible for repeat
 offences.
+
+**Free departures** (Sean, Oct 2026). Today every departure names a destination. Add
+leaving without one: no flight plan filed, just a heading.
+- There's no reason to want it before secret missions, so it unlocks with them.
+- Leaving a busy port (the main stations, Earth's neighbourhood) without a plan is
+  frowned on: a fine or a dent in standing, and traffic control remembers.
+- The point is the spy's exit: leave on a dull heading, and once clear of prying eyes
+  and radar (step 6's sensor ranges), turn for where you really mean to go.
+
+## 8. Walking about, first person
+
+Sean, Oct 2026: walk around the places you visit, FPS style.
+
+- A character controller and interiors: the docking bays (step 3), station
+  concourses, the bars, the elevator towns and counterweights.
+- It's a big view-side job. It comes after step 3, which gives you somewhere to walk.
+- In the sim it's only a view: what you do while walking (the bar, the market, a
+  contact) still goes through the same commands.
+
+## Done alongside the steps
+
+- **Counterweight rides** (Oct 2026): every elevator goes on past its anchor to a
+  counterweight you can ride out to, just to have been there. Ballast Point is
+  26,000 km past L1, Stalk Top is on Ceres and Pavonis Ballast is on Mars, each with a
+  bar.
+- **Badges** (Oct 2026): one-off marks for going where few go or standing the bar a
+  round. They add renown, which gets you noticed by hitchhikers and by clients asking
+  for you by name.
 
 ## Open decisions
 

@@ -30,6 +30,8 @@ var _line: Dictionary
 var _body := ""
 var _radius := 1.0
 var _top_m := 0.0
+## Anchor to counterweight, metres.
+var _leg_m := 0.0
 var _planet: MeshInstance3D
 var _planet_r0 := 1.0
 var _plates: Array = []
@@ -52,6 +54,7 @@ func _ready() -> void:
 	_body = _line["body"]
 	_radius = float(sim.data.bodies[_body]["radius_m"])
 	_top_m = float(_line["km"]) * 1000.0
+	_leg_m = float(_line.get("counterweight", {}).get("km", 0.0)) * 1000.0
 	add_child(SkyKit.environment())
 	var eph = sim.ephemeris
 	var t: float = sim.state.time_s
@@ -144,11 +147,23 @@ func _build_hud() -> void:
 	root.add_child(_hud)
 
 
-## Altitude above the foot now, in metres: steady speed, easing at each end.
+## Altitude above the foot now, in metres: steady speed, easing at each end. Out to
+## the counterweight (and back in), the ride runs on from the anchor.
 func altitude(t: float) -> float:
 	var f := clampf((t - float(_loc["depart_t"])) / maxf(float(_loc["arrive_t"]) - float(_loc["depart_t"]), 1.0), 0.0, 1.0)
 	var p := lerpf(f, f * f * (3.0 - 2.0 * f), 0.25)
-	return _top_m * (1.0 - p) if _loc["down"] else _top_m * p
+	match _dir():
+		"out":
+			return _top_m + _leg_m * p
+		"in":
+			return _top_m + _leg_m * (1.0 - p)
+		"down":
+			return _top_m * (1.0 - p)
+	return _top_m * p
+
+
+func _dir() -> String:
+	return String(_loc.get("dir", "down" if _loc["down"] else "up"))
 
 
 ## What a person weighs here, in gees: gravity less the swing of the spin (or, on the
@@ -201,16 +216,28 @@ func _update(dt: float) -> void:
 	camera.basis = Basis(Vector3.UP, look_yaw) * Basis(Vector3.RIGHT, look_pitch)
 	var left := maxf(float(_loc["arrive_t"]) - t, 0.0)
 	var to_name: String = sim.data.places[_loc["to"]]["name"]
-	_title.text = "%s  ·  %s TO %s" % [String(_line["name"]).to_upper(), "DOWN" if _loc["down"] else "UP", to_name.to_upper()]
+	_title.text = "%s  ·  %s TO %s" % [String(_line["name"]).to_upper(), {"down": "DOWN", "up": "UP", "out": "OUT", "in": "IN"}[_dir()], to_name.to_upper()]
+	# Past the anchor the spin outweighs the pull: you weigh something again, outward,
+	# and the cab's ceiling becomes the floor.
+	var w := weight_g(h)
 	var lines := [
 		"Altitude      %s" % _km(h),
 		"Speed         %d km/h" % int(round(_speed * 3.6)),
-		"You weigh     %.3f g" % maxf(weight_g(h), 0.0),
+		"You weigh     %s" % _weight_text(w),
 		"%s in       %s" % [to_name, UI.duration(left)],
 		"",
 		"%s %s  time    %s  pause    %s %s  look" % [Bindings.key_of("time_slower"), Bindings.key_of("time_faster"), Bindings.key_of("pause"), Bindings.key_of("climber_look_left"), Bindings.key_of("climber_look_right")],
 	]
 	_hud.text = "\n".join(lines)
+
+
+## Weight in gees, or milligees when slight; past the anchor it points outward.
+static func _weight_text(w: float) -> String:
+	var a := absf(w)
+	var amount := ("%.3f g" % a) if a >= 0.01 else ("%.2f mg" % (a * 1000.0))
+	if a < 1.0e-6:
+		return "nothing"
+	return amount if w > 0.0 else amount + ", outward: the ceiling is the floor"
 
 
 static func _km(m: float) -> String:

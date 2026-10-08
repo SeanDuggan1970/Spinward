@@ -313,6 +313,13 @@ func _handle_events() -> void:
 			"elevator_departed":
 				var line: Dictionary = sim.data.places[d["line"]]["elevator"]
 				notice("On %s for %s: %s. Fare %s." % [line["name"], sim.data.places[d["to"]]["name"], UI.duration(float(d["hours"]) * 3600.0), UI.money(float(d["fare"]))], UI.AMBER)
+			"badge_earned":
+				notice("Badge: %s. %s" % [d["name"], d["text"]], UI.GOOD)
+				comms.append("%s  BADGE  %s: %s" % [_clock(e["time_s"]), d["name"], d["text"]])
+				refresh = true
+			"round_bought":
+				notice("A round for %d at %s: %s. Glasses go up." % [int(d["patrons"]), d["bar"], UI.money(-float(d["credits"]))], UI.AMBER)
+				refresh = true
 			"elevator_arrived":
 				play_sfx("dock_clunk", -8.0)
 				if d["down"]:

@@ -119,6 +119,7 @@ func _initialize() -> void:
 	test_upkeep_bites()
 	test_turning_with_inertia()
 	test_final_approach()
+	test_counterweights_and_badges()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -4043,3 +4044,69 @@ func test_final_approach() -> void:
 	loc_old.erase("approach")
 	var tm := float(loc_old["arrive_t"]) - 100.0
 	check(Navigation.approach_state(loc_old, tm)[3] == "" and V.distance(Navigation.transit_position(loc_old, tm), Navigation._raw_position(loc_old, tm)) == 0.0, "A trip without an approach keeps its own path")
+
+
+## Riding out to an elevator's counterweight, and badges (Sean, Oct 2026).
+func test_counterweights_and_badges() -> void:
+	var Elevator := preload("res://sim/systems/elevator_system.gd")
+	var Badges := preload("res://sim/badges.gd")
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	check(d.validate().is_empty(), "Data with counterweights, bars and badges validates")
+	# Each anchor offers two rides: down to the foot, out to the counterweight.
+	for port in ["halo_depot", "piazzi_station", "ares_ring"]:
+		var rides: Array = Elevator.rides_here(d, port)
+		var cw: String = d.places[port]["elevator"]["counterweight"]["place"]
+		check(rides.size() == 2 and rides[1]["dir"] == "out" and rides[1]["to"] == cw, "%s: down to the foot, or out to %s" % [port, cw])
+		var back: Array = Elevator.rides_here(d, cw)
+		check(back.size() == 1 and back[0]["dir"] == "in" and back[0]["to"] == port, "%s: the only ride is back in" % cw)
+		# Held out along the ribbon, turning with its world: beyond the anchor, from the body.
+		var body: String = d.places[port]["elevator"]["body"]
+		var t: float = s.time_s
+		var r_cw := V.distance(sim.ephemeris.position(cw, t), sim.ephemeris.position(body, t))
+		var r_foot := V.distance(sim.ephemeris.position(d.places[port]["elevator"]["foot"], t), sim.ephemeris.position(body, t))
+		var top := float(d.places[port]["elevator"]["km"]) * 1000.0
+		check(absf(r_cw - r_foot - top - float(d.places[port]["elevator"]["counterweight"]["km"]) * 1000.0) < 50000.0, "%s sits its leg beyond the anchor (%.0f km from the body)" % [cw, r_cw / 1000.0])
+		check(not Perks.place_open(s, d, cw), "Ships can't fly to %s" % cw)
+	# Ride out to Ballast Point and back.
+	s.location = {"status": "docked", "place": "halo_depot"}
+	s.credits = 5000.0
+	s.ship["cargo"] = {}
+	check(sim.apply({"type": "ride_elevator", "to": "ballast_point"}) == "" and s.location["dir"] == "out", "Ride out past L1")
+	check(absf(s.credits - 4880.0) < 1e-6, "The fare out is the leg's (120 cr empty)")
+	sim.advance_game_time(float(s.location["arrive_t"]) - s.time_s + 1.0)
+	check(s.location == {"status": "docked", "place": "ballast_point"}, "At Ballast Point")
+	check(s.badges["earned"].has("past_the_point"), "Past the Point is earned on arrival")
+	check(Badges.renown(s, d) >= 1.0, "and adds renown")
+	# A round at the Counterweight Bar.
+	var cost := Badges.round_cost(d, "ballast_point")
+	var rep0 := float(s.reputation.get("Luna Cooperative", 0.0))
+	check(sim.apply({"type": "buy_round"}) == "" and absf(s.credits - (4880.0 - cost)) < 1e-6, "A round costs patrons x the round (%d cr)" % int(cost))
+	check(s.badges["earned"].has("first_round") and s.badges["earned"].has("drinks_on_the_ribbon"), "The first round, and the Counterweight Bar's own badge")
+	check(float(s.reputation.get("Luna Cooperative", 0.0)) > rep0, "The Cooperative notices")
+	s.credits = 1.0
+	check(sim.apply({"type": "buy_round"}).begins_with("a round is"), "No credit at the bar")
+	# Back in, on credit if need be, as the way up always is.
+	check(Elevator.blocked(d, s, "ballast_point") == "" and sim.apply({"type": "ride_elevator"}) == "", "The way back in never strands you")
+	sim.advance_game_time(float(s.location["arrive_t"]) - s.time_s + 1.0)
+	check(s.location == {"status": "docked", "place": "halo_depot"}, "Back aboard at Halo Depot")
+	check(sim.apply({"type": "buy_round"}) == "there is no bar here", "No bar at Halo Depot")
+	# Renown gets you noticed, within limits.
+	var m := Badges.chance_mult(s, d, "hitchhiker_per_point")
+	check(m > 1.0 and m <= float(d.badges["renown"]["max_mult"]), "Renown raises the hitchhiker chance (x%.2f), capped" % m)
+	var plain := fresh()
+	check(Badges.chance_mult(plain.state, plain.data, "approach_per_point") == 1.0, "No badges, no change")
+	# Badges survive a save.
+	var loaded := SaveIO.from_text(SaveIO.to_text(s))
+	check(loaded != null and loaded.badges == s.badges, "Badges are saved")
+	# Past the anchor the spin outweighs the pull: the ride view shows weight outward.
+	var Climber := preload("res://view/climber_view.gd")
+	var cv = Climber.new(sim)
+	cv._loc = {"line": "halo_depot"}
+	cv._line = d.places["halo_depot"]["elevator"]
+	cv._body = "moon"
+	cv._radius = float(d.bodies["moon"]["radius_m"])
+	check(cv.weight_g(82000.0e3) < 0.0 and cv.weight_g(1000.0) > 0.1, "Heavy at the foot, a hair of weight outward at Ballast Point (%.2f mg)" % (cv.weight_g(82000.0e3) * 1000.0))
+	check(Climber._weight_text(-0.00017).ends_with("outward: the ceiling is the floor") and Climber._weight_text(0.15) == "0.150 g", "Slight weights read in milligees")
+	cv.free()

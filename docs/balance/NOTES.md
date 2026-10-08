@@ -229,3 +229,10 @@ Full write-up: [2026-10-07-economy-together.md](2026-10-07-economy-together.md).
 - The docking trial docks at every port as before (193 s at most wheel stations, 294 s at Concord). Spawned on the axis, it now needs no lateral correction.
 - Ports in orbit now get a four-hour descent onto their orbit, met from 4 km behind. The swing that follows needs at most 0.27 m/s² (it was about 2,000 m/s² for Shackleton Port express). The descent's own thrust averages 0.3 to 1.8 m/s²: Shackleton 0.35 (quick) to 1.2 (gravity routes), Kibo Ring 1.1, Kalpana One 1.8, Clarke Exchange 0.5, Ares Ring 1.3. That's 10 to 40 times a Mule's drive (see the physics bent in DESIGN.md).
 - `balance.approach` gained `descent_s` (14,400), `descent_time_scale` (100) and `meet_behind_m` (4,000). Trip time and propellant are still unchanged.
+
+
+## Counterweights and badges (2026-10-08)
+
+- New places: Ballast Point, Stalk Top, Pavonis Ballast. Each is tiny: 0.5 to 0.8 t/day of produce, and food in small amounts. They're for visiting, not trading.
+- Rounds cost 50 to 270 cr: Stalk Top 50, Ballast Point 108, Pavonis Ballast 154, Line Foot 270. Each adds 0.5 standing with the bar's operator. Too dear to farm for standing: a delivered contract gives far more.
+- Renown: each point raises the hitchhiker and named-client ("approach") chances by 6% and 5%, at most 1.8 times. The balance bot earns no badges, so its runs are unchanged; it was not re-run.
