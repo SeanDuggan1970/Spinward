@@ -37,8 +37,13 @@ static func build(power: String = "beam", livery: String = "yellow", scale: floa
 			body.add_child(w)
 			wheels.append(w)
 			body.add_child(Kit.cylinder(0.22, 0.5, steel, Vector3(side * (WHEEL_R + 0.02), y, 1.2), 10))
+	# An open frame either side (rails and a cross-bar at each axle), so the wheels show.
 	for side in [-1.0, 1.0]:
-		body.add_child(Kit.box(Vector3(0.25, span + 1.6, 2.6), frame_mat, Vector3(side * (WHEEL_R * 2.0 + 0.35), 0.0, 0.0)))
+		var x: float = side * (WHEEL_R * 2.0 + 0.35)
+		for edge in [-1.0, 1.0]:
+			body.add_child(Kit.box(Vector3(0.22, span + 1.6, 0.22), frame_mat, Vector3(x, 0.0, edge * 1.2)))
+		for i in WHEEL_PAIRS:
+			body.add_child(Kit.box(Vector3(0.16, 0.16, 2.6), frame_mat, Vector3(x, -span * 0.5 + float(i) * WHEEL_PITCH, 0.0)))
 	body.add_child(Kit.box(Vector3(2.0 * WHEEL_R + 0.95, 0.3, 2.6), frame_mat, Vector3(0, span * 0.5 + 0.95, 0)))
 	body.add_child(Kit.box(Vector3(2.0 * WHEEL_R + 0.95, 0.3, 2.6), frame_mat, Vector3(0, -span * 0.5 - 0.95, 0)))
 	body.add_child(Kit.beacon(Color("ff3a2a"), Vector3(0, span * 0.5 + 1.3, 0), 0.2, 1.4))
@@ -68,8 +73,9 @@ static func build(power: String = "beam", livery: String = "yellow", scale: floa
 			var dish := Kit.cylinder(4.2, 0.18, Kit.paint(Color("1d2b4a"), {"finish": 1, "metallic": 0.35, "roughness": 0.3}), Vector3(0, -10.5, 0), 32)
 			dish.rotation_degrees = Vector3.ZERO
 			body.add_child(dish)
+			# TorusMesh lies round Y already: undo Kit's turn onto Z.
 			var rim := Kit.torus(4.2, 0.12, steel, Vector3(0, -10.5, 0), 32)
-			rim.rotation_degrees = Vector3(90, 0, 0)
+			rim.rotation_degrees = Vector3.ZERO
 			body.add_child(rim)
 	return {"node": root, "wheels": wheels, "radius": WHEEL_R * scale}
 
