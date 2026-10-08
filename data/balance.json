@@ -47,8 +47,16 @@
 		"max_speed_mps": 1.5,
 		"max_angle_deg": 15.0,
 		"max_roll_error_deg": 20.0,
-		"spawn_distance_m": 600.0,
-		"spawn_offset_m": 60.0
+		"spawn_distance_m": 600.0
+	},
+	"approach": {
+		"_note": "The last part of every trip to a port (sim/navigation.gd add_approach), flown in the port's own frame. Over the last window_s before the ship reaches the port, it swings round from wherever the trip brings it to the corridor entry (corridor_m beyond the handover point, on the docking axis), going wide of the station (its bounding radius plus clear_margin_m) if it comes in from behind (when the cosine between its direction and the axis is under swing_cos). Then it brakes along the corridor from corridor_speed_mps to handover_speed_mps, arriving at the handover point, where the docking scene takes over. Docking ports all face view +Z (sim -Y), as in the flight scene. Trip time and propellant are unchanged.",
+		"window_s": 1200,
+		"corridor_m": 3000,
+		"corridor_speed_mps": 15.0,
+		"handover_speed_mps": 1.0,
+		"clear_margin_m": 300,
+		"swing_cos": 0.5
 	},
 	"turning": {
 		"_note": "How the ship turns in the transit view. A hull's turn_rate_dps and turn_accel_dps2 (data/ships.json, else these defaults) hold at its stock dry mass. Angular acceleration scales with stock dry mass over what the ship weighs now (cargo, cabin and fuel included), clamped to [min_mass_factor, max_mass_factor], so a laden hauler turns slower. Turns play out in real seconds up to time compression real_time_scale; above it they speed up in proportion, so the ship keeps up with a voyage's thrust at x100,000. The drive's plume shows only once the nose is within plume_align_deg of the thrust.",

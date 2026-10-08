@@ -70,6 +70,7 @@ var _length := 30.0
 var _radius := 6.0
 ## The middle of the ship (model space), what the camera looks at.
 var _pivot := Vector3.ZERO
+var _nose_z := 0.0
 ## The nose (view space) and how fast it is swinging (a world vector, rad per second of
 ## turning: real seconds, or faster above balance.turning.real_time_scale).
 var _fwd := Vector3.FORWARD
@@ -133,7 +134,8 @@ func _ready() -> void:
 	_plume = _ship.find_child("DrivePlume", true, false)
 	_length = float(model["length"])
 	_radius = float(model["radius"])
-	_pivot = Vector3(0, 0, float(model["nose_z"]) + _length * 0.5)
+	_nose_z = float(model["nose_z"])
+	_pivot = Vector3(0, 0, _nose_z + _length * 0.5)
 	add_child(_ship)
 	_dist = _length * 2.4
 	camera = Camera3D.new()
@@ -273,15 +275,26 @@ func _update_world(dt: float) -> void:
 	# spawn distance), so the hand-over picks up where this leaves off. Each corridor
 	# runs along the trip's own first or last leg: we leave and arrive the way the
 	# path goes.
+	#
+	# Arriving on a trip with a final approach (Navigation.add_approach), the port is
+	# where the sim puts it relative to us, its docking face along +Z as the flight
+	# scene builds it, and the hand-over point matches the flight scene's start.
 	_corridors(loc)
 	var elapsed := t - float(loc["depart_t"])
 	var left := float(loc["arrive_t"]) - t
+	var app: Array = Navigation.approach_state(loc, t)
 	for place in [loc["from"], loc["to"]]:
 		if not sim.data.places.has(place) or not sim.data.places[place].has("station"):
 			continue
 		var leaving: bool = place == loc["from"]
 		var tau := elapsed if leaving else left
 		var near := tau >= 0.0 and tau < PORT_WINDOW_S
+		var on_approach: bool = not leaving and app[3] != ""
+		var from_port := Vector3.ZERO
+		if on_approach:
+			var rel: Array = app[0]
+			from_port = Vector3(rel[0], rel[2], -rel[1])
+			near = from_port.length() < STATION_RANGE_M
 		if near and not _stations.has(place):
 			var geom: Dictionary = sim.data.places[place]["station"]
 			var st := Models.station(geom, sim.data.places[place]["name"], Livery.for_station(sim.data, place))
@@ -298,16 +311,23 @@ func _update_world(dt: float) -> void:
 			# way we came in.
 			var d: Vector3 = _corridor[0] if leaving else -_corridor[1]
 			var at := -d * (_port_gap(place, tau, leaving) + float(st["port_z"]))
+			var facing := Basis.looking_at(-d, Vector3.UP if absf(d.y) < 0.98 else Vector3.RIGHT)
+			if on_approach:
+				# The sim's hand-over point sits hub_length / 2 + handover_m from the centre;
+				# the flight scene's ship origin sits port_z + handover_m - nose_z from it.
+				var geom: Dictionary = sim.data.places[place]["station"]
+				at = -from_port + Vector3(0, 0, float(geom["hub_length_m"]) * 0.5 - float(st["port_z"]) + _nose_z)
+				facing = Basis.IDENTITY
 			st["node"].visible = near
 			st["node"].position = at
-			st["node"].basis = Basis.looking_at(-d, Vector3.UP if absf(d.y) < 0.98 else Vector3.RIGHT)
+			st["node"].basis = facing
 			st["rotor"].rotation.z = fposmod(t * float(entry["rate"]), TAU)
 			entry["dist"] = at.length() if near else INF
 	# Attitude: along the thrust while burning (from toward the target round to braking
 	# against it); coasting, hold it. The ship turns with inertia (ShipRig.turn_step),
 	# so it starts round early enough to be lined up when the drive lights, and swings
 	# through a flip half a turn before the thrust does.
-	var thrust: Array = Navigation.transit_accel(loc, t)
+	var thrust: Array = _drive_accel(loc, t)
 	_thrusting = V.length(thrust) > 1e-6
 	var thrust_dir := _view_dir(thrust)
 	# Game seconds per second of turning: turns play out in real time up to
@@ -325,12 +345,15 @@ func _update_world(dt: float) -> void:
 		var lead := ShipRig.turn_time(PI, _turn_rate, _turn_accel) * 0.5 * scale
 		# Look ahead only within this burn: the thrust at its very end can be anything.
 		var t_ahead := minf(t + lead, _burn_end(t) - 2.0)
-		var ahead := _view_dir(Navigation.transit_accel(loc, t_ahead)) if t_ahead > t else Vector3.ZERO
+		var ahead := _view_dir(_drive_accel(loc, t_ahead)) if t_ahead > t else Vector3.ZERO
 		if ahead != Vector3.ZERO and ahead.angle_to(thrust_dir) > FLIP_ANGLE:
 			forward = ahead
 	elif next >= 0 and (t < _first_burn_t or float(_burns[next][0]) - t <= (ShipRig.turn_time(_fwd.angle_to(_burns[next][2]), _turn_rate, _turn_accel) + TURN_MARGIN_S) * scale):
 		forward = _burns[next][2]
-	elif left < PORT_WINDOW_S:
+	elif app[3] in ["corridor", "hold"]:
+		# On the docking corridor, nose to the port, braking on the thrusters.
+		forward = Vector3.FORWARD
+	elif left < PORT_WINDOW_S and app[3] == "":
 		forward = _corridor[1]
 	var omega_was := _omega
 	if not _ready_basis:
@@ -359,6 +382,8 @@ func _update_world(dt: float) -> void:
 	readout["remaining"] = V.distance(here, eph.position(loc["to"], t))
 	readout["dest_dir"] = dest_dir
 	readout["phase"] = ("TURNING" if _omega.length() > 0.02 else "COASTING") if not _thrusting else ("TURNING" if not _lit else ("ACCELERATING" if V.dot(V.normalized(thrust), V.normalized(v_now)) > 0.3 else ("BRAKING" if V.dot(V.normalized(thrust), V.normalized(v_now)) < -0.3 else "BURNING ACROSS")))
+	if app[3] in ["corridor", "hold"]:
+		readout["phase"] = "ON APPROACH"
 
 
 ## The trip's corridors, once per trip: [the way we leave, the way we arrive], as
@@ -397,7 +422,7 @@ func _corridors(loc: Dictionary) -> void:
 	var was := false
 	for k in 401:
 		var tk := lerpf(t0, t1, float(k) / 400.0)
-		var lit := V.length(Navigation.transit_accel(loc, tk)) > 1e-6
+		var lit := V.length(_drive_accel(loc, tk)) > 1e-6
 		if lit != was:
 			var edge := t0 if k == 0 else _edge(loc, lerpf(t0, t1, float(k - 1) / 400.0), tk, lit)
 			if lit:
@@ -408,7 +433,7 @@ func _corridors(loc: Dictionary) -> void:
 	if was:
 		_burns.append([on, t1])
 	for b in _burns:
-		b.append(_view_dir(Navigation.transit_accel(loc, minf(float(b[0]) + 1.0, float(b[1])))))
+		b.append(_view_dir(_drive_accel(loc, minf(float(b[0]) + 1.0, float(b[1])))))
 	_first_burn_t = float(_burns[0][0]) if not _burns.is_empty() else INF
 	var limits: Array = ShipStats.turn_limits(sim.state.ship, sim.data)
 	_turn_rate = float(limits[0])
@@ -423,11 +448,19 @@ func _edge(loc: Dictionary, ta: float, tb: float, lit: bool) -> float:
 		if tb - ta < 1.0:
 			break
 		var tm := (ta + tb) * 0.5
-		if (V.length(Navigation.transit_accel(loc, tm)) > 1e-6) == lit:
+		if (V.length(_drive_accel(loc, tm)) > 1e-6) == lit:
 			tb = tm
 		else:
 			ta = tm
 	return tb
+
+
+## What the main drive pushes (the trip's thrust), but none on the docking corridor
+## or holding off the port: there the thrusters do the braking.
+func _drive_accel(loc: Dictionary, t: float) -> Array:
+	if Navigation.approach_state(loc, t)[3] in ["corridor", "hold"]:
+		return [0.0, 0.0, 0.0]
+	return Navigation.transit_accel(loc, t)
 
 
 ## A sim vector (heliocentric axes) as a view direction; zero stays zero.

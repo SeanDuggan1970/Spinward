@@ -507,6 +507,13 @@ static func _sampled_accel(location: Dictionary, t: float) -> Array:
 
 ## Ship position in the trip frame during transit.
 static func transit_position(location: Dictionary, t: float) -> Array:
+	var app = location.get("approach")
+	if app != null and t >= float(app["t0"]):
+		return V.add(_approach_port(app, t), approach_state(location, t)[0])
+	return _raw_position(location, t)
+
+
+static func _raw_position(location: Dictionary, t: float) -> Array:
 	if _sampled(location):
 		return _sampled_position(location, t)
 	var ph := _burn_phase(location, t)
@@ -527,6 +534,13 @@ static func transit_position(location: Dictionary, t: float) -> Array:
 
 ## Ship velocity in the trip frame during transit (m/s).
 static func transit_velocity(location: Dictionary, t: float) -> Array:
+	var app = location.get("approach")
+	if app != null and t >= float(app["t0"]):
+		return V.add(_approach_port_vel(app, t), approach_state(location, t)[1])
+	return _raw_velocity(location, t)
+
+
+static func _raw_velocity(location: Dictionary, t: float) -> Array:
 	if _sampled(location):
 		return _sampled_velocity(location, t)
 	var ph := _burn_phase(location, t)
@@ -542,20 +556,27 @@ static func transit_velocity(location: Dictionary, t: float) -> Array:
 		var b_t := minf(t + h, float(ph[0]) + T)
 		# At either end the path is at rest in the rotating frame: only the frame turns.
 		if t <= float(ph[0]) + 1e-3 or t >= float(ph[0]) + T - 1e-3 or b_t - a_t < 1e-3:
-			return V.cross(V.scale(location["rot_axis"], float(location["rot_angle"]) / T), transit_position(location, t))
-		return V.scale(V.sub(transit_position(location, b_t), transit_position(location, a_t)), 1.0 / (b_t - a_t))
+			return V.cross(V.scale(location["rot_axis"], float(location["rot_angle"]) / T), _raw_position(location, t))
+		return V.scale(V.sub(_raw_position(location, b_t), _raw_position(location, a_t)), 1.0 / (b_t - a_t))
 	if _rotating(location):
 		var zero := [0.0, 0.0, 0.0]
 		var axis: Array = location["rot_axis"]
 		var angle := float(location["rot_angle"]) * s
 		var v_rot := _hermite_vel(location["from_rot"], zero, location["to_rot"], zero, s, T)
-		var p := transit_position(location, t)
+		var p := _raw_position(location, t)
 		return V.add(V.rotate(v_rot, axis, angle), V.cross(V.scale(axis, float(location["rot_angle"]) / T), p))
 	return _hermite_vel(location["from_pos"], _vel(location, "from_vel"), location["to_pos"], _vel(location, "to_vel"), s, T)
 
 
 ## The thrust (acceleration) vector during transit (m/s^2); zero outside the burn.
 static func transit_accel(location: Dictionary, t: float) -> Array:
+	var app = location.get("approach")
+	if app != null and t >= float(app["t0"]):
+		return approach_state(location, t)[2]
+	return _raw_accel(location, t)
+
+
+static func _raw_accel(location: Dictionary, t: float) -> Array:
 	if _sampled(location):
 		return _sampled_accel(location, t)
 	var ph := _burn_phase(location, t)
@@ -581,3 +602,172 @@ static func track_id(data, place: String, frame: String) -> String:
 	var loc: Dictionary = data.locations[place]["location"]
 	var id: String = loc["parent"] if loc["type"] == "orbit" else place
 	return "" if id == frame else id
+
+
+# --- The final approach: flown in the port's own frame ------------------------------
+#
+# Over the last minutes before the ship reaches its port (balance.approach), the path
+# is set relative to the port rather than taken from the trip: a swing round from
+# wherever the trip brings the ship to the corridor entry on the docking axis (wide of
+# the station if it comes in from behind), then a straight run along the corridor,
+# braking, to the handover point where the docking scene takes over. A quick trip
+# that reaches its port early holds there until its arrival time. Trip time and
+# propellant are not changed: this re-shapes the last stretch, it does not re-plan it.
+#
+# Every docking port faces sim -Y (view +Z), as the flight scene builds them.
+
+const DOCK_AXIS := [0.0, -1.0, 0.0]
+const APPROACH_STEPS := 48
+
+
+## The docking scene's starting distance from the port face (metres).
+static func handover_m(data, geom: Dictionary) -> float:
+	return maxf(float(data.balance["docking"]["spawn_distance_m"]), float(geom["hub_radius_m"]) * 3.0)
+
+
+## The handover point's distance from the station's centre along the docking axis.
+static func handover_from_centre(data, geom: Dictionary) -> float:
+	return float(geom["hub_length_m"]) * 0.5 + handover_m(data, geom)
+
+
+## Plan the final approach for a trip just departed (location as travel_system builds
+## it) and store it in location["approach"]. Trips to sites (no port) have none.
+static func add_approach(location: Dictionary, data, eph) -> void:
+	var to: String = location["to"]
+	if not data.places.has(to) or not data.places[to].has("station"):
+		return
+	var cfg: Dictionary = data.balance["approach"]
+	var geom: Dictionary = data.places[to]["station"]
+	var frame: String = location["frame"]
+	var t_end := float(location["arrive_t"])
+	# When the trip reaches the port: a quick trip at the end of its burn (it then waits
+	# on the port), any other at its arrival.
+	var t_reach := t_end
+	var earliest := float(location["depart_t"])
+	if not _sampled(location):
+		var ph := _burn_phase(location, t_end)
+		t_reach = float(ph[0]) + float(ph[2])
+		earliest = float(ph[0])
+	# The longest window (halving from window_s) whose path clears the bodies the port
+	# hangs from: the trip does not match a low orbit's motion, so the further out the
+	# approach starts, the further round its world the port may be.
+	var bodies := []
+	for body in body_chain(data, to):
+		if body != "sun":
+			bodies.append(body)
+	var window := float(cfg["window_s"])
+	while window >= 60.0:
+		var t0 := maxf(t_reach - window, (earliest + t_reach) * 0.5)
+		window *= 0.5
+		if t_reach - t0 < 60.0:
+			return
+		var track := []
+		for k in APPROACH_STEPS + 1:
+			track.append(eph.relative(to, frame, lerpf(t0, t_end, float(k) / float(APPROACH_STEPS))))
+		var port_v0 := V.scale(V.sub(eph.relative(to, frame, t0 + 1.0), eph.relative(to, frame, t0 - 1.0)), 0.5)
+		var r0 := V.sub(_raw_position(location, t0), track[0])
+		var v0 := V.sub(_raw_velocity(location, t0), port_v0)
+		var app := {"t0": t0, "t_reach": t_reach, "t_end": t_end, "track": track,
+			"legs": _approach_legs(r0, v0, t0, t_reach, t_end, geom, data)}
+		if _approach_clear(app, bodies, data, eph, frame):
+			location["approach"] = app
+			return
+
+
+## Whether an approach keeps out of each body's clearance (Interplanetary.clearance),
+## unless the port itself is inside it (a surface port).
+static func _approach_clear(app: Dictionary, bodies: Array, data, eph, frame: String) -> bool:
+	var loc := {"approach": app}
+	var t0 := float(app["t0"])
+	var t1 := float(app["t_end"])
+	for body in bodies:
+		var need := Interplanetary.clearance(data, body)
+		if V.distance(_approach_port(app, t1), eph.relative(body, frame, t1)) < need * 1.01:
+			continue
+		for k in 61:
+			var t := lerpf(t0, t1, float(k) / 60.0)
+			var here := V.add(_approach_port(app, t), approach_state(loc, t)[0])
+			if V.distance(here, eph.relative(body, frame, t)) < need:
+				return false
+	return true
+
+
+## [[t_a, t_b, p_a, v_a, p_b, v_b, phase]] relative to the port: "swing" legs to the
+## corridor entry, a "hold" there if the trip reaches its port early (a quick trip
+## waiting on it), then the "corridor" run to the hand-over point, ending at arrival.
+static func _approach_legs(r0: Array, v0: Array, t0: float, t_reach: float, t_end: float, geom: Dictionary, data) -> Array:
+	var cfg: Dictionary = data.balance["approach"]
+	var n: Array = DOCK_AXIS
+	var zero := [0.0, 0.0, 0.0]
+	var v_h := float(cfg["handover_speed_mps"])
+	var v_c := float(cfg["corridor_speed_mps"])
+	var d_h := handover_from_centre(data, geom)
+	var bound := maxf(maxf(float(geom.get("ring_radius_m", 0.0)) + float(geom.get("ring_tube_m", 0.0)), float(geom["hub_radius_m"])), float(geom["hub_length_m"]) * 0.5) + float(cfg["clear_margin_m"])
+	var d_c := maxf(d_h + float(cfg["corridor_m"]), bound * 2.0)
+	var handover := V.scale(n, d_h)
+	var entry := V.scale(n, d_c)
+	# A steady braking run along the corridor, unless the window is too short for it.
+	var t_c := t_end - minf(2.0 * (d_c - d_h) / (v_c + v_h), (t_reach - t0) * 0.6)
+	var waits := t_reach < t_c
+	var swing_end := t_reach if waits else t_c
+	var v_entry := zero if waits else V.scale(n, -v_c)
+	var legs := []
+	var dist := V.length(r0)
+	var cos_in := V.dot(r0, n) / maxf(dist, 1e-6)
+	if cos_in >= float(cfg["swing_cos"]) or dist < bound:
+		legs.append([t0, swing_end, r0, v0, entry, v_entry, "swing"])
+	else:
+		# Coming in from the side or behind: go round wide of the station.
+		var perp := V.sub(r0, V.scale(n, V.dot(r0, n)))
+		if V.length(perp) < 1.0:
+			perp = [0.0, 0.0, -1.0]
+		var wide := V.add(V.scale(V.normalized(perp), maxf(bound * 2.0, float(cfg["corridor_m"]))), V.scale(n, d_c * 0.5))
+		var t_s := lerpf(t0, swing_end, 0.6)
+		var v_s := V.scale(V.sub(entry, wide), 1.0 / maxf(swing_end - t_s, 1.0))
+		legs.append([t0, t_s, r0, v0, wide, v_s, "swing"])
+		legs.append([t_s, swing_end, wide, v_s, entry, v_entry, "swing"])
+	if waits:
+		legs.append([t_reach, t_c, entry, zero, entry, zero, "hold"])
+	legs.append([t_c, t_end, entry, v_entry, handover, V.scale(n, -v_h), "corridor"])
+	return legs
+
+
+## Where the ship is relative to its port on the final approach (trip frame axes):
+## [position, velocity, thrust, phase], phase "swing", "hold" or "corridor". Phase ""
+## (and zeros) outside the approach.
+static func approach_state(location: Dictionary, t: float) -> Array:
+	var zero := [0.0, 0.0, 0.0]
+	var app = location.get("approach")
+	if app == null or t < float(app["t0"]):
+		return [zero, zero, zero, ""]
+	var legs: Array = app["legs"]
+	for leg in legs:
+		var ta := float(leg[0])
+		var tb := float(leg[1])
+		if t <= tb:
+			var T := maxf(tb - ta, 1e-6)
+			var s := clampf((t - ta) / T, 0.0, 1.0)
+			return [_hermite(leg[2], leg[3], leg[4], leg[5], s, T), _hermite_vel(leg[2], leg[3], leg[4], leg[5], s, T),
+				_hermite_acc(leg[2], leg[3], leg[4], leg[5], s, T), leg[6]]
+	return [legs[-1][4], zero, zero, "corridor"]
+
+
+static func _hermite_acc(p0: Array, v0: Array, p1: Array, v1: Array, s: float, T: float) -> Array:
+	var a := V.scale(p0, (12.0 * s - 6.0) / (T * T))
+	a = V.add(a, V.scale(v0, (6.0 * s - 4.0) / T))
+	a = V.add(a, V.scale(p1, (6.0 - 12.0 * s) / (T * T)))
+	return V.add(a, V.scale(v1, (6.0 * s - 2.0) / T))
+
+
+static func _approach_port(app: Dictionary, t: float) -> Array:
+	var s := clampf((t - float(app["t0"])) / maxf(float(app["t_end"]) - float(app["t0"]), 1.0), 0.0, 1.0)
+	return _track([app["track"]], s)
+
+
+static func _approach_port_vel(app: Dictionary, t: float) -> Array:
+	# Differenced within the track (one-sided at its ends, where it is clamped).
+	var ta := maxf(t - 1.0, float(app["t0"]))
+	var tb := minf(t + 1.0, float(app["t_end"]))
+	if tb - ta < 1e-3:
+		ta = tb - 1.0
+	return V.scale(V.sub(_approach_port(app, tb), _approach_port(app, ta)), 1.0 / (tb - ta))

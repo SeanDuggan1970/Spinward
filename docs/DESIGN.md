@@ -203,6 +203,16 @@ A character, not just a feature. It is the in-world reason the flight is playabl
     - The plume shows only once the nose is within `plume_align_deg` of the thrust. If compression is too high to turn in time, the drive appears to light late. The sim's thrust is unchanged: this is view only.
     - RCS quads puff at the start and end of each turn: the ones whose torque pushes the way the ship is being swung.
     - **Physics bent:** the rates (6–30 °/s) are far brisker than a real hauler's RCS could manage, so a turn plays out in seconds on screen.
+  - **Smooth rendezvous arrival (Oct 2026, roadmap step 2).** Every trip to a port ends with a final approach flown in the port's own frame (`Navigation.add_approach`, planned at departure and saved with the trip; numbers in `balance.approach`).
+    - **Swing:** over the last 20 minutes before the trip reaches its port, the ship swings round from wherever the trip brings it to the corridor entry, on the docking axis about 3 km beyond the hand-over point. If it comes in from the side or behind, it goes wide of the station.
+    - **Hold:** a quick trip that reaches its port early holds at the corridor entry until it is due, waiting for clearance.
+    - **Corridor:** the ship brakes along the axis, nose to the port on its thrusters, to the hand-over point. It arrives there at 1 m/s on the axis, exactly at the arrival time.
+    - **Hand-over:** the docking scene starts the ship at that point, at the same speed and attitude. The ship view hands over within centimetres of it.
+    - Every docking port faces view +Z (sim -Y), as the flight scene has always built them.
+    - Trip time and propellant are unchanged: the approach re-shapes the last stretch, it does not re-plan it.
+    - **Clearance:** the window is halved (down to a minute) until the approach clears every body the port hangs from. The route-clearance test samples it closely.
+    - **Known gap:** the trip does not match a low orbit's motion (the overhead hours cover that). For ports in low orbit (Shackleton Port, Clarke Exchange, Ares Ring) the trip is still hundreds to thousands of km off, at km/s, when the approach starts, so the swing's thrust is far beyond any drive. It used to slam into the port at that speed instead. Fixing it needs the gravity-flown terminal phase to target the station rather than its body.
+    - Saves from before have no approach and keep the trip's own path.
   - Gravity is taken to supply the co-rotation, and the departure/arrival overhead covers climbing out of gravity wells (a deliberate simplification).
 - **Gravity-flown routes** (`sim/orbit_mech.gd`, `sim/gravity_flight.gd`, `sim/route_planner.gd`). The player's trips are flown under real Earth and Moon point gravity, integrated with RK4 at adaptive steps.
   - **Guidance:** Lambert steering onto the free-fall orbit that reaches the target on time, then coasting, then a terminal phase that matches the destination's motion.

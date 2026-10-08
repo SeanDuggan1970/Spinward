@@ -220,3 +220,11 @@ Full write-up: [2026-10-07-economy-together.md](2026-10-07-economy-together.md).
 - Headless check (scratch script, not committed):
   - Kibo Ring to Halo Depot, x1 to x1000: the ship is lined up before the drive lights, and the plume never hides for misalignment.
   - Halo Depot to Ares Ring at x100,000: the plume switches 5 times in the voyage. It lights about 16 s late at departure (a 58° turn at x1), and hides briefly at the jump to x100,000 and at a mid-voyage flip.
+
+
+## Final approach (2026-10-08)
+
+- New data: `balance.approach`. `docking.spawn_offset_m` is gone: the docking scene now starts on the axis at the hand-over point, closing at 1 m/s.
+- The approach changes no trip's time or propellant, and nothing an economy system reads, so the balance bot was not re-run.
+- The docking trial docks at every port as before (193 s at most wheel stations, 294 s at Concord). Spawned on the axis, it now needs no lateral correction.
+- The Shackleton Port express trip gets a 300 s window, and its swing would need about 2,000 m/s² (see the known gap in DESIGN.md).

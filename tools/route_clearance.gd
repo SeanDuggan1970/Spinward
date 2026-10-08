@@ -132,6 +132,7 @@ func _location(plan: Dictionary, a: String, b: String, t: float) -> Dictionary:
 		var tracks := Navigation.port_tracks(sim.ephemeris, a, b, plan["frame"], t, start, start + float(plan["burn_s"]), float(plan["arrive_t"]))
 		loc["pre_track"] = tracks[0]
 		loc["post_track"] = tracks[1]
+	Navigation.add_approach(loc, sim.data, sim.ephemeris)
 	return loc
 
 
@@ -141,9 +142,11 @@ func _sampled(o: Dictionary, a: String, b: String, t: float, ship: Dictionary) -
 	var samples: Array = o["samples"]
 	if frame == "sun":
 		samples = Interplanetary.dress(samples, sim.data, sim.ephemeris, a, b, t, arrive, ShipStats.accel_mps2(ship, sim.data))
-	return {"status": "transit", "from": a, "to": b, "frame": frame, "depart_t": t, "arrive_t": arrive,
+	var loc := {"status": "transit", "from": a, "to": b, "frame": frame, "depart_t": t, "arrive_t": arrive,
 		"burn_s": 0.0, "from_pos": sim.ephemeris.relative(a, frame, t), "to_pos": sim.ephemeris.relative(b, frame, arrive),
 		"samples": samples, "avoid": Navigation.sampled_avoid(sim.data, sim.ephemeris, a, b, frame, t, arrive) if frame != "sun" else null}
+	Navigation.add_approach(loc, sim.data, sim.ephemeris)
+	return loc
 
 
 ## The Saturn ring plane's normal in the ecliptic frame, from the pole's RA and Dec.
@@ -167,8 +170,17 @@ func _check(loc: Dictionary, kind: String, a: String, b: String, day: float) -> 
 	var saturn_pole := _pole(data.bodies["saturn"])
 	var prev_side := 0.0
 	var prev_rel := []
+	# The whole trip, and the final approach closely.
+	var times := []
 	for i in SAMPLES + 1:
-		var t := lerpf(t0, t1, float(i) / float(SAMPLES))
+		times.append(lerpf(t0, t1, float(i) / float(SAMPLES)))
+	if loc.get("approach") != null:
+		for i in 121:
+			times.append(lerpf(float(loc["approach"]["t0"]), t1, float(i) / 120.0))
+		times.sort()
+	for i in times.size():
+		var t: float = times[i]
+		var f_way := (t - t0) / maxf(t1 - t0, 1.0)
 		var here := V.add(eph.position(frame, t), Navigation.transit_position(loc, t))
 		for id in clear_r:
 			var c: Array = eph.position(id, t)
@@ -183,7 +195,7 @@ func _check(loc: Dictionary, kind: String, a: String, b: String, day: float) -> 
 				continue
 			var depth := need - d
 			if worst.is_empty() or depth > float(worst["depth"]):
-				worst = {"body": id, "depth": depth, "alt": d - float(data.bodies[id]["radius_m"]), "f": float(i) / float(SAMPLES)}
+				worst = {"body": id, "depth": depth, "alt": d - float(data.bodies[id]["radius_m"]), "f": f_way}
 		# Saturn's main rings: a crossing of the ring plane inside them.
 		var rel := V.sub(here, eph.position("saturn", t))
 		var side := V.dot(rel, saturn_pole)
@@ -193,7 +205,7 @@ func _check(loc: Dictionary, kind: String, a: String, b: String, day: float) -> 
 			var rs := float(data.bodies["saturn"]["radius_m"])
 			var rr := V.length(cross) / rs
 			if rr > RING_IN and rr < RING_OUT:
-				worst = {"body": "saturn rings", "depth": 0.0, "alt": rr, "f": float(i) / float(SAMPLES)}
+				worst = {"body": "saturn rings", "depth": 0.0, "alt": rr, "f": f_way}
 		prev_side = side
 		prev_rel = rel
 	if not worst.is_empty():

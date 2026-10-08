@@ -32,6 +32,7 @@ const Insurance := preload("res://sim/insurance.gd")
 const ShipBill := preload("res://sim/ship_bill.gd")
 const CockpitPages := preload("res://view/ui/cockpit_pages.gd")
 const ShipRig := preload("res://view/flight/ship_rig.gd")
+const TravelSystem := preload("res://sim/systems/travel_system.gd")
 
 const AU := 1.495978707e11
 const DAY := 86400.0
@@ -117,6 +118,7 @@ func _initialize() -> void:
 	test_hitchhikers_and_wof()
 	test_upkeep_bites()
 	test_turning_with_inertia()
+	test_final_approach()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -695,12 +697,19 @@ func test_routes_clear_of_bodies() -> void:
 			var tracks := Navigation.port_tracks(eph, a, b, plan["frame"], t, start, start + float(plan["burn_s"]), float(plan["arrive_t"]))
 			loc["pre_track"] = tracks[0]
 			loc["post_track"] = tracks[1]
+		Navigation.add_approach(loc, d, eph)
 		var p_start: Array = eph.position(a, t)
 		var p_end: Array = eph.position(b, float(plan["arrive_t"]))
 		var worst := 0.0
 		var worst_body := ""
+		# The whole trip, and the final approach closely.
+		var times := []
 		for i in 241:
-			var ti := lerpf(t, float(plan["arrive_t"]), float(i) / 240.0)
+			times.append(lerpf(t, float(plan["arrive_t"]), float(i) / 240.0))
+		if loc.get("approach") != null:
+			for i in 121:
+				times.append(lerpf(float(loc["approach"]["t0"]), float(plan["arrive_t"]), float(i) / 120.0))
+		for ti: float in times:
 			var here := V.add(eph.position(plan["frame"], ti), Navigation.transit_position(loc, ti))
 			for id in bodies:
 				var cb: Array = eph.position(id, ti)
@@ -3936,3 +3945,60 @@ func test_turning_with_inertia() -> void:
 	# Dead astern: it still picks a way round.
 	var astern: Array = ShipRig.turn_step(Vector3.FORWARD, Vector3.ZERO, Vector3.BACK, rate, accel, dt)
 	check((astern[1] as Vector3).length() > 0.0, "A turn dead astern still starts")
+
+
+## Smooth rendezvous arrival (roadmap step 2): every trip to a port ends with a final
+## approach in the port's frame, arriving slow and lined up at the point where the
+## docking scene takes over, without changing the trip's time or propellant.
+func test_final_approach() -> void:
+	var cfg: Dictionary = fresh().data.balance["approach"]
+	for case in [["halo_depot", ""], ["kernel_l5", "express"], ["shackleton_port", ""]]:
+		var sim := fresh()
+		var s := sim.state
+		var d := sim.data
+		var t: float = s.time_s
+		var to: String = case[0]
+		var plan := Navigation.plan(s.ship, d, sim.ephemeris, "kibo_ring", to, t)
+		var fuel_before := float(s.ship["fuel_t"])
+		if case[1] == "":
+			check(sim.apply({"type": "depart", "to": to}) == "", "Depart for %s" % to)
+			check(is_equal_approx(float(s.location["arrive_t"]), float(plan["arrive_t"])), "The approach leaves the trip time alone (%s)" % to)
+			check(absf(fuel_before - float(s.ship["fuel_t"]) - float(plan["fuel_t"])) < 1e-6, "The approach costs no extra propellant (%s)" % to)
+		else:
+			var options: Array = TravelSystem.plan_for(s.ship, d, sim.ephemeris, "kibo_ring", to, t)
+			sim.store_route_options(sim.route_key(to, t), options)
+			check(sim.apply({"type": "depart", "to": to, "route": case[1], "plan_t": t}) == "", "Depart for %s (%s)" % [to, case[1]])
+		var loc: Dictionary = s.location
+		var app = loc.get("approach")
+		check(app != null, "A trip to %s has a final approach" % to)
+		if app == null:
+			continue
+		var geom: Dictionary = d.places[to]["station"]
+		var t1 := float(loc["arrive_t"])
+		var end: Array = Navigation.approach_state(loc, t1)
+		var want := V.scale(Navigation.DOCK_AXIS, Navigation.handover_from_centre(d, geom))
+		check(V.distance(end[0], want) < 1e-3, "%s: the approach ends at the hand-over point on the docking axis" % to)
+		check(absf(V.length(end[1]) - float(cfg["handover_speed_mps"])) < 1e-3 and V.dot(end[1], Navigation.DOCK_AXIS) < 0.0, "%s: arriving slow, along the axis toward the port" % to)
+		check(end[3] == "corridor", "%s: the last stretch is the docking corridor" % to)
+		# Seamless where it takes over from the trip.
+		var t0 := float(app["t0"])
+		check(V.distance(Navigation._raw_position(loc, t0), Navigation.transit_position(loc, t0)) < 1.0, "%s: no jump where the approach begins" % to)
+		# Never through the station: kept beyond its hub, ring and the margin.
+		var bound := maxf(maxf(float(geom["ring_radius_m"]) + float(geom["ring_tube_m"]), float(geom["hub_radius_m"])), float(geom["hub_length_m"]) * 0.5)
+		var nearest := INF
+		var phases := {}
+		for k in 401:
+			var st: Array = Navigation.approach_state(loc, lerpf(t0, t1, float(k) / 400.0))
+			nearest = minf(nearest, V.length(st[0]))
+			phases[st[3]] = true
+		check(nearest > bound, "%s: the approach keeps clear of the station (%.0f m, bound %.0f m)" % [to, nearest, bound])
+		check(phases.has("swing") and phases.has("corridor"), "%s: swings round, then runs the corridor" % to)
+		if case[1] == "":
+			check(phases.has("hold"), "%s: a quick trip that reaches its port early holds off it" % to)
+	# Old saves in transit have no approach, and keep the trip's own path.
+	var old := fresh()
+	old.apply({"type": "depart", "to": "halo_depot"})
+	var loc_old: Dictionary = old.state.location.duplicate()
+	loc_old.erase("approach")
+	var tm := float(loc_old["arrive_t"]) - 100.0
+	check(Navigation.approach_state(loc_old, tm)[3] == "" and V.distance(Navigation.transit_position(loc_old, tm), Navigation._raw_position(loc_old, tm)) == 0.0, "A trip without an approach keeps its own path")

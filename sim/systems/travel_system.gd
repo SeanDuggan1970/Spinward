@@ -144,6 +144,7 @@ func _depart(command: Dictionary) -> String:
 		"ramp_stage": 0, "ramp_scale": 1.0,
 	}
 	_port_waits(s.location)
+	Navigation.add_approach(s.location, sim().data, sim().ephemeris)
 	s.time_scale = 1.0
 	sim().emit("departed", {"from": here, "to": to, "arrive_t": route["arrive_t"], "fuel_t": burn, "fuel_trimmed_t": float(route["fuel_t"]) - burn})
 	return ""
@@ -246,6 +247,7 @@ func _depart_route(here: String, to: String, route_id: String, plan_t: float) ->
 		"peri_alt": float(opt["peri_alt"]), "peri_stage": 0,
 		"ramp_stage": 0, "ramp_scale": 1.0,
 	}
+	Navigation.add_approach(s.location, data, eph)
 	s.time_scale = 1.0
 	sim().emit("departed", {"from": here, "to": to, "arrive_t": arrive, "fuel_t": burn, "fuel_trimmed_t": float(opt["fuel_t"]) - burn, "route": opt["label"]})
 	return ""
