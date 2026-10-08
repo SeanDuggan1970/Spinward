@@ -125,6 +125,7 @@ func _initialize() -> void:
 	test_counterweights_and_badges()
 	test_lander_pods()
 	test_detection_and_stealth()
+	test_panel_fold()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -4221,3 +4222,28 @@ func test_detection_and_stealth() -> void:
 	var cost := DetectionSystem.coat_cost(s, d)
 	check(sim.apply({"type": "coat_hull"}) == "" and s.ship.get("coating", "") == "low_obs" and is_equal_approx(s.credits, 1.0e6 - cost), "Coated at Trojan Yards for %d cr" % int(cost))
 	check(sim.apply({"type": "coat_hull"}) == "she's already coated", "Once is enough")
+
+
+func test_panel_fold() -> void:
+	var sim := fresh()
+	var Models = load("res://view/flight/models.gd")
+	var model: Dictionary = Models.ship(sim.state.ship, sim.data)
+	var rig: Dictionary = model["rig"]
+	var arrays: Array = rig["arrays"]
+	check(not arrays.is_empty() and arrays.all(func(a): return a["hinges"].size() >= 2), "Every panel is built in hinged segments")
+	ShipRig.set_fold(rig, 0.0)
+	ShipRig.aim(rig, Basis.IDENTITY, Vector3(0.3, 0.8, 0.4), Vector3.FORWARD, 0.1)
+	check(is_zero_approx(float(rig["fold"])) and is_zero_approx(arrays[0]["hinges"][0].rotation.z), "Deployed: the segments lie flat in a line")
+	# Stowing takes FOLD_RATE: part way after a few seconds, all the way in the end.
+	ShipRig.set_fold(rig, 1.0)
+	ShipRig.aim(rig, Basis.IDENTITY, Vector3(0.3, 0.8, 0.4), Vector3.FORWARD, 5.0)
+	check(float(rig["fold"]) > 0.0 and float(rig["fold"]) < 1.0, "Folding takes time (%.2f after 5 s)" % float(rig["fold"]))
+	for i in 40:
+		ShipRig.aim(rig, Basis.IDENTITY, Vector3(0.3, 0.8, 0.4), Vector3.FORWARD, 1.0)
+	var a: Dictionary = arrays[0]
+	check(is_equal_approx(float(rig["fold"]), 1.0) and is_zero_approx(a["node"].rotation.x), "Stowed: the panel turned flat")
+	check(is_equal_approx(absf(a["hinges"][0].rotation.z), PI * 0.5), "Stowed: the first segment stands up off the boom")
+	# In transit the panels stay stowed just after leaving port.
+	var loc := {"depart_t": 1000.0}
+	check(ShipRig.transit_fold(loc, 1010.0) == 1.0 and ShipRig.transit_fold(loc, 1000.0 + ShipRig.DEPLOY_AFTER_S + 1.0) == 0.0, "Panels unfold once clear of the port")
+	model["node"].free()

@@ -376,6 +376,7 @@ func _update_world(dt: float) -> void:
 	if _plume:
 		_plume.visible = _lit
 	var dest_dir := SkyKit.dir_between(eph.position(loc["to"], t), here)
+	ShipRig.set_fold(_rig, ShipRig.transit_fold(loc, t))
 	ShipRig.aim(_rig, _ship.basis, _sun_dir, dest_dir * 1.0e6, dt)
 	var v_now: Array = Navigation.transit_velocity(loc, t)
 	readout["speed"] = V.length(v_now)

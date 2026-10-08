@@ -27,6 +27,8 @@ const ASSIST_MODES := ["full", "assisted", "manual"]
 const SKY_DISTANCE := 60000.0
 ## NPC traffic is shown on the lanes for this long either side of docking (game seconds).
 const LANE_WINDOW := 3.0 * 3600.0
+## Lane traffic stows its panels over this share of the lane nearest the station.
+const TRAFFIC_STOW := 0.3
 const LANE_LENGTH := 15000.0
 const BERTH_ANGLES := [PI * 0.5, -PI * 0.5, PI * 0.25, PI * 0.75, -PI * 0.25, -PI * 0.75]
 ## The pilot sits looking a little down over the instrument panel, so the ship's nose
@@ -137,6 +139,8 @@ func _ready() -> void:
 	ship_length = float(model.get("length", 30.0))
 	_drive_plume = ship_node.find_child("DrivePlume", true, false)
 	_rig = model["rig"]
+	# In from the transit view with the panels out; they stow for the final approach.
+	ShipRig.set_fold(_rig, 0.0, true)
 	add_child(ship_node)
 	audio = ShipAudio.new()
 	ship_node.add_child(audio)
@@ -299,6 +303,7 @@ func _physics_process(dt: float) -> void:
 	SetPieces.animate(_set_pieces, clock)
 	# Docking: the pilot owns the roll, so the panels do what one hinge can; the dish
 	# holds on the station's traffic control.
+	ShipRig.set_fold(_rig, 1.0)
 	ShipRig.aim(_rig, ship_node.global_basis, body_dirs["sun"], -ship_node.global_position, dt)
 	_move_rocks(dt)
 	_fly(dt)
@@ -630,7 +635,8 @@ func _move_traffic(dt: float) -> void:
 	for id in _traffic:
 		var entry: Dictionary = _traffic[id]
 		if entry["mode"] == "berth":
-			# Moored: talking home to Earth while the panels ride the station's spin.
+			# Moored, panels stowed, talking home to Earth.
+			ShipRig.set_fold(entry["rig"], 1.0)
 			ShipRig.aim(entry["rig"], entry["ship"].global_basis, sun, body_dirs["earth"], dt)
 			continue
 		var loc: Dictionary = entry["npc"]["location"]
@@ -656,6 +662,8 @@ func _move_traffic(dt: float) -> void:
 			node.basis = ShipRig.roll_to_sun(Vector3.BACK, sun)
 		node.position = offset + Vector3(0, 0, z0 + span * f)
 		target = -node.position if entry["mode"] == "inbound" else entry.get("dest_dir", Vector3.BACK)
+		# Close in to the station, panels stowed: folding coming in, unfolding going out.
+		ShipRig.set_fold(entry["rig"], 1.0 if f < TRAFFIC_STOW else 0.0)
 		ShipRig.aim(entry["rig"], node.basis, sun, target, dt)
 
 

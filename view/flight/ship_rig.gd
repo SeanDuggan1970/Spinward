@@ -7,6 +7,10 @@
 ## soaking up sunlight. While docking the pilot owns the roll, and the panels do the
 ## best a single hinge can.
 ##
+## For docking the panels stow: each turns flat (in the ship's X-Z plane), then folds
+## up accordion-fashion at its boom's end, and the dish parks. rig["fold_to"] (0 out,
+## 1 stowed) is where the view wants them; rig["fold"] follows it at FOLD_RATE.
+##
 ## The high-gain dish turns on azimuth (about the mast, +Y) and elevation, toward
 ## the comms target, typically the point-ahead direction from sim/light_time.gd.
 extends RefCounted
@@ -16,6 +20,12 @@ const ARRAY_RATE := 0.5
 const DISH_RATE := 0.8
 ## The mast can't look down through the hull.
 const DISH_MIN_EL := -0.35
+## Folding, fraction of the whole stow per real second (about 25 s end to end).
+const FOLD_RATE := 0.04
+## The share of the stow spent turning the panels flat before the segments fold.
+const FLATTEN := 0.25
+## How long after leaving port a ship keeps its panels stowed (game seconds).
+const DEPLOY_AFTER_S := 60.0
 
 
 ## An attitude with -Z along `forward` and the Sun in the ship's Y-Z plane (on the
@@ -72,22 +82,72 @@ static func aim(rig: Dictionary, ship_basis: Basis, sun: Vector3, target: Vector
 	var s := to_local * sun.normalized()
 	# Panel normal (0, cos a, sin a) after turning a about X; face the Sun's Y-Z part.
 	var face := atan2(s.z, s.y)
+	var fold := _fold_step(rig, dt)
+	# Stowing, the panels first turn flat, then fold; deploying, the reverse.
+	var flat := clampf(fold / FLATTEN, 0.0, 1.0)
+	var bend := clampf((fold - FLATTEN) / (1.0 - FLATTEN), 0.0, 1.0)
+	bend = bend * bend * (3.0 - 2.0 * bend)
 	for a in rig.get("arrays", []):
 		var node: Node3D = a["node"]
 		if not is_instance_valid(node):
 			continue
-		var want := face if a["kind"] == "solar" else face + PI * 0.5
-		node.rotation.x = _slew(node.rotation.x, want, ARRAY_RATE, dt)
+		var want: float = face if a["kind"] == "solar" else face + PI * 0.5
+		if fold > 0.0:
+			# Ease from the tracking angle to flat as the stow begins.
+			node.rotation.x = wrapf(lerp_angle(want, 0.0, flat), -PI, PI)
+		else:
+			node.rotation.x = _slew(node.rotation.x, want, ARRAY_RATE, dt)
+		_bend(a, bend)
 	var dish: Dictionary = rig.get("dish", {})
 	if dish.is_empty() or not is_instance_valid(dish["az"]):
 		return
 	var d := to_local * target.normalized()
 	var az := atan2(d.x, d.z)
 	var el := clampf(atan2(d.y, Vector2(d.x, d.z).length()), DISH_MIN_EL, PI * 0.5)
+	if fold > 0.0:
+		# Parked: straight ahead and level.
+		az = 0.0 if fold >= 1.0 else az * (1.0 - fold)
+		el = 0.0 if fold >= 1.0 else el * (1.0 - fold)
 	var az_node: Node3D = dish["az"]
 	var el_node: Node3D = dish["el"]
 	az_node.rotation.y = _slew(az_node.rotation.y, az, DISH_RATE, dt)
 	el_node.rotation.x = _slew(el_node.rotation.x, -el, DISH_RATE, dt)
+
+
+## Where the view wants the panels: 0 deployed, 1 stowed. The first call, or snap,
+## puts them straight there; after that they fold or unfold at FOLD_RATE.
+static func set_fold(rig: Dictionary, to: float, snap: bool = false) -> void:
+	if rig.is_empty():
+		return
+	rig["fold_to"] = clampf(to, 0.0, 1.0)
+	if snap or not rig.has("fold"):
+		rig["fold"] = rig["fold_to"]
+
+
+## In transit, a ship leaving port keeps its panels stowed until it is clear.
+static func transit_fold(location: Dictionary, t: float) -> float:
+	return 1.0 if t - float(location.get("depart_t", -INF)) < DEPLOY_AFTER_S else 0.0
+
+
+static func _fold_step(rig: Dictionary, dt: float) -> float:
+	var to := float(rig.get("fold_to", 0.0))
+	var now := float(rig.get("fold", 0.0))
+	now = to if dt < 0.0 else move_toward(now, to, FOLD_RATE * dt)
+	rig["fold"] = now
+	return now
+
+
+## Fold a panel's segments: the first stands up off the boom, the rest zig-zag back
+## down on it, so the stowed panel is a short stack at the boom's end.
+static func _bend(array: Dictionary, bend: float) -> void:
+	var hinges: Array = array.get("hinges", [])
+	var side := float(array.get("side", 1.0))
+	for k in hinges.size():
+		var h: Node3D = hinges[k]
+		if not is_instance_valid(h):
+			continue
+		var angle := PI * 0.5 if k == 0 else PI * 0.96 * (-1.0 if k % 2 == 1 else 1.0)
+		h.rotation.z = side * angle * bend
 
 
 static func _slew(from: float, to: float, rate: float, dt: float) -> float:

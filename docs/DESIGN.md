@@ -805,6 +805,18 @@ Sean's direction (2026-10-06): a follow camera with mouse control while the ship
 - **Lighting:** a soft fill light rides with the camera, so the design reads on the night side. Sky worlds no longer receive ship shadows.
 - **Capture:** `--shipcam=<dir>` shoots every set-up at the moments it suits (leaving, burning, coasting, arriving), and tests real mouse input.
 
+## Panels that fold for docking (Oct 2026)
+
+Sean's request (2026-10-08): solar wings and radiators should fold back for docking and unfold once undocked. This is view only: nothing in the sim changes. Docked ships run on shore power, and a ship leaving port runs its reactor, so stowed panels cost nothing.
+
+- **Built in segments** (`ShipBuilder.boom_panel`): every panel is cut into segments about 1.6 m long, hinged along the boom's width.
+- **Stowing** (`ShipRig.set_fold`, `rig.fold` from 0 out to 1 stowed): over about 25 s, each panel first turns flat into the hull's plane. Then its segments fold accordion-fashion into a short stack standing at the boom's end, and the dish parks facing ahead. Deploying runs the same steps in reverse.
+- **When:**
+  - The player's ship stows on the final approach in the docking scene.
+  - Leaving port, it keeps the panels stowed for the first minute of game time (`ShipRig.DEPLOY_AFTER_S`), then unfolds them in every transit view.
+  - Ships moored at a station are stowed. Lane traffic stows over the 30% of its lane nearest the station.
+- The sail freighter's sail is not folded.
+
 ## Sound: heard through the hull (Oct 2026)
 
 Sean's direction (2026-10-06):

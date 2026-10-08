@@ -133,6 +133,9 @@ Sean, Oct 2026: walk around the places you visit, FPS style.
 - **Badges** (Oct 2026): one-off marks for going where few go or standing the bar a
   round. They add renown, which gets you noticed by hitchhikers and by clients asking
   for you by name.
+- **Folding panels** (Oct 2026): solar wings and radiators fold accordion-fashion for
+  docking and unfold once clear of the port (`view/flight/ship_rig.gd`), ready for
+  step 3's bays.
 
 ## Decisions (confirmed by Sean, Oct 2026)
 
