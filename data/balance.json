@@ -66,6 +66,9 @@
 		"coat_cr_per_t": 1500,
 		"stealth_yards": ["trojan_yards", "hektor_reach", "landauer_deep"],
 		"sink_dump_kw": 40.0,
+		"_stow_note": "Panels folded in while coasting (stow_panels): the hull shows stowed_area_mult of its sunlit area, and with the radiators folded only stowed_heat_mult of the waste heat gets out (the rest soaks into the structure). The solar wings make nothing. The co-pilot unfolds them for a burn: the radiators carry the drive's heat.",
+		"stowed_area_mult": 0.4,
+		"stowed_heat_mult": 0.3,
 		"check_s": 300.0
 	},
 	"approach": {

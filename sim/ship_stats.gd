@@ -239,8 +239,9 @@ static func reject_mw(ship: Dictionary, data) -> float:
 
 ## Electrical figures (kW, kWh), for sim/power.gd. Supply stats fall with damage;
 ## load stats do not (UNDAMAGED).
+## Folded in (ship.stowed, for stealth), the solar wings make nothing.
 static func solar_kw_1au(ship: Dictionary, data) -> float:
-	return _sum(ship, data, "solar_kw")
+	return 0.0 if ship.get("stowed", false) else _sum(ship, data, "solar_kw")
 
 
 static func battery_kwh(ship: Dictionary, data) -> float:

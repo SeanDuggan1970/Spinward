@@ -5,7 +5,8 @@
 ## that sees a dark ship inside its control zone fines it (once a trip: ports share
 ## word). The heat sink fills while dark and dumps otherwise. Arriving, the
 ## transponder comes back on (ports don't dock a dark ship). coat_hull, at a stealth
-## yard, applies the low-observable coating. Honest physics: nobody hides while burning.
+## yard, applies the low-observable coating; stow_panels folds the panels in while
+## coasting. Honest physics: nobody hides while burning.
 extends "res://sim/systems/system.gd"
 
 const Detection := preload("res://sim/detection.gd")
@@ -22,6 +23,7 @@ func setup(owner) -> void:
 	super.setup(owner)
 	owner.register("dark_running", _dark)
 	owner.register("coat_hull", _coat)
+	owner.register("stow_panels", _stow)
 
 
 static func ensure(state) -> void:
@@ -44,6 +46,11 @@ func tick(dt: float) -> void:
 		det["sink_mj"] = minf(cap, float(det["sink_mj"]) + Detection.heat_kw(s.ship, data, burning) * dt / 1000.0)
 	else:
 		det["sink_mj"] = maxf(0.0, float(det["sink_mj"]) - float(data.balance["detection"]["sink_dump_kw"]) * dt / 1000.0)
+	# The co-pilot unfolds the panels for a burn (the radiators carry the drive's
+	# heat), and in port, where the berth gives shore power.
+	if bool(s.ship.get("stowed", false)) and (burning or loc.get("status") in ["approach", "docked"]):
+		s.ship.erase("stowed")
+		sim().emit("panels_deployed", {"burn": burning})
 	if not transit:
 		if loc.get("status") == "transit":
 			return
@@ -117,6 +124,25 @@ func _dark(command: Dictionary) -> String:
 		return "traffic control won't let a ship sit dark at the berth"
 	s.detection["dark"] = on
 	sim().emit("dark_running", {"on": on})
+	return ""
+
+
+## {on}: fold the panels in while coasting (a smaller signature), or out again.
+func _stow(command: Dictionary) -> String:
+	var s = sim().state
+	var loc: Dictionary = s.location
+	var on := bool(command.get("on", not bool(s.ship.get("stowed", false))))
+	if not on:
+		if s.ship.get("stowed", false):
+			s.ship.erase("stowed")
+			sim().emit("panels_deployed", {"burn": false})
+		return ""
+	if loc.get("status") != "transit":
+		return "the panels fold in only under way"
+	if V.length(Navigation.transit_accel(loc, s.time_s)) > 1e-6:
+		return "not while the drive is lit: the radiators are carrying its heat"
+	s.ship["stowed"] = true
+	sim().emit("panels_stowed", {})
 	return ""
 
 

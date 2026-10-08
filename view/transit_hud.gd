@@ -337,7 +337,8 @@ func _page_nav(g, r: Dictionary) -> void:
 	var det: Dictionary = sim.state.detection
 	var dark := bool(det.get("dark", false))
 	g.text(Vector2(8, H - 40), "SIG %s %s  SEEN %d" % [UI.km(float(det.get("range_m", 0.0))), String(det.get("loudest", "")).to_upper(), det.get("seen_by", []).size()], 9, AV.AMBER if dark else AV.GREY)
-	g.soft_keys([["M", "MAP", AV.GREY], ["Z", "SCOPE", AV.CYAN if view.telescope else AV.GREY], ["C", "CENTRE", AV.GREY], ["←→", "LOOK", AV.GREY], [Bindings.key_of("transit_dark"), "DARK", AV.AMBER if dark else AV.GREY]])
+	var stowed := bool(sim.state.ship.get("stowed", false))
+	g.soft_keys([["M", "MAP", AV.GREY], ["Z", "SCOPE", AV.CYAN if view.telescope else AV.GREY], ["←→", "LOOK", AV.GREY], [Bindings.key_of("transit_stow"), "STOW", AV.AMBER if stowed else AV.GREY], [Bindings.key_of("transit_dark"), "DARK", AV.AMBER if dark else AV.GREY]])
 
 
 ## A round number near x (1, 2 or 5 times a power of ten).

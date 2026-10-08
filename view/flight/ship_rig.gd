@@ -124,8 +124,11 @@ static func set_fold(rig: Dictionary, to: float, snap: bool = false) -> void:
 		rig["fold"] = rig["fold_to"]
 
 
-## In transit, a ship leaving port keeps its panels stowed until it is clear.
-static func transit_fold(location: Dictionary, t: float) -> float:
+## In transit, a ship leaving port keeps its panels stowed until it is clear, and a
+## ship running quiet (ship.stowed, sim/systems/detection_system.gd) keeps them in.
+static func transit_fold(location: Dictionary, t: float, ship: Dictionary = {}) -> float:
+	if ship.get("stowed", false):
+		return 1.0
 	return 1.0 if t - float(location.get("depart_t", -INF)) < DEPLOY_AFTER_S else 0.0
 
 

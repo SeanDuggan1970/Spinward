@@ -90,6 +90,8 @@ Built in October 2026: see "Detection and stealth" in `docs/DESIGN.md`.
   - a heat sink module that holds heat for about a day
   - dark running (`dark_running`, key D in transit): lights and transponder off, fined
     near ports
+  - panels folded in (`stow_panels`, key F) while coasting: less sunlit area and
+    radiated heat, no solar power
 - Honest physics: you can hide while coasting, never while burning.
 - Offences are counted (`state.detection.offences`), ready for step 7's impound for
   repeat offenders.

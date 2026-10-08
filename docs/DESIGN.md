@@ -686,7 +686,8 @@ Who can see you is a sim rule (`sim/detection.gd`, `sim/systems/detection_system
 - **The stealth package.**
   - The low-observable coating (`coat_hull`, 1,500 cr a tonne of dry mass) is sold at the outer yards: Trojan Yards, Hektor Reach and Landauer Deep. It cuts albedo from 0.5 to 0.05.
   - The heat sink module (sold at the same yards) soaks up 800 MJ of waste heat while dark. That is about a day of a small ship's loads. It dumps the heat through the radiators otherwise.
-  - Coasting dark, coated and sunk, a Mule shows at about 2,300 km. Burning, it shows at 5 million km whatever it carries.
+  - Folding the panels in (`stow_panels`, key F in transit, Sean's idea) cuts the sunlit area to 40% and lets out only 30% of the waste heat, with the rest soaking into the structure. The solar wings make nothing while folded. It is allowed only while coasting, and the co-pilot unfolds them for a burn (the radiators carry the drive's heat) and in port.
+  - Coasting dark, coated and sunk, a Mule shows at about 2,300 km, and about 1,500 km with its panels in. Burning, it shows at 5 million km whatever it carries.
 - **Departures from hard physics.**
   - The ranges are game numbers, not a sensor model. Real waste heat is visible much further against 3 K space; we let the radiators hide behind a fixed figure so that hiding is possible at all.
   - A heat sink that holds a day of heat is generous.
@@ -815,6 +816,7 @@ Sean's request (2026-10-08): solar wings and radiators should fold back for dock
   - The player's ship stows on the final approach in the docking scene.
   - Leaving port, it keeps the panels stowed for the first minute of game time (`ShipRig.DEPLOY_AFTER_S`), then unfolds them in every transit view.
   - Ships moored at a station are stowed. Lane traffic stows over the 30% of its lane nearest the station.
+- **Running quiet:** the same fold, held in transit while `ship.stowed` is set (see "Detection and stealth").
 - The sail freighter's sail is not folded.
 
 ## Sound: heard through the hull (Oct 2026)

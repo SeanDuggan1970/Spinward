@@ -4210,12 +4210,26 @@ func test_detection_and_stealth() -> void:
 	check(float(s.reputation.get(op, 0.0)) < rep, "And it costs standing with the operator")
 	sim.advance_game_time(900.0)
 	check(is_equal_approx(s.credits, credits - float(d.balance["detection"]["dark_fine_cr"])), "Only once a trip")
+	# Folding the panels in shrinks the signature and stops the solar wings.
+	var quiet := s.ship.duplicate(true)
+	quiet["stowed"] = true
+	var open_ch := Detection.channels(s.ship, d, {"dark": true}, false, 1.0)
+	var in_ch := Detection.channels(quiet, d, {"dark": true}, false, 1.0)
+	check(float(in_ch["sunlight"]) < float(open_ch["sunlight"]) and float(in_ch["heat"]) < float(open_ch["heat"]), "Panels in: less sunlight and heat show")
+	check(ShipStats.solar_kw_1au(quiet, d) == 0.0, "Panels in: the solar wings make nothing")
+	var coasting := Navigation.transit_accel(s.location, s.time_s)
+	if V.length(coasting) > 1e-6:
+		check(sim.apply({"type": "stow_panels", "on": true}) != "", "No folding in while the drive is lit")
+	else:
+		check(sim.apply({"type": "stow_panels", "on": true}) == "" and s.ship.get("stowed", false), "Fold the panels in while coasting")
 	# Saved and loaded.
 	var loaded := SaveIO.from_text(SaveIO.to_text(s))
 	check(loaded != null and bool(loaded.detection.get("dark", false)) and "kibo_ring" in loaded.detection.get("fined", []), "Detection state is saved")
 	# Arriving, the transponder comes back on.
 	sim.advance_game_time(float(s.location["arrive_t"]) - s.time_s + 60.0)
 	check(s.location.get("status") != "transit" and not bool(s.detection["dark"]), "The transponder is on again in port")
+	check(not s.ship.get("stowed", false), "And the panels are out again")
+	check(sim.apply({"type": "stow_panels", "on": true}) == "the panels fold in only under way", "Panels fold in only under way")
 	# A stealth yard coats the hull, for a price.
 	s.location = {"status": "docked", "place": "trojan_yards"}
 	s.credits = 1.0e6

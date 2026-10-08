@@ -250,3 +250,4 @@ Full write-up: [2026-10-07-economy-together.md](2026-10-07-economy-together.md).
 - Signatures at 1 AU: a lit drive shows at 4.8 to 16 million km. Coasting dark, waste heat is loudest at 10,000 to 14,000 km. With the coating and a heat sink still soaking up heat, a Mule shows at about 2,300 km.
 - The fine for running dark near a port is 600 cr and 1.5 standing, once a trip. That's about a small cargo's margin: a nuisance, not ruin. The coating costs a stock Mule (18.8 t dry) 28,200 cr.
 - The balance bot never runs dark, so the rules cost it nothing. The new module only adds to three yards' stock, which the bot doesn't buy from.
+- Panels in (`stowed_area_mult` 0.4, `stowed_heat_mult` 0.3): a dark, coated, sunk Mule drops from about 2,300 km to about 1,500 km. Without the coating or sink, the heat channel falls from about 12,300 km to about 6,800 km. The solar wings matter little in transit, where the reactor runs. The bot never stows.

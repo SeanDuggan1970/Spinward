@@ -4,7 +4,7 @@
 ## A ship shows on several channels, each with the range at which a standard sensor
 ## sees it: its lit drive (enormous: nobody hides while burning), its waste heat, its
 ## transponder and running lights (off when running dark), and the sunlight it
-## reflects (less with the low-observable coating). A heat sink soaks up waste heat
+## reflects (less with the low-observable coating, and with the panels folded in). A heat sink soaks up waste heat
 ## while running dark, until it is full. A port sees the ship within its largest
 ## range times the port's sensors.
 extends RefCounted
@@ -39,9 +39,14 @@ static func channels(ship: Dictionary, data, det: Dictionary, burning: bool, au:
 	var soaking := dark and float(det.get("sink_mj", 0.0)) < sink_capacity_mj(ship, data) - 1e-6
 	var albedo := float(cfg["coated_albedo"]) if ship.get("coating", "") == "low_obs" else float(cfg["albedo"])
 	var area := float(cfg["area_m2_per_t23"]) * pow(ShipStats.dry_mass_t(ship, data), 2.0 / 3.0)
+	# Panels folded in: less to catch the light, and the radiators can't shed heat.
+	var stowed := bool(ship.get("stowed", false))
+	if stowed:
+		area *= float(cfg["stowed_area_mult"])
+	var heat := heat_kw(ship, data, burning) * (float(cfg["stowed_heat_mult"]) if stowed and not burning else 1.0)
 	return {
 		"drive": float(cfg["drive_m_per_sqrt_mw"]) * sqrt(jet_mw(ship, data)) if burning else 0.0,
-		"heat": 0.0 if soaking else float(cfg["heat_m_per_sqrt_kw"]) * sqrt(heat_kw(ship, data, burning)),
+		"heat": 0.0 if soaking else float(cfg["heat_m_per_sqrt_kw"]) * sqrt(heat),
 		"transponder": 0.0 if dark else float(cfg["transponder_m"]),
 		"lights": 0.0 if dark else float(cfg["lights_m"]),
 		"sunlight": float(cfg["light_m"]) * sqrt(area * albedo) / maxf(au, 0.1),

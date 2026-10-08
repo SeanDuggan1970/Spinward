@@ -122,7 +122,10 @@ static func signature(sim) -> String:
 	for p in seen.slice(0, 3):
 		names.append(sim.data.places[p]["name"])
 	var who := "no port sees us" if seen.is_empty() else "seen by " + ", ".join(names) + (" +%d" % (seen.size() - 3) if seen.size() > 3 else "")
-	return "%s  ·  shows %s on %s  ·  %s" % ["RUNNING DARK" if det.get("dark", false) else "Transponder on", km(float(det.get("range_m", 0.0))), det.get("loudest", ""), who]
+	var mode := "RUNNING DARK" if det.get("dark", false) else "Transponder on"
+	if sim.state.ship.get("stowed", false):
+		mode += ", panels in"
+	return "%s  ·  shows %s on %s  ·  %s" % [mode, km(float(det.get("range_m", 0.0))), det.get("loudest", ""), who]
 
 
 static func km(metres: float) -> String:

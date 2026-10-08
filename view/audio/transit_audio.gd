@@ -69,7 +69,7 @@ func _process(dt: float) -> void:
 		turn = step / dt
 	var sun := SkyKit.dir_between(eph.position("sun", t), here)
 	_ship.basis = ShipRig.roll_to_sun(-_basis.z, sun)
-	ShipRig.set_fold(_rig, ShipRig.transit_fold(loc, t))
+	ShipRig.set_fold(_rig, ShipRig.transit_fold(loc, t, sim.state.ship))
 	ShipRig.aim(_rig, _ship.basis, sun, SkyKit.dir_between(eph.position(loc["to"], t), here), dt)
 	# Swinging round, the attitude jets fire; burning, the drive does.
 	var spin := Vector3(0, 1, 0) * (1.0 if turn > 0.05 else 0.0)

@@ -339,6 +339,10 @@ func _handle_events() -> void:
 			"unseen":
 				if bool(sim.state.detection.get("dark", false)) and sim.state.detection.get("seen_by", []).is_empty():
 					notice("No port can see us now.", UI.GOOD)
+			"panels_stowed":
+				notice("Panels folding in: less to see, no solar power, and the radiators can't shed heat.", UI.AMBER)
+			"panels_deployed":
+				notice("Panels out for the burn: the radiators carry the drive's heat." if d["burn"] else "Panels unfolding.", UI.DIM)
 			"hull_coated":
 				notice("Hull coated, low-observable, for %s. She reflects a tenth of the light she did." % UI.money(-float(d["credits"])), UI.GOOD)
 				refresh = true
@@ -639,6 +643,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		sim.apply({"type": "set_time_scale", "scale": scales[clampi(i, 0, scales.size() - 1)]})
 	elif _mode == "transit" and event.is_action_pressed("transit_dark"):
 		sim.apply({"type": "dark_running"})
+	elif _mode == "transit" and event.is_action_pressed("transit_stow"):
+		sim.apply({"type": "stow_panels"})
 	elif event.is_action_pressed("sound"):
 		var muted := not AudioServer.is_bus_mute(0)
 		AudioServer.set_bus_mute(0, muted)
