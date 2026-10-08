@@ -664,6 +664,34 @@ Sean: the elevators "lack counterweights deeper in space beyond the geostationar
   - The pod lies there in the saved game (`state.sites.pods`) until a lander with an empty clamp picks it up; its contents come aboard if there is room.
   - The site tab lists your pod and any pods lying there; the shipyard tab sells pods.
 
+## Detection and stealth (Oct 2026, roadmap step 6)
+
+Who can see you is a sim rule (`sim/detection.gd`, `sim/systems/detection_system.gd`, `balance.detection`). It sets up the secret missions of step 7.
+
+- **Signature channels.** Each has a range at which a standard sensor sees the ship:
+
+  | Channel | Range (a Mule, at 1 AU) | Off when |
+  |---|---|---|
+  | Lit drive | about 5 million km (16 million for a deep freighter) | coasting |
+  | Waste heat | about 12,000 km | a heat sink is soaking it up |
+  | Transponder | 2 million km | running dark |
+  | Running lights | 200 km | running dark |
+  | Reflected sunlight | about 7,000 km, 2,300 coated | never (it falls with distance from the Sun) |
+
+  The drive's range goes with the square root of its jet power, heat with the root of what the ship radiates (the drive's heat while burning, its electrical loads otherwise), and sunlight with the root of the hull's area times its albedo.
+
+- **Sensors.** A port with a station sees the ship within its loudest range times the port's `sensors` (1 by default; 1.3 to 1.6 at the busy Earth ports and Shackleton). It is checked every 5 minutes of game time in transit. `state.detection.seen_by` lists who sees you now.
+- **Running dark** (`dark_running`, key D in the transit views) turns off the transponder and lights. It is allowed only in transit, and the transponder comes back on for the approach: ports don't dock a dark ship.
+- **The fine.** A port that sees a dark ship inside its control zone (50,000 km) fines it 600 cr and 1.5 standing with its operator. It happens once a trip, because the ports share word. Offences are counted for step 7's impound.
+- **The stealth package.**
+  - The low-observable coating (`coat_hull`, 1,500 cr a tonne of dry mass) is sold at the outer yards: Trojan Yards, Hektor Reach and Landauer Deep. It cuts albedo from 0.5 to 0.05.
+  - The heat sink module (sold at the same yards) soaks up 800 MJ of waste heat while dark. That is about a day of a small ship's loads. It dumps the heat through the radiators otherwise.
+  - Coasting dark, coated and sunk, a Mule shows at about 2,300 km. Burning, it shows at 5 million km whatever it carries.
+- **Departures from hard physics.**
+  - The ranges are game numbers, not a sensor model. Real waste heat is visible much further against 3 K space; we let the radiators hide behind a fixed figure so that hiding is possible at all.
+  - A heat sink that holds a day of heat is generous.
+  - This keeps the honest part honest: a lit fusion drive cannot hide.
+
 ## Saturn, rings and shadows (Oct 2026)
 
 Sean: the rings were "very unrealistic and downright ugly"; the planet should cast its shadow on the rings and on moons and ships.

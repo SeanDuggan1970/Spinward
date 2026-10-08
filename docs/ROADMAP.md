@@ -74,21 +74,25 @@ below the lift thrusters' line of thrust.
 - Placed satellites persist in the world.
 - The covert versions wait for steps 6 and 7.
 
-## 6. Detection model and stealth package
+## 6. Detection model and stealth package (done)
 
-Nothing in the sim detects ships yet.
+Built in October 2026: see "Detection and stealth" in `docs/DESIGN.md`.
 
-- A signature for every ship, from:
+- A signature for every ship (`sim/detection.gd`), from:
   - the lit drive
-  - heat on the radiators
+  - waste heat
   - lights and transponder
-  - reflectivity
-- Sensor ranges for stations and patrols.
+  - reflected sunlight
+- Sensor ranges for stations (`places.json` `sensors`). Patrols wait for ships that
+  patrol.
 - The stealth modules:
-  - a low-reflectivity coating, looking dull and dark
-  - a heat sink that holds heat for a limited time
-  - dark running: lights and transponder off, which may be fined
+  - a low-observable coating (`coat_hull`, at the three outer yards)
+  - a heat sink module that holds heat for about a day
+  - dark running (`dark_running`, key D in transit): lights and transponder off, fined
+    near ports
 - Honest physics: you can hide while coasting, never while burning.
+- Offences are counted (`state.detection.offences`), ready for step 7's impound for
+  repeat offenders.
 
 ## 7. Secret missions (late game)
 

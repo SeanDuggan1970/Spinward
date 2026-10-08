@@ -326,6 +326,22 @@ func _handle_events() -> void:
 				notice("Badge: %s. %s" % [d["name"], d["text"]], UI.GOOD)
 				comms.append("%s  BADGE  %s: %s" % [_clock(e["time_s"]), d["name"], d["text"]])
 				refresh = true
+			"dark_running":
+				notice(("Running dark: transponder and lights off. Burns still show for millions of km." if d["on"] else "Transponder and lights back on."), UI.AMBER if d["on"] else UI.DIM)
+			"transponder_on":
+				notice("Transponder on for the approach: ports don't dock a dark ship.", UI.DIM)
+			"dark_running_fined":
+				notice("%s saw us running dark in its control zone: fined %s, and %s won't forget it." % [sim.data.places[d["place"]]["name"], UI.money(-float(d["credits"])), d["operator"] if d["operator"] != "" else "they"], UI.WARN)
+				refresh = true
+			"seen":
+				if bool(sim.state.detection.get("dark", false)):
+					notice("%s has us on its sensors (%s)." % [sim.data.places[d["place"]]["name"], d["by"]], UI.WARN)
+			"unseen":
+				if bool(sim.state.detection.get("dark", false)) and sim.state.detection.get("seen_by", []).is_empty():
+					notice("No port can see us now.", UI.GOOD)
+			"hull_coated":
+				notice("Hull coated, low-observable, for %s. She reflects a tenth of the light she did." % UI.money(-float(d["credits"])), UI.GOOD)
+				refresh = true
 			"round_bought":
 				notice("A round for %d at %s: %s. Glasses go up." % [int(d["patrons"]), d["bar"], UI.money(-float(d["credits"]))], UI.AMBER)
 				refresh = true
@@ -621,6 +637,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		var scales: Array = sim.data.balance["time"]["scales"]
 		var i := scales.find(sim.state.time_scale) + _time_step(event)
 		sim.apply({"type": "set_time_scale", "scale": scales[clampi(i, 0, scales.size() - 1)]})
+	elif _mode == "transit" and event.is_action_pressed("transit_dark"):
+		sim.apply({"type": "dark_running"})
 	elif event.is_action_pressed("sound"):
 		var muted := not AudioServer.is_bus_mute(0)
 		AudioServer.set_bus_mute(0, muted)

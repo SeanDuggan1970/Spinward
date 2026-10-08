@@ -50,6 +50,8 @@ var contracts: Dictionary = {}
 var favours: Dictionary = {}
 ## Badges earned, places been and rounds bought (sim/badges.gd).
 var badges: Dictionary = {}
+## Running dark, the heat sink, and who can see the ship (sim/systems/detection_system.gd).
+var detection: Dictionary = {}
 ## Standing with each operator: {operator: score}. Tiers in data/contracts.json.
 var reputation: Dictionary = {}
 ## The quiet arc: {done: [beat], fired: {beat: {t, offer}}, messages: [{t, from, text}]}.
@@ -104,6 +106,7 @@ func to_dict() -> Dictionary:
 		"contracts": contracts.duplicate(true),
 		"favours": favours.duplicate(true),
 		"badges": badges.duplicate(true),
+		"detection": detection.duplicate(true),
 		"reputation": reputation.duplicate(true),
 		"perks": perks.duplicate(true),
 		"sites": sites.duplicate(true),
@@ -139,6 +142,7 @@ func load_dict(d: Dictionary) -> void:
 	contracts = d.get("contracts", {}).duplicate(true)
 	favours = d.get("favours", {}).duplicate(true)
 	badges = d.get("badges", {}).duplicate(true)
+	detection = d.get("detection", {}).duplicate(true)
 	reputation = d.get("reputation", {}).duplicate(true)
 	perks = d.get("perks", {}).duplicate(true)
 	sites = d.get("sites", {}).duplicate(true)

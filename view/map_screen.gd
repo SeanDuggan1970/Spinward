@@ -105,10 +105,10 @@ func _process(_dt: float) -> void:
 		for npc in s.npcs:
 			if npc["location"]["status"] == "transit":
 				flying += 1
-		_hud.text = "%s  to  %s\nArrive in %s  (%s)\nRemaining %s\nTime ×%d%s\n%d other ships under way" % [
+		_hud.text = "%s  to  %s\nArrive in %s  (%s)\nRemaining %s\nTime ×%d%s\n%d other ships under way\n%s" % [
 			sim.data.locations[loc["from"]]["name"], sim.data.locations[loc["to"]]["name"],
 			UI.duration(left), _date(float(loc["arrive_t"])), UI.km(V.distance(pos, loc["to_pos"])),
-			int(s.time_scale), "   PAUSED" if s.paused else "", flying]
+			int(s.time_scale), "   PAUSED" if s.paused else "", flying, UI.signature(sim)]
 		for i in _scale_bar.get_child_count():
 			var b: Button = _scale_bar.get_child(i)
 			b.modulate = UI.AMBER if float(sim.data.balance["time"]["scales"][i]) == s.time_scale else Color.WHITE

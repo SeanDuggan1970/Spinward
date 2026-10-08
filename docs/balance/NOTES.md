@@ -242,3 +242,11 @@ Full write-up: [2026-10-07-economy-together.md](2026-10-07-economy-together.md).
 
 - The lander bay now carries a pod (`data/pods.json`). The default cargo container adds 4 t of hold to any ship with a lander bay, older saves included. The other pods are bought at a yard for 4,000 to 18,000 cr.
 - The balance bot never fits a lander bay, so its runs are unchanged and it was not re-run. The prospector refit in the art gallery (lander bay + mining rig) gains 4 t of hold for site yields.
+
+
+## Detection and stealth (2026-10-08)
+
+- New data: `balance.detection`, the `heat_sink` module (38,000 cr, at the three outer yards), and port `sensors` in `places.json`.
+- Signatures at 1 AU: a lit drive shows at 4.8 to 16 million km. Coasting dark, waste heat is loudest at 10,000 to 14,000 km. With the coating and a heat sink still soaking up heat, a Mule shows at about 2,300 km.
+- The fine for running dark near a port is 600 cr and 1.5 standing, once a trip. That's about a small cargo's margin: a nuisance, not ruin. The coating costs a stock Mule (18.8 t dry) 28,200 cr.
+- The balance bot never runs dark, so the rules cost it nothing. The new module only adds to three yards' stock, which the bot doesn't buy from.

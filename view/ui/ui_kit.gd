@@ -111,5 +111,19 @@ static func duration(seconds: float) -> String:
 	return "%.1f d" % (seconds / 86400.0)
 
 
+## One line on who can see the ship in transit (state.detection): running dark or
+## not, how far it shows and on what, and the ports that see it now.
+static func signature(sim) -> String:
+	var det: Dictionary = sim.state.detection
+	if det.is_empty():
+		return ""
+	var seen: Array = det.get("seen_by", [])
+	var names := []
+	for p in seen.slice(0, 3):
+		names.append(sim.data.places[p]["name"])
+	var who := "no port sees us" if seen.is_empty() else "seen by " + ", ".join(names) + (" +%d" % (seen.size() - 3) if seen.size() > 3 else "")
+	return "%s  ·  shows %s on %s  ·  %s" % ["RUNNING DARK" if det.get("dark", false) else "Transponder on", km(float(det.get("range_m", 0.0))), det.get("loudest", ""), who]
+
+
 static func km(metres: float) -> String:
 	return "%s km" % money(metres / 1000.0).trim_suffix(" cr")

@@ -52,6 +52,7 @@
 				{"action": "transit_look_down", "label": "Orbit the ship or look down", "key": ["Down"], "pad": ["ry+"]},
 				{"action": "transit_telescope", "label": "Telescope (cockpit)", "key": ["Z"], "pad": ["x"]},
 				{"action": "transit_centre", "label": "Look ahead again (cockpit)", "key": ["C"], "pad": ["y"]},
+				{"action": "transit_dark", "label": "Run dark: transponder and lights off (fined near ports if seen)", "key": ["D"], "pad": []},
 				{"action": "transit_time_slower", "label": "Slow down time", "key": [], "pad": ["lb"]},
 				{"action": "transit_time_faster", "label": "Speed up time", "key": [], "pad": ["rb"]},
 				{"text": "Mouse drag", "label": "Orbit the ship (ship view)"},

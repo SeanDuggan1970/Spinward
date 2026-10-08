@@ -29,6 +29,7 @@ const FitnessSystem := preload("res://sim/systems/fitness_system.gd")
 const InsuranceSystem := preload("res://sim/systems/insurance_system.gd")
 const BadgeSystem := preload("res://sim/systems/badge_system.gd")
 const PodSystem := preload("res://sim/systems/pod_system.gd")
+const DetectionSystem := preload("res://sim/systems/detection_system.gd")
 
 ## Undrained events are capped so headless runs (bots, tests) cannot grow without bound.
 const MAX_PENDING_EVENTS := 2000
@@ -49,7 +50,7 @@ func _init(catalog: DataCatalog = null) -> void:
 	ephemeris = Ephemeris.new(data.bodies, data.locations)
 	state = GameState.new()
 	# Order matters within a tick: the clock moves first, then everything catches up to it.
-	systems = [CalendarSystem.new(), EconomySystem.new(), ShipyardSystem.new(), WearSystem.new(), FitnessSystem.new(), InsuranceSystem.new(), TravelSystem.new(), NpcSystem.new(), ProjectSystem.new(), TipSystem.new(), ContractSystem.new(), FavourSystem.new(), SiteSystem.new(), StorySystem.new(), ElevatorSystem.new(), DamageSystem.new(), PowerSystem.new(), BadgeSystem.new(), PodSystem.new(), NewsSystem.new()]
+	systems = [CalendarSystem.new(), EconomySystem.new(), ShipyardSystem.new(), WearSystem.new(), FitnessSystem.new(), InsuranceSystem.new(), TravelSystem.new(), NpcSystem.new(), ProjectSystem.new(), TipSystem.new(), ContractSystem.new(), FavourSystem.new(), SiteSystem.new(), StorySystem.new(), ElevatorSystem.new(), DamageSystem.new(), PowerSystem.new(), BadgeSystem.new(), PodSystem.new(), DetectionSystem.new(), NewsSystem.new()]
 	for system in systems:
 		system.setup(self)
 

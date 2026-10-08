@@ -644,5 +644,25 @@
 			],
 			"colour": "offwhite"
 		}
+	},
+	"heat_sink": {
+		"name": "Heat sink, phase-change",
+		"kind": "sink",
+		"mounts": [
+			"cargo"
+		],
+		"mass_t": 2.5,
+		"price": 38000,
+		"sink_mj": 800,
+		"description": "Tonnes of wax in a tank: it soaks up the ship's waste heat while you run dark, so your radiators can go cold. When it is full, you glow again. It dumps its heat through the radiators once you light up.",
+		"look": {
+			"shape": "cage",
+			"size_m": [
+				3.0,
+				3.0,
+				4.0
+			],
+			"colour": "dark"
+		}
 	}
 }

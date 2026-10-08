@@ -34,6 +34,8 @@ const CockpitPages := preload("res://view/ui/cockpit_pages.gd")
 const ShipRig := preload("res://view/flight/ship_rig.gd")
 const TravelSystem := preload("res://sim/systems/travel_system.gd")
 const PodSystem := preload("res://sim/systems/pod_system.gd")
+const Detection := preload("res://sim/detection.gd")
+const DetectionSystem := preload("res://sim/systems/detection_system.gd")
 
 const AU := 1.495978707e11
 const DAY := 86400.0
@@ -122,6 +124,7 @@ func _initialize() -> void:
 	test_final_approach()
 	test_counterweights_and_badges()
 	test_lander_pods()
+	test_detection_and_stealth()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -4168,3 +4171,53 @@ func test_lander_pods() -> void:
 	var old := s.ship.duplicate(true)
 	old.erase("pod")
 	check(ShipStats.pod_of(old, d) == "cargo_container", "An old save's lander bay has the default pod")
+
+
+func test_detection_and_stealth() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	check(d.validate().is_empty(), "Data with detection validates")
+	# Honest physics: a lit drive shows across millions of km; coasting dark, the ship is faint.
+	var lit := Detection.channels(s.ship, d, {"dark": false}, true, 1.0)
+	var coast := Detection.channels(s.ship, d, {"dark": true}, false, 1.0)
+	check(Detection.loudest(lit)[0] == "drive" and float(lit["drive"]) > 1.0e9, "A burning drive is the loudest thing aboard (%.0f km)" % (float(lit["drive"]) / 1000.0))
+	check(float(coast["transponder"]) == 0.0 and float(coast["lights"]) == 0.0 and float(coast["drive"]) == 0.0, "Dark and coasting: no transponder, lights or drive")
+	check(float(Detection.loudest(coast)[1]) < 1.0e8, "Dark and coasting, the ship is seen only nearby (%.0f km)" % (float(Detection.loudest(coast)[1]) / 1000.0))
+	# The coating cuts reflected sunlight; a heat sink hides waste heat until it is full.
+	var coated := s.ship.duplicate(true)
+	coated["coating"] = "low_obs"
+	check(float(Detection.channels(coated, d, {"dark": true}, false, 1.0)["sunlight"]) < float(coast["sunlight"]) * 0.5, "The low-observable coating dims the hull")
+	var sunk := s.ship.duplicate(true)
+	sunk["modules"]["cargo.1"] = "heat_sink"
+	check(float(Detection.channels(sunk, d, {"dark": true, "sink_mj": 0.0}, false, 1.0)["heat"]) == 0.0, "An empty sink soaks up the heat")
+	check(float(Detection.channels(sunk, d, {"dark": true, "sink_mj": 800.0}, false, 1.0)["heat"]) > 0.0, "A full sink no longer hides it")
+	# No running dark at the berth; the coating only at a stealth yard.
+	check(sim.apply({"type": "dark_running", "on": true}) != "", "Traffic control won't let a ship sit dark at the berth")
+	check(sim.apply({"type": "coat_hull"}) == "only a few yards do that work", "Kibo Ring doesn't coat hulls")
+	# Leave, then go dark right by the port: it sees you and fines you, once.
+	s.ship["fuel_t"] = 3.0
+	check(sim.apply({"type": "depart", "to": "halo_depot"}) == "", "Depart for Halo Depot")
+	sim.advance_game_time(600.0)
+	check("kibo_ring" in s.detection["seen_by"], "Kibo Ring sees the ship leaving")
+	var credits := s.credits
+	var op: String = d.places["kibo_ring"]["operator"]
+	var rep := float(s.reputation.get(op, 0.0))
+	check(sim.apply({"type": "dark_running", "on": true}) == "", "Run dark")
+	sim.advance_game_time(900.0)
+	check(is_equal_approx(s.credits, credits - float(d.balance["detection"]["dark_fine_cr"])), "Fined for running dark under Kibo's nose")
+	check(float(s.reputation.get(op, 0.0)) < rep, "And it costs standing with the operator")
+	sim.advance_game_time(900.0)
+	check(is_equal_approx(s.credits, credits - float(d.balance["detection"]["dark_fine_cr"])), "Only once a trip")
+	# Saved and loaded.
+	var loaded := SaveIO.from_text(SaveIO.to_text(s))
+	check(loaded != null and bool(loaded.detection.get("dark", false)) and "kibo_ring" in loaded.detection.get("fined", []), "Detection state is saved")
+	# Arriving, the transponder comes back on.
+	sim.advance_game_time(float(s.location["arrive_t"]) - s.time_s + 60.0)
+	check(s.location.get("status") != "transit" and not bool(s.detection["dark"]), "The transponder is on again in port")
+	# A stealth yard coats the hull, for a price.
+	s.location = {"status": "docked", "place": "trojan_yards"}
+	s.credits = 1.0e6
+	var cost := DetectionSystem.coat_cost(s, d)
+	check(sim.apply({"type": "coat_hull"}) == "" and s.ship.get("coating", "") == "low_obs" and is_equal_approx(s.credits, 1.0e6 - cost), "Coated at Trojan Yards for %d cr" % int(cost))
+	check(sim.apply({"type": "coat_hull"}) == "she's already coated", "Once is enough")

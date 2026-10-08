@@ -53,7 +53,7 @@ static func build(ship_state: Dictionary, data, livery: Dictionary) -> Dictionar
 	var cargo := []
 	# Whatever bay a module sits in, it goes where it belongs: habs behind the crew,
 	# freight and working kit amidships, tanks ahead of the drives.
-	var bay: Array = by_kind.get("cargo", []) + by_kind.get("hab", []) + by_kind.get("lander", []) + by_kind.get("sensor", []) + by_kind.get("mining", [])
+	var bay: Array = by_kind.get("cargo", []) + by_kind.get("hab", []) + by_kind.get("lander", []) + by_kind.get("sensor", []) + by_kind.get("mining", []) + by_kind.get("sink", [])
 	for entry in bay:
 		if entry[1]["look"].get("shape", "") == "hab":
 			sections.append(_hab(entry[1], ctx))

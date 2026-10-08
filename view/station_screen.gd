@@ -26,6 +26,7 @@ const Insurance := preload("res://sim/insurance.gd")
 const ShipBill := preload("res://sim/ship_bill.gd")
 const SiteSystem := preload("res://sim/systems/site_system.gd")
 const PodSystem := preload("res://sim/systems/pod_system.gd")
+const DetectionSystem := preload("res://sim/systems/detection_system.gd")
 const Badges := preload("res://sim/badges.gd")
 const DAY := 86400.0
 
@@ -824,6 +825,17 @@ func _shipyard_tab() -> Control:
 			row.add_child(UI.button("Fit  %s" % UI.money(cost), send.bind({"type": "fit_pod", "pod": id}), s.credits >= cost))
 			pp[1].add_child(row)
 		parts[1].add_child(pp[0])
+	# The stealth yards coat hulls (balance.detection): a matt skin that reflects a
+	# tenth of the light. Their stock also carries heat sinks.
+	if s.location.get("place", "") in d.balance["detection"]["stealth_yards"]:
+		var cp := UI.panel("Low-observable coating")
+		if s.ship.get("coating", "") == "low_obs":
+			cp[1].add_child(UI.label("She's coated: a matt skin that reflects a tenth of the sunlight. Coasting dark, she's hard to see; burning, nothing hides her.", UI.DIM, 13))
+		else:
+			var coat := DetectionSystem.coat_cost(s, d)
+			cp[1].add_child(UI.label("A matt skin that reflects a tenth of the sunlight. With the transponder off and a heat sink soaking up her heat, a coasting ship is hard to see. Nothing hides a lit drive.", UI.DIM, 13))
+			cp[1].add_child(UI.button("Coat the hull  %s" % UI.money(coat), send.bind({"type": "coat_hull"}), s.credits >= coat))
+		parts[1].add_child(cp[0])
 	var slots: Array = s.ship["modules"].keys()
 	slots.sort()
 	for slot in slots:
