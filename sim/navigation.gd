@@ -678,17 +678,17 @@ static func add_approach(location: Dictionary, data, eph) -> void:
 ## unless the port itself is inside it (a surface port).
 static func _approach_clear(app: Dictionary, bodies: Array, data, eph, frame: String) -> bool:
 	var loc := {"approach": app}
-	var t0 := float(app["t0"])
 	var t1 := float(app["t_end"])
 	for body in bodies:
 		var need := Interplanetary.clearance(data, body)
 		if V.distance(_approach_port(app, t1), eph.relative(body, frame, t1)) < need * 1.01:
 			continue
-		for k in 61:
-			var t := lerpf(t0, t1, float(k) / 60.0)
-			var here := V.add(_approach_port(app, t), approach_state(loc, t)[0])
-			if V.distance(here, eph.relative(body, frame, t)) < need:
-				return false
+		for leg in app["legs"]:
+			for k in 41:
+				var t := lerpf(float(leg[0]), float(leg[1]), float(k) / 40.0)
+				var here := V.add(_approach_port(app, t), approach_state(loc, t)[0])
+				if V.distance(here, eph.relative(body, frame, t)) < need:
+					return false
 	return true
 
 

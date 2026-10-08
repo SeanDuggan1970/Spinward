@@ -707,8 +707,9 @@ func test_routes_clear_of_bodies() -> void:
 		for i in 241:
 			times.append(lerpf(t, float(plan["arrive_t"]), float(i) / 240.0))
 		if loc.get("approach") != null:
-			for i in 121:
-				times.append(lerpf(float(loc["approach"]["t0"]), float(plan["arrive_t"]), float(i) / 120.0))
+			for leg in loc["approach"]["legs"]:
+				for i in 41:
+					times.append(lerpf(float(leg[0]), float(leg[1]), float(i) / 40.0))
 		for ti: float in times:
 			var here := V.add(eph.position(plan["frame"], ti), Navigation.transit_position(loc, ti))
 			for id in bodies:

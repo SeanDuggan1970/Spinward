@@ -175,8 +175,9 @@ func _check(loc: Dictionary, kind: String, a: String, b: String, day: float) -> 
 	for i in SAMPLES + 1:
 		times.append(lerpf(t0, t1, float(i) / float(SAMPLES)))
 	if loc.get("approach") != null:
-		for i in 121:
-			times.append(lerpf(float(loc["approach"]["t0"]), t1, float(i) / 120.0))
+		for leg in loc["approach"]["legs"]:
+			for i in 41:
+				times.append(lerpf(float(leg[0]), float(leg[1]), float(i) / 40.0))
 		times.sort()
 	for i in times.size():
 		var t: float = times[i]
