@@ -29,6 +29,7 @@ func start_game() -> void:
 func tick(_game_dt: float) -> void:
 	var s = sim().state
 	_flyby_moments(s)
+	_descent_moment(s)
 	_time_ramps(s)
 	if s.location.get("status") == "transit" and s.time_s >= float(s.location["arrive_t"]):
 		var place: String = s.location["to"]
@@ -79,6 +80,22 @@ func _time_ramps(s) -> void:
 	for cap in time.get("approach_caps", []):
 		if left <= float(cap[0]) and s.time_scale > float(cap[1]):
 			s.time_scale = float(cap[1])
+
+
+## The co-pilot calls the descent onto a port's orbit as it begins (the approach was
+## planned at departure: Navigation.add_approach).
+func _descent_moment(s) -> void:
+	var loc: Dictionary = s.location
+	if loc.get("status") != "transit" or loc.get("descent_called", false):
+		return
+	var app = loc.get("approach")
+	if app == null or not app.has("descent") or s.time_s < float(app["descent"]["t_d"]):
+		return
+	loc["descent_called"] = true
+	# Slow the clock for it, so the sweep down plays out to be watched.
+	s.time_scale = minf(s.time_scale, float(sim().data.balance["approach"]["descent_time_scale"]))
+	sim().emit("descent_begins", {"place": loc["to"], "body": sim().data.locations[loc["to"]]["location"]["parent"],
+		"corridor_in_s": float(app["t0"]) - s.time_s})
 
 
 ## Flyby drama: slow time for the run-in to periapsis, then for the pass itself,
@@ -144,6 +161,7 @@ func _depart(command: Dictionary) -> String:
 		"ramp_stage": 0, "ramp_scale": 1.0,
 	}
 	_port_waits(s.location)
+	Navigation.add_approach(s.location, sim().data, sim().ephemeris)
 	s.time_scale = 1.0
 	sim().emit("departed", {"from": here, "to": to, "arrive_t": route["arrive_t"], "fuel_t": burn, "fuel_trimmed_t": float(route["fuel_t"]) - burn})
 	return ""
@@ -246,6 +264,7 @@ func _depart_route(here: String, to: String, route_id: String, plan_t: float) ->
 		"peri_alt": float(opt["peri_alt"]), "peri_stage": 0,
 		"ramp_stage": 0, "ramp_scale": 1.0,
 	}
+	Navigation.add_approach(s.location, data, eph)
 	s.time_scale = 1.0
 	sim().emit("departed", {"from": here, "to": to, "arrive_t": arrive, "fuel_t": burn, "fuel_trimmed_t": float(opt["fuel_t"]) - burn, "route": opt["label"]})
 	return ""

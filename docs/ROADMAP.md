@@ -6,7 +6,7 @@ step done here when it lands on main.
 | # | Step | Depends on | Status |
 |---|---|---|---|
 | 1 | Turning with inertia | none | done |
-| 2 | Smooth rendezvous arrival | 1 | to do |
+| 2 | Smooth rendezvous arrival | 1 | done |
 | 3 | Bigger stations, docking bays and doors | 2 | to do |
 | 4 | Humpback cargo lander and pod types | none (can run alongside 2 and 3) | to do |
 | 5 | Satellite missions | 4 | to do |

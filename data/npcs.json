@@ -923,6 +923,11 @@
 			"{ship}, {operator}: on the ribbon from {from}, bound for {to} with {cargo}.",
 			"{ship} clamped on and climbing. {to} in a while. Nobody hurry.",
 			"{ship} away from {from} for {to}. Wheels warm, ribbon clean."
+		],
+		"copilot_descent": [
+			"Co-pilot: \"Plotting our way down onto {port}'s orbit. We'll fall in behind her and come up the corridor in {in}.\"",
+			"Co-pilot: \"{port} is coming round {body}. Matching her orbit now: we'll slot in a few kilometres astern. Corridor in {in}.\"",
+			"Co-pilot: \"Updated the arrival: down the well onto {port}'s orbit, phased to meet her from behind. No chasing. {in} to the corridor.\""
 		]
 	}
 }

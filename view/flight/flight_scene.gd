@@ -17,6 +17,7 @@ const SetPieces := preload("res://view/flight/set_pieces.gd")
 const SkyKit := preload("res://view/flight/sky.gd")
 const Autopilot := preload("res://view/flight/autopilot.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
+const Navigation := preload("res://sim/navigation.gd")
 const ProjectSystem := preload("res://sim/systems/project_system.gd")
 const DamageSystem := preload("res://sim/systems/damage_system.gd")
 const ShipAudio := preload("res://view/audio/ship_audio.gd")
@@ -140,12 +141,12 @@ func _ready() -> void:
 	audio = ShipAudio.new()
 	ship_node.add_child(audio)
 	audio.setup(model)
-	# Start out on the approach axis with a deterministic offset per station.
-	var h := hash(place_id)
-	var off := float(tune_dock["spawn_offset_m"])
-	ship_node.position = Vector3(off * (float(h % 7) / 3.0 - 1.0), off * (float((h / 7) % 5) / 2.0 - 1.0) * 0.5,
-		float(station["port_z"]) + maxf(float(tune_dock["spawn_distance_m"]), float(station["hub_radius"]) * 3.0) - nose_z)
-	ship_node.rotation = Vector3(0.05, -0.08, 0.6)
+	# Start where the transit view's final approach leaves us (Navigation.add_approach):
+	# on the docking axis at the hand-over point, nose to the port, rolled to the Sun as
+	# in transit, still closing at the hand-over speed.
+	ship_node.position = Vector3(0, 0, float(station["port_z"]) + Navigation.handover_m(sim.data, geom) - nose_z)
+	ship_node.basis = ShipRig.roll_to_sun(Vector3.FORWARD, body_dirs["sun"])
+	velocity = Vector3(0, 0, -float(sim.data.balance["approach"]["handover_speed_mps"]))
 	spin_angle = fposmod(float(sim.state.time_s) * spin_rate, TAU)
 	camera = Camera3D.new()
 	# Far enough for an elevator's counterweight beyond its planet on the sky shell.
@@ -170,7 +171,7 @@ func _ready() -> void:
 	hud = load("res://view/flight/flight_hud.gd").new(self)
 	hud.theme = UI.make_theme()
 	add_child(hud)
-	flash("On approach to %s. Line up on the amber corridor lights." % sim.data.places[place_id]["name"], UI.AMBER, 6.0)
+	flash("On the corridor to %s, closing at %.0f m/s. Match the spin and bring her in." % [sim.data.places[place_id]["name"], -velocity.z], UI.AMBER, 6.0)
 
 
 func _build_environment() -> void:
