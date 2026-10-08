@@ -75,6 +75,24 @@ static func accel_mps2(ship: Dictionary, data, extra_mass_t: float = 0.0) -> flo
 	return thrust_n(ship, data) / ((total_mass_t(ship, data) + extra_mass_t) * 1000.0)
 
 
+## How fast the ship can turn: [max rate rad/s, angular acceleration rad/s^2]. The
+## hull's figures (balance.turning defaults) hold at its stock dry mass; acceleration
+## falls as cargo, cabin and fuel add mass, so a laden hauler turns slower.
+static func turn_limits(ship: Dictionary, data) -> Array:
+	var cfg: Dictionary = data.balance["turning"]
+	var hull: Dictionary = data.ships.get(ship.get("hull", ""), {})
+	var rate := deg_to_rad(float(hull.get("turn_rate_dps", cfg["rate_dps"])))
+	var accel := deg_to_rad(float(hull.get("turn_accel_dps2", cfg["accel_dps2"])))
+	if hull.has("spine"):
+		var stock := float(data.modules[hull["spine"]]["mass_t"])
+		for slot in hull.get("modules", {}):
+			stock += float(data.modules[hull["modules"][slot]]["mass_t"])
+		var mass := total_mass_t(ship, data)
+		if mass > 0.0:
+			accel *= clampf(stock / mass, float(cfg["min_mass_factor"]), float(cfg["max_mass_factor"]))
+	return [rate, accel]
+
+
 ## What a module makes or draws regardless of damage: a drive's heat, and the
 ## electrical loads (a hit module still draws its power).
 const UNDAMAGED := ["heat_mw", "life_kw", "avionics_kw", "comms_kw", "sensor_kw", "mining_kw"]

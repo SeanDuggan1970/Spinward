@@ -3,6 +3,8 @@
 		"name": "Mule-class utility hauler",
 		"description": "Thirty years old, three previous owners, two refits. The truss is sound and the drive still lights. Everything else is negotiable.",
 		"spine": "mule_spine",
+		"turn_rate_dps": 14,
+		"turn_accel_dps2": 8,
 		"modules": {
 			"command.0": "cmd_pod_basic",
 			"cargo.0": "cargo_pod_s",
@@ -20,6 +22,8 @@
 		"name": "Cooperative bulk tanker",
 		"description": "Luna Cooperative workhorse: two bulk containers on a Mule truss, run by a crew of three and a very patient AI.",
 		"spine": "mule_spine",
+		"turn_rate_dps": 10,
+		"turn_accel_dps2": 5,
 		"modules": {
 			"command.0": "cmd_pod_basic",
 			"cargo.0": "cargo_pod_l",
@@ -37,6 +41,8 @@
 		"name": "Commons drone freighter",
 		"description": "Uncrewed and unhurried. Each one is a mind of The Commons that has chosen, for now, to haul freight.",
 		"spine": "mule_spine",
+		"turn_rate_dps": 14,
+		"turn_accel_dps2": 8,
 		"modules": {
 			"command.0": "drone_core",
 			"cargo.0": "cargo_pod_m",
@@ -54,6 +60,8 @@
 		"name": "Compact fast courier",
 		"description": "Small cargo cage, big drive, bigger radiators. Medicine and parts that cannot wait.",
 		"spine": "mule_spine",
+		"turn_rate_dps": 22,
+		"turn_accel_dps2": 14,
 		"modules": {
 			"command.0": "cmd_pod_basic",
 			"cargo.0": "cargo_pod_s",
@@ -70,6 +78,8 @@
 		"name": "Kernel passenger shuttle",
 		"description": "Settlers, visiting engineers and the occasional tourist, two dozen at a time.",
 		"spine": "mule_spine",
+		"turn_rate_dps": 18,
+		"turn_accel_dps2": 10,
 		"modules": {
 			"command.0": "cmd_pod_basic",
 			"cargo.0": "passenger_pod",
@@ -86,6 +96,8 @@
 		"name": "Commons outsize tender",
 		"description": "A drone freighter rebuilt round a flatbed cradle, for mirror segments and anything else that will not fit in a box.",
 		"spine": "mule_spine",
+		"turn_rate_dps": 14,
+		"turn_accel_dps2": 8,
 		"modules": {
 			"command.0": "drone_core",
 			"cargo.0": "cargo_cradle",
@@ -103,6 +115,8 @@
 		"name": "Compact heavy container ship",
 		"description": "Six standard boxes two abreast on a heavy keel, twin drives, and a crew of four who measure trips in weeks. Slow, but it moves a town's worth of ice.",
 		"spine": "heavy_spine",
+		"turn_rate_dps": 8,
+		"turn_accel_dps2": 3,
 		"modules": {
 			"command.0": "cmd_pod_basic",
 			"cargo.0": "cargo_pod_m",
@@ -128,6 +142,8 @@
 		"name": "Deep freighter",
 		"description": "A heavy keel built for months between ports: three boxes of cargo, a long-duration hab, four long-haul tanks and twin Mk3 drives. Crews sign on for a year at a time.",
 		"spine": "heavy_spine",
+		"turn_rate_dps": 6,
+		"turn_accel_dps2": 2,
 		"modules": {
 			"command.0": "cmd_pod_basic",
 			"cargo.0": "cargo_pod_m",
@@ -153,6 +169,8 @@
 		"name": "Sail freighter",
 		"description": "A Commons mind, two containers and a square of sunlight-catching film six hundred metres on a side. It never buys fuel and is never in a hurry.",
 		"spine": "mule_spine",
+		"turn_rate_dps": 8,
+		"turn_accel_dps2": 3,
 		"modules": {
 			"command.0": "drone_core",
 			"cargo.0": "cargo_pod_m",
@@ -181,6 +199,8 @@
 		"name": "Kestrel-class surface transporter",
 		"description": "An open spine with a command module forward, four sprung legs with lift thrusters, a passenger pod slung beneath and four main engines aft. It lands on anything airless that will take its weight; the crews love it.",
 		"spine": "kestrel_frame",
+		"turn_rate_dps": 30,
+		"turn_accel_dps2": 20,
 		"modules": {
 			"command.0": "kestrel_cmd",
 			"cargo.0": "kestrel_pod",

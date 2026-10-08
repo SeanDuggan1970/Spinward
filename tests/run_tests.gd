@@ -31,6 +31,7 @@ const Fitness := preload("res://sim/fitness.gd")
 const Insurance := preload("res://sim/insurance.gd")
 const ShipBill := preload("res://sim/ship_bill.gd")
 const CockpitPages := preload("res://view/ui/cockpit_pages.gd")
+const ShipRig := preload("res://view/flight/ship_rig.gd")
 
 const AU := 1.495978707e11
 const DAY := 86400.0
@@ -115,6 +116,7 @@ func _initialize() -> void:
 	test_yard_voucher_on_bill()
 	test_hitchhikers_and_wof()
 	test_upkeep_bites()
+	test_turning_with_inertia()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -3894,3 +3896,43 @@ func test_upkeep_bites() -> void:
 	var far_before: float = far.state.insurance["policy"]["paid_until_t"]
 	far.advance_game_time(60.0)
 	check(far.state.insurance["policy"]["paid_until_t"] == far_before, "and does not renew too early")
+
+
+## Turning with inertia (roadmap step 1): each hull has its own turn rate, a laden ship
+## turns slower, and a turn accelerates, coasts and brakes to stop lined up.
+func test_turning_with_inertia() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var light: Array = ShipStats.turn_limits(s.ship, d)
+	check(is_equal_approx(float(light[0]), deg_to_rad(float(d.ships["mule"]["turn_rate_dps"]))), "The Mule turns at its hull's rate")
+	s.ship["cargo"] = {"water_ice": 20.0}
+	var laden: Array = ShipStats.turn_limits(s.ship, d)
+	check(float(laden[1]) < float(light[1]) * 0.6, "A laden Mule swings round slower (%.3f vs %.3f rad/s^2)" % [laden[1], light[1]])
+	var courier := {"hull": "courier", "modules": d.ships["courier"]["modules"].duplicate(), "fuel_t": 0.0}
+	var heavy := {"hull": "heavy_freighter", "modules": d.ships["heavy_freighter"]["modules"].duplicate(), "fuel_t": 0.0}
+	check(float(ShipStats.turn_limits(courier, d)[1]) > float(ShipStats.turn_limits(heavy, d)[1]) * 2.0, "A courier turns faster than a heavy freighter")
+	var no_hull := ShipStats.turn_limits({"hull": "climber", "modules": d.ships["climber"]["modules"].duplicate()}, d)
+	check(is_equal_approx(float(no_hull[0]), deg_to_rad(float(d.balance["turning"]["rate_dps"]))), "A hull without figures uses the defaults")
+	# A flip: from rest to rest, never faster than the limit, ending lined up.
+	var rate := float(light[0])
+	var accel := float(light[1])
+	var f := Vector3.FORWARD
+	var w := Vector3.ZERO
+	var target := Vector3.BACK.rotated(Vector3.UP, 0.01)
+	var dt := 1.0 / 60.0
+	var elapsed := 0.0
+	var fastest := 0.0
+	while elapsed < 120.0 and not (f.angle_to(target) < 1e-3 and w == Vector3.ZERO):
+		var step: Array = ShipRig.turn_step(f, w, target, rate, accel, dt)
+		f = step[0]
+		w = step[1]
+		fastest = maxf(fastest, w.length())
+		elapsed += dt
+	var expect := ShipRig.turn_time(Vector3.FORWARD.angle_to(target), rate, accel)
+	check(f.angle_to(target) < 1e-3 and w == Vector3.ZERO, "A turn stops lined up")
+	check(fastest <= rate + 1e-6, "A turn never exceeds the hull's rate")
+	check(absf(elapsed - expect) < expect * 0.1 + 0.2, "A flip takes about as long as turn_time says (%.1f s vs %.1f s)" % [elapsed, expect])
+	# Dead astern: it still picks a way round.
+	var astern: Array = ShipRig.turn_step(Vector3.FORWARD, Vector3.ZERO, Vector3.BACK, rate, accel, dt)
+	check((astern[1] as Vector3).length() > 0.0, "A turn dead astern still starts")

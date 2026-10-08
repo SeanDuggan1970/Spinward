@@ -29,6 +29,40 @@ static func roll_to_sun(forward: Vector3, sun: Vector3) -> Basis:
 	return Basis.looking_at(f, up.normalized())
 
 
+## One step of a turn with inertia: swing `forward` toward `target`, accelerating at
+## up to `accel` (rad/s^2) to at most `rate` (rad/s), coasting, then braking so it
+## stops lined up. omega is the angular velocity (a world vector). Returns
+## [forward, omega].
+static func turn_step(forward: Vector3, omega: Vector3, target: Vector3, rate: float, accel: float, dt: float) -> Array:
+	var f := forward.normalized()
+	var to := target.normalized()
+	var angle := f.angle_to(to)
+	var axis := f.cross(to)
+	if axis.length() < 1e-6:
+		# Dead ahead or dead astern: keep any turn already going, else pick a side.
+		axis = omega if omega.length() > 1e-6 else f.cross(Vector3.UP if absf(f.y) < 0.98 else Vector3.RIGHT)
+	axis = axis.normalized()
+	# The fastest rate from which we can still stop in the angle left.
+	var want := axis * minf(rate, sqrt(2.0 * accel * angle))
+	omega = omega.move_toward(want, accel * dt)
+	# Only swinging the nose matters; spin about it is the roll's business.
+	omega -= f * omega.dot(f)
+	if omega.length() > 1e-9:
+		f = f.rotated(omega.normalized(), omega.length() * dt)
+	if angle < 1e-3 and omega.length() < accel * dt:
+		return [to, Vector3.ZERO]
+	return [f.normalized(), omega]
+
+
+## Seconds to swing through `angle` from rest to rest.
+static func turn_time(angle: float, rate: float, accel: float) -> float:
+	if accel <= 0.0:
+		return INF
+	if angle < rate * rate / accel:
+		return 2.0 * sqrt(angle / accel)
+	return angle / rate + rate / accel
+
+
 ## Turn the panels and dish. ship_basis: the model's world basis (may be scaled);
 ## sun and target: world directions from the ship. dt < 0 snaps straight there.
 static func aim(rig: Dictionary, ship_basis: Basis, sun: Vector3, target: Vector3, dt: float) -> void:
