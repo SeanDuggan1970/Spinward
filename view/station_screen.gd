@@ -25,6 +25,7 @@ const Fitness := preload("res://sim/fitness.gd")
 const Insurance := preload("res://sim/insurance.gd")
 const ShipBill := preload("res://sim/ship_bill.gd")
 const SiteSystem := preload("res://sim/systems/site_system.gd")
+const Badges := preload("res://sim/badges.gd")
 const DAY := 86400.0
 
 var sim
@@ -233,6 +234,19 @@ func _market_tab(place_id: String) -> Control:
 	keep.focus_mode = Control.FOCUS_NONE
 	keep.toggled.connect(func(on): keep_reserve = on; refresh())
 	parts[1].add_child(keep)
+	# A bar: stand the room a round. It gets you remembered.
+	var cost := Badges.round_cost(d, place_id)
+	if cost >= 0.0:
+		var bar: Dictionary = d.places[place_id]["bar"]
+		var bp := UI.panel(String(bar["name"]).to_upper())
+		var brow := HBoxContainer.new()
+		brow.add_theme_constant_override("separation", 16)
+		bp[1].add_child(brow)
+		var said := UI.label("%d in tonight. A round for the house is %s." % [int(bar["patrons"]), UI.money(cost)], UI.TEXT, 13)
+		said.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		brow.add_child(said)
+		brow.add_child(UI.button("Buy a round", send.bind({"type": "buy_round"}), s.credits >= cost))
+		parts[1].add_child(bp[0])
 	return parts[0]
 
 
@@ -267,11 +281,12 @@ func _departures_tab(place_id: String) -> Control:
 	var parts := _scroll("Departures")
 	var s = sim.state
 	var d = sim.data
-	# A ribbon down to the surface (or, at the bottom, back up to your ship).
-	if not ElevatorSystem.line_here(d, place_id).is_empty():
-		parts[1].add_child(_elevator_panel(place_id))
-		if d.places[place_id].has("foot_of"):
-			return parts[0]
+	# A ribbon down to the surface and out to the counterweight (or, at either end, back
+	# to your ship).
+	for ride in ElevatorSystem.rides_here(d, place_id):
+		parts[1].add_child(_elevator_panel(place_id, ride))
+	if d.places[place_id].has("foot_of"):
+		return parts[0]
 	parts[1].add_child(UI.label("Plot routes and your co-pilot flies trial courses under real Earth and Moon gravity: Express burns hard, Economy lets gravity do the work, lunar flybys are for the view (and occasionally the fuel). Prices elsewhere are what you last saw there, or what you have been told: buy tips on the Tip Line.", UI.DIM, 13))
 	# Local destinations first, then the long hauls across the Sun's domain.
 	var dests: Array = d.places.keys().filter(func(to): return to != place_id and Perks.place_open(s, d, to))
@@ -320,37 +335,40 @@ func _departures_tab(place_id: String) -> Control:
 
 
 ## Riding the elevator from here: where it goes, how long, the fare for what you carry.
-func _elevator_panel(place_id: String) -> Control:
+func _elevator_panel(place_id: String, here: Dictionary) -> Control:
 	var d = sim.data
 	var s = sim.state
-	var here := ElevatorSystem.line_here(d, place_id)
 	var line: Dictionary = here["line"]
-	var to_name: String = d.places[here["to"]]["name"]
-	var p := UI.panel("%s  ·  %s" % [String(line["name"]).to_upper(), ("down to " + to_name) if here["down"] else ("up to " + to_name)])
+	var to: String = here["to"]
+	var to_name: String = d.places[to]["name"]
+	var dir: String = here["dir"]
+	var heading := {"down": "down to ", "out": "out to ", "up": "up to ", "in": "back in to "}
+	var p := UI.panel("%s  ·  %s" % [String(line["name"]).to_upper(), heading[dir] + to_name])
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 16)
 	p[1].add_child(row)
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(info)
-	if here["down"]:
-		var town := UI.label(d.places[here["to"]]["description"], UI.DIM, 12)
+	if dir in ["down", "out"]:
+		var town := UI.label(d.places[to]["description"], UI.DIM, 12)
 		town.autowrap_mode = TextServer.AUTOWRAP_WORD
 		town.custom_minimum_size = Vector2(200, 0)
 		info.add_child(town)
-		var via := UI.label(String(line.get("via", "")) + " Your ship stays docked here; your hold rides down with you in a climber container.", UI.TEXT, 12)
+		var via := UI.label(String(line.get("via", "")) + " Your ship stays docked here; your hold rides with you in a climber container.", UI.TEXT, 12)
 		via.autowrap_mode = TextServer.AUTOWRAP_WORD
 		via.custom_minimum_size = Vector2(200, 0)
 		info.add_child(via)
 	else:
-		info.add_child(UI.label("Your ship is docked at %s. Your hold rides up with you." % to_name, UI.TEXT, 13))
-	var fare := ElevatorSystem.fare(d, s, place_id)
+		info.add_child(UI.label("Your ship is docked at %s. Your hold rides with you." % to_name, UI.TEXT, 13))
+	var fare := ElevatorSystem.fare(d, s, place_id, to)
 	info.add_child(UI.label("%s ride   ·   %d km   ·   fare %s (a seat, and %d cr a tonne for the %.1f t you carry)" % [
 		UI.duration(float(line["hours"]) * 3600.0), int(line["km"]), UI.money(fare), int(line["fare_per_t"]), ShipStats.cargo_t(s.ship)]))
-	var why := ElevatorSystem.blocked(d, s, place_id)
+	var why := ElevatorSystem.blocked(d, s, place_id, to)
 	if why != "":
 		info.add_child(UI.label(why.capitalize(), UI.WARN, 13))
-	row.add_child(UI.button("Ride down" if here["down"] else "Ride up", send.bind({"type": "ride_elevator"}), why == ""))
+	var verbs := {"down": "Ride down", "out": "Ride out", "up": "Ride up", "in": "Ride in"}
+	row.add_child(UI.button(verbs[dir], send.bind({"type": "ride_elevator", "to": to}), why == ""))
 	return p[0]
 
 
@@ -423,6 +441,13 @@ func _contracts_tab(place_id: String) -> Control:
 			known.append("%s: %s" % [op, Contracts.tier(d, float(s.reputation[op]))])
 	if not known.is_empty():
 		parts[1].add_child(UI.label("Elsewhere: " + "  ·  ".join(known), UI.DIM, 12))
+	# Badges: what you are known for, and how much it gets you noticed.
+	var earned: Dictionary = s.badges.get("earned", {})
+	if not earned.is_empty():
+		var names := []
+		for id in earned:
+			names.append(String(d.badges["badges"].get(id, {}).get("name", id)))
+		parts[1].add_child(UI.label("Known for: %s  (renown %d)" % ["  ·  ".join(names), int(Badges.renown(s, d))], UI.GOOD, 12))
 	var letters: Array = s.story.get("messages", [])
 	if not letters.is_empty():
 		var corr := UI.panel("Correspondence")

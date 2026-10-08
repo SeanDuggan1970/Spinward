@@ -9,6 +9,7 @@
 ## they dock, and some jobs are only heard of through rumours (tip_system.gd).
 extends "res://sim/systems/system.gd"
 
+const Badges := preload("res://sim/badges.gd")
 const Contracts := preload("res://sim/contracts.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
 const Favours := preload("res://sim/favours.gd")
@@ -106,7 +107,8 @@ func _maybe_approach(place: String) -> void:
 	var board: Array = s.contracts["board"].get(place, [])
 	if board.any(func(o): return o["channel"] == "approach"):
 		return
-	if _rng.randf() >= float(ap["chance"]):
+	# Renown (badges) gets you noticed: clients ask a well-known pilot by name more often.
+	if _rng.randf() >= float(ap["chance"]) * Badges.chance_mult(s, data, "approach_per_point"):
 		return
 	var rep := Contracts.rep_of(s, client)
 	var kind := Contracts.pick_kind(data, _rng, func(k): return float(data.contracts["kinds"][k].get("min_rep", 0.0)) <= rep)

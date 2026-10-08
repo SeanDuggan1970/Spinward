@@ -14,6 +14,7 @@
 ## boards them, mends, speaks, and sets them down.
 extends "res://sim/systems/system.gd"
 
+const Badges := preload("res://sim/badges.gd")
 const Favours := preload("res://sim/favours.gd")
 const Fitness := preload("res://sim/fitness.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
@@ -150,7 +151,8 @@ func _maybe_hiker(place: String) -> void:
 	if s.time_s < float(s.favours["next_t"].get(place, 0.0)):
 		return
 	s.favours["next_t"][place] = s.time_s + float(cfg["cooldown_days"]) * DAY
-	if _rng.randf() >= float(cfg["chance"]):
+	# Renown (badges) gets you noticed: more ask a well-known pilot.
+	if _rng.randf() >= float(cfg["chance"]) * Badges.chance_mult(s, data, "hitchhiker_per_point"):
 		return
 	var waiting: Array = s.favours["waiting"].get(place, [])
 	if waiting.size() >= int(cfg["max_waiting"]):

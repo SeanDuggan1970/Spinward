@@ -26,6 +26,8 @@ var story: Dictionary = {}
 var contracts: Dictionary = {}
 ## Rewards in kind, hitchhikers and engine tunes (data/favours.json).
 var favours: Dictionary = {}
+## Badges and renown (data/badges.json).
+var badges: Dictionary = {}
 ## The Spaceline news feed (data/news.json).
 var news: Dictionary = {}
 ## Every control and its default keys and gamepad buttons (data/controls.json); view-only,
@@ -60,6 +62,7 @@ func load_from(root: String) -> void:
 	sites = read_json(root + "/sites.json") if FileAccess.file_exists(root + "/sites.json") else {}
 	story = read_json(root + "/story.json") if FileAccess.file_exists(root + "/story.json") else {}
 	favours = read_json(root + "/favours.json") if FileAccess.file_exists(root + "/favours.json") else {}
+	badges = read_json(root + "/badges.json") if FileAccess.file_exists(root + "/badges.json") else {}
 	news = read_json(root + "/news.json") if FileAccess.file_exists(root + "/news.json") else {}
 	controls = read_json(root + "/controls.json") if FileAccess.file_exists(root + "/controls.json") else {}
 	ship_economy = read_json(root + "/ship_economy.json")
@@ -112,6 +115,12 @@ func validate() -> Array[String]:
 				problems.append("place %s: elevator built by unknown project" % id)
 		if p.has("foot_of") and not places.get(p["foot_of"], {}).has("elevator"):
 			problems.append("place %s: foot of %s, which has no elevator" % [id, p["foot_of"]])
+		if p.has("elevator") and p["elevator"].has("counterweight"):
+			var cw: String = p["elevator"]["counterweight"].get("place", "")
+			if not places.has(cw) or places[cw].get("foot_of", "") != id or not places[cw].get("counterweight", false):
+				problems.append("place %s: counterweight %s must be a place marked counterweight and foot_of it" % [id, cw])
+		if "bar" in p.get("services", []) and not p.has("bar"):
+			problems.append("place %s: a bar service needs a bar (name, patrons, round_cr)" % id)
 		var market: Dictionary = p.get("market", {})
 		for g in market:
 			if not goods.has(g):
@@ -335,6 +344,11 @@ func validate() -> Array[String]:
 	for c in liveries.get("containers", []):
 		if not Color.html_is_valid(String(c)):
 			problems.append("livery container colour %s is not a colour" % c)
+	for id in badges.get("badges", {}):
+		var b: Dictionary = badges["badges"][id]
+		for place in b.get("visit", []) + b.get("visit_all", []) + b.get("at", []):
+			if not places.has(place):
+				problems.append("badge %s: unknown place %s" % [id, place])
 	return problems
 
 

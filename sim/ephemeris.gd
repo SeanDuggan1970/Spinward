@@ -3,7 +3,8 @@
 ## Places are "orbit" (elements around a parent body), "lagrange" (a point of a
 ## two-body system, solved from the circular restricted three-body model) or "surface"
 ## (a town on a body: at lat/lon, turning with its day, or always under the body it
-## faces, like the Moon's near side under Earth).
+## faces, like the Moon's near side under Earth; with radius_m, held that far out
+## instead, as an elevator's counterweight is).
 extends RefCounted
 
 const V := preload("res://sim/v3.gd")
@@ -136,7 +137,9 @@ func _place_position(id: String, place: Dictionary, t: float) -> Array:
 func surface_point(where: Dictionary, t: float) -> Array:
 	var parent: String = where["parent"]
 	var c := position(parent, t)
-	var r := float(bodies[parent]["radius_m"])
+	# radius_m: from the body's centre, for a point held above the surface (an
+	# elevator's counterweight, turning with the world); else on the surface.
+	var r := float(where.get("radius_m", bodies[parent]["radius_m"]))
 	if where.has("facing"):
 		return V.add(c, V.scale(V.normalized(V.sub(position(where["facing"], t), c)), r))
 	var lat := deg_to_rad(float(where.get("lat_deg", 0.0)))

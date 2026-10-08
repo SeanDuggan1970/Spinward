@@ -459,35 +459,63 @@ static func _elevator(mesh: MeshInstance3D, spec: Dictionary, radius: float, vie
 	ribbon.emission_enabled = true
 	ribbon.emission = Color("d8d2c4")
 	ribbon.emission_energy_multiplier = 0.6
-	# A real ribbon is a metre wide; drawn at least a pixel or so wide from where it is seen.
+	# A real ribbon is a metre wide; drawn at least a pixel or so wide from where it is
+	# seen, tapered as the real ones are: widest at the anchor, where it carries most.
 	var w := maxf(radius * 0.0025, mesh.position.length() * 0.0022)
-	var line := MeshInstance3D.new()
-	var bm := BoxMesh.new()
-	bm.size = Vector3(w, radius * (high - low), w)
-	line.mesh = bm
-	line.material_override = ribbon
-	line.position = Vector3(0, radius * (low + high) * 0.5, 0)
-	holder.add_child(line)
-	var anchor := MeshInstance3D.new()
-	var am := BoxMesh.new()
-	am.size = Vector3.ONE * radius * 0.03
-	anchor.mesh = am
-	anchor.material_override = _glow(Color("f0a030"), 1.6)
-	anchor.position = Vector3(0, radius * top, 0)
-	holder.add_child(anchor)
-	var counter := MeshInstance3D.new()
-	var cmesh := BoxMesh.new()
-	cmesh.size = Vector3.ONE * radius * 0.045
-	counter.mesh = cmesh
-	counter.material_override = _glow(Color("c8c0b0"), 0.8)
-	counter.position = Vector3(0, radius * high, 0)
-	holder.add_child(counter)
+	var widths := {1.0: w * 0.35, top: w * 0.8, cw: w * 0.5}
+	var spans := []
+	if low < top:
+		spans.append([low, minf(top, high)])
+	if high > top:
+		spans.append([maxf(top, low), high])
+	for sp in spans:
+		var a := float(sp[0])
+		var b := float(sp[1])
+		var seg := MeshInstance3D.new()
+		var cm := CylinderMesh.new()
+		cm.radial_segments = 6
+		cm.rings = 1
+		cm.height = radius * (b - a)
+		cm.bottom_radius = _ribbon_width(widths, a, top, cw) * 0.5
+		cm.top_radius = _ribbon_width(widths, b, top, cw) * 0.5
+		seg.mesh = cm
+		seg.material_override = ribbon
+		seg.position = Vector3(0, radius * (a + b) * 0.5, 0)
+		holder.add_child(seg)
+	# The anchor: a stacked station threaded on the ribbon, its modules lit.
+	var block := radius * 0.012
+	for k in 3:
+		var mod := MeshInstance3D.new()
+		var mm := CylinderMesh.new()
+		mm.top_radius = block * (1.0 if k != 1 else 0.75)
+		mm.bottom_radius = mm.top_radius
+		mm.height = block * 1.6
+		mm.radial_segments = 10
+		mod.mesh = mm
+		mod.material_override = _glow(Color("f0a030") if k != 1 else Color("e8e0d0"), 1.6)
+		mod.position = Vector3(0, radius * top + block * 1.7 * float(k - 1), 0)
+		holder.add_child(mod)
+	# The counterweight: a lumpy mass of rock and slag, with a warning light.
+	var lump := radius * 0.018
+	for k in 3:
+		var off := Vector3(lump * 0.6 * float(k - 1), lump * (0.3 if k == 1 else -0.2), lump * (0.4 if k == 2 else -0.3))
+		holder.add_child(_ball(lump * (1.0 if k == 1 else 0.7), _glow(Color("c8c0b0"), 0.8), Vector3(0, radius * high, 0) + off))
+	if p >= 1.0:
+		holder.add_child(_ball(lump * 0.25, _glow(Color("ff3a2a"), 3.0), Vector3(0, radius * high + lump * 1.3, 0)))
 	if p < 1.0 and low > 1.0:
 		holder.add_child(_ball(radius * 0.012, _glow(Color("40ff60"), 4.0), Vector3(0, radius * low, 0)))
 	if p >= 1.0:
 		for i in int(spec.get("climbers", 3)):
 			holder.add_child(_ball(radius * 0.008, _glow(Color("fff0c0"), 4.0), Vector3(0, radius * lerpf(1.05, top, rng.randf()), 0)))
 		holder.add_child(_ball(radius * 0.01, _glow(Color("ff3a2a"), 3.0), Vector3(0, radius * 1.002, 0)))
+
+
+## The ribbon's drawn width at x body radii out: from the foot's to the anchor's, then
+## to the tip's.
+static func _ribbon_width(widths: Dictionary, x: float, top: float, cw: float) -> float:
+	if x <= top:
+		return lerpf(float(widths[1.0]), float(widths[top]), clampf((x - 1.0) / maxf(top - 1.0, 1e-6), 0.0, 1.0))
+	return lerpf(float(widths[top]), float(widths[cw]), clampf((x - top) / maxf(cw - top, 1e-6), 0.0, 1.0))
 
 
 ## An orbital ring round the equator: a bright thread at radius_r, built in arcs

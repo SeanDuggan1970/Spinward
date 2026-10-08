@@ -59,6 +59,37 @@ Plan: a curated catalog of about 30 major bodies plus a hand-picked set of named
 - **Physics:** since Godot 4.6, Jolt is the default 3D physics engine for new projects ([GDQuest](https://www.gdquest.com/library/godot_4_6_workflow_changes/)). We use it only for local, close-range collisions and docking. Orbits are our own maths.
 - **Language:** start in GDScript. The simulation is isolated so hot spots, such as the economy tick or a many-body orbit update, can move to C# (Godot .NET) or GDExtension later without touching gameplay or UI.
 
+## 6. Space elevator counterweights
+
+- **Lunar elevator through L1** (the Luna Line): the ribbon runs from the near side up
+  through Earth-Moon L1, about 58,000 km from the Moon. It needs a counterweight
+  beyond L1, toward Earth, to stay taut; how far depends on its mass.
+  - About 26,000 km past L1 holds 1,000 kg of counterweight per kilogram hung just
+    above the surface ([Wikipedia: Lunar space elevator](https://en.wikipedia.org/wiki/Lunar_space_elevator)).
+  - Light designs run the ribbon on much further, about 220,000 km by one account
+    ([Space Settlement Progress](https://spacesettlementprogress.com/tag/l1-lagrange-point/)).
+  - Pearson et al. is the primary source ([record](https://cris.tau.ac.il/en/publications/the-lunar-space-elevator-2/)); not yet read in full.
+  - **Our choice:** a heavy counterweight (Ballast Point) 26,000 km past L1.
+- **Synchronous elevators** (the Piazzi Stalk on Ceres, the Pavonis Line on Mars):
+  the counterweight sits beyond synchronous height. We use the sky dressing's
+  `counter_r`: 3.7 Ceres radii, 550 km past the anchor; and 8.2 Mars radii, 7,400 km past.
+- **What you weigh there** (the ride view works it out): gravity less the spin, or on
+  the Luna Line, less Earth's pull in the turning Earth-Moon frame.
+  - Ballast Point: about 0.17 milligee outward. Earth only just out-pulls the Moon, so a dropped spanner drifts slowly to the ceiling.
+  - Stalk Top: about 4 milligee outward.
+  - Pavonis Ballast: about 9 milligee outward.
+
+## 7. Elevator design references (for the look)
+
+- **Climber:** opposed wheel pairs pinching the tether (friction drive, no capstan). Five pairs and ten motors lift a 20 t climber with 9 t of payload. Climbing speeds of 200 to 300 km/h; climbers' Coriolis-driven oscillations of the tether must be damped, or offset by other climbers ([ISEC 2023 study](https://www.isec.org/2023-study); [ISEC climber slides](https://www.isec.org/s/isec-slides-2022-bartoszek-climbers.pdf); [JBIS tether paper](https://www.isec.org/s/JBIS-2-Building-the-Space-Elevator-Tether.pdf)).
+- **Ribbon:** Edwards' wide, thin ribbon survives micrometeoroids better than a cable. It tapers, widest at synchronous height: one design runs 0.31 m at the ground to 1.55 m at GEO, 10 µm thick ([Wikipedia](https://en.wikipedia.org/wiki/Space_elevator)).
+- **Power:** a laser on the ground beams up to a photocell array under the climber (Edwards).
+- **Anchor and counterweight:**
+  - Obayashi's 2050 concept has a vertical modular station at GEO with solar power beside it, and a counterweight beyond that doubles as a launch gate for deep space ([Obayashi](https://www.obayashi.co.jp/en/special/space_elevator.html)).
+  - ISEC's apex anchor carries reels, thrusters and command modules ([ISEC lexicon](https://isec.org/lexicon)).
+  - A captured asteroid as counterweight ([Dezeen](https://www.dezeen.com/2024/01/09/jordan-william-hughes-space-elevator/amp/)).
+- **Fiction:** in Red Mars, cars go up and down together; in Clarke's *The Fountains of Paradise*, the elevator rises from a mountain temple ([Space elevators in fiction](https://en.wikipedia.org/wiki/Space_elevators_in_fiction)).
+
 ## Open research for later passes
 
 - Readable orbit-planning UI patterns (KSP manoeuvre nodes versus one-click "AI plot course").

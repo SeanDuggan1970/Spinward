@@ -14,12 +14,26 @@ const Kit := preload("res://view/flight/kit.gd")
 const Bindings := preload("res://view/bindings.gd")
 const SkyKit := preload("res://view/flight/sky.gd")
 const UI := preload("res://view/ui/ui_kit.gd")
+const ClimberModel := preload("res://view/flight/climber_model.gd")
 
 ## The body sits this far below on the sky, whatever the altitude: only its size changes.
 const SKY := 50000.0
 const NEAR_RIBBON_M := 3000.0
 const PLATE_SPACING_M := 50.0
 const G0 := 9.80665
+## The tape's width (m): narrow at the foot, widest at the anchor where it carries
+## the most, narrowing again to the counterweight (after Edwards and ISEC's tapered
+## ribbons). Two guard strands run alongside, tied across every 100 m.
+const TAPE_FOOT_M := 0.4
+const TAPE_ANCHOR_M := 1.6
+const TAPE_TIP_M := 0.8
+const GUARD_GAP_M := 0.7
+const TAPE_SEGMENTS := 60
+## A slow wave travels the ribbon (climbing stirs it; paired climbers damp it): metres
+## of sway, metres of wavelength, and real seconds to pass.
+const WAVE_M := 0.5
+const WAVE_LENGTH_M := 2400.0
+const WAVE_PERIOD_S := 9.0
 
 var sim
 var camera: Camera3D
@@ -30,9 +44,15 @@ var _line: Dictionary
 var _body := ""
 var _radius := 1.0
 var _top_m := 0.0
+## Anchor to counterweight, metres.
+var _leg_m := 0.0
 var _planet: MeshInstance3D
 var _planet_r0 := 1.0
 var _plates: Array = []
+var _segments: Array = []
+var _drive: Dictionary = {}
+var _passing: Dictionary = {}
+var _beam: Node3D
 var _streak: MeshInstance3D
 var _other: Node3D
 var _hud: Label
@@ -52,6 +72,7 @@ func _ready() -> void:
 	_body = _line["body"]
 	_radius = float(sim.data.bodies[_body]["radius_m"])
 	_top_m = float(_line["km"]) * 1000.0
+	_leg_m = float(_line.get("counterweight", {}).get("km", 0.0)) * 1000.0
 	add_child(SkyKit.environment())
 	var eph = sim.ephemeris
 	var t: float = sim.state.time_s
@@ -99,33 +120,65 @@ static func _up_basis(up: Vector3) -> Basis:
 	return Basis(x, y, x.cross(y).normalized())
 
 
-## The ribbon at true size near the cab: a metre-wide tape with marker plates, a
-## streak for when time compression smears them, and a climber coming the other way.
+## The ribbon at true size near the cab: a tapered tape between two guard strands,
+## marker plates and ties, a streak for when time compression smears them, our own
+## traction head and power dish below the window, and a climber coming the other way.
 func _build_ribbon() -> void:
-	# A carbon-nanotube tape: dark, with a dull sheen, half a metre wide.
+	# A carbon-nanotube tape: dark, with a dull sheen.
 	var tape := Kit.paint(Color("6a7078"), {"finish": 1, "wear": 0.05, "mismatch": 0.0, "panel_m": 6.0, "metallic": 0.6, "roughness": 0.35})
-	add_child(Kit.box(Vector3(0.03, NEAR_RIBBON_M * 2.0, 0.5), tape))
-	# The cab's traction head, below the window, where the wheels grip the ribbon.
-	add_child(Kit.box(Vector3(0.9, 1.6, 1.2), Kit.mat("yellow"), Vector3(0.0, -9.0, 0.0)))
-	for k in 2:
-		add_child(Kit.cylinder(0.45, 0.3, Kit.mat("dark"), Vector3(0.0, -9.0 + (0.5 if k == 0 else -0.5), 0.55), 16))
-	add_child(Kit.beacon(Color("ff3a2a"), Vector3(0.0, -8.1, 0.0), 0.12, 1.4))
+	var guard := Kit.mat("steel")
+	var seg_len := NEAR_RIBBON_M * 2.0 / float(TAPE_SEGMENTS)
+	for i in TAPE_SEGMENTS:
+		var seg := Node3D.new()
+		seg.position = Vector3(0, -NEAR_RIBBON_M + seg_len * (float(i) + 0.5), 0)
+		seg.add_child(Kit.box(Vector3(0.03, seg_len, 1.0), tape))
+		for side in [-1.0, 1.0]:
+			var g := Kit.box(Vector3(0.05, seg_len, 0.05), guard)
+			g.set_meta("side", side)
+			seg.add_child(g)
+		add_child(seg)
+		_segments.append(seg)
+	# Our own traction head, below the window, its wheels pinching the tape.
+	_drive = ClimberModel.build(String(_line.get("power", "beam")), "yellow", 1.0, true)
+	_drive["node"].position = Vector3(0.0, -9.0, 0.0)
+	add_child(_drive["node"])
 	var lamp := Kit.glow(Color("f0a030"), 3.0)
 	for i in int(NEAR_RIBBON_M * 2.0 / PLATE_SPACING_M):
 		var plate := Node3D.new()
 		plate.add_child(Kit.box(Vector3(0.08, 0.25, 0.7), Kit.mat("yellow")))
 		plate.add_child(Kit.sphere(0.08, lamp, Vector3(0.06, 0, 0.32)))
+		# Every other plate carries a tie across to the guard strands.
+		if i % 2 == 0:
+			var tie := Kit.box(Vector3(0.04, 0.04, 1.0), guard)
+			tie.set_meta("tie", true)
+			plate.add_child(tie)
 		add_child(plate)
 		_plates.append(plate)
 	var streak_mat := Kit.glow(Color("f0a030"), 0.6)
 	_streak = Kit.box(Vector3(0.06, NEAR_RIBBON_M * 2.0, 0.06), streak_mat, Vector3(0.06, 0, 0.32))
 	add_child(_streak)
-	_other = Node3D.new()
-	_other.add_child(Kit.box(Vector3(5.0, 6.0, 4.0), Kit.mat("yellow"), Vector3(-3.0, 0, 0)))
-	_other.add_child(Kit.box(Vector3(4.0, 8.0, 4.0), Kit.mat("grey"), Vector3(-3.0, -7.5, 0)))
-	_other.add_child(Kit.beacon(Color("ff3a2a"), Vector3(-3.0, 3.4, 0), 0.4, 1.2))
-	_other.add_child(Kit.beacon(Color.WHITE, Vector3(-3.0, -12.0, 0), 0.3, 0.8, 0.5))
+	# Power beamed up from the foot shows as a faint column below the dish.
+	if String(_line.get("power", "beam")) == "beam":
+		_beam = Kit.box(Vector3(3.0, NEAR_RIBBON_M, 3.0), Kit.glow(Color(0.55, 0.75, 1.0), 0.25), Vector3(0, -NEAR_RIBBON_M * 0.5 - 20.0, 0))
+		add_child(_beam)
+	# A climber coming the other way, on the far side of the tape.
+	_passing = ClimberModel.build(String(_line.get("power", "beam")), "orange")
+	_other = _passing["node"]
+	_other.rotation = Vector3(0, PI, 0)
 	add_child(_other)
+
+
+## The tape's width at height h above the foot.
+func tape_width(h: float) -> float:
+	if h <= _top_m:
+		return lerpf(TAPE_FOOT_M, TAPE_ANCHOR_M, clampf(h / maxf(_top_m, 1.0), 0.0, 1.0))
+	return lerpf(TAPE_ANCHOR_M, TAPE_TIP_M, clampf((h - _top_m) / maxf(_leg_m, 1.0), 0.0, 1.0))
+
+
+## The ribbon's sway at a point s metres up it (relative to where we hold it, at the cab).
+func _sway(s: float, h: float) -> float:
+	var phase := TAU * Time.get_ticks_msec() / 1000.0 / WAVE_PERIOD_S
+	return WAVE_M * (sin(TAU * (s + h) / WAVE_LENGTH_M - phase) - sin(TAU * h / WAVE_LENGTH_M - phase))
 
 
 func _build_hud() -> void:
@@ -144,11 +197,23 @@ func _build_hud() -> void:
 	root.add_child(_hud)
 
 
-## Altitude above the foot now, in metres: steady speed, easing at each end.
+## Altitude above the foot now, in metres: steady speed, easing at each end. Out to
+## the counterweight (and back in), the ride runs on from the anchor.
 func altitude(t: float) -> float:
 	var f := clampf((t - float(_loc["depart_t"])) / maxf(float(_loc["arrive_t"]) - float(_loc["depart_t"]), 1.0), 0.0, 1.0)
 	var p := lerpf(f, f * f * (3.0 - 2.0 * f), 0.25)
-	return _top_m * (1.0 - p) if _loc["down"] else _top_m * p
+	match _dir():
+		"out":
+			return _top_m + _leg_m * p
+		"in":
+			return _top_m + _leg_m * (1.0 - p)
+		"down":
+			return _top_m * (1.0 - p)
+	return _top_m * p
+
+
+func _dir() -> String:
+	return String(_loc.get("dir", "down" if _loc["down"] else "up"))
 
 
 ## What a person weighs here, in gees: gravity less the swing of the spin (or, on the
@@ -190,27 +255,57 @@ func _update(dt: float) -> void:
 	_planet.scale = Vector3.ONE * (_radius * k / _planet_r0)
 	# Plates fixed on the ribbon scroll past; smeared to a streak when time runs fast.
 	var fast := moved > PLATE_SPACING_M * 0.4
+	var tw := tape_width(h)
+	for seg in _segments:
+		var y: float = seg.position.y
+		seg.position.x = _sway(y, h)
+		seg.get_child(0).scale.z = tw
+		for g in seg.get_children():
+			if g.has_meta("side"):
+				g.position.z = float(g.get_meta("side")) * (tw * 0.5 + GUARD_GAP_M)
 	for i in _plates.size():
-		_plates[i].position = Vector3(0.03, fposmod(float(i) * PLATE_SPACING_M - h, NEAR_RIBBON_M * 2.0) - NEAR_RIBBON_M, 0)
+		var y := fposmod(float(i) * PLATE_SPACING_M - h, NEAR_RIBBON_M * 2.0) - NEAR_RIBBON_M
+		_plates[i].position = Vector3(0.03 + _sway(y, h), y, 0)
 		_plates[i].visible = not fast
+		for c in _plates[i].get_children():
+			if c.has_meta("tie"):
+				c.scale.z = tw + 2.0 * GUARD_GAP_M
 	_streak.visible = fast
+	# Our wheels roll with the climb (a blur under time compression, so leave them be).
+	if not fast and _last_h >= 0.0:
+		ClimberModel.roll(_drive, moved * (1.0 if _dir() in ["up", "out"] else -1.0))
 	# A climber going the other way passes every so often (at sane time rates).
 	var meet := fposmod(h * 2.0 + 1200.0, 40000.0) - 20000.0
-	_other.position = Vector3(0, meet if not _loc["down"] else -meet, 0)
+	var oy: float = meet if not _loc["down"] else -meet
+	_other.position = Vector3(_sway(oy, h), oy, 0)
 	_other.visible = not fast and absf(meet) < NEAR_RIBBON_M
+	if _other.visible:
+		ClimberModel.roll(_passing, 2.0 * moved)
 	camera.basis = Basis(Vector3.UP, look_yaw) * Basis(Vector3.RIGHT, look_pitch)
 	var left := maxf(float(_loc["arrive_t"]) - t, 0.0)
 	var to_name: String = sim.data.places[_loc["to"]]["name"]
-	_title.text = "%s  ·  %s TO %s" % [String(_line["name"]).to_upper(), "DOWN" if _loc["down"] else "UP", to_name.to_upper()]
+	_title.text = "%s  ·  %s TO %s" % [String(_line["name"]).to_upper(), {"down": "DOWN", "up": "UP", "out": "OUT", "in": "IN"}[_dir()], to_name.to_upper()]
+	# Past the anchor the spin outweighs the pull: you weigh something again, outward,
+	# and the cab's ceiling becomes the floor.
+	var w := weight_g(h)
 	var lines := [
 		"Altitude      %s" % _km(h),
 		"Speed         %d km/h" % int(round(_speed * 3.6)),
-		"You weigh     %.3f g" % maxf(weight_g(h), 0.0),
+		"You weigh     %s" % _weight_text(w),
 		"%s in       %s" % [to_name, UI.duration(left)],
 		"",
 		"%s %s  time    %s  pause    %s %s  look" % [Bindings.key_of("time_slower"), Bindings.key_of("time_faster"), Bindings.key_of("pause"), Bindings.key_of("climber_look_left"), Bindings.key_of("climber_look_right")],
 	]
 	_hud.text = "\n".join(lines)
+
+
+## Weight in gees, or milligees when slight; past the anchor it points outward.
+static func _weight_text(w: float) -> String:
+	var a := absf(w)
+	var amount := ("%.3f g" % a) if a >= 0.01 else ("%.2f mg" % (a * 1000.0))
+	if a < 1.0e-6:
+		return "nothing"
+	return amount if w > 0.0 else amount + ", outward: the ceiling is the floor"
 
 
 static func _km(m: float) -> String:

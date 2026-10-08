@@ -1,0 +1,120 @@
+{
+	"_note": "Badges (sim/systems/badge_system.gd): one-off marks for doing something few do, kept in state.badges. Each has a name, a line for the log, and what earns it: 'visit' (be docked at any of these places), 'visit_all' (have been to all of them), or 'rounds' (have bought a bar this many rounds; 'at' limits it to these places). Each adds 'renown', and may add 'rep' with operators. Renown gets you noticed: each point raises the chance a hitchhiker asks at a port and a client approaches you by name, by the fractions in 'renown', up to max_mult times the usual chance. Buying a round costs a bar's patrons times its round_cr, and adds round_rep with the bar's operator.",
+	"renown": {
+		"hitchhiker_per_point": 0.06,
+		"approach_per_point": 0.05,
+		"max_mult": 1.8
+	},
+	"round_rep": 0.5,
+	"badges": {
+		"past_the_point": {
+			"name": "Past the Point",
+			"text": "Rode the Luna Line out beyond L1 to Ballast Point, and stood on the ceiling.",
+			"visit": [
+				"ballast_point"
+			],
+			"renown": 1,
+			"rep": {
+				"Luna Cooperative": 1.0
+			}
+		},
+		"the_end": {
+			"name": "The End",
+			"text": "Climbed the Piazzi Stalk to Stalk Top and signed under the sign.",
+			"visit": [
+				"stalk_top"
+			],
+			"renown": 1,
+			"rep": {
+				"Belt Assembly": 1.0
+			}
+		},
+		"far_side_of_up": {
+			"name": "The Far Side of Up",
+			"text": "Rode the Pavonis Line out to its counterweight.",
+			"visit": [
+				"pavonis_ballast"
+			],
+			"renown": 1,
+			"rep": {
+				"Mars Accord": 1.0
+			}
+		},
+		"ballast_collector": {
+			"name": "Ballast Collector",
+			"text": "Has stood at the top of every elevator in the system.",
+			"visit_all": [
+				"ballast_point",
+				"stalk_top",
+				"pavonis_ballast"
+			],
+			"renown": 2
+		},
+		"under_earth": {
+			"name": "Under Earth",
+			"text": "Rode down to Line Foot and saw Earth hang still overhead.",
+			"visit": [
+				"line_foot"
+			],
+			"renown": 1
+		},
+		"belter": {
+			"name": "Belter",
+			"text": "Docked at Psyche Claims, a long way from anywhere.",
+			"visit": [
+				"psyche_claims"
+			],
+			"renown": 1
+		},
+		"ringside": {
+			"name": "Ringside",
+			"text": "Made it out to Saturn.",
+			"visit": [
+				"huygens_port",
+				"plume_watch",
+				"landauer_deep"
+			],
+			"renown": 1
+		},
+		"jovian": {
+			"name": "Jovian",
+			"text": "Made it out to Jupiter.",
+			"visit": [
+				"valhalla_station"
+			],
+			"renown": 1
+		},
+		"trojan_horse": {
+			"name": "Trojan Horse",
+			"text": "Reached Hektor, out among the Trojans.",
+			"visit": [
+				"hektor_reach"
+			],
+			"renown": 1
+		},
+		"first_round": {
+			"name": "On Me",
+			"text": "Bought the house a round.",
+			"rounds": 1,
+			"renown": 1
+		},
+		"drinks_on_the_ribbon": {
+			"name": "Drinks on the Ribbon",
+			"text": "Bought the Counterweight Bar a round, 82,000 km above the Moon.",
+			"rounds": 1,
+			"at": [
+				"ballast_point"
+			],
+			"renown": 1,
+			"rep": {
+				"Luna Cooperative": 1.0
+			}
+		},
+		"regular": {
+			"name": "Regular",
+			"text": "Has bought ten rounds. People save you a seat.",
+			"rounds": 10,
+			"renown": 2
+		}
+	}
+}
