@@ -385,6 +385,9 @@ func _fill_bill(q: Dictionary) -> void:
 			# "Service: drive, 70% to 92%", short enough for the column.
 			var parts := String(b["label"]).split(", condition ")
 			_bill_row("%s: %s%s" % [kind.capitalize(), _slot_title(String(b["slot"])).to_lower(), (", " + parts[1]) if parts.size() > 1 else ""], float(b["credits"]), UI.TEXT, 12)
+		elif kind == "voucher":
+			# A client's repair voucher paying towards the service and overhaul.
+			_bill_row("    repair voucher, %s yards" % String(Favours.operator_of(d, String(q["bill"]["place"]))), float(b["credits"]), UI.DIM, 12)
 	var total: float = q["total"]
 	var sep := ColorRect.new()
 	sep.color = UI.PANEL_EDGE
