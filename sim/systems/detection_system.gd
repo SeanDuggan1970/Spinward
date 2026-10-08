@@ -35,7 +35,8 @@ func tick(dt: float) -> void:
 	ensure(s)
 	var det: Dictionary = s.detection
 	var loc: Dictionary = s.location
-	var transit: bool = loc.get("status") == "transit"
+	# A trip with no planned path (some tests and bots stub one) can't be swept.
+	var transit: bool = loc.get("status") == "transit" and loc.has("frame") and (loc.has("samples") or loc.has("burn_s"))
 	var burning := transit and V.length(Navigation.transit_accel(loc, s.time_s)) > 1e-6
 	# The sink soaks up heat while dark, and dumps it through the radiators otherwise.
 	var cap := Detection.sink_capacity_mj(s.ship, data)
@@ -44,6 +45,8 @@ func tick(dt: float) -> void:
 	else:
 		det["sink_mj"] = maxf(0.0, float(det["sink_mj"]) - float(data.balance["detection"]["sink_dump_kw"]) * dt / 1000.0)
 	if not transit:
+		if loc.get("status") == "transit":
+			return
 		if bool(det["dark"]) and loc.get("status") in ["approach", "docked"]:
 			det["dark"] = false
 			sim().emit("transponder_on", {"place": loc.get("place", "")})
