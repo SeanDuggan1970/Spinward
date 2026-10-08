@@ -18,7 +18,21 @@ static func dry_mass_t(ship: Dictionary, data) -> float:
 	var modules: Dictionary = ship.get("modules", {})
 	for slot in modules:
 		total += float(data.modules[modules[slot]]["mass_t"])
-	return total
+	return total + float(pod_data(ship, data).get("mass_t", 0.0))
+
+
+## The lander's pod (data/pods.json): "" if the ship has no pod mount or an empty one.
+## A mount with no pod key carries the default pod.
+static func pod_of(ship: Dictionary, data) -> String:
+	for m in modules_of(ship, data):
+		if m.get("pod_mount", false):
+			return String(ship.get("pod", data.pods.get("default", "")))
+	return ""
+
+
+static func pod_data(ship: Dictionary, data) -> Dictionary:
+	var id := pod_of(ship, data)
+	return data.pods.get("pods", {}).get(id, {}) if id != "" else {}
 
 
 static func cargo_capacity_t(ship: Dictionary, data) -> float:
@@ -118,7 +132,14 @@ static func _sum(ship: Dictionary, data, key: String) -> float:
 		var tune: float = tunes.get(slot, NO_TUNE)[key] if not tunes.is_empty() else 1.0
 		# Wear and small faults shave a little off supply and rating stats (Condition.perf).
 		total += base * left * tune * Condition.perf(ship, slot, key, data)
+	# The lander's pod counts as a module would (it takes no damage or wear).
+	if key in POD_KEYS:
+		total += float(pod_data(ship, data).get(key, 0.0))
 	return total
+
+
+## The stats a pod can carry (data/pods.json).
+const POD_KEYS := ["cargo_t", "fuel_t", "berths", "payload_t", "life_kw"]
 
 
 ## Engine tunes (data/favours.json "tunes"): ship["tunes"] is [{id, slot, module, source}].

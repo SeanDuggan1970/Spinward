@@ -5,7 +5,10 @@
 ##   - four leg pods at the corners, each with a lift thruster firing down and a
 ##     sprung landing leg: an outrigger strut, a telescopic shock absorber, and a
 ##     ball-jointed footpad
-##   - the passenger or cargo pod slung underneath, swappable on the pad
+##   - the pod, swappable on the pad, carried under a humped spine so it hangs level
+##     with the lift thrusters (its weight on their line of thrust, not swinging below
+##     it): a passenger cabin, cargo container, liquid tank, open flatbed or payload
+##     carrier (data/pods.json "look")
 ##   - the service module aft: propellant spheres and four main engines
 ## So it can set down on any airless body that will take its weight.
 ##
@@ -22,6 +25,11 @@ const HullKit := preload("res://view/flight/hull_kit.gd")
 const EXHAUST := "res://view/shaders/exhaust.gdshader"
 
 const LENGTH := 23.0
+## The spine arches up this far over the pod (m, before scale), flat across the
+## middle and easing down to the leg pods.
+const HUMP := 1.7
+const HUMP_FLAT := 3.6
+const HUMP_END := 5.6
 
 
 static func build(livery: Dictionary, scale: float = 1.0, payload: String = "passenger") -> Dictionary:
@@ -39,26 +47,32 @@ static func build(livery: Dictionary, scale: float = 1.0, payload: String = "pas
 	var spine_from := -7.2
 	var spine_to := 8.4
 
-	# --- the spine: an open box truss, the craft's backbone -----------------------
+	# --- the spine: an open box truss, the craft's backbone, humped over the pod ----
 	var w := 0.8
-	for x in [-w, w]:
-		for y in [-w * 0.6, w * 0.6]:
-			frame.add_child(_rod(Vector3(x, spine_y + y, spine_from), Vector3(x, spine_y + y, spine_to), 0.07, steel))
-	var bays := 12
+	var bays := 24
 	for i in bays + 1:
 		var z := lerpf(spine_from, spine_to, float(i) / float(bays))
-		frame.add_child(Kit.box(Vector3(w * 2.0 + 0.1, 0.08, 0.08), steel, Vector3(0, spine_y + w * 0.6, z)))
-		frame.add_child(Kit.box(Vector3(w * 2.0 + 0.1, 0.08, 0.08), steel, Vector3(0, spine_y - w * 0.6, z)))
-		frame.add_child(Kit.box(Vector3(0.08, w * 1.2, 0.08), steel, Vector3(-w, spine_y, z)))
-		frame.add_child(Kit.box(Vector3(0.08, w * 1.2, 0.08), steel, Vector3(w, spine_y, z)))
+		var y := spine_y + _hump(z)
+		frame.add_child(Kit.box(Vector3(w * 2.0 + 0.1, 0.08, 0.08), steel, Vector3(0, y + w * 0.6, z)))
+		frame.add_child(Kit.box(Vector3(w * 2.0 + 0.1, 0.08, 0.08), steel, Vector3(0, y - w * 0.6, z)))
+		if i % 2 == 0:
+			frame.add_child(Kit.box(Vector3(0.08, w * 1.2, 0.08), steel, Vector3(-w, y, z)))
+			frame.add_child(Kit.box(Vector3(0.08, w * 1.2, 0.08), steel, Vector3(w, y, z)))
 		if i < bays:
 			var z2 := lerpf(spine_from, spine_to, float(i + 1) / float(bays))
-			var s := 1.0 if i % 2 == 0 else -1.0
-			frame.add_child(_rod(Vector3(-w, spine_y - w * 0.6 * s, z), Vector3(-w, spine_y + w * 0.6 * s, z2), 0.04, steel))
-			frame.add_child(_rod(Vector3(w, spine_y + w * 0.6 * s, z), Vector3(w, spine_y - w * 0.6 * s, z2), 0.04, steel))
-	# Service ducts and cable runs along the spine.
-	frame.add_child(_rod(Vector3(0.35, spine_y + 0.2, spine_from), Vector3(0.35, spine_y + 0.2, spine_to), 0.09, mats["foil"]))
-	frame.add_child(_rod(Vector3(-0.3, spine_y - 0.25, spine_from), Vector3(-0.3, spine_y - 0.25, spine_to), 0.06, accent))
+			var y2 := spine_y + _hump(z2)
+			for x in [-w, w]:
+				for dy in [-w * 0.6, w * 0.6]:
+					frame.add_child(_rod(Vector3(x, y + dy, z), Vector3(x, y2 + dy, z2), 0.07, steel))
+			if i % 2 == 0 and i + 2 <= bays:
+				var z3 := lerpf(spine_from, spine_to, float(i + 2) / float(bays))
+				var y3 := spine_y + _hump(z3)
+				var sgn := 1.0 if (i / 2) % 2 == 0 else -1.0
+				frame.add_child(_rod(Vector3(-w, y - w * 0.6 * sgn, z), Vector3(-w, y3 + w * 0.6 * sgn, z3), 0.04, steel))
+				frame.add_child(_rod(Vector3(w, y + w * 0.6 * sgn, z), Vector3(w, y3 - w * 0.6 * sgn, z3), 0.04, steel))
+			# Service ducts and cable runs along the spine.
+			frame.add_child(_rod(Vector3(0.35, y + 0.2, z), Vector3(0.35, y2 + 0.2, z2), 0.09, mats["foil"]))
+			frame.add_child(_rod(Vector3(-0.3, y - 0.25, z), Vector3(-0.3, y2 - 0.25, z2), 0.06, accent))
 
 	# --- the command module: an angular nose, a cabin, a hatch on top -------------
 	var cab := Node3D.new()
@@ -151,8 +165,8 @@ static func build(livery: Dictionary, scale: float = 1.0, payload: String = "pas
 			lift.add_child(lift_jet)
 			# Outriggers back to the spine.
 			for dz in [-0.9, 0.9]:
-				frame.add_child(_rod(Vector3(side * 0.85, spine_y + 0.3, zi + dz * 0.6), pod.position + Vector3(-side * 0.95, 0.35, dz), 0.07, steel))
-				frame.add_child(_rod(Vector3(side * 0.85, spine_y - 0.4, zi + dz * 0.3), pod.position + Vector3(-side * 0.95, -0.4, dz), 0.06, steel))
+				frame.add_child(_rod(Vector3(side * 0.85, spine_y + _hump(zi + dz * 0.6) + 0.3, zi + dz * 0.6), pod.position + Vector3(-side * 0.95, 0.35, dz), 0.07, steel))
+				frame.add_child(_rod(Vector3(side * 0.85, spine_y + _hump(zi + dz * 0.3) - 0.4, zi + dz * 0.3), pod.position + Vector3(-side * 0.95, -0.4, dz), 0.06, steel))
 			pod.add_child(_rcs(Vector3(side * 0.98, 0.0, -1.0 if zi < 0 else 1.0), Vector3(side, 0, 0), mats, rig))
 			# The leg: from the pod's outboard lower corner, out and down to the pad.
 			var hip := pod.position + Vector3(side * 0.9, -0.55, 0.0)
@@ -161,29 +175,17 @@ static func build(livery: Dictionary, scale: float = 1.0, payload: String = "pas
 			frame.add_child(leg["node"])
 			legs.append(leg)
 
-	# --- the payload pod slung beneath the spine ------------------------------------
+	# --- the pod, under the hump, level with the lift thrusters ---------------------
 	var pay := Node3D.new()
-	pay.position = Vector3(0, spine_y - 1.85, 0.0)
+	pay.position = Vector3(0, spine_y - 0.15, 0.0)
 	frame.add_child(pay)
-	pay.add_child(Kit.box(Vector3(2.7, 2.1, 9.4), hull))
-	pay.add_child(Kit.box(Vector3(2.75, 0.3, 9.45), accent, Vector3(0, -0.75, 0)))
-	for z in [-4.4, -1.5, 1.5, 4.4]:
-		pay.add_child(Kit.box(Vector3(2.8, 2.18, 0.12), steel, Vector3(0, 0, z)))
-	if payload == "passenger":
-		# Windows down both sides, a door each side, a ramp at the back.
-		for side in [-1.0, 1.0]:
-			for k in 8:
-				pay.add_child(Kit.box(Vector3(0.05, 0.35, 0.55), Kit.glow(Color("ffdca0"), 0.6), Vector3(side * 1.36, 0.35, -3.9 + 1.1 * float(k))))
-			pay.add_child(Kit.box(Vector3(0.06, 1.5, 1.0), dark, Vector3(side * 1.36, -0.1, 2.9)))
-	else:
-		for side in [-1.0, 1.0]:
-			for k in 3:
-				pay.add_child(Kit.box(Vector3(0.05, 1.6, 2.4), Kit.mat("grey"), Vector3(side * 1.36, 0, -3.0 + 3.0 * float(k))))
-	pay.add_child(Kit.box(Vector3(2.4, 1.8, 0.08), dark, Vector3(0, -0.05, 4.73)))
-	# Clamps to the spine.
-	for z in [-3.6, 0.0, 3.6]:
+	if payload != "none":
+		_pod(pay, payload, hull, accent, steel, dark)
+	# Clamps from the hump down to the pod's roof.
+	for z in [-3.0, 0.0, 3.0]:
 		for x in [-0.6, 0.6]:
-			frame.add_child(_rod(Vector3(x, spine_y - w * 0.6, z), Vector3(x * 1.4, spine_y - 0.8, z), 0.08, steel))
+			frame.add_child(_rod(Vector3(x, spine_y + _hump(z) - w * 0.6, z), Vector3(x * 1.4, spine_y + 0.95, z), 0.08, steel))
+		frame.add_child(Kit.box(Vector3(2.0, 0.14, 0.4), Kit.mat("yellow"), Vector3(0, spine_y + 0.98, z)))
 
 	# --- the service module: propellant spheres and the main engines ----------------
 	var aft := Node3D.new()
@@ -312,3 +314,67 @@ static func _rcs(at: Vector3, outward: Vector3, mats: Dictionary, rig: Dictionar
 		n.add_child(Kit.box(Vector3(0.11, 0.11, 0.11), Kit.mat("black"), d * 0.22))
 	rig["rcs"].append({"node": n, "outward": side})
 	return n
+
+
+## How far the spine rises at z (before scale): flat across the pod, easing to nothing
+## by the leg pods.
+static func _hump(z: float) -> float:
+	var a := absf(z)
+	if a <= HUMP_FLAT:
+		return HUMP
+	var f := clampf((HUMP_END - a) / (HUMP_END - HUMP_FLAT), 0.0, 1.0)
+	return HUMP * f * f * (3.0 - 2.0 * f)
+
+
+## The pod itself (centred on `pay`, 2.7 m wide, 2.1 m tall, 7.6 m long), by look:
+## passenger, cargo, tank, flatbed or payload.
+static func _pod(pay: Node3D, look: String, hull: Material, accent: Material, steel: Material, dark: Material) -> void:
+	match look:
+		"tank":
+			# A pressure tank in a frame: a capsule lying fore and aft, banded.
+			for x in [-1.25, 1.25]:
+				for y in [-0.95, 0.95]:
+					pay.add_child(Kit.box(Vector3(0.12, 0.12, 7.6), steel, Vector3(x, y, 0)))
+			pay.add_child(Kit.cylinder(0.95, 5.6, Kit.mat("foil"), Vector3(0, 0, 0), 24))
+			for z in [-2.8, 2.8]:
+				pay.add_child(Kit.sphere(0.95, Kit.mat("foil"), Vector3(0, 0, z)))
+			for z in [-1.6, 0.0, 1.6]:
+				pay.add_child(Kit.torus(0.97, 0.06, accent, Vector3(0, 0, z), 24))
+			pay.add_child(Kit.cylinder(0.12, 0.6, steel, Vector3(0, 0.95, 3.2), 10))
+		"flatbed":
+			# A bare deck with tie-down rails and a couple of crates strapped down.
+			pay.add_child(Kit.box(Vector3(2.7, 0.25, 7.6), steel, Vector3(0, -0.9, 0)))
+			for x in [-1.3, 1.3]:
+				pay.add_child(Kit.box(Vector3(0.1, 0.3, 7.6), Kit.mat("yellow"), Vector3(x, -0.65, 0)))
+			pay.add_child(Kit.box(Vector3(1.8, 1.2, 1.8), Kit.mat("grey"), Vector3(-0.2, -0.2, -2.0)))
+			pay.add_child(Kit.box(Vector3(2.0, 0.9, 2.6), Kit.mat("rust"), Vector3(0.1, -0.35, 1.6)))
+			for z in [-2.0, 1.6]:
+				pay.add_child(Kit.box(Vector3(2.2, 0.05, 0.08), Kit.mat("orange"), Vector3(0, 0.4 if z < 0 else 0.1, z)))
+		"payload":
+			# A cradle with release clamps and a spring push-off plate, a satellite in it.
+			for x in [-1.25, 1.25]:
+				pay.add_child(Kit.box(Vector3(0.14, 0.14, 7.6), steel, Vector3(x, -0.9, 0)))
+				for z in [-3.0, 0.0, 3.0]:
+					pay.add_child(Kit.box(Vector3(0.14, 1.9, 0.14), steel, Vector3(x, 0, z)))
+			pay.add_child(Kit.box(Vector3(2.4, 0.12, 2.4), Kit.mat("yellow"), Vector3(0, -0.85, 0)))
+			pay.add_child(Kit.box(Vector3(1.5, 1.3, 1.5), Kit.mat("foil"), Vector3(0, -0.1, 0)))
+			for side in [-1.0, 1.0]:
+				pay.add_child(Kit.box(Vector3(0.06, 1.2, 2.4), Kit.paint(Color("1d2b4a"), {"finish": 1, "metallic": 0.35, "roughness": 0.3}), Vector3(side * 0.82, -0.1, 0)))
+			pay.add_child(Kit.cylinder(0.35, 0.3, steel, Vector3(0, 0.7, 0), 16))
+			pay.get_child(-1).basis = Basis.IDENTITY
+		_:
+			pay.add_child(Kit.box(Vector3(2.7, 2.1, 7.6), hull))
+			pay.add_child(Kit.box(Vector3(2.75, 0.3, 7.65), accent, Vector3(0, -0.75, 0)))
+			for z in [-3.6, -1.2, 1.2, 3.6]:
+				pay.add_child(Kit.box(Vector3(2.8, 2.18, 0.12), steel, Vector3(0, 0, z)))
+			if look == "passenger":
+				# Windows down both sides, a door each side, a ramp at the back.
+				for side in [-1.0, 1.0]:
+					for k in 6:
+						pay.add_child(Kit.box(Vector3(0.05, 0.35, 0.55), Kit.glow(Color("ffdca0"), 0.6), Vector3(side * 1.36, 0.35, -3.0 + 1.1 * float(k))))
+					pay.add_child(Kit.box(Vector3(0.06, 1.5, 1.0), dark, Vector3(side * 1.36, -0.1, 2.6)))
+			else:
+				for side in [-1.0, 1.0]:
+					for k in 2:
+						pay.add_child(Kit.box(Vector3(0.05, 1.6, 2.4), Kit.mat("grey"), Vector3(side * 1.36, 0, -1.6 + 3.2 * float(k))))
+			pay.add_child(Kit.box(Vector3(2.4, 1.8, 0.08), dark, Vector3(0, -0.05, 3.83)))

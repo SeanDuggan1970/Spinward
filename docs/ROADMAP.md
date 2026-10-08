@@ -8,7 +8,7 @@ step done here when it lands on main.
 | 1 | Turning with inertia | none | done |
 | 2 | Smooth rendezvous arrival | 1 | done |
 | 3 | Bigger stations, docking bays and doors | 2 | to do |
-| 4 | Humpback cargo lander and pod types | none (can run alongside 2 and 3) | to do |
+| 4 | Humpback cargo lander and pod types | none (can run alongside 2 and 3) | done |
 | 5 | Satellite missions | 4 | to do |
 | 6 | Detection model and stealth package | 1 | to do |
 | 7 | Secret missions (late game), with free departures | 4, 5, 6 | to do |
@@ -130,9 +130,7 @@ Sean, Oct 2026: walk around the places you visit, FPS style.
   round. They add renown, which gets you noticed by hitchhikers and by clients asking
   for you by name.
 
-## Open decisions
-
-These are recommended but not yet confirmed by Sean:
+## Decisions (confirmed by Sean, Oct 2026)
 
 - **Stealth strictness:** honest, hiding only while coasting.
 - **Docking style:** a bay you fly into.

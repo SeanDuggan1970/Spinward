@@ -412,7 +412,8 @@
 				7.0
 			],
 			"colour": "yellow"
-		}
+		},
+		"pod_mount": true
 	},
 	"survey_pod": {
 		"name": "Survey sensor pod",

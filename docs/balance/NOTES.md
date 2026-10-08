@@ -236,3 +236,9 @@ Full write-up: [2026-10-07-economy-together.md](2026-10-07-economy-together.md).
 - New places: Ballast Point, Stalk Top, Pavonis Ballast. Each is tiny: 0.5 to 0.8 t/day of produce, and food in small amounts. They're for visiting, not trading.
 - Rounds cost 50 to 270 cr: Stalk Top 50, Ballast Point 108, Pavonis Ballast 154, Line Foot 270. Each adds 0.5 standing with the bar's operator. Too dear to farm for standing: a delivered contract gives far more.
 - Renown: each point raises the hitchhiker and named-client ("approach") chances by 6% and 5%, at most 1.8 times. The balance bot earns no badges, so its runs are unchanged; it was not re-run.
+
+
+## Lander pods (2026-10-08)
+
+- The lander bay now carries a pod (`data/pods.json`). The default cargo container adds 4 t of hold to any ship with a lander bay, older saves included. The other pods are bought at a yard for 4,000 to 18,000 cr.
+- The balance bot never fits a lander bay, so its runs are unchanged and it was not re-run. The prospector refit in the art gallery (lander bay + mining rig) gains 4 t of hold for site yields.

@@ -25,6 +25,7 @@ const Fitness := preload("res://sim/fitness.gd")
 const Insurance := preload("res://sim/insurance.gd")
 const ShipBill := preload("res://sim/ship_bill.gd")
 const SiteSystem := preload("res://sim/systems/site_system.gd")
+const PodSystem := preload("res://sim/systems/pod_system.gd")
 const Badges := preload("res://sim/badges.gd")
 const DAY := 86400.0
 
@@ -372,6 +373,58 @@ func _elevator_panel(place_id: String, here: Dictionary) -> Control:
 	return p[0]
 
 
+## On site: the lander's pod, and any pods lying here. Set yours down (empty, or with
+## what fits in it: as much of the hold as it takes, or a tankful), or pick one up.
+func _pods_panel(site_id: String) -> Control:
+	var s = sim.state
+	var d = sim.data
+	var p := UI.panel("Pods")
+	if not PodSystem.has_mount(s.ship, d):
+		p[1].add_child(UI.label("A lander bay carries a pod you can set down here and collect later.", UI.DIM, 13))
+		return p[0]
+	var pod := ShipStats.pod_of(s.ship, d)
+	if pod != "":
+		var spec: Dictionary = d.pods["pods"][pod]
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 10)
+		var info := UI.label("Your lander carries a %s." % String(spec["name"]).to_lower(), UI.TEXT, 13)
+		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(info)
+		row.add_child(UI.button("Set it down empty", send.bind({"type": "drop_pod"})))
+		if float(spec.get("cargo_t", 0.0)) > 0.0 and ShipStats.cargo_t(s.ship) > 0.0:
+			# Fill it from the hold, biggest lots first.
+			var room := float(spec["cargo_t"])
+			var load := {}
+			var goods: Array = s.ship["cargo"].keys()
+			goods.sort_custom(func(a, b): return float(s.ship["cargo"][a]) > float(s.ship["cargo"][b]))
+			for g in goods:
+				var t := minf(float(s.ship["cargo"][g]), room)
+				if t > 0.0:
+					load[g] = t
+					room -= t
+			row.add_child(UI.button("Set it down loaded", send.bind({"type": "drop_pod", "cargo": load})))
+		if float(spec.get("fuel_t", 0.0)) > 0.0:
+			row.add_child(UI.button("Leave a fuel cache", send.bind({"type": "drop_pod", "fuel_t": minf(float(spec["fuel_t"]), float(s.ship["fuel_t"]))})))
+		p[1].add_child(row)
+	else:
+		p[1].add_child(UI.label("Your lander's clamp is empty: pick up a pod here, or fit one at a shipyard.", UI.DIM, 13))
+	var here: Array = PodSystem.at_site(s, site_id)
+	for i in here.size():
+		var found: Dictionary = here[i]
+		var bits := []
+		for g in found["cargo"]:
+			bits.append("%.1f t %s" % [float(found["cargo"][g]), String(d.goods[g]["name"]).to_lower()])
+		if float(found["fuel_t"]) > 0.0:
+			bits.append("%.1f t propellant" % float(found["fuel_t"]))
+		var row := HBoxContainer.new()
+		var info := UI.label("Lying here: a %s%s, set down %s." % [String(d.pods["pods"][found["pod"]]["name"]).to_lower(), (" with " + ", ".join(bits)) if not bits.is_empty() else ", empty", TipsText.age(sim, float(found["t"]))], UI.AMBER, 13)
+		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(info)
+		row.add_child(UI.button("Pick it up", send.bind({"type": "pick_up_pod", "index": i}), pod == ""))
+		p[1].add_child(row)
+	return p[0]
+
+
 ## On site: what there is to do here, what it needs, how long it takes, and what it
 ## might yield. Work passes game time; speed it up with time compression.
 func _site_tab(site_id: String) -> Control:
@@ -422,6 +475,7 @@ func _site_tab(site_id: String) -> Control:
 			row.add_child(UI.button("Begin", send.bind({"type": "site_work", "activity": act_id}), why == ""))
 		p[1].add_child(row)
 		parts[1].add_child(p[0])
+	parts[1].add_child(_pods_panel(site_id))
 	return parts[0]
 
 
@@ -752,6 +806,24 @@ func _shipyard_tab() -> Control:
 	parts[1].add_child(open)
 	parts[1].add_child(UI.label("Or swap one module at a time below: parts, fitting labour and days in port, less a trade-in by condition and age. Every price is the bill you will be charged.", UI.DIM, 13))
 	parts[1].add_child(_fitness_panel())
+	if PodSystem.has_mount(s.ship, d):
+		var pp := UI.panel("Lander pod")
+		var now := ShipStats.pod_of(s.ship, d)
+		pp[1].add_child(UI.label("Fitted: %s. The old pod is taken back at half its price." % (String(d.pods["pods"][now]["name"]) if now != "" else "none"), UI.DIM, 13))
+		for id in d.pods["pods"]:
+			if id == now:
+				continue
+			var spec: Dictionary = d.pods["pods"][id]
+			var row := HBoxContainer.new()
+			var info := UI.label("%s: %s" % [spec["name"], spec["description"]], UI.TEXT, 12)
+			info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			info.autowrap_mode = TextServer.AUTOWRAP_WORD
+			info.custom_minimum_size = Vector2(200, 0)
+			row.add_child(info)
+			var cost := PodSystem.fit_cost(s, d, id)
+			row.add_child(UI.button("Fit  %s" % UI.money(cost), send.bind({"type": "fit_pod", "pod": id}), s.credits >= cost))
+			pp[1].add_child(row)
+		parts[1].add_child(pp[0])
 	var slots: Array = s.ship["modules"].keys()
 	slots.sort()
 	for slot in slots:

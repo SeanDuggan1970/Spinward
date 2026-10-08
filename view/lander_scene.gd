@@ -80,12 +80,14 @@ func _ready() -> void:
 	add_child(_hud)
 
 
-## The Bramble: a two-seat Kestrel, a third the size, a cargo pod slung under it.
+## The Bramble: a two-seat Kestrel, a third the size, carrying the pod fitted to the
+## lander bay (data/pods.json), or none.
 ## It flies on its four lift thrusters, and its legs take the touchdown.
 func _build_lander() -> Node3D:
 	var n := Node3D.new()
 	var livery: Dictionary = preload("res://view/flight/livery.gd").for_ship(sim.data, "", String(sim.state.ship.get("name", "")), true)
-	_model = load("res://view/flight/kestrel.gd").build(livery, 0.36, "cargo")
+	var pod: Dictionary = preload("res://sim/ship_stats.gd").pod_data(sim.state.ship, sim.data)
+	_model = load("res://view/flight/kestrel.gd").build(livery, 0.36, String(pod.get("look", "none")))
 	var craft: Node3D = _model["node"]
 	# Feet at the node's origin, so the craft stands where it lands.
 	craft.position = Vector3(0, -float(_model["foot_y"]), 0)

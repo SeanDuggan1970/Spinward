@@ -644,6 +644,26 @@ Sean: the elevators "lack counterweights deeper in space beyond the geostationar
   - **From afar:** the ribbon tapers, the anchor is a stacked tower, and the counterweight is a lumpy mass with a warning light.
 - **Bars:** a place with the `bar` service has a `bar` (name, patrons, round_cr). "Buy a round" on the Market tab stands everyone a drink and adds a little standing with the operator. Bars so far: the three counterweights and Line Foot's Earthrise.
 
+## The humpback lander and its pods (Oct 2026, roadmap step 4)
+
+- **The humpback** (`view/flight/kestrel.gd`): the Kestrel's spine (and the Bramble's, a Kestrel at 0.36 scale) arches 1.7 m up over the pod. It is flat across the middle and eases down to the leg pods. The pod hangs level with the leg pods and their lift thrusters, so its weight sits on their line of thrust rather than swinging a metre and a half below it. Landed, it now clears the ground by about 2 m (it nearly touched before).
+- **Pod types** (`data/pods.json`), each with its own look:
+
+  | Pod | Carries | Price |
+  |---|---|---|
+  | Cargo container (the default) | 4 t | 6,000 cr |
+  | Liquid tank | 3 t of propellant | 9,000 cr |
+  | Passenger cabin | 4 seats and 1 t | 14,000 cr |
+  | Open flatbed | 5 t | 4,000 cr |
+  | Payload carrier | 3 t of payload, for step 5's satellites | 18,000 cr |
+
+- **How they count:** a module with `pod_mount` (the lander bay) carries one pod (`ship.pod`). Its stats count as a module's would (`ShipStats.pod_of`, `pod_data`, `POD_KEYS`), with no damage or wear. A bay with no `pod` key, as in older saves, has the default.
+- **Fitting** (`fit_pod`, `sim/systems/pod_system.gd`): at a shipyard, the old pod taken back at half its price. What's aboard must still fit.
+- **Dropping and picking up** (`drop_pod`, `pick_up_pod`):
+  - On site, set the pod down: empty, loaded from the hold (up to its capacity), or as a fuel cache from the tanks. What stays aboard must fit without it.
+  - The pod lies there in the saved game (`state.sites.pods`) until a lander with an empty clamp picks it up; its contents come aboard if there is room.
+  - The site tab lists your pod and any pods lying there; the shipyard tab sells pods.
+
 ## Saturn, rings and shadows (Oct 2026)
 
 Sean: the rings were "very unrealistic and downright ugly"; the planet should cast its shadow on the rings and on moons and ships.

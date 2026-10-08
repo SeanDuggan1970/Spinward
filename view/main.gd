@@ -313,6 +313,15 @@ func _handle_events() -> void:
 			"elevator_departed":
 				var line: Dictionary = sim.data.places[d["line"]]["elevator"]
 				notice("On %s for %s: %s. Fare %s." % [line["name"], sim.data.places[d["to"]]["name"], UI.duration(float(d["hours"]) * 3600.0), UI.money(float(d["fare"]))], UI.AMBER)
+			"pod_fitted":
+				notice("Fitted a %s to the lander." % String(sim.data.pods["pods"][d["pod"]]["name"]).to_lower(), UI.GOOD)
+				refresh = true
+			"pod_dropped":
+				notice("Pod set down: a %s%s. It'll be here when you come back." % [String(sim.data.pods["pods"][d["pod"]]["name"]).to_lower(), (" with %.1f t aboard" % float(d["cargo_t"])) if float(d["cargo_t"]) > 0.0 else ((" with %.1f t of propellant" % float(d["fuel_t"])) if float(d["fuel_t"]) > 0.0 else "")], UI.AMBER)
+				refresh = true
+			"pod_picked_up":
+				notice("Picked up the %s." % String(sim.data.pods["pods"][d["pod"]]["name"]).to_lower(), UI.GOOD)
+				refresh = true
 			"badge_earned":
 				notice("Badge: %s. %s" % [d["name"], d["text"]], UI.GOOD)
 				comms.append("%s  BADGE  %s: %s" % [_clock(e["time_s"]), d["name"], d["text"]])

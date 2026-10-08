@@ -33,6 +33,7 @@ const ShipBill := preload("res://sim/ship_bill.gd")
 const CockpitPages := preload("res://view/ui/cockpit_pages.gd")
 const ShipRig := preload("res://view/flight/ship_rig.gd")
 const TravelSystem := preload("res://sim/systems/travel_system.gd")
+const PodSystem := preload("res://sim/systems/pod_system.gd")
 
 const AU := 1.495978707e11
 const DAY := 86400.0
@@ -120,6 +121,7 @@ func _initialize() -> void:
 	test_turning_with_inertia()
 	test_final_approach()
 	test_counterweights_and_badges()
+	test_lander_pods()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -4110,3 +4112,59 @@ func test_counterweights_and_badges() -> void:
 	check(cv.weight_g(82000.0e3) < 0.0 and cv.weight_g(1000.0) > 0.1, "Heavy at the foot, a hair of weight outward at Ballast Point (%.2f mg)" % (cv.weight_g(82000.0e3) * 1000.0))
 	check(Climber._weight_text(-0.00017).ends_with("outward: the ceiling is the floor") and Climber._weight_text(0.15) == "0.150 g", "Slight weights read in milligees")
 	cv.free()
+
+
+## The lander's pods (roadmap step 4): fitted at a shipyard, counted in the ship's
+## stats, set down on site with cargo or propellant, and picked up again, staying in
+## the saved game until then.
+func test_lander_pods() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	check(d.validate().is_empty(), "Data with pods validates")
+	var base_cap := ShipStats.cargo_capacity_t(s.ship, d)
+	check(ShipStats.pod_of(s.ship, d) == "", "No lander bay, no pod")
+	s.ship["modules"]["cargo.1"] = "lander_bay"
+	check(ShipStats.pod_of(s.ship, d) == "cargo_container", "A lander bay carries the default pod")
+	var cap := ShipStats.cargo_capacity_t(s.ship, d)
+	check(is_equal_approx(cap, base_cap - float(d.modules["cargo_pod_s"]["cargo_t"]) + float(d.pods["pods"]["cargo_container"]["cargo_t"])), "The pod's hold counts in the ship's (%.1f t)" % cap)
+	# Fit a liquid tank at a shipyard: the container is taken back at half price.
+	s.credits = 50000.0
+	check(sim.apply({"type": "fit_pod", "pod": "liquid_tank"}) == "", "Fit a liquid tank at Kibo Ring's yard")
+	check(absf(s.credits - (50000.0 - 9000.0 + 3000.0)) < 1e-6, "Paid the tank less half the container")
+	var fuel_cap := ShipStats.fuel_capacity_t(s.ship, d)
+	check(is_equal_approx(fuel_cap, float(d.modules["tank_s"]["fuel_t"]) + 3.0), "The tank pod adds 3 t of propellant room")
+	check(sim.apply({"type": "fit_pod", "pod": "liquid_tank"}) == "that pod is already fitted", "Can't fit the same pod twice")
+	# Leave a fuel cache on site.
+	s.ship["fuel_t"] = fuel_cap
+	s.location = {"status": "on_site", "place": "eros_survey"}
+	check(sim.apply({"type": "fit_pod", "pod": "open_flatbed"}).begins_with("pods are fitted"), "No shipyard on site")
+	check(sim.apply({"type": "drop_pod", "fuel_t": 2.0}) == "the ship's tanks won't take the rest of the propellant", "Full tanks: what stays aboard must fit without the pod")
+	s.ship["fuel_t"] = 5.0
+	check(sim.apply({"type": "drop_pod", "fuel_t": 2.0}) == "", "Set the tank down with 2 t in it")
+	check(ShipStats.pod_of(s.ship, d) == "" and is_equal_approx(float(s.ship["fuel_t"]), 3.0), "The clamp is empty and 2 t went with it")
+	check(PodSystem.at_site(s, "eros_survey").size() == 1, "The pod lies at the site")
+	# It stays in the saved game.
+	var loaded := SaveIO.from_text(SaveIO.to_text(s))
+	check(loaded != null and loaded.sites.get("pods", {}).get("eros_survey", []).size() == 1, "A dropped pod is saved")
+	# Pick it back up: the propellant comes aboard.
+	s.ship["fuel_t"] = 0.5
+	check(sim.apply({"type": "pick_up_pod", "index": 0}) == "", "Pick the cache back up")
+	check(ShipStats.pod_of(s.ship, d) == "liquid_tank" and is_equal_approx(float(s.ship["fuel_t"]), 2.5), "The tank and its 2 t are back aboard")
+	check(PodSystem.at_site(s, "eros_survey").is_empty(), "Nothing left lying there")
+	# A loaded cargo pod; what stays aboard must fit without it.
+	s.location = {"status": "docked", "place": "kibo_ring"}
+	check(sim.apply({"type": "fit_pod", "pod": "cargo_container"}) == "", "Back to a container")
+	s.location = {"status": "on_site", "place": "eros_survey"}
+	s.ship["cargo"] = {"water_ice": 3.0}
+	check(sim.apply({"type": "drop_pod", "cargo": {"water_ice": 5.0}}).begins_with("you don't have"), "Can't leave more than you carry")
+	check(sim.apply({"type": "drop_pod", "cargo": {"water_ice": 3.0}}) == "" and not s.ship["cargo"].has("water_ice"), "Leave 3 t of ice in the pod")
+	check(sim.apply({"type": "drop_pod"}) == "no pod to set down", "Nothing left to set down")
+	# Someone else's pod is picked up only with an empty clamp; one can carry another.
+	s.sites["pods"]["eros_survey"].append({"pod": "open_flatbed", "cargo": {}, "fuel_t": 0.0, "t": s.time_s})
+	check(sim.apply({"type": "pick_up_pod", "index": 1}) == "" and ShipStats.pod_of(s.ship, d) == "open_flatbed", "Pick up the flatbed")
+	check(sim.apply({"type": "pick_up_pod", "index": 0}) == "set your own pod down first", "One pod at a time")
+	# An old save with a lander bay carries the default pod.
+	var old := s.ship.duplicate(true)
+	old.erase("pod")
+	check(ShipStats.pod_of(old, d) == "cargo_container", "An old save's lander bay has the default pod")
