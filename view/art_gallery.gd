@@ -107,7 +107,7 @@ func _stations() -> void:
 	_camera.far = 20000.0
 	for place in ["kibo_ring", "trojan_yards", "halo_depot", "kalpana_one", "tsiolkovsky_wheel", "island_one", "kalpana_two", "concord_pair", "selene_ring"]:
 		var geom: Dictionary = data.places[place]["station"]
-		var st := Models.station(geom, data.places[place]["name"], Livery.for_station(data, place))
+		var st := Models.station(geom, data.places[place]["name"], Livery.for_station(data, place), data.balance["bays"])
 		var node: Node3D = st["node"]
 		add_child(node)
 		var rr := maxf(float(st["ring_radius"]), float(st["hub_radius"]))

@@ -18,6 +18,7 @@
 			}
 		},
 		"station": {
+			"door": "iris",
 			"hub_radius_m": 14,
 			"hub_length_m": 90,
 			"ring_radius_m": 110,
@@ -95,6 +96,7 @@
 			}
 		},
 		"station": {
+			"door": "iris",
 			"hub_radius_m": 10,
 			"hub_length_m": 60,
 			"ring_radius_m": 70,
@@ -284,6 +286,7 @@
 			"point": "L4"
 		},
 		"station": {
+			"door": "clamshell",
 			"hub_radius_m": 16,
 			"hub_length_m": 120,
 			"ring_radius_m": 95,
@@ -396,6 +399,7 @@
 			"point": "L5"
 		},
 		"station": {
+			"door": "clamshell",
 			"hub_radius_m": 20,
 			"hub_length_m": 140,
 			"ring_radius_m": 160,
@@ -458,6 +462,7 @@
 			}
 		},
 		"station": {
+			"door": "iris",
 			"type": "cylinder",
 			"hub_radius_m": 250,
 			"hub_length_m": 325,
@@ -561,6 +566,7 @@
 			}
 		},
 		"station": {
+			"door": "clamshell",
 			"hub_radius_m": 16,
 			"hub_length_m": 110,
 			"ring_radius_m": 120,
@@ -658,6 +664,7 @@
 			}
 		},
 		"station": {
+			"door": "clamshell",
 			"hub_radius_m": 14,
 			"hub_length_m": 90,
 			"ring_radius_m": 100,
@@ -775,6 +782,7 @@
 			}
 		},
 		"station": {
+			"door": "clamshell",
 			"hub_radius_m": 9,
 			"hub_length_m": 60,
 			"ring_radius_m": 50,
@@ -1007,6 +1015,7 @@
 			}
 		},
 		"station": {
+			"door": "clamshell",
 			"hub_radius_m": 14,
 			"hub_length_m": 90,
 			"ring_radius_m": 95,
@@ -1093,6 +1102,7 @@
 			}
 		},
 		"station": {
+			"door": "clamshell",
 			"hub_radius_m": 20,
 			"hub_length_m": 150,
 			"ring_radius_m": 45,
@@ -1289,6 +1299,7 @@
 			]
 		},
 		"station": {
+			"door": "iris",
 			"type": "stanford",
 			"hub_radius_m": 60,
 			"hub_length_m": 240,
@@ -1346,6 +1357,7 @@
 			]
 		},
 		"station": {
+			"door": "iris",
 			"type": "bernal",
 			"hub_radius_m": 250,
 			"hub_length_m": 500,
@@ -1405,6 +1417,7 @@
 			}
 		},
 		"station": {
+			"door": "iris",
 			"type": "cylinder",
 			"hub_radius_m": 250,
 			"hub_length_m": 325,
@@ -1460,6 +1473,7 @@
 			}
 		},
 		"station": {
+			"door": "iris",
 			"type": "pair",
 			"hub_radius_m": 400,
 			"hub_length_m": 3200,
@@ -1519,6 +1533,7 @@
 			}
 		},
 		"station": {
+			"door": "iris",
 			"type": "wheel",
 			"hub_radius_m": 30,
 			"hub_length_m": 200,

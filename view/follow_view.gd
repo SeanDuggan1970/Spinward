@@ -299,7 +299,7 @@ func _update_world(dt: float) -> void:
 			near = from_port.length() < STATION_RANGE_M
 		if near and not _stations.has(place):
 			var geom: Dictionary = sim.data.places[place]["station"]
-			var st := Models.station(geom, sim.data.places[place]["name"], Livery.for_station(sim.data, place))
+			var st := Models.station(geom, sim.data.places[place]["name"], Livery.for_station(sim.data, place), sim.data.balance["bays"])
 			# The approach corridor's lights are for pilots coming in, not for the camera.
 			for c in st["node"].get_children():
 				if c is MeshInstance3D:

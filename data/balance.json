@@ -71,6 +71,17 @@
 		"stowed_heat_mult": 0.3,
 		"check_s": 300.0
 	},
+	"bays": {
+		"_note": "Docking bays you fly into (view/flight/bay.gd): a tunnel radius_m across (at least port_margin times the port's radius) and depth_m deep, built forward of the station's docking face, with wall_m of structure round it; a wheel's hub grows to that width. The port is at the back, where the docking face was, so approaches and trip times are unchanged. Doors (each station's station.door, else door) open door_s after traffic control clears the ship in (clear_s into the docking scene) and close once it is inside. A ship whose stowed radius plus clearance_m won't go in berths on a collar on the shut doors.",
+		"radius_m": 16.0,
+		"port_margin": 1.45,
+		"depth_m": 80.0,
+		"wall_m": 8.0,
+		"clearance_m": 3.0,
+		"door": "sliding",
+		"door_s": 12.0,
+		"clear_s": 4.0
+	},
 	"approach": {
 		"_note": "The last part of every trip to a port (sim/navigation.gd add_approach), flown in the port's own frame. Over the last window_s before the ship reaches the port, it swings round from wherever the trip brings it to the corridor entry (corridor_m beyond the handover point, on the docking axis), going wide of the station (its bounding radius plus clear_margin_m) if it comes in from behind (when the cosine between its direction and the axis is under swing_cos). Then it brakes along the corridor from corridor_speed_mps to handover_speed_mps, arriving at the handover point, where the docking scene takes over. Docking ports all face view +Z (sim -Y), as in the flight scene. For a port in orbit round a body, a descent over the descent_s before that sweeps the ship down onto the port's orbit, meeting it meet_behind_m behind the port and moving with it; time drops to at most descent_time_scale for it. Trip time and propellant are unchanged.",
 		"window_s": 1200,

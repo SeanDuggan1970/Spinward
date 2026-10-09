@@ -84,6 +84,15 @@ func _ready() -> void:
 		_dock_trial.call_deferred()
 		return
 	for a in args:
+		# Fly the trial in another stock hull (e.g. the deep freighter, the biggest
+		# ship a bay must take).
+		if a.begins_with("--dock-trial="):
+			var hull := a.trim_prefix("--dock-trial=")
+			sim.state.ship["hull"] = hull
+			sim.state.ship["modules"] = sim.data.ships[hull]["modules"].duplicate()
+			_dock_trial.call_deferred()
+			return
+	for a in args:
 		if a.begins_with("--art="):
 			visible = false
 			get_tree().root.add_child.call_deferred(load("res://view/art_gallery.gd").new(sim.data, a.trim_prefix("--art=")))
@@ -781,7 +790,9 @@ func _dock_trial() -> void:
 			steps += 1
 		var ok := flight.docked
 		all_ok = all_ok and ok
-		print("DOCK_TRIAL %-16s docked=%s time=%5.0f s refusals=%d contacts=%d" % [place, ok, steps / 60.0, flight.refusals, flight.bumps])
+		ok = ok and flight.hits == 0
+		all_ok = all_ok and ok
+		print("DOCK_TRIAL %-16s docked=%s time=%5.0f s refusals=%d contacts=%d hits=%d bay=%s" % [place, flight.docked, steps / 60.0, flight.refusals, flight.bumps, flight.hits, flight.bay_doors])
 		sim.state.location = {"status": "docked", "place": place}
 	print("DOCK_TRIAL_OK" if all_ok else "DOCK_TRIAL_FAIL")
 	_quit(0 if all_ok else 1)

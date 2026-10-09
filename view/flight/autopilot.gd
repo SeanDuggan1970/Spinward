@@ -33,6 +33,10 @@ static func controls(flight) -> Dictionary:
 	var closing := clampf(along * 0.02, limit * 0.5, 6.0) if on_axis else 0.0
 	if along < 25.0:
 		closing = minf(closing, limit * 0.6)
+	# A docking bay: hold short of the mouth until its doors are open.
+	if not flight.bay_ready():
+		var to_mouth: float = nose.z - float(flight.station["bay"]["z_mouth"]) - flight.BAY_HOLD_M
+		closing = clampf(to_mouth * 0.05, 0.0, closing)
 	var want_v := Vector3(lateral_v.x, lateral_v.y, -closing)
 	var err: Vector3 = basis.inverse() * (want_v - flight.velocity)
 	var thrust := Vector3.ZERO

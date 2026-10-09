@@ -124,6 +124,35 @@ static func set_fold(rig: Dictionary, to: float, snap: bool = false) -> void:
 		rig["fold"] = rig["fold_to"]
 
 
+## The model's radius about its long axis with the panels stowed (for docking bays):
+## measured from its meshes, the plume left out. Leaves the fold where it was.
+static func stowed_radius(model: Dictionary) -> float:
+	var rig: Dictionary = model["rig"]
+	var was := [rig.get("fold", 0.0), rig.get("fold_to", 0.0)]
+	set_fold(rig, 1.0, true)
+	aim(rig, Basis.IDENTITY, Vector3.UP, Vector3.FORWARD, -1.0)
+	var root: Node3D = model["node"]
+	var plume := root.find_child("DrivePlume", true, false)
+	var r := 0.0
+	var stack: Array = [[root, Transform3D.IDENTITY]]
+	while not stack.is_empty():
+		var item: Array = stack.pop_back()
+		for c in (item[0] as Node).get_children():
+			if c == plume or not c is Node3D:
+				continue
+			var xf: Transform3D = item[1] * (c as Node3D).transform
+			if c is MeshInstance3D and (c as MeshInstance3D).mesh != null:
+				var box: AABB = xf * (c as MeshInstance3D).mesh.get_aabb()
+				for i in 8:
+					var e := box.get_endpoint(i)
+					r = maxf(r, Vector2(e.x, e.y).length())
+			stack.append([c, xf])
+	set_fold(rig, float(was[0]), true)
+	rig["fold_to"] = was[1]
+	aim(rig, Basis.IDENTITY, Vector3.UP, Vector3.FORWARD, -1.0)
+	return r
+
+
 ## In transit, a ship leaving port keeps its panels stowed until it is clear, and a
 ## ship running quiet (ship.stowed, sim/systems/detection_system.gd) keeps them in.
 static func transit_fold(location: Dictionary, t: float, ship: Dictionary = {}) -> float:

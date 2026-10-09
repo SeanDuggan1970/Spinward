@@ -122,6 +122,8 @@ func validate() -> Array[String]:
 			var cw: String = p["elevator"]["counterweight"].get("place", "")
 			if not places.has(cw) or places[cw].get("foot_of", "") != id or not places[cw].get("counterweight", false):
 				problems.append("place %s: counterweight %s must be a place marked counterweight and foot_of it" % [id, cw])
+		if not p.get("station", {}).get("door", "iris") in ["iris", "clamshell", "sliding"]:
+			problems.append("place %s: unknown bay door %s (iris, clamshell or sliding)" % [id, p["station"]["door"]])
 		if "bar" in p.get("services", []) and not p.has("bar"):
 			problems.append("place %s: a bar service needs a bar (name, patrons, round_cr)" % id)
 		var market: Dictionary = p.get("market", {})

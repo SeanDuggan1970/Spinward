@@ -214,7 +214,7 @@ func _build_earth_orbit() -> void:
 	_light(Vector3(-0.55, 0.35, 0.75))
 	_body("earth", 14000.0, Vector3(9500.0, -11800.0, -17000.0), 0.004)
 	_body("moon", 700.0, Vector3(-15000.0, 7000.0, -42000.0))
-	var station := Models.station(data.places["kibo_ring"]["station"], data.places["kibo_ring"]["name"], Livery.for_station(data, "kibo_ring"))
+	var station := Models.station(data.places["kibo_ring"]["station"], data.places["kibo_ring"]["name"], Livery.for_station(data, "kibo_ring"), data.balance["bays"])
 	var holder := Node3D.new()
 	holder.position = Vector3(-230.0, 60.0, -760.0)
 	holder.rotation = Vector3(0.12, 0.85, 0.0)

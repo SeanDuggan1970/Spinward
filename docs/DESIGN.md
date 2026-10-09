@@ -819,6 +819,29 @@ Sean's request (2026-10-08): solar wings and radiators should fold back for dock
 - **Running quiet:** the same fold, held in transit while `ship.stowed` is set (see "Detection and stealth").
 - The sail freighter's sail is not folded.
 
+## Docking bays (Oct 2026, roadmap step 3)
+
+Ships fly into a station instead of nosing up to a collar on a small hub (`view/flight/bay.gd`, `balance.bays`).
+
+- **The bay:**
+  - A tunnel 16 m in radius and 80 m deep, lined in pale steel and lit by rings of lamps, with yellow guide stripes.
+  - It is built forward of the station's docking face, so the port at its back is exactly where the old port was. Approaches, hand-overs and trip times are unchanged.
+  - A wheel's hub grows to the bay's outer width (24 m radius) where it was smaller. Habitats carry the bay as a module on their docking nub.
+  - The station's name is stencilled on the bay's face.
+  - Green and red approach lights flank the mouth.
+- **Doors** (`station.door` in `data/places.json`):
+  - **Iris** at the Earth wheels and the habitats: twelve blades behind the face that swing in across the mouth. Open, they lie along the rim inside a housing flange.
+  - **Clamshell** at the yards and working ports: two leaves hinged top and bottom, folding outward.
+  - **Sliding** elsewhere: two leaves running apart in tracks.
+- **Clearance:** traffic control clears the ship 4 s into the docking scene, and the doors take 12 s to open, with amber lamps turning while they move. Once the whole ship is inside, they close behind it.
+  - The co-pilot and the docking computer hold 40 m short of the mouth until the doors are open.
+- **Collisions:**
+  - Shut doors are solid.
+  - Inside, the tunnel wall and the back wall hold the ship, and doors shut behind it hold it in.
+  - The ship's body probe shrinks to its stowed radius as its panels fold (see "Panels that fold for docking"). That radius is at most 10 m (a deep freighter), against the tunnel's 16 m.
+- **Too big for the bay:** a ship whose stowed radius plus 3 m won't go in berths on a collar on the shut doors. Only the sail freighters are that big, and they never dock in the flight scene.
+- Only the view changed: the sim never sees the bay.
+
 ## Sound: heard through the hull (Oct 2026)
 
 Sean's direction (2026-10-06):

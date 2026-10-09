@@ -43,17 +43,20 @@ result is an unrealistic turn and chase.
 - Trip time and fuel stay close to today's. The route-clearance test
   (`test_routes_clear_of_bodies`, `tools/route_clearance.gd`) must stay green.
 
-## 3. Bigger stations, docking bays and doors
+## 3. Bigger stations, docking bays and doors (done)
 
-Wheel hubs are only 8 to 20 m across, and their ports a few metres.
+Built in October 2026: see "Docking bays" in `docs/DESIGN.md`.
 
-- Scale the hubs up to hold a docking bay you fly into: a lit tunnel or hangar, not a
-  collar.
-- Doors chosen per station in the data: folding or clamshell, sliding, or an iris.
-  They open when traffic control clears you and close behind you.
-- A door counts as a collider until it is open.
-- The new approach from step 2 aims at the bay mouth.
-- The docking trial must still pass at every port.
+- Every station has a docking bay you fly into: a lit tunnel 32 m across and 80 m deep,
+  built forward of the docking face, with the port at its back. Wheel hubs grow to the
+  bay's width.
+- Doors are chosen per station in the data (`station.door`): iris at the big Earth
+  wheels and habitats, clamshell at the yards and working ports, sliding elsewhere.
+  They open when traffic control clears you, and close once you are inside.
+- Shut doors count as a collider; inside, the tunnel's walls do.
+- The port did not move, so step 2's approach and every trip are unchanged.
+- The docking trial passes at every port in a Mule and in a deep freighter, the
+  biggest ship a player flies.
 
 ## 4. Humpback cargo lander and pod types
 

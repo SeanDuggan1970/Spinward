@@ -126,6 +126,7 @@ func _initialize() -> void:
 	test_lander_pods()
 	test_detection_and_stealth()
 	test_panel_fold()
+	test_docking_bays()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -4261,3 +4262,32 @@ func test_panel_fold() -> void:
 	var loc := {"depart_t": 1000.0}
 	check(ShipRig.transit_fold(loc, 1010.0) == 1.0 and ShipRig.transit_fold(loc, 1000.0 + ShipRig.DEPLOY_AFTER_S + 1.0) == 0.0, "Panels unfold once clear of the port")
 	model["node"].free()
+
+
+func test_docking_bays() -> void:
+	var d = DataCatalog.load_default()
+	var Models = load("res://view/flight/models.gd")
+	var Bay = load("res://view/flight/bay.gd")
+	var geom: Dictionary = d.places["kibo_ring"]["station"]
+	var plain: Dictionary = Models.station(geom, "Kibo Ring")
+	var st: Dictionary = Models.station(geom, "Kibo Ring", {}, d.balance["bays"], 6.0)
+	var bay: Dictionary = st["bay"]
+	check(not bay.is_empty() and bay["fits"] and bay["door"] == "iris", "Kibo Ring has an iris bay a Mule fits")
+	check(is_equal_approx(float(st["port_z"]), float(plain["port_z"])), "The port stays where it was: approaches are unchanged")
+	check(float(st["hub_radius"]) >= float(bay["r"]) + float(d.balance["bays"]["wall_m"]), "The hub grows to the bay's width")
+	var mouth: float = bay["z_mouth"]
+	var hit: Array = Bay.contact(bay, Vector3(0, 0, mouth + 1.0), 2.0)
+	check(float(hit[0]) > 0.0 and hit[1].is_equal_approx(Vector3(0, 0, 1)), "Shut doors stop a ship at the mouth")
+	Bay.set_open(bay, 1.0)
+	check(float(Bay.contact(bay, Vector3(0, 0, mouth + 1.0), 2.0)[0]) == 0.0, "Open doors let it in")
+	hit = Bay.contact(bay, Vector3(float(bay["r"]) - 1.0, 0, mouth - 20.0), 3.0)
+	check(float(hit[0]) > 0.0 and hit[1].x < 0.0, "Inside, the tunnel wall pushes back toward the axis")
+	check(float(Bay.contact(bay, Vector3(0, 0, mouth - 20.0), 3.0)[0]) == 0.0, "On the axis inside the bay: clear")
+	Bay.set_open(bay, 0.0)
+	hit = Bay.contact(bay, Vector3(0, 0, mouth - 1.0), 2.0)
+	check(float(hit[0]) > 0.0 and hit[1].is_equal_approx(Vector3(0, 0, -1)), "Doors shut behind you hold you in")
+	# Too big for the bay: berth on a collar on the shut doors.
+	var big: Dictionary = Models.station(geom, "Kibo Ring", {}, d.balance["bays"], 400.0)
+	check(not big["bay"]["fits"] and float(big["port_z"]) > float(big["bay"]["z_mouth"]), "A ship too big for the bay berths on the doors")
+	for n in [plain["node"], st["node"], big["node"]]:
+		n.free()
