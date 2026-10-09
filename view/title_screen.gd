@@ -8,7 +8,11 @@
 ##   belt          weaving between tumbling rocks off Ceres, the Concord Pair beyond
 ##   enceladus     under Enceladus' south pole, its plumes blazing against the Sun
 ##   sail          a Lightfoot sail freighter catching sunlight over Earth
-##   touchdown     a Kestrel lowering onto the Moon on its lift jets, legs taking the weight
+##   touchdown     a humpback Kestrel lowering onto the Moon on its lift jets, legs
+##                 taking the weight, with a different pod each time (tank, flatbed...)
+##   docking       a ship folding its panels as it noses into a station's bay, the
+##                 doors opening for it
+##   release       a satellite let go over Earth, unfolding its wings as it drifts clear
 ## Bodies wear what is on them (plumes, elevators), as the system will be.
 ## Each shot flies a random hull in a real fleet's livery (the ships you will meet),
 ## with its caption. View-only: the sim is not ticking while this is up.
@@ -26,8 +30,10 @@ const SetPieces := preload("res://view/flight/set_pieces.gd")
 const SkyKit := preload("res://view/flight/sky.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
 const UI := preload("res://view/ui/ui_kit.gd")
+const Bay := preload("res://view/flight/bay.gd")
+const SatModel := preload("res://view/flight/satellite_model.gd")
 
-const SHOTS := ["earth_orbit", "jovian", "saturn", "lunar", "mars", "belt", "enceladus", "sail", "touchdown"]
+const SHOTS := ["earth_orbit", "jovian", "saturn", "lunar", "mars", "belt", "enceladus", "sail", "touchdown", "docking", "release"]
 const SHOT_S := 18.0
 const FADE_S := 0.8
 
@@ -49,6 +55,8 @@ var _hero_plume: Node3D
 var _hero_hull := ""
 var _hero_len := 30.0
 var _where := ""
+## Overrides for the caption card's name and description (a Kestrel's pod, say).
+var _caption := {}
 var _sun_dir := Vector3(-0.55, 0.35, 0.75).normalized()
 var _update: Callable
 var _spinners: Array = []
@@ -87,8 +95,8 @@ func _ready() -> void:
 func hero_info() -> Dictionary:
 	var ship := _ship_dict(_hero_hull)
 	return {
-		"name": data.ships[_hero_hull]["name"],
-		"description": data.ships[_hero_hull].get("description", ""),
+		"name": _caption.get("name", data.ships[_hero_hull]["name"]),
+		"description": _caption.get("description", data.ships[_hero_hull].get("description", "")),
 		"cargo_t": ShipStats.cargo_capacity_t(ship, data),
 		"fuel_t": ShipStats.fuel_capacity_t(ship, data),
 		"thrust_n": ShipStats.thrust_n(ship, data),
@@ -139,7 +147,17 @@ func _pick_hero(hull: String = "") -> void:
 		var fleet: Dictionary = fleets[_rng.randi() % fleets.size()]
 		var fleet_names: Array = fleet["names"]
 		livery = Livery.for_ship(data, fleet["operator"], fleet_names[_rng.randi() % fleet_names.size()])
-	var model := Models.ship(_ship_dict(_hero_hull), data, livery)
+	_caption = {}
+	var model: Dictionary
+	if _hero_hull == "kestrel" and data.pods.has("pods"):
+		# The humpback lander with one of its pods, a different one each time.
+		var pods: Array = data.pods["pods"].keys()
+		var pod: String = pods[_rng.randi() % pods.size()]
+		var spec: Dictionary = data.pods["pods"][pod]
+		model = load("res://view/flight/kestrel.gd").build(livery, 1.0, String(spec.get("look", "cargo")))
+		_caption = {"name": "Kestrel lander  ·  %s pod" % String(spec["name"]).to_lower(), "description": String(spec.get("description", ""))}
+	else:
+		model = Models.ship(_ship_dict(_hero_hull), data, livery)
 	_hero = model["node"]
 	_hero_rig = model["rig"]
 	_hero_model = model
@@ -397,7 +415,7 @@ func _build_sail() -> void:
 ## A Kestrel coming down on the Moon: lift jets on, the legs touching and taking the
 ## weight, dust... (no air, so none drifts: the jets just push the regolith flat).
 func _build_touchdown() -> void:
-	_where = "The Moon  ·  a Kestrel setting down"
+	_where = "The Moon  ·  setting a pod down"
 	_light(Vector3(-0.55, 0.42, -0.72), 1.6, Vector3(-30, 10, -30))
 	var moon := _body("moon", 220000.0, Vector3(0.0, -220000.0, 0.0))
 	(moon.mesh as SphereMesh).radial_segments = 1024
@@ -423,8 +441,69 @@ func _build_touchdown() -> void:
 		for leg in legs:
 			push.append(float(leg["travel_max"]) * clampf(squash, 0.0, 1.0))
 		Kestrel.compress(legs, push)
-		camera.position = Vector3(-24.0 + 4.0 * sin(clock * 0.1), 3.0, -20.0)
-		camera.look_at(_hero.position + Vector3(0, 1.0, 0), Vector3.UP)
+		# From the side, a little above: the humpback spine and its pod in profile.
+		camera.position = _hero.position + _hero.basis * Vector3(27.0 + 3.0 * sin(clock * 0.1), 5.0 - h * 0.3, -2.0 + 6.0 * sin(clock * 0.07))
+		camera.look_at(_hero.position + Vector3(0, 1.5, 0), Vector3.UP)
+
+
+## Into the bay: a ship comes up the axis folding its panels while the doors open,
+## and glides in under the lamps.
+func _build_docking() -> void:
+	var ports := ["trojan_yards", "shackleton_port", "clarke_exchange", "hektor_reach"]
+	var place: String = ports[_rng.randi() % ports.size()]
+	_where = "%s  ·  cleared in" % data.places[place]["name"]
+	_light(Vector3(-0.6, 0.45, 0.66), 1.5, Vector3(40, 30, 60))
+	if place == "shackleton_port":
+		_body("moon", 9000.0, Vector3(-6000.0, -9500.0, -16000.0))
+	elif place == "hektor_reach":
+		_body("jupiter", 9000.0, Vector3(14000.0, -3000.0, -40000.0))
+	else:
+		_body("earth", 14000.0, Vector3(9000.0, -12500.0, -19000.0), 0.004)
+	var stowed := ShipRig.stowed_radius(_hero_model)
+	var station := Models.station(data.places[place]["station"], data.places[place]["name"], Livery.for_station(data, place), data.balance["bays"], stowed)
+	_stage.add_child(station["node"])
+	var rotor: Node3D = station["rotor"]
+	var rate := float(data.places[place]["station"]["spin_rpm"]) * TAU / 60.0
+	var bay: Dictionary = station["bay"]
+	var mouth: float = bay["z_mouth"]
+	var R: float = bay["outer"]
+	ShipRig.set_fold(_hero_rig, 0.0, true)
+	_update = func(dt: float) -> void:
+		rotor.rotation.z += rate * dt
+		# Panels in over the first 8 s; doors open from 3 s to 10 s.
+		ShipRig.set_fold(_hero_rig, clampf(clock / 8.0, 0.0, 1.0), true)
+		Bay.set_open(bay, clampf((clock - 3.0) / 7.0, 0.0, 1.0))
+		# Up the axis, slowing, and in: nose at the mouth at 11 s, well inside by the end.
+		var f := clampf(clock / (SHOT_S - 1.0), 0.0, 1.0)
+		var nose_z: float = lerpf(mouth + 260.0, mouth - _hero_len * 0.9, 1.0 - pow(1.0 - f, 1.6))
+		var pos := Vector3(0, 0, nose_z + _hero_len * 0.5)
+		_fly(pos, Vector3(0, 0, -1), false, dt)
+		camera.position = Vector3(R * 1.6 + 6.0 * sin(clock * 0.1), R * 0.9, mouth + 110.0 - clock * 3.0)
+		camera.look_at(Vector3(0, 0, lerpf(mouth + 40.0, mouth - 20.0, f)), Vector3.UP)
+
+
+## A satellite let go over Earth: it drifts up out of the ship and its wings unfold.
+func _build_release() -> void:
+	_where = "Above Earth  ·  a satellite away"
+	_light(Vector3(-0.5, 0.5, 0.7), 1.5, Vector3(-20, 20, 20))
+	_body("earth", 14000.0, Vector3(-4000.0, -15800.0, -12000.0), 0.004)
+	_body("moon", 650.0, Vector3(19000.0, 5000.0, -46000.0))
+	var names := ["a relay cubesat cluster", "a weather smallsat", "a navigation beacon", "a space-weather sentinel"]
+	var sat: Dictionary = SatModel.build(names[_rng.randi() % names.size()])
+	SatModel.unfold(sat, 0.0)
+	var sat_node: Node3D = sat["node"]
+	_stage.add_child(sat_node)
+	_update = func(dt: float) -> void:
+		var pos := Vector3(0, sin(clock * 0.3) * 0.3, -40.0)
+		_fly(pos, Vector3(1, 0, -0.15).normalized(), false, dt)
+		# Out of the bay at 2 s, drifting up and away; wings open from 5 s.
+		var out := maxf(0.0, clock - 2.0)
+		var up := _hero.basis.y
+		sat_node.position = pos + up * (3.0 + out * 1.1) + _hero.basis.z * (out * 0.25)
+		sat_node.rotation = Vector3(0.2, clock * 0.06, 0.1)
+		SatModel.unfold(sat, (clock - 5.0) / 8.0)
+		camera.position = pos + Vector3(-_hero_len * 0.9, 6.0 + clock * 0.35, _hero_len * 0.8)
+		camera.look_at(sat_node.position.lerp(pos, 0.45), Vector3.UP)
 
 
 func _process(dt: float) -> void:
