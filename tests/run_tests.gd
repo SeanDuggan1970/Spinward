@@ -33,6 +33,9 @@ const ShipBill := preload("res://sim/ship_bill.gd")
 const CockpitPages := preload("res://view/ui/cockpit_pages.gd")
 const ShipRig := preload("res://view/flight/ship_rig.gd")
 const TravelSystem := preload("res://sim/systems/travel_system.gd")
+const PodSystem := preload("res://sim/systems/pod_system.gd")
+const Detection := preload("res://sim/detection.gd")
+const DetectionSystem := preload("res://sim/systems/detection_system.gd")
 
 const AU := 1.495978707e11
 const DAY := 86400.0
@@ -120,6 +123,12 @@ func _initialize() -> void:
 	test_turning_with_inertia()
 	test_final_approach()
 	test_counterweights_and_badges()
+	test_lander_pods()
+	test_detection_and_stealth()
+	test_panel_fold()
+	test_docking_bays()
+	test_satellite_missions()
+	test_secret_work()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -4110,3 +4119,288 @@ func test_counterweights_and_badges() -> void:
 	check(cv.weight_g(82000.0e3) < 0.0 and cv.weight_g(1000.0) > 0.1, "Heavy at the foot, a hair of weight outward at Ballast Point (%.2f mg)" % (cv.weight_g(82000.0e3) * 1000.0))
 	check(Climber._weight_text(-0.00017).ends_with("outward: the ceiling is the floor") and Climber._weight_text(0.15) == "0.150 g", "Slight weights read in milligees")
 	cv.free()
+
+
+## The lander's pods (roadmap step 4): fitted at a shipyard, counted in the ship's
+## stats, set down on site with cargo or propellant, and picked up again, staying in
+## the saved game until then.
+func test_lander_pods() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	check(d.validate().is_empty(), "Data with pods validates")
+	var base_cap := ShipStats.cargo_capacity_t(s.ship, d)
+	check(ShipStats.pod_of(s.ship, d) == "", "No lander bay, no pod")
+	s.ship["modules"]["cargo.1"] = "lander_bay"
+	check(ShipStats.pod_of(s.ship, d) == "cargo_container", "A lander bay carries the default pod")
+	var cap := ShipStats.cargo_capacity_t(s.ship, d)
+	check(is_equal_approx(cap, base_cap - float(d.modules["cargo_pod_s"]["cargo_t"]) + float(d.pods["pods"]["cargo_container"]["cargo_t"])), "The pod's hold counts in the ship's (%.1f t)" % cap)
+	# Fit a liquid tank at a shipyard: the container is taken back at half price.
+	s.credits = 50000.0
+	check(sim.apply({"type": "fit_pod", "pod": "liquid_tank"}) == "", "Fit a liquid tank at Kibo Ring's yard")
+	check(absf(s.credits - (50000.0 - 9000.0 + 3000.0)) < 1e-6, "Paid the tank less half the container")
+	var fuel_cap := ShipStats.fuel_capacity_t(s.ship, d)
+	check(is_equal_approx(fuel_cap, float(d.modules["tank_s"]["fuel_t"]) + 3.0), "The tank pod adds 3 t of propellant room")
+	check(sim.apply({"type": "fit_pod", "pod": "liquid_tank"}) == "that pod is already fitted", "Can't fit the same pod twice")
+	# Leave a fuel cache on site.
+	s.ship["fuel_t"] = fuel_cap
+	s.location = {"status": "on_site", "place": "eros_survey"}
+	check(sim.apply({"type": "fit_pod", "pod": "open_flatbed"}).begins_with("pods are fitted"), "No shipyard on site")
+	check(sim.apply({"type": "drop_pod", "fuel_t": 2.0}) == "the ship's tanks won't take the rest of the propellant", "Full tanks: what stays aboard must fit without the pod")
+	s.ship["fuel_t"] = 5.0
+	check(sim.apply({"type": "drop_pod", "fuel_t": 2.0}) == "", "Set the tank down with 2 t in it")
+	check(ShipStats.pod_of(s.ship, d) == "" and is_equal_approx(float(s.ship["fuel_t"]), 3.0), "The clamp is empty and 2 t went with it")
+	check(PodSystem.at_site(s, "eros_survey").size() == 1, "The pod lies at the site")
+	# It stays in the saved game.
+	var loaded := SaveIO.from_text(SaveIO.to_text(s))
+	check(loaded != null and loaded.sites.get("pods", {}).get("eros_survey", []).size() == 1, "A dropped pod is saved")
+	# Pick it back up: the propellant comes aboard.
+	s.ship["fuel_t"] = 0.5
+	check(sim.apply({"type": "pick_up_pod", "index": 0}) == "", "Pick the cache back up")
+	check(ShipStats.pod_of(s.ship, d) == "liquid_tank" and is_equal_approx(float(s.ship["fuel_t"]), 2.5), "The tank and its 2 t are back aboard")
+	check(PodSystem.at_site(s, "eros_survey").is_empty(), "Nothing left lying there")
+	# A loaded cargo pod; what stays aboard must fit without it.
+	s.location = {"status": "docked", "place": "kibo_ring"}
+	check(sim.apply({"type": "fit_pod", "pod": "cargo_container"}) == "", "Back to a container")
+	s.location = {"status": "on_site", "place": "eros_survey"}
+	s.ship["cargo"] = {"water_ice": 3.0}
+	check(sim.apply({"type": "drop_pod", "cargo": {"water_ice": 5.0}}).begins_with("you don't have"), "Can't leave more than you carry")
+	check(sim.apply({"type": "drop_pod", "cargo": {"water_ice": 3.0}}) == "" and not s.ship["cargo"].has("water_ice"), "Leave 3 t of ice in the pod")
+	check(sim.apply({"type": "drop_pod"}) == "no pod to set down", "Nothing left to set down")
+	# Someone else's pod is picked up only with an empty clamp; one can carry another.
+	s.sites["pods"]["eros_survey"].append({"pod": "open_flatbed", "cargo": {}, "fuel_t": 0.0, "t": s.time_s})
+	check(sim.apply({"type": "pick_up_pod", "index": 1}) == "" and ShipStats.pod_of(s.ship, d) == "open_flatbed", "Pick up the flatbed")
+	check(sim.apply({"type": "pick_up_pod", "index": 0}) == "set your own pod down first", "One pod at a time")
+	# An old save with a lander bay carries the default pod.
+	var old := s.ship.duplicate(true)
+	old.erase("pod")
+	check(ShipStats.pod_of(old, d) == "cargo_container", "An old save's lander bay has the default pod")
+
+
+func test_detection_and_stealth() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	check(d.validate().is_empty(), "Data with detection validates")
+	# Honest physics: a lit drive shows across millions of km; coasting dark, the ship is faint.
+	var lit := Detection.channels(s.ship, d, {"dark": false}, true, 1.0)
+	var coast := Detection.channels(s.ship, d, {"dark": true}, false, 1.0)
+	check(Detection.loudest(lit)[0] == "drive" and float(lit["drive"]) > 1.0e9, "A burning drive is the loudest thing aboard (%.0f km)" % (float(lit["drive"]) / 1000.0))
+	check(float(coast["transponder"]) == 0.0 and float(coast["lights"]) == 0.0 and float(coast["drive"]) == 0.0, "Dark and coasting: no transponder, lights or drive")
+	check(float(Detection.loudest(coast)[1]) < 1.0e8, "Dark and coasting, the ship is seen only nearby (%.0f km)" % (float(Detection.loudest(coast)[1]) / 1000.0))
+	# The coating cuts reflected sunlight; a heat sink hides waste heat until it is full.
+	var coated := s.ship.duplicate(true)
+	coated["coating"] = "low_obs"
+	check(float(Detection.channels(coated, d, {"dark": true}, false, 1.0)["sunlight"]) < float(coast["sunlight"]) * 0.5, "The low-observable coating dims the hull")
+	var sunk := s.ship.duplicate(true)
+	sunk["modules"]["cargo.1"] = "heat_sink"
+	check(float(Detection.channels(sunk, d, {"dark": true, "sink_mj": 0.0}, false, 1.0)["heat"]) == 0.0, "An empty sink soaks up the heat")
+	check(float(Detection.channels(sunk, d, {"dark": true, "sink_mj": 800.0}, false, 1.0)["heat"]) > 0.0, "A full sink no longer hides it")
+	# No running dark at the berth; the coating only at a stealth yard.
+	check(sim.apply({"type": "dark_running", "on": true}) != "", "Traffic control won't let a ship sit dark at the berth")
+	check(sim.apply({"type": "coat_hull"}) == "only a few yards do that work", "Kibo Ring doesn't coat hulls")
+	# Leave, then go dark right by the port: it sees you and fines you, once.
+	s.ship["fuel_t"] = 3.0
+	check(sim.apply({"type": "depart", "to": "halo_depot"}) == "", "Depart for Halo Depot")
+	sim.advance_game_time(600.0)
+	check("kibo_ring" in s.detection["seen_by"], "Kibo Ring sees the ship leaving")
+	var credits := s.credits
+	var op: String = d.places["kibo_ring"]["operator"]
+	var rep := float(s.reputation.get(op, 0.0))
+	check(sim.apply({"type": "dark_running", "on": true}) == "", "Run dark")
+	sim.advance_game_time(900.0)
+	check(is_equal_approx(s.credits, credits - float(d.balance["detection"]["dark_fine_cr"])), "Fined for running dark under Kibo's nose")
+	check(float(s.reputation.get(op, 0.0)) < rep, "And it costs standing with the operator")
+	sim.advance_game_time(900.0)
+	check(is_equal_approx(s.credits, credits - float(d.balance["detection"]["dark_fine_cr"])), "Only once a trip")
+	# Folding the panels in shrinks the signature and stops the solar wings.
+	var quiet := s.ship.duplicate(true)
+	quiet["stowed"] = true
+	var open_ch := Detection.channels(s.ship, d, {"dark": true}, false, 1.0)
+	var in_ch := Detection.channels(quiet, d, {"dark": true}, false, 1.0)
+	check(float(in_ch["sunlight"]) < float(open_ch["sunlight"]) and float(in_ch["heat"]) < float(open_ch["heat"]), "Panels in: less sunlight and heat show")
+	check(ShipStats.solar_kw_1au(quiet, d) == 0.0, "Panels in: the solar wings make nothing")
+	var coasting := Navigation.transit_accel(s.location, s.time_s)
+	if V.length(coasting) > 1e-6:
+		check(sim.apply({"type": "stow_panels", "on": true}) != "", "No folding in while the drive is lit")
+	else:
+		check(sim.apply({"type": "stow_panels", "on": true}) == "" and s.ship.get("stowed", false), "Fold the panels in while coasting")
+	# Saved and loaded.
+	var loaded := SaveIO.from_text(SaveIO.to_text(s))
+	check(loaded != null and bool(loaded.detection.get("dark", false)) and "kibo_ring" in loaded.detection.get("fined", []), "Detection state is saved")
+	# Arriving, the transponder comes back on.
+	sim.advance_game_time(float(s.location["arrive_t"]) - s.time_s + 60.0)
+	check(s.location.get("status") != "transit" and not bool(s.detection["dark"]), "The transponder is on again in port")
+	check(not s.ship.get("stowed", false), "And the panels are out again")
+	check(sim.apply({"type": "stow_panels", "on": true}) == "the panels fold in only under way", "Panels fold in only under way")
+	# A stealth yard coats the hull, for a price.
+	s.location = {"status": "docked", "place": "trojan_yards"}
+	s.credits = 1.0e6
+	var cost := DetectionSystem.coat_cost(s, d)
+	check(sim.apply({"type": "coat_hull"}) == "" and s.ship.get("coating", "") == "low_obs" and is_equal_approx(s.credits, 1.0e6 - cost), "Coated at Trojan Yards for %d cr" % int(cost))
+	check(sim.apply({"type": "coat_hull"}) == "she's already coated", "Once is enough")
+
+
+func test_panel_fold() -> void:
+	var sim := fresh()
+	var Models = load("res://view/flight/models.gd")
+	var model: Dictionary = Models.ship(sim.state.ship, sim.data)
+	var rig: Dictionary = model["rig"]
+	var arrays: Array = rig["arrays"]
+	check(not arrays.is_empty() and arrays.all(func(a): return a["hinges"].size() >= 2), "Every panel is built in hinged segments")
+	ShipRig.set_fold(rig, 0.0)
+	ShipRig.aim(rig, Basis.IDENTITY, Vector3(0.3, 0.8, 0.4), Vector3.FORWARD, 0.1)
+	check(is_zero_approx(float(rig["fold"])) and is_zero_approx(arrays[0]["hinges"][0].rotation.z), "Deployed: the segments lie flat in a line")
+	# Stowing takes FOLD_RATE: part way after a few seconds, all the way in the end.
+	ShipRig.set_fold(rig, 1.0)
+	ShipRig.aim(rig, Basis.IDENTITY, Vector3(0.3, 0.8, 0.4), Vector3.FORWARD, 5.0)
+	check(float(rig["fold"]) > 0.0 and float(rig["fold"]) < 1.0, "Folding takes time (%.2f after 5 s)" % float(rig["fold"]))
+	for i in 40:
+		ShipRig.aim(rig, Basis.IDENTITY, Vector3(0.3, 0.8, 0.4), Vector3.FORWARD, 1.0)
+	var a: Dictionary = arrays[0]
+	check(is_equal_approx(float(rig["fold"]), 1.0) and is_zero_approx(a["node"].rotation.x), "Stowed: the panel turned flat")
+	check(is_equal_approx(absf(a["hinges"][0].rotation.z), PI * 0.5), "Stowed: the first segment stands up off the boom")
+	# In transit the panels stay stowed just after leaving port.
+	var loc := {"depart_t": 1000.0}
+	check(ShipRig.transit_fold(loc, 1010.0) == 1.0 and ShipRig.transit_fold(loc, 1000.0 + ShipRig.DEPLOY_AFTER_S + 1.0) == 0.0, "Panels unfold once clear of the port")
+	model["node"].free()
+
+
+func test_docking_bays() -> void:
+	var d = DataCatalog.load_default()
+	var Models = load("res://view/flight/models.gd")
+	var Bay = load("res://view/flight/bay.gd")
+	var geom: Dictionary = d.places["kibo_ring"]["station"]
+	var plain: Dictionary = Models.station(geom, "Kibo Ring")
+	var st: Dictionary = Models.station(geom, "Kibo Ring", {}, d.balance["bays"], 6.0)
+	var bay: Dictionary = st["bay"]
+	check(not bay.is_empty() and bay["fits"] and bay["door"] == "iris", "Kibo Ring has an iris bay a Mule fits")
+	check(is_equal_approx(float(st["port_z"]), float(plain["port_z"])), "The port stays where it was: approaches are unchanged")
+	check(float(st["hub_radius"]) >= float(bay["r"]) + float(d.balance["bays"]["wall_m"]), "The hub grows to the bay's width")
+	var mouth: float = bay["z_mouth"]
+	var hit: Array = Bay.contact(bay, Vector3(0, 0, mouth + 1.0), 2.0)
+	check(float(hit[0]) > 0.0 and hit[1].is_equal_approx(Vector3(0, 0, 1)), "Shut doors stop a ship at the mouth")
+	Bay.set_open(bay, 1.0)
+	check(float(Bay.contact(bay, Vector3(0, 0, mouth + 1.0), 2.0)[0]) == 0.0, "Open doors let it in")
+	hit = Bay.contact(bay, Vector3(float(bay["r"]) - 1.0, 0, mouth - 20.0), 3.0)
+	check(float(hit[0]) > 0.0 and hit[1].x < 0.0, "Inside, the tunnel wall pushes back toward the axis")
+	check(float(Bay.contact(bay, Vector3(0, 0, mouth - 20.0), 3.0)[0]) == 0.0, "On the axis inside the bay: clear")
+	Bay.set_open(bay, 0.0)
+	hit = Bay.contact(bay, Vector3(0, 0, mouth - 1.0), 2.0)
+	check(float(hit[0]) > 0.0 and hit[1].is_equal_approx(Vector3(0, 0, -1)), "Doors shut behind you hold you in")
+	# Too big for the bay: berth on a collar on the shut doors.
+	var big: Dictionary = Models.station(geom, "Kibo Ring", {}, d.balance["bays"], 400.0)
+	check(not big["bay"]["fits"] and float(big["port_z"]) > float(big["bay"]["z_mouth"]), "A ship too big for the bay berths on the doors")
+	for n in [plain["node"], st["node"], big["node"]]:
+		n.free()
+
+
+## The contract system instance (for driving its rules directly in tests).
+func _contract_system(sim: Sim):
+	for sys in sim.systems:
+		if sys is ContractSystemScript:
+			return sys
+	return null
+
+
+func _offer(sim: Sim, place: String, kind: String, to: String = "") -> Dictionary:
+	var rng := RandomNumberGenerator.new()
+	for i in 200:
+		rng.seed = 1000 + i
+		var o := Contracts.make_offer(sim.data, sim.ephemeris, sim.state, rng, place, kind, "approach")
+		if not o.is_empty() and (to == "" or o["to"] == to):
+			o["id"] = 900 + i
+			sim.state.contracts["board"][place] = sim.state.contracts["board"].get(place, []) + [o]
+			return o
+	return {}
+
+
+func test_satellite_missions() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var o := _offer(sim, "kibo_ring", "satellite")
+	check(not o.is_empty() and o.get("payload", false) and o.get("release", false), "A satellite job: payload, released near its orbit")
+	s.reputation[o["client"]] = 10.0
+	check(sim.apply({"type": "accept_contract", "id": o["id"]}).begins_with("no room in a payload carrier"), "No payload carrier, no satellite")
+	s.ship["modules"]["cargo.1"] = "lander_bay"
+	s.ship["pod"] = "payload_carrier"
+	var mass_before := ShipStats.total_mass_t(s.ship, d)
+	check(sim.apply({"type": "accept_contract", "id": o["id"]}) == "", "With a payload carrier: take the job")
+	check(is_equal_approx(float(s.ship["payload_load_t"]), float(o["mass_t"])) and ShipStats.total_mass_t(s.ship, d) > mass_before, "The satellite rides in the carrier, and weighs")
+	check(sim.apply({"type": "fit_pod", "pod": "cargo_container"}) == "there's a satellite in the payload carrier", "Can't swap the pod with a satellite in it")
+	var where: String = o["to"]
+	check(sim.apply({"type": "release_satellite", "id": o["id"]}).begins_with("too far") or where == "kibo_ring", "Too far from its orbit to release")
+	var credits := s.credits
+	s.location = {"status": "docked", "place": where}
+	check(sim.apply({"type": "release_satellite", "id": o["id"]}) == "", "Released at %s" % d.locations[where]["name"])
+	check(s.sites.get("satellites", []).size() == 1 and s.sites["satellites"][0]["place"] == where, "The satellite stays in the world")
+	check(s.credits > credits and is_zero_approx(float(s.ship["payload_load_t"])), "Paid, and the carrier is empty")
+	var loaded := SaveIO.from_text(SaveIO.to_text(s))
+	check(loaded != null and loaded.sites.get("satellites", []).size() == 1, "Placed satellites are saved")
+
+
+func test_secret_work() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var cs = _contract_system(sim)
+	check(not Contracts.covert_unlocked(s, d), "No secret work for a newcomer")
+	s.ship["fuel_t"] = 3.0
+	check(sim.apply({"type": "depart", "to": "halo_depot", "filed": false}) == "traffic control wants a flight plan", "No free departures yet")
+	s.reputation["Terran Compact"] = 25.0
+	check(Contracts.covert_unlocked(s, d), "Reliable with the Compact: secret work opens")
+	# Every covert kind makes an offer with a watcher who isn't the client.
+	for kind in ["covert_delivery", "listening_device", "spy_satellite", "covert_drop", "covert_extract"]:
+		var o := _offer(sim, "kibo_ring", kind)
+		check(not o.is_empty() and o.get("covert", false) and o.get("watcher", "") != "" and o["watcher"] != o["client"], "%s: hidden from %s" % [kind, o.get("watcher", "?")])
+	# A listening device on Shackleton Port, planted unseen on the way out.
+	var bug := _offer(sim, "kibo_ring", "listening_device", "shackleton_port")
+	check(sim.apply({"type": "accept_contract", "id": bug["id"]}) == "", "Take the device")
+	# Leave without a plan: Kibo Ring is busy, so it costs.
+	var credits := s.credits
+	var rep := float(s.reputation["Terran Compact"])
+	check(sim.apply({"type": "depart", "to": "halo_depot", "filed": false}) == "", "Leave without filing a plan")
+	check(s.location.get("filed", true) == false and s.credits < credits and float(s.reputation["Terran Compact"]) < rep, "Frowned on at a busy port: fined and a dent in standing")
+	sim.advance_game_time(60.0)
+	check(sim.apply({"type": "plant_device", "id": bug["id"]}) == "run dark first: transponder and lights off", "Plant it dark")
+	sim.apply({"type": "dark_running", "on": true})
+	sim.advance_game_time(400.0)
+	var why: String = cs.release_block(cs._job(bug["id"]))
+	if why == "":
+		credits = s.credits
+		check(sim.apply({"type": "plant_device", "id": bug["id"]}) == "" and s.credits > credits, "Planted unseen, coasting dark near the Moon's port")
+	else:
+		check(why.begins_with("not with the drive lit") or why.begins_with("too far"), "Planting waits for a coast within range (%s)" % why)
+	# Suspicion: a watcher's port sees us with covert work aboard.
+	var job := {"id": 7001, "kind": "covert_delivery", "client": "Terran Compact", "watcher": "Luna Cooperative", "covert": true, "state": "carried",
+		"to": "halo_depot", "pickup": "", "mass_t": 0.0, "passengers": 0, "reward": 5000.0, "rep": 4.0, "accepted_t": s.time_s, "deadline_t": s.time_s + 1.0e7, "window_s": 1.0e7, "stowed": "parcels_t"}
+	s.contracts["active"].append(job)
+	s.detection["seen_by"] = ["shackleton_port"]
+	s.detection["dark"] = true
+	cs._watchers(1000.0)
+	check(is_equal_approx(float(job["suspicion_s"]), 1000.0), "Seen dark on a trip without a plan: suspicion builds at 1x")
+	s.detection["seen_by"] = []
+	cs._watchers(100.0)
+	check(is_zero_approx(float(job["suspicion_s"])), "No plan filed, and out of every port's sight: they lost us")
+	s.detection["seen_by"] = ["shackleton_port"]
+	s.detection["dark"] = false
+	credits = s.credits
+	var offences := int(s.detection.get("offences", 0))
+	cs._watchers(3000.0)
+	check(job["outcome"] == "caught" and s.credits < credits and int(s.detection["offences"]) == offences + 1, "Transponder on under a watcher's eye: caught, fined, an offence")
+	# Repeat offenders are impounded until they pay.
+	s.detection["offences"] = int(d.contracts["covert"]["impound_after"]) - 1
+	var job2 := job.duplicate(true)
+	job2.erase("outcome")
+	job2["id"] = 7002
+	job2["suspicion_s"] = 0.0
+	s.contracts["active"].append(job2)
+	s.location = {"status": "docked", "place": "shackleton_port"}
+	s.contracts["last_dock"] = ""
+	sim.advance_game_time(1.0)
+	check(job2.get("outcome", "") == "caught", "Docking at the watcher's port with it aboard: customs")
+	check(float(s.detection.get("impound_cr", 0.0)) > 0.0, "A repeat offender's ship is impounded")
+	check(sim.apply({"type": "depart", "to": "kibo_ring"}).begins_with("your ship is impounded"), "An impounded ship goes nowhere")
+	s.credits = 1.0e5
+	check(sim.apply({"type": "pay_impound"}) == "" and sim.apply({"type": "depart", "to": "kibo_ring"}) == "", "Pay the fee and leave")

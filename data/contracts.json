@@ -163,7 +163,151 @@
 				0.002,
 				0.03
 			]
+		},
+		"satellite": {
+			"weight": 2,
+			"payload": true,
+			"release": true,
+			"mass_t": [0.4, 2.5],
+			"slack": [1.8, 3.0],
+			"pay_base": 5000,
+			"pay_per_day": 1100,
+			"urgency": 0.4,
+			"rep": 3.0,
+			"min_rep": 6.0,
+			"items": [
+				"a weather smallsat for the agricultural rings",
+				"a relay cubesat cluster",
+				"a navigation beacon satellite",
+				"a student-built science satellite",
+				"a space-weather sentinel",
+				"a debris-tracking radar satellite",
+				"a comms relay for the far side"
+			]
+		},
+		"covert_delivery": {
+			"covert": true,
+			"weight": 3,
+			"mass_t": [0.05, 1.0],
+			"slack": [1.6, 2.4],
+			"pay_base": 6000,
+			"pay_per_day": 1500,
+			"urgency": 0.6,
+			"rep": 4.0,
+			"min_rep": 0.0,
+			"items": [
+				"a crate with no manifest",
+				"medicine that has not been approved yet",
+				"a prototype the patent office has not seen",
+				"seed stock from a quarantined farm"
+			],
+			"hand_items": [
+				"a data cube that must never be read in transit",
+				"letters from a dissident, on paper",
+				"a key to something, in a lead box"
+			],
+			"hand_mass_t": [0.002, 0.03]
+		},
+		"listening_device": {
+			"covert": true,
+			"plant": true,
+			"weight": 2,
+			"mass_t": [0.01, 0.01],
+			"slack": [2.0, 3.0],
+			"pay_base": 9000,
+			"pay_per_day": 1200,
+			"urgency": 0.3,
+			"rep": 5.0,
+			"min_rep": 0.0,
+			"items": [
+				"a listening device, to drift in among their traffic",
+				"a packet sniffer in a meteoroid-shaped shell",
+				"a relay tap for their traffic-control channel"
+			]
+		},
+		"spy_satellite": {
+			"covert": true,
+			"payload": true,
+			"release": true,
+			"watched": true,
+			"weight": 2,
+			"mass_t": [0.3, 1.2],
+			"slack": [2.0, 3.0],
+			"pay_base": 12000,
+			"pay_per_day": 1500,
+			"urgency": 0.3,
+			"rep": 6.0,
+			"min_rep": 0.0,
+			"items": [
+				"a 'weather' satellite with an unusually large lens",
+				"a signals satellite in a dead satellite's shell",
+				"an inspector satellite for a watched orbit"
+			]
+		},
+		"covert_drop": {
+			"covert": true,
+			"lander": true,
+			"to_site": true,
+			"weight": 1,
+			"count": [1, 2],
+			"slack": [1.8, 2.8],
+			"pay_base": 7000,
+			"pay_per_day": 1200,
+			"urgency": 0.5,
+			"rep": 5.0,
+			"min_rep": 0.0,
+			"per_head": true,
+			"who": [
+				"someone who needs to disappear for a while",
+				"a whistle-blower and her lawyer",
+				"two engineers who were never here"
+			]
+		},
+		"covert_extract": {
+			"covert": true,
+			"lander": true,
+			"from_site": true,
+			"weight": 1,
+			"count": [1, 1],
+			"slack": [2.0, 3.0],
+			"pay_base": 9000,
+			"pay_per_day": 1400,
+			"urgency": 0.5,
+			"rep": 6.0,
+			"min_rep": 0.0,
+			"per_head": true,
+			"who": [
+				"a surveyor who saw too much",
+				"a defector with a head full of plans",
+				"a journalist who went to look"
+			]
 		}
+	},
+	"covert": {
+		"_note": "Secret work (sim/systems/contract_system.gd), unlocked at unlock_rep standing with any operator (Reliable). Covert jobs come only as approaches, chance of the time once unlocked. Each has a watcher (an operator whose ports would stop you). While carrying one, every second a watcher's port sees the ship builds suspicion: transponder_mult as fast with the transponder on, filed_mult as fast on a trip with a filed plan (they know where you are going). On a trip without a plan, losing every port's sensors loses them too: suspicion resets. At suspicion_s you are caught, as you are docking at a watcher's port with covert work aboard: the job fails, caught_fine_cr, caught_rep with the watcher and client_rep with the client, and an offence. impound_after offences and the ship is held at your next port until you pay impound_fee_cr. Listening devices and spy satellites go in on a long, slow drift from within plant_m of their target, coasting, dark and unseen by it; ordinary satellites anywhere within release_m of their orbit (or from the bay at the port). Free departures (no plan filed) unlock with secret work; leaving a busy_port that way costs unfiled_fine_cr and unfiled_rep with its operator, more each time (unfiled_repeat_mult): traffic control remembers.",
+		"unlock_rep": 20.0,
+		"chance": 0.5,
+		"pay_mult": 1.0,
+		"suspicion_s": 7200.0,
+		"transponder_mult": 3.0,
+		"filed_mult": 2.0,
+		"caught_fine_cr": 2500,
+		"caught_rep": -6.0,
+		"client_rep": -4.0,
+		"impound_after": 3,
+		"impound_fee_cr": 6000,
+		"release_m": 2.0e7,
+		"plant_m": 5.0e8,
+		"unfiled_fine_cr": 400,
+		"unfiled_rep": -1.0,
+		"unfiled_repeat_mult": 0.5,
+		"busy_ports": ["kibo_ring", "clarke_exchange", "halo_depot", "shackleton_port", "kalpana_one", "kalpana_two", "selene_ring", "tsiolkovsky_wheel"],
+		"openers": [
+			"A note slipped under your cabin door: a time, a berth number, and no name.",
+			"The bartender sets down a drink you didn't order. 'From the gentleman who has already left.'",
+			"Your co-pilot finds a message hidden in a routine traffic bulletin. It knows your ship's name.",
+			"A dockhand helping with your lines says, very quietly, that someone would like a word."
+		]
 	},
 	"late": {
 		"pay_fraction": 0.5,

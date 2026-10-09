@@ -1,5 +1,5 @@
 {
-	"_note": "Flows are tonnes per game day. market.target is the stock where price equals base price. Recipes run per day while inputs last. Station geometry drives the docking scene. Orbits flagged 'equatorial' are relative to Earth's equator. 'features' add view-only megastructure set pieces (skyhook, power_arrays, elevator, bernal_frame, telescope_array, captured_rock). station.type is 'wheel' (default) or 'cylinder'. Places that a project builds ('opens_with': island_one, kalpana_two, concord_pair, selene_ring, tsiolkovsky_wheel, hektor_reach) stay shut (departures, boards, map, traffic, tips) until the project is done (Perks.place_open); their markets still warm up from day one. A habitat built beside an existing port sits a few km off it (lagrange offset_km, or a slightly different mean anomaly in the same orbit). station.type 'bernal' is a Bernal sphere (Island One: hub_radius_m is the sphere's radius) and 'pair' an O'Neill pair of counter-rotating cylinders (Concord; optional mirror_open_deg, twin_offset_m), both in view/flight/habitats.gd. An elevator may have a 'counterweight' leg (place, km and hours beyond the anchor, fare, fare_per_t, via): a place marked 'counterweight' and foot_of the anchor, reached only by climbing out past the anchor; a surface location with radius_m sits that far from the body's centre, turning with it. A place with the 'bar' service has a 'bar' (name, patrons, round_cr): you can buy the room a round (sim/systems/badge_system.gd). An elevator's 'power' is how its climbers run: 'beam' (a photocell dish under each climber, lit from the foot) or 'solar' (wings).",
+	"_note": "Flows are tonnes per game day. market.target is the stock where price equals base price. Recipes run per day while inputs last. Station geometry drives the docking scene. Orbits flagged 'equatorial' are relative to Earth's equator. 'features' add view-only megastructure set pieces (skyhook, power_arrays, elevator, bernal_frame, telescope_array, captured_rock). station.type is 'wheel' (default) or 'cylinder'. Places that a project builds ('opens_with': island_one, kalpana_two, concord_pair, selene_ring, tsiolkovsky_wheel, hektor_reach) stay shut (departures, boards, map, traffic, tips) until the project is done (Perks.place_open); their markets still warm up from day one. A habitat built beside an existing port sits a few km off it (lagrange offset_km, or a slightly different mean anomaly in the same orbit). station.type 'bernal' is a Bernal sphere (Island One: hub_radius_m is the sphere's radius) and 'pair' an O'Neill pair of counter-rotating cylinders (Concord; optional mirror_open_deg, twin_offset_m), both in view/flight/habitats.gd. An elevator may have a 'counterweight' leg (place, km and hours beyond the anchor, fare, fare_per_t, via): a place marked 'counterweight' and foot_of the anchor, reached only by climbing out past the anchor; a surface location with radius_m sits that far from the body's centre, turning with it. A place with the 'bar' service has a 'bar' (name, patrons, round_cr): you can buy the room a round (sim/systems/badge_system.gd). An elevator's 'power' is how its climbers run: 'beam' (a photocell dish under each climber, lit from the foot) or 'solar' (wings). 'sensors' scales how far a port sees ships (balance.detection.port_sensors by default).",
 	"kibo_ring": {
 		"name": "Kibo Ring",
 		"operator": "Terran Compact",
@@ -18,6 +18,7 @@
 			}
 		},
 		"station": {
+			"door": "iris",
 			"hub_radius_m": 14,
 			"hub_length_m": 90,
 			"ring_radius_m": 110,
@@ -74,7 +75,8 @@
 		"recipes": [],
 		"features": [
 			"skyhook"
-		]
+		],
+		"sensors": 1.6
 	},
 	"clarke_exchange": {
 		"name": "Clarke Exchange",
@@ -94,6 +96,7 @@
 			}
 		},
 		"station": {
+			"door": "iris",
 			"hub_radius_m": 10,
 			"hub_length_m": 60,
 			"ring_radius_m": 70,
@@ -128,7 +131,8 @@
 		"features": [
 			"power_arrays",
 			"sail_yard"
-		]
+		],
+		"sensors": 1.6
 	},
 	"halo_depot": {
 		"name": "Halo Depot",
@@ -204,7 +208,8 @@
 				"via": "Up the ribbon past the anchor, the way you didn't come: 26,000 km more toward Earth to the counterweight, where the floor turns into the ceiling."
 			},
 			"power": "beam"
-		}
+		},
+		"sensors": 1.3
 	},
 	"shackleton_port": {
 		"name": "Shackleton Port",
@@ -265,7 +270,8 @@
 					"propellant": 2
 				}
 			}
-		]
+		],
+		"sensors": 1.3
 	},
 	"trojan_yards": {
 		"name": "Trojan Yards",
@@ -280,6 +286,7 @@
 			"point": "L4"
 		},
 		"station": {
+			"door": "clamshell",
 			"hub_radius_m": 16,
 			"hub_length_m": 120,
 			"ring_radius_m": 95,
@@ -309,7 +316,8 @@
 			"lander_bay",
 			"mining_rig",
 			"hab_extended",
-			"passenger_berths"
+			"passenger_berths",
+			"heat_sink"
 		],
 		"market": {
 			"regolith": 600,
@@ -391,6 +399,7 @@
 			"point": "L5"
 		},
 		"station": {
+			"door": "clamshell",
 			"hub_radius_m": 20,
 			"hub_length_m": 140,
 			"ring_radius_m": 160,
@@ -453,6 +462,7 @@
 			}
 		},
 		"station": {
+			"door": "iris",
 			"type": "cylinder",
 			"hub_radius_m": 250,
 			"hub_length_m": 325,
@@ -492,7 +502,8 @@
 		"recipes": [],
 		"features": [
 			"kalpana_two"
-		]
+		],
+		"sensors": 1.4
 	},
 	"farside_array": {
 		"name": "Farside Array",
@@ -555,6 +566,7 @@
 			}
 		},
 		"station": {
+			"door": "clamshell",
 			"hub_radius_m": 16,
 			"hub_length_m": 110,
 			"ring_radius_m": 120,
@@ -652,6 +664,7 @@
 			}
 		},
 		"station": {
+			"door": "clamshell",
 			"hub_radius_m": 14,
 			"hub_length_m": 90,
 			"ring_radius_m": 100,
@@ -769,6 +782,7 @@
 			}
 		},
 		"station": {
+			"door": "clamshell",
 			"hub_radius_m": 9,
 			"hub_length_m": 60,
 			"ring_radius_m": 50,
@@ -1001,6 +1015,7 @@
 			}
 		},
 		"station": {
+			"door": "clamshell",
 			"hub_radius_m": 14,
 			"hub_length_m": 90,
 			"ring_radius_m": 95,
@@ -1021,7 +1036,8 @@
 			"mining_rig",
 			"survey_pod",
 			"radiator_array",
-			"passenger_berths"
+			"passenger_berths",
+			"heat_sink"
 		],
 		"market": {
 			"water_ice": 300,
@@ -1086,6 +1102,7 @@
 			}
 		},
 		"station": {
+			"door": "clamshell",
 			"hub_radius_m": 20,
 			"hub_length_m": 150,
 			"ring_radius_m": 45,
@@ -1104,7 +1121,8 @@
 			"radiator_array",
 			"tank_l",
 			"survey_pod",
-			"docking_computer"
+			"docking_computer",
+			"heat_sink"
 		],
 		"market": {
 			"electronics": 80,
@@ -1281,6 +1299,7 @@
 			]
 		},
 		"station": {
+			"door": "iris",
 			"type": "stanford",
 			"hub_radius_m": 60,
 			"hub_length_m": 240,
@@ -1338,6 +1357,7 @@
 			]
 		},
 		"station": {
+			"door": "iris",
 			"type": "bernal",
 			"hub_radius_m": 250,
 			"hub_length_m": 500,
@@ -1397,6 +1417,7 @@
 			}
 		},
 		"station": {
+			"door": "iris",
 			"type": "cylinder",
 			"hub_radius_m": 250,
 			"hub_length_m": 325,
@@ -1452,6 +1473,7 @@
 			}
 		},
 		"station": {
+			"door": "iris",
 			"type": "pair",
 			"hub_radius_m": 400,
 			"hub_length_m": 3200,
@@ -1511,6 +1533,7 @@
 			}
 		},
 		"station": {
+			"door": "iris",
 			"type": "wheel",
 			"hub_radius_m": 30,
 			"hub_length_m": 200,

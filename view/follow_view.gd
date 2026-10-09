@@ -16,6 +16,7 @@
 ##   - framing the station at either end of the trip
 extends Node3D
 
+const SatModel := preload("res://view/flight/satellite_model.gd")
 const V := preload("res://sim/v3.gd")
 const Navigation := preload("res://sim/navigation.gd")
 const Kit := preload("res://view/flight/kit.gd")
@@ -299,7 +300,7 @@ func _update_world(dt: float) -> void:
 			near = from_port.length() < STATION_RANGE_M
 		if near and not _stations.has(place):
 			var geom: Dictionary = sim.data.places[place]["station"]
-			var st := Models.station(geom, sim.data.places[place]["name"], Livery.for_station(sim.data, place))
+			var st := Models.station(geom, sim.data.places[place]["name"], Livery.for_station(sim.data, place), sim.data.balance["bays"])
 			# The approach corridor's lights are for pilots coming in, not for the camera.
 			for c in st["node"].get_children():
 				if c is MeshInstance3D:
@@ -376,7 +377,9 @@ func _update_world(dt: float) -> void:
 	if _plume:
 		_plume.visible = _lit
 	var dest_dir := SkyKit.dir_between(eph.position(loc["to"], t), here)
+	ShipRig.set_fold(_rig, ShipRig.transit_fold(loc, t, sim.state.ship))
 	ShipRig.aim(_rig, _ship.basis, _sun_dir, dest_dir * 1.0e6, dt)
+	_drift_satellites(dt)
 	var v_now: Array = Navigation.transit_velocity(loc, t)
 	readout["speed"] = V.length(v_now)
 	readout["accel"] = V.length(thrust)
@@ -386,6 +389,36 @@ func _update_world(dt: float) -> void:
 	readout["phase"] = ("TURNING" if _omega.length() > 0.02 else "COASTING") if not _thrusting else ("TURNING" if not _lit else ("ACCELERATING" if V.dot(V.normalized(thrust), V.normalized(v_now)) > 0.3 else ("BRAKING" if V.dot(V.normalized(thrust), V.normalized(v_now)) < -0.3 else "BURNING ACROSS")))
 	if app[3] in ["corridor", "hold"] or app[3] == "swing" and not _thrusting:
 		readout["phase"] = "ON APPROACH"
+
+
+## Satellites released on this trip drift clear of the ship and unfold their wings.
+var _last_sat_t := NAN
+var _drifting: Array = []
+
+
+func _drift_satellites(dt: float) -> void:
+	var placed: Array = sim.state.sites.get("satellites", [])
+	var newest := float(placed[-1]["t"]) if not placed.is_empty() else -INF
+	if is_nan(_last_sat_t):
+		_last_sat_t = newest
+	elif newest > _last_sat_t:
+		_last_sat_t = newest
+		var model: Dictionary = SatModel.build(String(placed[-1]["name"]))
+		SatModel.unfold(model, 0.0)
+		var node: Node3D = model["node"]
+		var out := _ship.basis.y
+		node.position = _ship.position + out * (_radius * 0.6 + 2.0)
+		add_child(node)
+		_drifting.append({"model": model, "age": 0.0, "vel": out * 0.8 + _ship.basis.x * 0.2})
+	for d in _drifting.duplicate():
+		var node: Node3D = d["model"]["node"]
+		d["age"] = float(d["age"]) + dt
+		node.position += (d["vel"] as Vector3) * dt
+		node.rotate_y(0.08 * dt)
+		SatModel.unfold(d["model"], (float(d["age"]) - 3.0) / 15.0)
+		if float(d["age"]) > 120.0:
+			node.queue_free()
+			_drifting.erase(d)
 
 
 ## The trip's corridors, once per trip: [the way we leave, the way we arrive], as

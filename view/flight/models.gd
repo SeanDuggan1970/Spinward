@@ -4,6 +4,7 @@
 extends RefCounted
 
 const Kit := preload("res://view/flight/kit.gd")
+const Bay := preload("res://view/flight/bay.gd")
 const Livery := preload("res://view/flight/livery.gd")
 const ShipBuilder := preload("res://view/flight/ship_builder.gd")
 const StationDetail := preload("res://view/flight/station_detail.gd")
@@ -21,12 +22,16 @@ static func ship(ship_state: Dictionary, data, livery: Dictionary = {}) -> Dicti
 
 
 ## Returns {node, rotor, port_z, port_radius, hub_radius, hub_length, ring_radius, ring_tube,
-## lights, colliders}. colliders: {"cylinders": [[radius, z_min, z_max]], "tori": [[radius, tube]]},
+## lights, colliders, bay}. bays (balance.bays) gives the station a docking bay you fly
+## into (view/flight/bay.gd), built forward of its docking face, with the port at its
+## back; without it the port is a collar on the face. A wheel's hub grows to the bay's
+## width. ship_r: the visiting ship's radius with its panels stowed; a ship too big for
+## the bay berths on a collar on the shut doors instead. bay is {} without one. colliders: {"cylinders": [[radius, z_min, z_max]], "tori": [[radius, tube]]},
 ## all about the Z axis (a cylinder may carry an x, y offset, a torus a z). station.type
 ## "wheel" is a hub, spokes and ring; "stanford" a Stanford torus; "cylinder" a settlement
 ## drum with an axial docking nub on its forward cap; "bernal" a Bernal sphere and "pair"
 ## a counter-rotating O'Neill pair (view/flight/habitats.gd).
-static func station(geom: Dictionary, name: String = "", livery: Dictionary = {}) -> Dictionary:
+static func station(geom: Dictionary, name: String = "", livery: Dictionary = {}, bays: Dictionary = {}, ship_r: float = 0.0) -> Dictionary:
 	var colour: String = geom.get("colour", "offwhite")
 	var hull_mat: Material = livery["mats"]["hull"] if not livery.is_empty() else Kit.mat(colour)
 	var accent_mat: Material = livery["mats"]["accent"] if not livery.is_empty() else Kit.mat("orange")
@@ -51,6 +56,15 @@ static func station(geom: Dictionary, name: String = "", livery: Dictionary = {}
 	var rr := float(geom.get("ring_radius_m", 0.0))
 	var rt := float(geom.get("ring_tube_m", 0.0))
 	var pr := float(geom.get("port_radius_m", minf(rh * 0.45, 8.0)))
+	# The bay's tunnel and the module round it (balance.bays).
+	var bay_r := 0.0
+	var bay_outer := 0.0
+	if not bays.is_empty():
+		bay_r = maxf(float(bays["radius_m"]), pr * float(bays["port_margin"]))
+		bay_outer = bay_r + float(bays["wall_m"])
+		if geom.get("type", "wheel") in ["wheel", "stanford"]:
+			bay_outer = maxf(bay_outer, rh)
+			rh = bay_outer
 	var colliders := {"cylinders": [], "tori": []}
 	var face_z := lh * 0.5
 	var kind: String = geom.get("type", "wheel")
@@ -128,11 +142,21 @@ static func station(geom: Dictionary, name: String = "", livery: Dictionary = {}
 			StationDetail.ring(rotor, rr, rt, spokes, mats)
 			StationDetail.hub(rotor, rh, lh, pr, mats, rng)
 			StationDetail.despun(still, -lh * 0.5, 25.0 + rr * 0.3, rh + rr * 0.9, clampf(rh * 0.4, 3.0, 8.0), livery, rng)
-		# Port collar on the hub's forward face.
-		rotor.add_child(Kit.cylinder(pr, 3.0, Kit.mat("grey"), Vector3(0, 0, lh * 0.5 + 0.5)))
+		# Port collar on the hub's forward face (with a bay, its back wall stands there).
+		if bays.is_empty():
+			rotor.add_child(Kit.cylinder(pr, 3.0, Kit.mat("grey"), Vector3(0, 0, lh * 0.5 + 0.5)))
 		colliders["cylinders"].append([rh, -lh * 0.5, lh * 0.5 + 2.0])
 		colliders["tori"].append([rr, rt])
 		face_z = lh * 0.5 + 2.0
+	# The bay, forward of the docking face. A ship that fits flies in to the port at
+	# its back; one that doesn't berths on a collar on the shut doors.
+	var bay := {}
+	if not bays.is_empty():
+		bay = Bay.build(rotor, bay_r, bay_outer, face_z, float(bays["depth_m"]), String(geom.get("door", bays["door"])), mats)
+		bay["fits"] = ship_r + float(bays["clearance_m"]) <= bay_r
+		if not bay["fits"]:
+			face_z = float(bay["z_mouth"]) + 2.4
+			rotor.add_child(Kit.cylinder(pr, 1.2, Kit.mat("grey"), Vector3(0, 0, face_z - 0.6)))
 	# Docking port plane just in front of the collar face: keyed slot and guide lights,
 	# all spinning with the station.
 	var port_z := face_z + 0.2
@@ -158,17 +182,22 @@ static func station(geom: Dictionary, name: String = "", livery: Dictionary = {}
 		var drum_face := kind in ["cylinder", "pair"]
 		stencil.pixel_size = float(stencil_at["px"]) if not stencil_at.is_empty() else (rh * 0.16 if drum_face else rh * 0.3) / 96.0
 		stencil.position = Vector3(0, float(stencil_at["y"]), float(stencil_at["z"])) if not stencil_at.is_empty() else Vector3(0, -(rh * 0.42 if drum_face else rh * 0.72), face_z - (11.4 if drum_face else 1.6))
+		if not bay.is_empty() and not drum_face and stencil_at.is_empty():
+			# On the bay's face, below the mouth.
+			stencil.pixel_size = (bay_outer - bay_r) * 0.4 / 96.0
+			stencil.position = Vector3(0, -(bay_r + bay_outer) * 0.5, float(bay["z_mouth"]) + 0.05)
 		stencil.double_sided = false
 		rotor.add_child(stencil)
-	# Approach corridor: fixed "rabbit" lights stepping in toward the port.
+	# Approach corridor: fixed "rabbit" lights stepping in toward the port (or the bay).
+	var corridor_z := maxf(port_z, float(bay.get("z_mouth", port_z)))
 	for i in 10:
 		for side in [1.0, -1.0]:
-			root.add_child(Kit.beacon(Color("f0a030"), Vector3(0, side * pr * 2.0, port_z + 60.0 * float(i + 1)), 0.6, 2.0, 1.0 - float(i) / 10.0))
+			root.add_child(Kit.beacon(Color("f0a030"), Vector3(0, side * pr * 2.0, corridor_z + 60.0 * float(i + 1)), 0.6, 2.0, 1.0 - float(i) / 10.0))
 	# Merge per material: the rotor's parts into the rotor, the despun parts into theirs.
 	Kit.merge_static(rotor)
 	Kit.merge_static(still)
 	return {"node": root, "rotor": rotor, "port_z": port_z, "port_radius": pr, "hub_radius": rh, "hub_length": lh,
-		"ring_radius": rr, "ring_tube": rt, "lights": lights, "colliders": colliders, "type": geom.get("type", "wheel")}
+		"ring_radius": rr, "ring_tube": rt, "lights": lights, "colliders": colliders, "type": geom.get("type", "wheel"), "bay": bay}
 
 
 ## A settlement drum about Z (radius rh, length lh), with an axial docking nub on its

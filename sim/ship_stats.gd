@@ -18,7 +18,21 @@ static func dry_mass_t(ship: Dictionary, data) -> float:
 	var modules: Dictionary = ship.get("modules", {})
 	for slot in modules:
 		total += float(data.modules[modules[slot]]["mass_t"])
-	return total
+	return total + float(pod_data(ship, data).get("mass_t", 0.0))
+
+
+## The lander's pod (data/pods.json): "" if the ship has no pod mount or an empty one.
+## A mount with no pod key carries the default pod.
+static func pod_of(ship: Dictionary, data) -> String:
+	for m in modules_of(ship, data):
+		if m.get("pod_mount", false):
+			return String(ship.get("pod", data.pods.get("default", "")))
+	return ""
+
+
+static func pod_data(ship: Dictionary, data) -> Dictionary:
+	var id := pod_of(ship, data)
+	return data.pods.get("pods", {}).get(id, {}) if id != "" else {}
 
 
 static func cargo_capacity_t(ship: Dictionary, data) -> float:
@@ -39,9 +53,16 @@ static func cargo_t(ship: Dictionary) -> float:
 
 
 ## Everything aboard that has mass: the hold, plus what rides in the cabin (cabin_t:
-## passengers and hand-carried parcels, which take no hold space).
+## passengers and hand-carried parcels, which take no hold space) and the payload
+## carrier (payload_load_t: satellites).
 static func total_mass_t(ship: Dictionary, data) -> float:
-	return dry_mass_t(ship, data) + cargo_t(ship) + float(ship.get("cabin_t", 0.0)) + float(ship.get("fuel_t", 0.0))
+	return dry_mass_t(ship, data) + cargo_t(ship) + float(ship.get("cabin_t", 0.0)) + float(ship.get("payload_load_t", 0.0)) + float(ship.get("fuel_t", 0.0))
+
+
+## What the payload carrier can take (satellites; tonnes), and what is in it is
+## ship.payload_load_t.
+static func payload_capacity_t(ship: Dictionary, data) -> float:
+	return _sum(ship, data, "payload_t")
 
 
 ## Thrust after heat limits: drives throttle down when radiators cannot keep up.
@@ -118,7 +139,14 @@ static func _sum(ship: Dictionary, data, key: String) -> float:
 		var tune: float = tunes.get(slot, NO_TUNE)[key] if not tunes.is_empty() else 1.0
 		# Wear and small faults shave a little off supply and rating stats (Condition.perf).
 		total += base * left * tune * Condition.perf(ship, slot, key, data)
+	# The lander's pod counts as a module would (it takes no damage or wear).
+	if key in POD_KEYS:
+		total += float(pod_data(ship, data).get(key, 0.0))
 	return total
+
+
+## The stats a pod can carry (data/pods.json).
+const POD_KEYS := ["cargo_t", "fuel_t", "berths", "payload_t", "life_kw"]
 
 
 ## Engine tunes (data/favours.json "tunes"): ship["tunes"] is [{id, slot, module, source}].
@@ -218,8 +246,9 @@ static func reject_mw(ship: Dictionary, data) -> float:
 
 ## Electrical figures (kW, kWh), for sim/power.gd. Supply stats fall with damage;
 ## load stats do not (UNDAMAGED).
+## Folded in (ship.stowed, for stealth), the solar wings make nothing.
 static func solar_kw_1au(ship: Dictionary, data) -> float:
-	return _sum(ship, data, "solar_kw")
+	return 0.0 if ship.get("stowed", false) else _sum(ship, data, "solar_kw")
 
 
 static func battery_kwh(ship: Dictionary, data) -> float:

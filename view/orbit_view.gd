@@ -282,6 +282,7 @@ func _process(dt: float) -> void:
 	var ship_abs := V.add(eph.position(frame, t), Navigation.transit_position(loc, t))
 	var ship_vel := V.add(eph.velocity(frame, t), Navigation.transit_velocity(loc, t))
 	var comms := LightTime.pointing(eph, loc["to"], ship_abs, ship_vel, t)
+	ShipRig.set_fold(_rig, ShipRig.transit_fold(loc, t, sim.state.ship))
 	ShipRig.aim(_rig, _attitude, sun_dir, _d(comms["transmit"]["dir"]), dt)
 	_ship.find_child("Streak", true, false).visible = thrusting
 	var into := V.dot(V.normalized(Navigation.transit_accel(loc, t)), V.normalized(Navigation.transit_velocity(loc, t)))

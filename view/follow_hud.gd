@@ -43,6 +43,8 @@ func _draw() -> void:
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 13, UI.AMBER if r.get("phase", "") != "COASTING" else UI.DIM)
 	y += 20
 	draw_string(_font, Vector2(x, y), "Time ×%d%s" % [int(sim.state.time_scale), "   PAUSED" if sim.state.paused else ""], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, UI.DIM)
+	y += 20
+	draw_string(_font, Vector2(x, y), UI.signature(sim), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, UI.AMBER if sim.state.detection.get("dark", false) else UI.DIM)
 	var h := size.y
 	var w := size.x
 	if view.mode == "director":

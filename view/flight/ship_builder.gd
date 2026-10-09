@@ -53,7 +53,7 @@ static func build(ship_state: Dictionary, data, livery: Dictionary) -> Dictionar
 	var cargo := []
 	# Whatever bay a module sits in, it goes where it belongs: habs behind the crew,
 	# freight and working kit amidships, tanks ahead of the drives.
-	var bay: Array = by_kind.get("cargo", []) + by_kind.get("hab", []) + by_kind.get("lander", []) + by_kind.get("sensor", []) + by_kind.get("mining", [])
+	var bay: Array = by_kind.get("cargo", []) + by_kind.get("hab", []) + by_kind.get("lander", []) + by_kind.get("sensor", []) + by_kind.get("mining", []) + by_kind.get("sink", [])
 	for entry in bay:
 		if entry[1]["look"].get("shape", "") == "hab":
 			sections.append(_hab(entry[1], ctx))
@@ -202,7 +202,9 @@ static func steerable_dish(base: Vector3, r: float, ctx: Dictionary) -> Node3D:
 
 
 ## A panel on a boom: the boom is fixed, the panel turns about it. The panel spans
-## `span` outward along X, `width` along Z; kind "solar" or "radiator".
+## `span` outward along X, `width` along Z; kind "solar" or "radiator". It is built
+## in segments hinged along Z, so it can fold up accordion-fashion at the boom's end
+## for docking (ShipRig.set_fold): each hinge is in the rig entry's "hinges".
 static func boom_panel(root: Vector3, side: float, reach: float, span: float, width: float, kind: String, material: Material, ctx: Dictionary) -> Node3D:
 	var mats: Dictionary = ctx["mats"]
 	var n := Node3D.new()
@@ -212,14 +214,27 @@ static func boom_panel(root: Vector3, side: float, reach: float, span: float, wi
 	gimbal.position = boom_end
 	gimbal.set_meta("no_merge", true)
 	gimbal.add_child(Kit.box(Vector3(0.35, 0.35, 0.35), mats["dark"]))
-	var at := Vector3(side * (span * 0.5 + 0.2), 0, 0)
-	gimbal.add_child(Kit.box(Vector3(span, 0.08 if kind == "solar" else 0.2, width), material, at))
-	gimbal.add_child(rod(Vector3(side * 0.2, 0, 0), Vector3(side * (span + 0.2), 0, 0), 0.07, mats["steel"]))
-	for f in [-0.5, 0.5]:
-		gimbal.add_child(Kit.box(Vector3(span, 0.1, 0.08), mats["steel"], at + Vector3(0, 0, width * f)))
+	var segments := maxi(2, ceili(span / FOLD_SEGMENT_M))
+	var seg := span / float(segments)
+	var thick := 0.08 if kind == "solar" else 0.2
+	var hinges := []
+	var parent: Node3D = gimbal
+	for k in segments:
+		var hinge := Node3D.new()
+		hinge.position = Vector3(side * (0.2 if k == 0 else seg), 0, 0)
+		hinge.add_child(Kit.box(Vector3(seg * 0.97, thick, width), material, Vector3(side * seg * 0.5, 0, 0)))
+		for f in [-0.5, 0.5]:
+			hinge.add_child(Kit.box(Vector3(seg, 0.1, 0.08), mats["steel"], Vector3(side * seg * 0.5, 0, width * f)))
+		parent.add_child(hinge)
+		hinges.append(hinge)
+		parent = hinge
 	n.add_child(gimbal)
-	ctx["rig"]["arrays"].append({"node": gimbal, "kind": kind})
+	ctx["rig"]["arrays"].append({"node": gimbal, "kind": kind, "hinges": hinges, "side": side})
 	return n
+
+
+## Panels fold in segments about this long (metres).
+const FOLD_SEGMENT_M := 1.6
 
 
 static func solar_cells(ctx: Dictionary) -> Material:

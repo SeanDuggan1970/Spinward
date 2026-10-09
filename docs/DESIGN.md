@@ -644,6 +644,55 @@ Sean: the elevators "lack counterweights deeper in space beyond the geostationar
   - **From afar:** the ribbon tapers, the anchor is a stacked tower, and the counterweight is a lumpy mass with a warning light.
 - **Bars:** a place with the `bar` service has a `bar` (name, patrons, round_cr). "Buy a round" on the Market tab stands everyone a drink and adds a little standing with the operator. Bars so far: the three counterweights and Line Foot's Earthrise.
 
+## The humpback lander and its pods (Oct 2026, roadmap step 4)
+
+- **The humpback** (`view/flight/kestrel.gd`): the Kestrel's spine (and the Bramble's, a Kestrel at 0.36 scale) arches 1.7 m up over the pod. It is flat across the middle and eases down to the leg pods. The pod hangs level with the leg pods and their lift thrusters, so its weight sits on their line of thrust rather than swinging a metre and a half below it. Landed, it now clears the ground by about 2 m (it nearly touched before).
+- **Pod types** (`data/pods.json`), each with its own look:
+
+  | Pod | Carries | Price |
+  |---|---|---|
+  | Cargo container (the default) | 4 t | 6,000 cr |
+  | Liquid tank | 3 t of propellant | 9,000 cr |
+  | Passenger cabin | 4 seats and 1 t | 14,000 cr |
+  | Open flatbed | 5 t | 4,000 cr |
+  | Payload carrier | 3 t of payload, for step 5's satellites | 18,000 cr |
+
+- **How they count:** a module with `pod_mount` (the lander bay) carries one pod (`ship.pod`). Its stats count as a module's would (`ShipStats.pod_of`, `pod_data`, `POD_KEYS`), with no damage or wear. A bay with no `pod` key, as in older saves, has the default.
+- **Fitting** (`fit_pod`, `sim/systems/pod_system.gd`): at a shipyard, the old pod taken back at half its price. What's aboard must still fit.
+- **Dropping and picking up** (`drop_pod`, `pick_up_pod`):
+  - On site, set the pod down: empty, loaded from the hold (up to its capacity), or as a fuel cache from the tanks. What stays aboard must fit without it.
+  - The pod lies there in the saved game (`state.sites.pods`) until a lander with an empty clamp picks it up; its contents come aboard if there is room.
+  - The site tab lists your pod and any pods lying there; the shipyard tab sells pods.
+
+## Detection and stealth (Oct 2026, roadmap step 6)
+
+Who can see you is a sim rule (`sim/detection.gd`, `sim/systems/detection_system.gd`, `balance.detection`). It sets up the secret missions of step 7.
+
+- **Signature channels.** Each has a range at which a standard sensor sees the ship:
+
+  | Channel | Range (a Mule, at 1 AU) | Off when |
+  |---|---|---|
+  | Lit drive | about 5 million km (16 million for a deep freighter) | coasting |
+  | Waste heat | about 12,000 km | a heat sink is soaking it up |
+  | Transponder | 2 million km | running dark |
+  | Running lights | 200 km | running dark |
+  | Reflected sunlight | about 7,000 km, 2,300 coated | never (it falls with distance from the Sun) |
+
+  The drive's range goes with the square root of its jet power, heat with the root of what the ship radiates (the drive's heat while burning, its electrical loads otherwise), and sunlight with the root of the hull's area times its albedo.
+
+- **Sensors.** A port with a station sees the ship within its loudest range times the port's `sensors` (1 by default; 1.3 to 1.6 at the busy Earth ports and Shackleton). It is checked every 5 minutes of game time in transit. `state.detection.seen_by` lists who sees you now.
+- **Running dark** (`dark_running`, key D in the transit views) turns off the transponder and lights. It is allowed only in transit, and the transponder comes back on for the approach: ports don't dock a dark ship.
+- **The fine.** A port that sees a dark ship inside its control zone (50,000 km) fines it 600 cr and 1.5 standing with its operator. It happens once a trip, because the ports share word. Offences are counted for step 7's impound.
+- **The stealth package.**
+  - The low-observable coating (`coat_hull`, 1,500 cr a tonne of dry mass) is sold at the outer yards: Trojan Yards, Hektor Reach and Landauer Deep. It cuts albedo from 0.5 to 0.05.
+  - The heat sink module (sold at the same yards) soaks up 800 MJ of waste heat while dark. That is about a day of a small ship's loads. It dumps the heat through the radiators otherwise.
+  - Folding the panels in (`stow_panels`, key F in transit, Sean's idea) cuts the sunlit area to 40% and lets out only 30% of the waste heat, with the rest soaking into the structure. The solar wings make nothing while folded. It is allowed only while coasting, and the co-pilot unfolds them for a burn (the radiators carry the drive's heat) and in port.
+  - Coasting dark, coated and sunk, a Mule shows at about 2,300 km, and about 1,500 km with its panels in. Burning, it shows at 5 million km whatever it carries.
+- **Departures from hard physics.**
+  - The ranges are game numbers, not a sensor model. Real waste heat is visible much further against 3 K space; we let the radiators hide behind a fixed figure so that hiding is possible at all.
+  - A heat sink that holds a day of heat is generous.
+  - This keeps the honest part honest: a lit fusion drive cannot hide.
+
 ## Saturn, rings and shadows (Oct 2026)
 
 Sean: the rings were "very unrealistic and downright ugly"; the planet should cast its shadow on the rings and on moons and ships.
@@ -756,6 +805,76 @@ Sean's direction (2026-10-06): a follow camera with mouse control while the ship
   - the station at either end of the trip
 - **Lighting:** a soft fill light rides with the camera, so the design reads on the night side. Sky worlds no longer receive ship shadows.
 - **Capture:** `--shipcam=<dir>` shoots every set-up at the moments it suits (leaving, burning, coasting, arriving), and tests real mouse input.
+
+## Panels that fold for docking (Oct 2026)
+
+Sean's request (2026-10-08): solar wings and radiators should fold back for docking and unfold once undocked. This is view only: nothing in the sim changes. Docked ships run on shore power, and a ship leaving port runs its reactor, so stowed panels cost nothing.
+
+- **Built in segments** (`ShipBuilder.boom_panel`): every panel is cut into segments about 1.6 m long, hinged along the boom's width.
+- **Stowing** (`ShipRig.set_fold`, `rig.fold` from 0 out to 1 stowed): over about 25 s, each panel first turns flat into the hull's plane. Then its segments fold accordion-fashion into a short stack standing at the boom's end, and the dish parks facing ahead. Deploying runs the same steps in reverse.
+- **When:**
+  - The player's ship stows on the final approach in the docking scene.
+  - Leaving port, it keeps the panels stowed for the first minute of game time (`ShipRig.DEPLOY_AFTER_S`), then unfolds them in every transit view.
+  - Ships moored at a station are stowed. Lane traffic stows over the 30% of its lane nearest the station.
+- **Running quiet:** the same fold, held in transit while `ship.stowed` is set (see "Detection and stealth").
+- The sail freighter's sail is not folded.
+
+## Docking bays (Oct 2026, roadmap step 3)
+
+Ships fly into a station instead of nosing up to a collar on a small hub (`view/flight/bay.gd`, `balance.bays`).
+
+- **The bay:**
+  - A tunnel 16 m in radius and 80 m deep, lined in pale steel and lit by rings of lamps, with yellow guide stripes.
+  - It is built forward of the station's docking face, so the port at its back is exactly where the old port was. Approaches, hand-overs and trip times are unchanged.
+  - A wheel's hub grows to the bay's outer width (24 m radius) where it was smaller. Habitats carry the bay as a module on their docking nub.
+  - The station's name is stencilled on the bay's face.
+  - Green and red approach lights flank the mouth.
+- **Doors** (`station.door` in `data/places.json`):
+  - **Iris** at the Earth wheels and the habitats: twelve blades behind the face that swing in across the mouth. Open, they lie along the rim inside a housing flange.
+  - **Clamshell** at the yards and working ports: two leaves hinged top and bottom, folding outward.
+  - **Sliding** elsewhere: two leaves running apart in tracks.
+- **Clearance:** traffic control clears the ship 4 s into the docking scene, and the doors take 12 s to open, with amber lamps turning while they move. Once the whole ship is inside, they close behind it.
+  - The co-pilot and the docking computer hold 40 m short of the mouth until the doors are open.
+- **Collisions:**
+  - Shut doors are solid.
+  - Inside, the tunnel wall and the back wall hold the ship, and doors shut behind it hold it in.
+  - The ship's body probe shrinks to its stowed radius as its panels fold (see "Panels that fold for docking"). That radius is at most 10 m (a deep freighter), against the tunnel's 16 m.
+- **Too big for the bay:** a ship whose stowed radius plus 3 m won't go in berths on a collar on the shut doors. Only the sail freighters are that big, and they never dock in the flight scene.
+- Only the view changed: the sim never sees the bay.
+
+## Satellites (Oct 2026, roadmap step 5)
+
+- **The job** (`contracts.json` kind `satellite`, Known standing):
+  - Carry a satellite (0.4 to 2.5 t) in the lander's payload carrier pod (`ship.payload_load_t`; it counts toward the ship's mass) and release it near its orbit: within 20,000 km of the port it serves (`release_satellite`, key R in transit, or the Release button at the port).
+  - You can't swap or set down the pod with a satellite in it.
+- **Release:** in transit the satellite drifts clear of the ship and unfolds its wings (`view/flight/satellite_model.gd`, `view/follow_view.gd`).
+- **In the world:** released satellites are kept in `state.sites.satellites` (the newest 60). Up to eight keep station off the hub at their port in the docking scene, out of the approach corridor.
+
+## Secret work (Oct 2026, roadmap step 7)
+
+All the rules are in `sim/systems/contract_system.gd` and `contracts.covert`.
+
+- **Unlock:** Reliable standing (20) with any operator. Then half of the named approaches at a port are secret work, with their own openers.
+- **The kinds:**
+  - **Quiet delivery:** like a courier job.
+  - **Listening device:** planted on a port (`plant_device`, key R) from within 500,000 km, coasting, dark and unseen by it. It goes in on a long, slow drift.
+  - **Spy satellite:** the same rule, from the payload carrier.
+  - **Drop-off:** people to a site.
+  - **Extraction:** people from a site, brought home. Both need a lander bay. The job tells you where the site is.
+- **The watcher:** each job is hidden from an operator (for a device or spy satellite, the target's).
+  - While the job is aboard, every second a watcher's port sees you builds suspicion: three times as fast with the transponder on, and twice as fast on a trip with a filed plan.
+  - At two hours' worth you are caught. Docking at the watcher's port with the job aboard is customs: caught.
+  - On a trip without a plan, slipping every port's sensors loses them, and suspicion resets.
+- **Caught:** the job fails, with a 2,500 cr fine, −6 standing with the watcher, −4 with the client, and an offence. At the third offence the ship is impounded: departures refused until the 6,000 cr release fee is paid (`pay_impound`).
+- **Free departures:**
+  - `depart` with `filed: false`, unlocked with secret work. Nobody is told where you are bound.
+  - Leaving a busy port that way costs 400 cr and a point of standing with its operator, half as much again each time (traffic control remembers, `state.detection.unfiled`).
+  - **Simplification:** the co-pilot flies straight to the real destination. Leaving on a dull heading and turning later needs a planner that can re-plan mid-trip, which we don't have yet. The spy's exit is modelled by its effect: once out of every port's sight, the watchers lose you.
+- **The view:**
+  - The departures tab has a flight-plan toggle and the impound panel.
+  - Offer cards say what secret work needs and who mustn't know.
+  - Active jobs show suspicion and a Release or Plant button.
+  - The transit HUD adds "no plan filed" and suspicion.
 
 ## Sound: heard through the hull (Oct 2026)
 

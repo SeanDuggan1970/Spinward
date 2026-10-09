@@ -28,6 +28,8 @@ var contracts: Dictionary = {}
 var favours: Dictionary = {}
 ## Badges and renown (data/badges.json).
 var badges: Dictionary = {}
+## The lander's pod types (data/pods.json).
+var pods: Dictionary = {}
 ## The Spaceline news feed (data/news.json).
 var news: Dictionary = {}
 ## Every control and its default keys and gamepad buttons (data/controls.json); view-only,
@@ -63,6 +65,7 @@ func load_from(root: String) -> void:
 	story = read_json(root + "/story.json") if FileAccess.file_exists(root + "/story.json") else {}
 	favours = read_json(root + "/favours.json") if FileAccess.file_exists(root + "/favours.json") else {}
 	badges = read_json(root + "/badges.json") if FileAccess.file_exists(root + "/badges.json") else {}
+	pods = read_json(root + "/pods.json") if FileAccess.file_exists(root + "/pods.json") else {}
 	news = read_json(root + "/news.json") if FileAccess.file_exists(root + "/news.json") else {}
 	controls = read_json(root + "/controls.json") if FileAccess.file_exists(root + "/controls.json") else {}
 	ship_economy = read_json(root + "/ship_economy.json")
@@ -119,6 +122,8 @@ func validate() -> Array[String]:
 			var cw: String = p["elevator"]["counterweight"].get("place", "")
 			if not places.has(cw) or places[cw].get("foot_of", "") != id or not places[cw].get("counterweight", false):
 				problems.append("place %s: counterweight %s must be a place marked counterweight and foot_of it" % [id, cw])
+		if not p.get("station", {}).get("door", "iris") in ["iris", "clamshell", "sliding"]:
+			problems.append("place %s: unknown bay door %s (iris, clamshell or sliding)" % [id, p["station"]["door"]])
 		if "bar" in p.get("services", []) and not p.has("bar"):
 			problems.append("place %s: a bar service needs a bar (name, patrons, round_cr)" % id)
 		var market: Dictionary = p.get("market", {})
@@ -344,6 +349,8 @@ func validate() -> Array[String]:
 	for c in liveries.get("containers", []):
 		if not Color.html_is_valid(String(c)):
 			problems.append("livery container colour %s is not a colour" % c)
+	if not pods.is_empty() and not pods.get("pods", {}).has(pods.get("default", "")):
+		problems.append("pods: default %s is not a pod" % pods.get("default", ""))
 	for id in badges.get("badges", {}):
 		var b: Dictionary = badges["badges"][id]
 		for place in b.get("visit", []) + b.get("visit_all", []) + b.get("at", []):

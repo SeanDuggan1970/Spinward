@@ -16,6 +16,8 @@ const SystemMap := preload("res://view/system_map.gd")
 const SetPieces := preload("res://view/flight/set_pieces.gd")
 const SkyKit := preload("res://view/flight/sky.gd")
 const Autopilot := preload("res://view/flight/autopilot.gd")
+const Bay := preload("res://view/flight/bay.gd")
+const SatModel := preload("res://view/flight/satellite_model.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
 const Navigation := preload("res://sim/navigation.gd")
 const ProjectSystem := preload("res://sim/systems/project_system.gd")
@@ -27,7 +29,11 @@ const ASSIST_MODES := ["full", "assisted", "manual"]
 const SKY_DISTANCE := 60000.0
 ## NPC traffic is shown on the lanes for this long either side of docking (game seconds).
 const LANE_WINDOW := 3.0 * 3600.0
+## Lane traffic stows its panels over this share of the lane nearest the station.
+const TRAFFIC_STOW := 0.3
 const LANE_LENGTH := 15000.0
+## Waiting on a bay's doors, ships hold this far off the mouth.
+const BAY_HOLD_M := 40.0
 const BERTH_ANGLES := [PI * 0.5, -PI * 0.5, PI * 0.25, PI * 0.75, -PI * 0.25, -PI * 0.75]
 ## The pilot sits looking a little down over the instrument panel, so the ship's nose
 ## axis (the HUD boresight) is above the middle of the view, in the middle of the
@@ -64,6 +70,8 @@ var ship_radius := 5.0
 var spin_rate := 0.0
 var spin_angle := 0.0
 var bumps := 0
+## Contacts hard enough to do damage.
+var hits := 0
 var refusals := 0
 ## Docking computer engaged (K), if the ship has one fitted.
 var computer := false
@@ -109,6 +117,10 @@ var _shake := 0.0
 var _last_hit := -10.0
 var _warned_until := 0.0
 var ship_length := 30.0
+## The ship's radius with its panels stowed: what has to fit through a bay's doors.
+var stowed_radius := 5.0
+## The docking bay's doors: "shut", "opening", "open" or "closing" (view state only).
+var bay_doors := "shut"
 ## The keel has gone: the wreck plays out and the lifeboat takes over.
 var wrecked := false
 var _wreck_cam := Vector3.ZERO
@@ -128,15 +140,18 @@ func _ready() -> void:
 	var geom: Dictionary = sim.data.places[place_id]["station"]
 	spin_rate = float(geom["spin_rpm"]) * TAU / 60.0
 	_build_environment()
-	station = Models.station(geom, sim.data.places[place_id]["name"], Livery.for_station(sim.data, place_id))
-	add_child(station["node"])
 	var model := Models.ship(sim.state.ship, sim.data, Livery.for_ship(sim.data, "", sim.state.ship.get("name", ""), true))
+	stowed_radius = ShipRig.stowed_radius(model)
+	station = Models.station(geom, sim.data.places[place_id]["name"], Livery.for_station(sim.data, place_id), sim.data.balance["bays"], stowed_radius)
+	add_child(station["node"])
 	ship_node = model["node"]
 	nose_z = model["nose_z"]
 	ship_radius = model["radius"]
 	ship_length = float(model.get("length", 30.0))
 	_drive_plume = ship_node.find_child("DrivePlume", true, false)
 	_rig = model["rig"]
+	# In from the transit view with the panels out; they stow for the final approach.
+	ShipRig.set_fold(_rig, 0.0, true)
 	add_child(ship_node)
 	audio = ShipAudio.new()
 	ship_node.add_child(audio)
@@ -167,6 +182,7 @@ func _ready() -> void:
 	_set_pieces = SetPieces.build(self, sim.data.places[place_id].get("features", []), body_dirs, station, progress)
 	_spawn_hazards()
 	_spawn_work_craft()
+	_place_satellites()
 	_sync_traffic()
 	hud = load("res://view/flight/flight_hud.gd").new(self)
 	hud.theme = UI.make_theme()
@@ -299,8 +315,10 @@ func _physics_process(dt: float) -> void:
 	SetPieces.animate(_set_pieces, clock)
 	# Docking: the pilot owns the roll, so the panels do what one hinge can; the dish
 	# holds on the station's traffic control.
+	ShipRig.set_fold(_rig, 1.0)
 	ShipRig.aim(_rig, ship_node.global_basis, body_dirs["sun"], -ship_node.global_position, dt)
 	_move_rocks(dt)
+	_update_bay(dt)
 	_fly(dt)
 	var c := read_controls()
 	var push: Vector3 = c["thrust"]
@@ -424,9 +442,50 @@ func _update_readout() -> void:
 		m.emission = colour
 
 
+## The radius the ship's body probe uses: its full size with panels out, shrinking to
+## the stowed size as they fold.
+func probe_radius() -> float:
+	return lerpf(ship_radius, minf(stowed_radius, ship_radius), float(_rig.get("fold", 0.0)))
+
+
+## True when the bay (if any) is ready to fly into: no bay, a ship that berths on the
+## doors, doors open, or the ship already inside.
+func bay_ready() -> bool:
+	var bay: Dictionary = station.get("bay", {})
+	return bay.is_empty() or not bay["fits"] or Bay.is_open(bay) or bay_doors in ["closing", "shut_behind"]
+
+
+## Traffic control clears the ship in clear_s into the scene and the doors open over
+## door_s; once the whole ship is inside they close behind it.
+func _update_bay(dt: float) -> void:
+	var bay: Dictionary = station.get("bay", {})
+	if bay.is_empty() or not bay["fits"]:
+		return
+	var cfg: Dictionary = sim.data.balance["bays"]
+	var stern_z := ship_node.position.z + ship_length * 0.5
+	var inside := stern_z < float(bay["z_mouth"]) - 1.0 and Vector2(ship_node.position.x, ship_node.position.y).length() < float(bay["r"])
+	var want := float(bay["open"])
+	if bay_doors == "shut" and clock >= float(cfg["clear_s"]) and not inside:
+		bay_doors = "opening"
+		flash("Traffic control: cleared in. Bay doors opening.", UI.GOOD, 4.0)
+	elif bay_doors == "open" and inside:
+		bay_doors = "closing"
+		flash("All aboard the bay: doors closing behind you.", UI.DIM, 3.0)
+	if bay_doors == "opening":
+		want = minf(1.0, want + dt / float(cfg["door_s"]))
+		if want >= 1.0:
+			bay_doors = "open"
+	elif bay_doors == "closing":
+		want = maxf(0.0, want - dt / float(cfg["door_s"]))
+		if want <= 0.0:
+			bay_doors = "shut_behind"
+	Bay.set_open(bay, want)
+
+
 func _collide() -> void:
-	var probes := [[ship_node.position, ship_radius], [_nose(), 1.5]]
+	var probes := [[ship_node.position, probe_radius()], [_nose(), 1.5]]
 	var colliders: Dictionary = station["colliders"]
+	var bay: Dictionary = station.get("bay", {})
 	for probe in probes:
 		var p: Vector3 = probe[0]
 		var r: float = probe[1]
@@ -458,6 +517,12 @@ func _collide() -> void:
 				if d > depth:
 					depth = d
 					normal = radial if d == into_side else (Vector3(0, 0, 1) if d == into_front else Vector3(0, 0, -1))
+		# The docking bay: its walls inside, the module and shut doors outside.
+		if not bay.is_empty():
+			var hit := Bay.contact(bay, p, r)
+			if float(hit[0]) > depth:
+				depth = hit[0]
+				normal = hit[1]
 		# Rings.
 		for torus in colliders["tori"]:
 			var q := Vector2(rxy - float(torus[0]), p.z - (float(torus[2]) if torus.size() > 2 else 0.0))
@@ -630,7 +695,8 @@ func _move_traffic(dt: float) -> void:
 	for id in _traffic:
 		var entry: Dictionary = _traffic[id]
 		if entry["mode"] == "berth":
-			# Moored: talking home to Earth while the panels ride the station's spin.
+			# Moored, panels stowed, talking home to Earth.
+			ShipRig.set_fold(entry["rig"], 1.0)
 			ShipRig.aim(entry["rig"], entry["ship"].global_basis, sun, body_dirs["earth"], dt)
 			continue
 		var loc: Dictionary = entry["npc"]["location"]
@@ -656,7 +722,25 @@ func _move_traffic(dt: float) -> void:
 			node.basis = ShipRig.roll_to_sun(Vector3.BACK, sun)
 		node.position = offset + Vector3(0, 0, z0 + span * f)
 		target = -node.position if entry["mode"] == "inbound" else entry.get("dest_dir", Vector3.BACK)
+		# Close in to the station, panels stowed: folding coming in, unfolding going out.
+		ShipRig.set_fold(entry["rig"], 1.0 if f < TRAFFIC_STOW else 0.0)
 		ShipRig.aim(entry["rig"], node.basis, sun, target, dt)
+
+
+## Satellites released here (yours, state.sites.satellites) keep station off the hub,
+## out of the approach corridor, wings spread.
+func _place_satellites() -> void:
+	var here: Array = sim.state.sites.get("satellites", []).filter(func(sat): return sat["place"] == place_id)
+	for sat in here.slice(maxi(0, here.size() - 8)):
+		var rng := RandomNumberGenerator.new()
+		rng.seed = hash(String(sat["name"]) + str(sat["t"]))
+		var model: Dictionary = SatModel.build(String(sat["name"]))
+		var a := rng.randf() * TAU
+		var r: float = float(station["hub_radius"]) + rng.randf_range(160.0, 420.0)
+		var node: Node3D = model["node"]
+		node.position = Vector3(cos(a) * r, sin(a) * r, rng.randf_range(-float(station["hub_length"]) * 0.5, float(station["port_z"])))
+		node.rotation = Vector3(rng.randf() * TAU, rng.randf() * TAU, 0.0)
+		add_child(node)
 
 
 ## View-only station life: work pods circling the hub and a tug standing off the port.
@@ -713,6 +797,8 @@ func guidance() -> Dictionary:
 	var text := ""
 	if computer:
 		text = "Docking computer has control."
+	elif not bay_ready() and nose.z - float(station["bay"]["z_mouth"]) < BAY_HOLD_M + 20.0:
+		text = "Hold short of the bay: the doors are opening."
 	elif readout["align"] > float(tune_dock["max_angle_deg"]):
 		text = "Turn to face straight down the station's axis (nose along the amber lights)."
 	elif Vector2(nose.x, nose.y).length() > maxf(1.5, along * 0.08):
@@ -811,7 +897,7 @@ func _bodies_nearby(p: Vector3, reach: float) -> Array:
 
 
 func _collide_world() -> void:
-	var probes := [[ship_node.position, ship_radius], [_nose(), 1.5]]
+	var probes := [[ship_node.position, probe_radius()], [_nose(), 1.5]]
 	for probe in probes:
 		var p: Vector3 = probe[0]
 		var r: float = probe[1]
@@ -868,6 +954,7 @@ func _hit(speed: float, share: float, point: Vector3) -> void:
 	if clock - _last_hit < 0.3:
 		return
 	_last_hit = clock
+	hits += 1
 	var lp := ship_node.global_transform.affine_inverse() * point
 	var f := clampf((lp.z - nose_z) / maxf(ship_length, 1.0), 0.0, 1.0)
 	var zone := "mid"

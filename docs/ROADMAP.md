@@ -8,7 +8,7 @@ step done here when it lands on main.
 | 1 | Turning with inertia | none | done |
 | 2 | Smooth rendezvous arrival | 1 | done |
 | 3 | Bigger stations, docking bays and doors | 2 | to do |
-| 4 | Humpback cargo lander and pod types | none (can run alongside 2 and 3) | to do |
+| 4 | Humpback cargo lander and pod types | none (can run alongside 2 and 3) | done |
 | 5 | Satellite missions | 4 | to do |
 | 6 | Detection model and stealth package | 1 | to do |
 | 7 | Secret missions (late game), with free departures | 4, 5, 6 | to do |
@@ -43,17 +43,20 @@ result is an unrealistic turn and chase.
 - Trip time and fuel stay close to today's. The route-clearance test
   (`test_routes_clear_of_bodies`, `tools/route_clearance.gd`) must stay green.
 
-## 3. Bigger stations, docking bays and doors
+## 3. Bigger stations, docking bays and doors (done)
 
-Wheel hubs are only 8 to 20 m across, and their ports a few metres.
+Built in October 2026: see "Docking bays" in `docs/DESIGN.md`.
 
-- Scale the hubs up to hold a docking bay you fly into: a lit tunnel or hangar, not a
-  collar.
-- Doors chosen per station in the data: folding or clamshell, sliding, or an iris.
-  They open when traffic control clears you and close behind you.
-- A door counts as a collider until it is open.
-- The new approach from step 2 aims at the bay mouth.
-- The docking trial must still pass at every port.
+- Every station has a docking bay you fly into: a lit tunnel 32 m across and 80 m deep,
+  built forward of the docking face, with the port at its back. Wheel hubs grow to the
+  bay's width.
+- Doors are chosen per station in the data (`station.door`): iris at the big Earth
+  wheels and habitats, clamshell at the yards and working ports, sliding elsewhere.
+  They open when traffic control clears you, and close once you are inside.
+- Shut doors count as a collider; inside, the tunnel's walls do.
+- The port did not move, so step 2's approach and every trip are unchanged.
+- The docking trial passes at every port in a Mule and in a deep freighter, the
+  biggest ship a player flies.
 
 ## 4. Humpback cargo lander and pod types
 
@@ -66,49 +69,55 @@ below the lift thrusters' line of thrust.
 - Deploy, drop off and pick up at sites. A dropped pod stays in the saved state until
   it is collected.
 
-## 5. Satellite missions
+## 5. Satellite missions (done)
 
-- A new contract kind: carry a satellite (cargo with real mass, in the payload
-  carrier) to a given orbit and release it there.
-- Release from the bay, the satellite's panels unfolding as it drifts away.
-- Placed satellites persist in the world.
-- The covert versions wait for steps 6 and 7.
+Built in October 2026: see "Satellites" in `docs/DESIGN.md`.
 
-## 6. Detection model and stealth package
+- A new board job: carry a satellite in the lander's payload carrier and release it
+  near its orbit (`release_satellite`, key R in transit, or from the bay at the port).
+- In transit you see it drift clear of the ship and unfold its wings.
+- Placed satellites stay in the world (`state.sites.satellites`) and keep station off
+  the hub when you next visit.
+- The covert version, a spy satellite, is one of step 7's jobs.
 
-Nothing in the sim detects ships yet.
+## 6. Detection model and stealth package (done)
 
-- A signature for every ship, from:
+Built in October 2026: see "Detection and stealth" in `docs/DESIGN.md`.
+
+- A signature for every ship (`sim/detection.gd`), from:
   - the lit drive
-  - heat on the radiators
+  - waste heat
   - lights and transponder
-  - reflectivity
-- Sensor ranges for stations and patrols.
+  - reflected sunlight
+- Sensor ranges for stations (`places.json` `sensors`). Patrols wait for ships that
+  patrol.
 - The stealth modules:
-  - a low-reflectivity coating, looking dull and dark
-  - a heat sink that holds heat for a limited time
-  - dark running: lights and transponder off, which may be fined
+  - a low-observable coating (`coat_hull`, at the three outer yards)
+  - a heat sink module that holds heat for about a day
+  - dark running (`dark_running`, key D in transit): lights and transponder off, fined
+    near ports
+  - panels folded in (`stow_panels`, key F) while coasting: less sunlit area and
+    radiated heat, no solar power
 - Honest physics: you can hide while coasting, never while burning.
+- Offences are counted (`state.detection.offences`), ready for step 7's impound for
+  repeat offenders.
 
-## 7. Secret missions (late game)
+## 7. Secret missions (late game) (done)
 
-Unlocked by reputation and the story arc.
+Built in October 2026: see "Secret work" in `docs/DESIGN.md`.
 
-- Covert deliveries.
-- Planting listening devices.
-- Spy satellites into watched orbits.
-- Dropping off and extracting people with the lander.
-
-Being caught costs reputation and fines, and impounding is possible for repeat
-offences.
-
-**Free departures** (Sean, Oct 2026). Today every departure names a destination. Add
-leaving without one: no flight plan filed, just a heading.
-- There's no reason to want it before secret missions, so it unlocks with them.
-- Leaving a busy port (the main stations, Earth's neighbourhood) without a plan is
-  frowned on: a fine or a dent in standing, and traffic control remembers.
-- The point is the spy's exit: leave on a dull heading, and once clear of prying eyes
-  and radar (step 6's sensor ranges), turn for where you really mean to go.
+- It unlocks at Reliable standing with any operator, and comes as quiet approaches.
+  The story arc doesn't gate it yet.
+- Five kinds: covert deliveries, listening devices, spy satellites, and drop-offs and
+  extractions at sites with the lander.
+- Each job is hidden from a watcher, whose ports seeing you build suspicion, fast with
+  the transponder on. Docking at its port with the work aboard means customs.
+- Being caught fails the job and costs a fine, standing and an offence. The third
+  offence impounds the ship until you pay.
+- **Free departures:** leave without filing a plan. Busy ports fine you, more each
+  time. With no plan filed, slipping every port's sensors loses whoever is watching.
+  Simplification: the co-pilot still flies straight to the real destination. There
+  is no decoy heading and turn yet, because the planner can't re-plan mid-trip.
 
 ## 8. Walking about, first person
 
@@ -129,10 +138,11 @@ Sean, Oct 2026: walk around the places you visit, FPS style.
 - **Badges** (Oct 2026): one-off marks for going where few go or standing the bar a
   round. They add renown, which gets you noticed by hitchhikers and by clients asking
   for you by name.
+- **Folding panels** (Oct 2026): solar wings and radiators fold accordion-fashion for
+  docking and unfold once clear of the port (`view/flight/ship_rig.gd`), ready for
+  step 3's bays.
 
-## Open decisions
-
-These are recommended but not yet confirmed by Sean:
+## Decisions (confirmed by Sean, Oct 2026)
 
 - **Stealth strictness:** honest, hiding only while coasting.
 - **Docking style:** a bay you fly into.

@@ -84,6 +84,15 @@ func _ready() -> void:
 		_dock_trial.call_deferred()
 		return
 	for a in args:
+		# Fly the trial in another stock hull (e.g. the deep freighter, the biggest
+		# ship a bay must take).
+		if a.begins_with("--dock-trial="):
+			var hull := a.trim_prefix("--dock-trial=")
+			sim.state.ship["hull"] = hull
+			sim.state.ship["modules"] = sim.data.ships[hull]["modules"].duplicate()
+			_dock_trial.call_deferred()
+			return
+	for a in args:
 		if a.begins_with("--art="):
 			visible = false
 			get_tree().root.add_child.call_deferred(load("res://view/art_gallery.gd").new(sim.data, a.trim_prefix("--art=")))
@@ -313,9 +322,59 @@ func _handle_events() -> void:
 			"elevator_departed":
 				var line: Dictionary = sim.data.places[d["line"]]["elevator"]
 				notice("On %s for %s: %s. Fare %s." % [line["name"], sim.data.places[d["to"]]["name"], UI.duration(float(d["hours"]) * 3600.0), UI.money(float(d["fare"]))], UI.AMBER)
+			"pod_fitted":
+				notice("Fitted a %s to the lander." % String(sim.data.pods["pods"][d["pod"]]["name"]).to_lower(), UI.GOOD)
+				refresh = true
+			"pod_dropped":
+				notice("Pod set down: a %s%s. It'll be here when you come back." % [String(sim.data.pods["pods"][d["pod"]]["name"]).to_lower(), (" with %.1f t aboard" % float(d["cargo_t"])) if float(d["cargo_t"]) > 0.0 else ((" with %.1f t of propellant" % float(d["fuel_t"])) if float(d["fuel_t"]) > 0.0 else "")], UI.AMBER)
+				refresh = true
+			"pod_picked_up":
+				notice("Picked up the %s." % String(sim.data.pods["pods"][d["pod"]]["name"]).to_lower(), UI.GOOD)
+				refresh = true
 			"badge_earned":
 				notice("Badge: %s. %s" % [d["name"], d["text"]], UI.GOOD)
 				comms.append("%s  BADGE  %s: %s" % [_clock(e["time_s"]), d["name"], d["text"]])
+				refresh = true
+			"dark_running":
+				notice(("Running dark: transponder and lights off. Burns still show for millions of km." if d["on"] else "Transponder and lights back on."), UI.AMBER if d["on"] else UI.DIM)
+			"transponder_on":
+				notice("Transponder on for the approach: ports don't dock a dark ship.", UI.DIM)
+			"dark_running_fined":
+				notice("%s saw us running dark in its control zone: fined %s, and %s won't forget it." % [sim.data.places[d["place"]]["name"], UI.money(-float(d["credits"])), d["operator"] if d["operator"] != "" else "they"], UI.WARN)
+				refresh = true
+			"seen":
+				if bool(sim.state.detection.get("dark", false)):
+					notice("%s has us on its sensors (%s)." % [sim.data.places[d["place"]]["name"], d["by"]], UI.WARN)
+			"unseen":
+				if bool(sim.state.detection.get("dark", false)) and sim.state.detection.get("seen_by", []).is_empty():
+					notice("No port can see us now.", UI.GOOD)
+			"panels_stowed":
+				notice("Panels folding in: less to see, no solar power, and the radiators can't shed heat.", UI.AMBER)
+			"panels_deployed":
+				notice("Panels out for the burn: the radiators carry the drive's heat." if d["burn"] else "Panels unfolding.", UI.DIM)
+			"satellite_released":
+				notice(("%s is away, drifting clear and unfolding its panels. Nobody saw a thing." if d["covert"] else "%s is away near %s: panels unfolding, and it's calling home.") % ([String(d["name"]).capitalize()] if d["covert"] else [String(d["name"]).capitalize(), sim.data.locations[d["place"]]["name"]]), UI.GOOD)
+				refresh = true
+			"device_planted":
+				notice("The device is away on a long, slow drift toward %s. In a week it will be listening." % sim.data.locations[d["place"]]["name"], UI.GOOD)
+				refresh = true
+			"covert_watched":
+				notice("%s has us on its sensors with the job aboard. Get out of their sight." % d["watcher"], UI.WARN)
+			"covert_lost_them":
+				notice("No port can see us, and nobody knows our plan: %s has lost us." % d["watcher"], UI.GOOD)
+			"covert_caught":
+				notice("Caught: %s. Job lost, fined %s, and %s will remember.%s" % [d["how"], UI.money(-float(d["credits"])), d["watcher"], "  The ship is impounded until you pay the release fee." if d["impound"] else ""], UI.WARN)
+				refresh = true
+			"impound_paid":
+				notice("Release fee paid (%s). She's yours again." % UI.money(-float(d["credits"])), UI.AMBER)
+				refresh = true
+			"unfiled_departure":
+				if float(d["credits"]) < 0.0:
+					notice("Left %s without filing a plan. Traffic control fined us %s%s." % [sim.data.places[d["place"]]["name"], UI.money(-float(d["credits"])), " and they're keeping count" if int(d["times"]) > 1 else ""], UI.WARN)
+				else:
+					notice("Away without a flight plan. Nobody knows where we're bound.", UI.AMBER)
+			"hull_coated":
+				notice("Hull coated, low-observable, for %s. She reflects a tenth of the light she did." % UI.money(-float(d["credits"])), UI.GOOD)
 				refresh = true
 			"round_bought":
 				notice("A round for %d at %s: %s. Glasses go up." % [int(d["patrons"]), d["bar"], UI.money(-float(d["credits"]))], UI.AMBER)
@@ -338,10 +397,10 @@ func _handle_events() -> void:
 				notice("Backer's reward from %s: %s." % [sim.data.projects[d["project"]]["name"], d["text"]], UI.GOOD)
 				refresh = true
 			"contract_accepted":
-				notice("Job taken: %s due at %s. Pays %s." % ["collection" if d["pickup"] != "" else "delivery", sim.data.places[d["to"]]["name"], UI.money(float(d["reward"]))], UI.AMBER)
+				notice("Job taken: %s due at %s. Pays %s." % ["collection" if d["pickup"] != "" else "delivery", sim.data.locations[d["to"]]["name"], UI.money(float(d["reward"]))], UI.AMBER)
 				refresh = true
 			"contract_collected":
-				notice("Collected the consignment at %s." % sim.data.places[d["place"]]["name"], UI.GOOD)
+				notice("Collected the consignment at %s." % sim.data.locations[d["place"]]["name"], UI.GOOD)
 				refresh = true
 			"contract_no_room":
 				notice("Can't collect: %s." % d["reason"], UI.WARN)
@@ -387,7 +446,7 @@ func _handle_events() -> void:
 				notice("Fitted %s" % sim.data.modules[d["module"]]["name"], UI.GOOD)
 				refresh = true
 			"departed":
-				notice("Departed for %s%s" % [sim.data.places[d["to"]]["name"], (" via %s" % d["route"]) if d.has("route") else ""] + ("  (your navigator trimmed %.2f t)" % float(d["fuel_trimmed_t"]) if float(d.get("fuel_trimmed_t", 0.0)) > 0.005 else ""), UI.AMBER)
+				notice("Departed for %s%s" % [sim.data.locations[d["to"]]["name"], (" via %s" % d["route"]) if d.has("route") else ""] + ("  (your navigator trimmed %.2f t)" % float(d["fuel_trimmed_t"]) if float(d.get("fuel_trimmed_t", 0.0)) > 0.005 else ""), UI.AMBER)
 			"descent_begins":
 				var lines: Array = sim.data.npcs["chatter"]["copilot_descent"]
 				var minutes := int(float(d["corridor_in_s"]) / 60.0)
@@ -612,6 +671,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		var scales: Array = sim.data.balance["time"]["scales"]
 		var i := scales.find(sim.state.time_scale) + _time_step(event)
 		sim.apply({"type": "set_time_scale", "scale": scales[clampi(i, 0, scales.size() - 1)]})
+	elif _mode == "transit" and event.is_action_pressed("transit_dark"):
+		sim.apply({"type": "dark_running"})
+	elif _mode == "transit" and event.is_action_pressed("transit_stow"):
+		sim.apply({"type": "stow_panels"})
+	elif _mode == "transit" and event.is_action_pressed("transit_release"):
+		_release_payload()
 	elif event.is_action_pressed("sound"):
 		var muted := not AudioServer.is_bus_mute(0)
 		AudioServer.set_bus_mute(0, muted)
@@ -626,6 +691,17 @@ func _unhandled_input(event: InputEvent) -> void:
 			notice("Loaded quick save.", UI.GOOD)
 		else:
 			notice("No quick save to load.", UI.WARN)
+
+
+## Release the first satellite or device that can go in here and now (or say why not).
+func _release_payload() -> void:
+	var jobs: Array = sim.state.contracts.get("active", []).filter(func(j): return j.get("release", false) or j.get("plant", false))
+	if jobs.is_empty():
+		notice("Nothing aboard to release.", UI.DIM)
+		return
+	for job in jobs:
+		if sim.apply({"type": "release_satellite" if job.get("release", false) else "plant_device", "id": job["id"]}) == "":
+			return
 
 
 ## -1 to slow time down, +1 to speed it up, 0 if this is not a time key. Transit and elevator
@@ -748,7 +824,9 @@ func _dock_trial() -> void:
 			steps += 1
 		var ok := flight.docked
 		all_ok = all_ok and ok
-		print("DOCK_TRIAL %-16s docked=%s time=%5.0f s refusals=%d contacts=%d" % [place, ok, steps / 60.0, flight.refusals, flight.bumps])
+		ok = ok and flight.hits == 0
+		all_ok = all_ok and ok
+		print("DOCK_TRIAL %-16s docked=%s time=%5.0f s refusals=%d contacts=%d hits=%d bay=%s" % [place, flight.docked, steps / 60.0, flight.refusals, flight.bumps, flight.hits, flight.bay_doors])
 		sim.state.location = {"status": "docked", "place": place}
 	print("DOCK_TRIAL_OK" if all_ok else "DOCK_TRIAL_FAIL")
 	_quit(0 if all_ok else 1)

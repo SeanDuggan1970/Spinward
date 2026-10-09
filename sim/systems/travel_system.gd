@@ -9,6 +9,7 @@ const Interplanetary := preload("res://sim/interplanetary.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
 const Favours := preload("res://sim/favours.gd")
 const Fitness := preload("res://sim/fitness.gd")
+const Contracts := preload("res://sim/contracts.gd")
 
 const PERI_WARN_S := 2.0 * 3600.0
 const PERI_CLOSE_S := 600.0
@@ -18,7 +19,7 @@ const PLAN_VALID_S := 3600.0
 
 func setup(owner) -> void:
 	super.setup(owner)
-	owner.register("depart", _depart)
+	owner.register("depart", _depart_command)
 	owner.register("dock", _dock)
 
 
@@ -124,6 +125,40 @@ func _flyby_moments(s) -> void:
 			s.time_scale = maxf(s.time_scale, float(loc.get("peri_prev_scale", s.time_scale)))
 		else:
 			break
+
+
+## {to, route?, plan_t?, filed?}. filed false: leave without filing a flight plan
+## (free departures, open with secret work: contracts.covert). Nobody is told where
+## you are going; leaving a busy port that way costs a fine and standing, more each
+## time (traffic control remembers). An impounded ship goes nowhere.
+func _depart_command(command: Dictionary) -> String:
+	var s = sim().state
+	var data = sim().data
+	if float(s.detection.get("impound_cr", 0.0)) > 0.0:
+		return "your ship is impounded: pay the release fee (%d cr) first" % int(float(s.detection["impound_cr"]))
+	var filed := bool(command.get("filed", true))
+	if not filed and not Contracts.covert_unlocked(s, data):
+		return "traffic control wants a flight plan"
+	var here: String = s.location.get("place", "")
+	var why := _depart(command)
+	if why != "" or filed:
+		return why
+	s.location["filed"] = false
+	var cfg: Dictionary = data.contracts["covert"]
+	if here in cfg["busy_ports"]:
+		if not s.detection.has("unfiled"):
+			s.detection["unfiled"] = {}
+		var times := int(s.detection["unfiled"].get(here, 0))
+		var mult := 1.0 + float(cfg["unfiled_repeat_mult"]) * float(times)
+		var fine := float(cfg["unfiled_fine_cr"]) * mult
+		var op := Contracts.client_of(data, here)
+		s.credits -= fine
+		s.reputation[op] = float(s.reputation.get(op, 0.0)) + float(cfg["unfiled_rep"]) * mult
+		s.detection["unfiled"][here] = times + 1
+		sim().emit("unfiled_departure", {"place": here, "credits": -fine, "operator": op, "times": times + 1})
+	else:
+		sim().emit("unfiled_departure", {"place": here, "credits": 0.0, "operator": "", "times": 0})
+	return ""
 
 
 func _depart(command: Dictionary) -> String:

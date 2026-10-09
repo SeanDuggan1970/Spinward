@@ -1,0 +1,49 @@
+{
+	"_note": "Pods for the lander (sim/pods.gd, sim/systems/pod_system.gd). A module with 'pod_mount' (the lander bay) carries one pod, ship.pod, which counts toward the ship's stats as a module would: cargo_t, fuel_t, berths, payload_t, mass_t (dry). No pod key means the default pod. Pods are fitted at a shipyard (price; the old pod is taken back at trade_in of its price) and can be dropped on site, holding what you leave in them (cargo, or propellant in a tank pod), and picked up again later by anyone's lander: they stay where they are, in the saved game, until collected. 'look' is for the view (view/flight/kestrel.gd).",
+	"default": "cargo_container",
+	"trade_in": 0.5,
+	"pods": {
+		"cargo_container": {
+			"name": "Cargo container",
+			"price": 6000,
+			"mass_t": 0.8,
+			"cargo_t": 4,
+			"look": "cargo",
+			"description": "A closed box with side hatches. The working pod."
+		},
+		"liquid_tank": {
+			"name": "Liquid tank",
+			"price": 9000,
+			"mass_t": 0.7,
+			"fuel_t": 3,
+			"look": "tank",
+			"description": "A pressure tank in a frame. Carries propellant down, or leaves it on a rock for later."
+		},
+		"passenger_cabin": {
+			"name": "Passenger cabin",
+			"price": 14000,
+			"mass_t": 1.1,
+			"cargo_t": 1,
+			"berths": 4,
+			"life_kw": 0.6,
+			"look": "passenger",
+			"description": "Four seats, windows and a ramp. Survey teams and sightseers."
+		},
+		"open_flatbed": {
+			"name": "Open flatbed",
+			"price": 4000,
+			"mass_t": 0.4,
+			"cargo_t": 5,
+			"look": "flatbed",
+			"description": "A bare deck with tie-downs. Light and roomy, for anything that doesn't mind vacuum."
+		},
+		"payload_carrier": {
+			"name": "Payload carrier",
+			"price": 18000,
+			"mass_t": 0.9,
+			"payload_t": 3,
+			"look": "payload",
+			"description": "A cradle with release clamps and a spring push-off, for satellites and instruments."
+		}
+	}
+}
