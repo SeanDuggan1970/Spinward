@@ -18,7 +18,7 @@ Do visual and feel work locally, where it can be checked by eye. Send sim-heavy 
 (the maths in step 2, the mechanics in step 4, the model in step 6) to cloud jobs on
 separate files.
 
-## 1. Turning with inertia
+## 1. Turning with inertia (done)
 
 The transit view (`view/follow_view.gd`) turns the ship at a fixed `TURN_RATE` (0.9
 rad/s), with a slerp that starts and stops instantly. Hand-flying
@@ -30,7 +30,7 @@ rad/s), with a slerp that starts and stops instantly. Hand-flying
 - A puff of the RCS thrusters at the start and end of each turn.
 - Start the turn early enough that the ship is lined up before each burn.
 
-## 2. Smooth rendezvous arrival
+## 2. Smooth rendezvous arrival (done)
 
 The trip ends at the port's orbit, and the docking scene then spawns the ship at a
 fixed spot (`spawn_distance_m` and `spawn_offset_m` in the docking settings). The
@@ -58,7 +58,7 @@ Built in October 2026: see "Docking bays" in `docs/DESIGN.md`.
 - The docking trial passes at every port in a Mule and in a deep freighter, the
   biggest ship a player flies.
 
-## 4. Humpback cargo lander and pod types
+## 4. Humpback cargo lander and pod types (done)
 
 The Bramble (`view/flight/kestrel.gd`) carries its pod slung too low under the spine,
 below the lift thrusters' line of thrust.
