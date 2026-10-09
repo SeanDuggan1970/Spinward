@@ -842,6 +842,40 @@ Ships fly into a station instead of nosing up to a collar on a small hub (`view/
 - **Too big for the bay:** a ship whose stowed radius plus 3 m won't go in berths on a collar on the shut doors. Only the sail freighters are that big, and they never dock in the flight scene.
 - Only the view changed: the sim never sees the bay.
 
+## Satellites (Oct 2026, roadmap step 5)
+
+- **The job** (`contracts.json` kind `satellite`, Known standing):
+  - Carry a satellite (0.4 to 2.5 t) in the lander's payload carrier pod (`ship.payload_load_t`; it counts toward the ship's mass) and release it near its orbit: within 20,000 km of the port it serves (`release_satellite`, key R in transit, or the Release button at the port).
+  - You can't swap or set down the pod with a satellite in it.
+- **Release:** in transit the satellite drifts clear of the ship and unfolds its wings (`view/flight/satellite_model.gd`, `view/follow_view.gd`).
+- **In the world:** released satellites are kept in `state.sites.satellites` (the newest 60). Up to eight keep station off the hub at their port in the docking scene, out of the approach corridor.
+
+## Secret work (Oct 2026, roadmap step 7)
+
+All the rules are in `sim/systems/contract_system.gd` and `contracts.covert`.
+
+- **Unlock:** Reliable standing (20) with any operator. Then half of the named approaches at a port are secret work, with their own openers.
+- **The kinds:**
+  - **Quiet delivery:** like a courier job.
+  - **Listening device:** planted on a port (`plant_device`, key R) from within 500,000 km, coasting, dark and unseen by it. It goes in on a long, slow drift.
+  - **Spy satellite:** the same rule, from the payload carrier.
+  - **Drop-off:** people to a site.
+  - **Extraction:** people from a site, brought home. Both need a lander bay. The job tells you where the site is.
+- **The watcher:** each job is hidden from an operator (for a device or spy satellite, the target's).
+  - While the job is aboard, every second a watcher's port sees you builds suspicion: three times as fast with the transponder on, and twice as fast on a trip with a filed plan.
+  - At two hours' worth you are caught. Docking at the watcher's port with the job aboard is customs: caught.
+  - On a trip without a plan, slipping every port's sensors loses them, and suspicion resets.
+- **Caught:** the job fails, with a 2,500 cr fine, −6 standing with the watcher, −4 with the client, and an offence. At the third offence the ship is impounded: departures refused until the 6,000 cr release fee is paid (`pay_impound`).
+- **Free departures:**
+  - `depart` with `filed: false`, unlocked with secret work. Nobody is told where you are bound.
+  - Leaving a busy port that way costs 400 cr and a point of standing with its operator, half as much again each time (traffic control remembers, `state.detection.unfiled`).
+  - **Simplification:** the co-pilot flies straight to the real destination. Leaving on a dull heading and turning later needs a planner that can re-plan mid-trip, which we don't have yet. The spy's exit is modelled by its effect: once out of every port's sight, the watchers lose you.
+- **The view:**
+  - The departures tab has a flight-plan toggle and the impound panel.
+  - Offer cards say what secret work needs and who mustn't know.
+  - Active jobs show suspicion and a Release or Plant button.
+  - The transit HUD adds "no plan filed" and suspicion.
+
 ## Sound: heard through the hull (Oct 2026)
 
 Sean's direction (2026-10-06):

@@ -125,7 +125,17 @@ static func signature(sim) -> String:
 	var mode := "RUNNING DARK" if det.get("dark", false) else "Transponder on"
 	if sim.state.ship.get("stowed", false):
 		mode += ", panels in"
-	return "%s  ·  shows %s on %s  ·  %s" % [mode, km(float(det.get("range_m", 0.0))), det.get("loudest", ""), who]
+	var line := "%s  ·  shows %s on %s  ·  %s" % [mode, km(float(det.get("range_m", 0.0))), det.get("loudest", ""), who]
+	if not bool(sim.state.location.get("filed", true)):
+		line += "  ·  no plan filed"
+	# Secret work aboard: how close they are to putting it together.
+	var worst := 0.0
+	for job in sim.state.contracts.get("active", []):
+		if job.get("covert", false) and job["state"] == "carried":
+			worst = maxf(worst, float(job.get("suspicion_s", 0.0)) / float(sim.data.contracts["covert"]["suspicion_s"]))
+	if worst > 0.0:
+		line += "  ·  suspicion %d%%" % int(worst * 100.0)
+	return line
 
 
 static func km(metres: float) -> String:

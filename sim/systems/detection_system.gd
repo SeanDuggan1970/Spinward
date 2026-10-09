@@ -27,8 +27,10 @@ func setup(owner) -> void:
 
 
 static func ensure(state) -> void:
-	if state.detection.is_empty():
-		state.detection = {"dark": false, "sink_mj": 0.0, "seen_by": [], "fined": [], "next_t": 0.0, "range_m": 0.0, "loudest": "", "offences": 0}
+	var defaults := {"dark": false, "sink_mj": 0.0, "seen_by": [], "fined": [], "next_t": 0.0, "range_m": 0.0, "loudest": "", "offences": 0}
+	for k in defaults:
+		if not state.detection.has(k):
+			state.detection[k] = defaults[k]
 
 
 func tick(dt: float) -> void:

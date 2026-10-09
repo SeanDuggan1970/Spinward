@@ -53,9 +53,16 @@ static func cargo_t(ship: Dictionary) -> float:
 
 
 ## Everything aboard that has mass: the hold, plus what rides in the cabin (cabin_t:
-## passengers and hand-carried parcels, which take no hold space).
+## passengers and hand-carried parcels, which take no hold space) and the payload
+## carrier (payload_load_t: satellites).
 static func total_mass_t(ship: Dictionary, data) -> float:
-	return dry_mass_t(ship, data) + cargo_t(ship) + float(ship.get("cabin_t", 0.0)) + float(ship.get("fuel_t", 0.0))
+	return dry_mass_t(ship, data) + cargo_t(ship) + float(ship.get("cabin_t", 0.0)) + float(ship.get("payload_load_t", 0.0)) + float(ship.get("fuel_t", 0.0))
+
+
+## What the payload carrier can take (satellites; tonnes), and what is in it is
+## ship.payload_load_t.
+static func payload_capacity_t(ship: Dictionary, data) -> float:
+	return _sum(ship, data, "payload_t")
 
 
 ## Thrust after heat limits: drives throttle down when radiators cannot keep up.

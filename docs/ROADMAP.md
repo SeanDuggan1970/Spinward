@@ -69,13 +69,16 @@ below the lift thrusters' line of thrust.
 - Deploy, drop off and pick up at sites. A dropped pod stays in the saved state until
   it is collected.
 
-## 5. Satellite missions
+## 5. Satellite missions (done)
 
-- A new contract kind: carry a satellite (cargo with real mass, in the payload
-  carrier) to a given orbit and release it there.
-- Release from the bay, the satellite's panels unfolding as it drifts away.
-- Placed satellites persist in the world.
-- The covert versions wait for steps 6 and 7.
+Built in October 2026: see "Satellites" in `docs/DESIGN.md`.
+
+- A new board job: carry a satellite in the lander's payload carrier and release it
+  near its orbit (`release_satellite`, key R in transit, or from the bay at the port).
+- In transit you see it drift clear of the ship and unfold its wings.
+- Placed satellites stay in the world (`state.sites.satellites`) and keep station off
+  the hub when you next visit.
+- The covert version, a spy satellite, is one of step 7's jobs.
 
 ## 6. Detection model and stealth package (done)
 
@@ -99,25 +102,22 @@ Built in October 2026: see "Detection and stealth" in `docs/DESIGN.md`.
 - Offences are counted (`state.detection.offences`), ready for step 7's impound for
   repeat offenders.
 
-## 7. Secret missions (late game)
+## 7. Secret missions (late game) (done)
 
-Unlocked by reputation and the story arc.
+Built in October 2026: see "Secret work" in `docs/DESIGN.md`.
 
-- Covert deliveries.
-- Planting listening devices.
-- Spy satellites into watched orbits.
-- Dropping off and extracting people with the lander.
-
-Being caught costs reputation and fines, and impounding is possible for repeat
-offences.
-
-**Free departures** (Sean, Oct 2026). Today every departure names a destination. Add
-leaving without one: no flight plan filed, just a heading.
-- There's no reason to want it before secret missions, so it unlocks with them.
-- Leaving a busy port (the main stations, Earth's neighbourhood) without a plan is
-  frowned on: a fine or a dent in standing, and traffic control remembers.
-- The point is the spy's exit: leave on a dull heading, and once clear of prying eyes
-  and radar (step 6's sensor ranges), turn for where you really mean to go.
+- It unlocks at Reliable standing with any operator, and comes as quiet approaches.
+  The story arc doesn't gate it yet.
+- Five kinds: covert deliveries, listening devices, spy satellites, and drop-offs and
+  extractions at sites with the lander.
+- Each job is hidden from a watcher, whose ports seeing you build suspicion, fast with
+  the transponder on. Docking at its port with the work aboard means customs.
+- Being caught fails the job and costs a fine, standing and an offence. The third
+  offence impounds the ship until you pay.
+- **Free departures:** leave without filing a plan. Busy ports fine you, more each
+  time. With no plan filed, slipping every port's sensors loses whoever is watching.
+  Simplification: the co-pilot still flies straight to the real destination. There
+  is no decoy heading and turn yet, because the planner can't re-plan mid-trip.
 
 ## 8. Walking about, first person
 

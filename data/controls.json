@@ -53,6 +53,7 @@
 				{"action": "transit_telescope", "label": "Telescope (cockpit)", "key": ["Z"], "pad": ["x"]},
 				{"action": "transit_centre", "label": "Look ahead again (cockpit)", "key": ["C"], "pad": ["y"]},
 				{"action": "transit_dark", "label": "Run dark: transponder and lights off (fined near ports if seen)", "key": ["D"], "pad": []},
+				{"action": "transit_release", "label": "Release a satellite, or plant a device, when in reach", "key": ["R"], "pad": []},
 				{"action": "transit_stow", "label": "Fold the panels in (smaller signature; unfold before a burn)", "key": ["F"], "pad": []},
 				{"action": "transit_time_slower", "label": "Slow down time", "key": [], "pad": ["lb"]},
 				{"action": "transit_time_faster", "label": "Speed up time", "key": [], "pad": ["rb"]},

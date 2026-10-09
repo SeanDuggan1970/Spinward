@@ -17,6 +17,7 @@ const SetPieces := preload("res://view/flight/set_pieces.gd")
 const SkyKit := preload("res://view/flight/sky.gd")
 const Autopilot := preload("res://view/flight/autopilot.gd")
 const Bay := preload("res://view/flight/bay.gd")
+const SatModel := preload("res://view/flight/satellite_model.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
 const Navigation := preload("res://sim/navigation.gd")
 const ProjectSystem := preload("res://sim/systems/project_system.gd")
@@ -181,6 +182,7 @@ func _ready() -> void:
 	_set_pieces = SetPieces.build(self, sim.data.places[place_id].get("features", []), body_dirs, station, progress)
 	_spawn_hazards()
 	_spawn_work_craft()
+	_place_satellites()
 	_sync_traffic()
 	hud = load("res://view/flight/flight_hud.gd").new(self)
 	hud.theme = UI.make_theme()
@@ -723,6 +725,22 @@ func _move_traffic(dt: float) -> void:
 		# Close in to the station, panels stowed: folding coming in, unfolding going out.
 		ShipRig.set_fold(entry["rig"], 1.0 if f < TRAFFIC_STOW else 0.0)
 		ShipRig.aim(entry["rig"], node.basis, sun, target, dt)
+
+
+## Satellites released here (yours, state.sites.satellites) keep station off the hub,
+## out of the approach corridor, wings spread.
+func _place_satellites() -> void:
+	var here: Array = sim.state.sites.get("satellites", []).filter(func(sat): return sat["place"] == place_id)
+	for sat in here.slice(maxi(0, here.size() - 8)):
+		var rng := RandomNumberGenerator.new()
+		rng.seed = hash(String(sat["name"]) + str(sat["t"]))
+		var model: Dictionary = SatModel.build(String(sat["name"]))
+		var a := rng.randf() * TAU
+		var r: float = float(station["hub_radius"]) + rng.randf_range(160.0, 420.0)
+		var node: Node3D = model["node"]
+		node.position = Vector3(cos(a) * r, sin(a) * r, rng.randf_range(-float(station["hub_length"]) * 0.5, float(station["port_z"])))
+		node.rotation = Vector3(rng.randf() * TAU, rng.randf() * TAU, 0.0)
+		add_child(node)
 
 
 ## View-only station life: work pods circling the hub and a tug standing off the port.

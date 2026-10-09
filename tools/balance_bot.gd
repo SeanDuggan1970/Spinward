@@ -365,6 +365,9 @@ func take_jobs(here: String, to: String) -> void:
 	for o in s.contracts["board"].get(here, []).duplicate():
 		if o["to"] != to or o["pickup"] != "" or int(o.get("passengers", 0)) > 0:
 			continue
+		# A courier bot: no satellites, devices or secret work.
+		if o.get("covert", false) or o.get("release", false) or o.get("plant", false):
+			continue
 		counts["jobs_seen"] = int(counts.get("jobs_seen", 0)) + 1
 		var has_kind: bool = o.has("in_kind")
 		if has_kind:

@@ -59,6 +59,8 @@ func _fit(command: Dictionary) -> String:
 		return "unknown pod"
 	if ShipStats.pod_of(s.ship, data) == pod:
 		return "that pod is already fitted"
+	if float(s.ship.get("payload_load_t", 0.0)) > 0.0:
+		return "there's a satellite in the payload carrier"
 	var why := _wont_fit(s, data, pod)
 	if why != "":
 		return why
@@ -84,6 +86,8 @@ func _drop(command: Dictionary) -> String:
 		return "no pod to set down"
 	if not s.sites.get("work", {}).is_empty():
 		return "still at work"
+	if float(s.ship.get("payload_load_t", 0.0)) > 0.0:
+		return "there's a satellite in the payload carrier"
 	var spec: Dictionary = data.pods["pods"][pod]
 	var cargo: Dictionary = command.get("cargo", {})
 	var load := 0.0

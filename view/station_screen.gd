@@ -43,6 +43,8 @@ var _tab_index := 0
 static var keep_reserve := true
 ## Route plotting in progress: {to: {task, box, key, plan_t}}; box.options is filled by the worker.
 var _plotting: Dictionary = {}
+## Leaving without filing a flight plan (free departures, with secret work).
+var _unfiled := false
 ## Rebuilt lists being held at their old scroll position: [scroll bar, callable, frames left].
 var _scroll_holds: Array = []
 
@@ -290,6 +292,23 @@ func _departures_tab(place_id: String) -> Control:
 	if d.places[place_id].has("foot_of"):
 		return parts[0]
 	parts[1].add_child(UI.label("Plot routes and your co-pilot flies trial courses under real Earth and Moon gravity: Express burns hard, Economy lets gravity do the work, lunar flybys are for the view (and occasionally the fuel). Prices elsewhere are what you last saw there, or what you have been told: buy tips on the Tip Line.", UI.DIM, 13))
+	var held := float(s.detection.get("impound_cr", 0.0))
+	if held > 0.0:
+		var ip := UI.panel("Impounded")
+		ip[1].add_child(UI.label("Your ship is held: too many offences. Nothing leaves until the release fee is paid.", UI.WARN, 13))
+		ip[1].add_child(UI.button("Pay the release fee  %s" % UI.money(held), send.bind({"type": "pay_impound"}), s.credits >= held))
+		parts[1].add_child(ip[0])
+	if Contracts.covert_unlocked(s, d):
+		# Free departures: nobody told where you're going. Busy ports frown on it.
+		var fp := UI.panel("Flight plan")
+		var busy: bool = place_id in d.contracts["covert"]["busy_ports"]
+		var times := int(s.detection.get("unfiled", {}).get(place_id, 0))
+		var cost := float(d.contracts["covert"]["unfiled_fine_cr"]) * (1.0 + float(d.contracts["covert"]["unfiled_repeat_mult"]) * float(times))
+		fp[1].add_child(UI.label(("Leaving without a plan: nobody is told where you're going. Slip every port's sensors on the way and anyone watching loses you." if _unfiled else "Filing plans as usual: traffic control knows where you're bound.") + ("  Here that costs %s and some standing%s." % [UI.money(cost), ", and they remember" if times > 0 else ""] if busy and _unfiled else ""), UI.AMBER if _unfiled else UI.DIM, 13))
+		fp[1].add_child(UI.button("File plans as usual" if _unfiled else "Leave without filing a plan", _toggle_unfiled))
+		parts[1].add_child(fp[0])
+	elif _unfiled:
+		_unfiled = false
 	# Local destinations first, then the long hauls across the Sun's domain.
 	var dests: Array = d.places.keys().filter(func(to): return to != place_id and Perks.place_open(s, d, to))
 	var local: Array = dests.filter(func(to): return Navigation.frame_body(d, place_id, to) != "sun")
@@ -334,6 +353,11 @@ func _departures_tab(place_id: String) -> Control:
 		_route_controls(place_id, to, plan, p[1], side)
 		parts[1].add_child(p[0])
 	return parts[0]
+
+
+func _toggle_unfiled() -> void:
+	_unfiled = not _unfiled
+	refresh()
 
 
 ## Riding the elevator from here: where it goes, how long, the fare for what you carry.
@@ -520,12 +544,20 @@ func _contracts_tab(place_id: String) -> Control:
 		for job in active:
 			var row := HBoxContainer.new()
 			var left: float = float(job["deadline_t"]) - s.time_s
-			var where := ("collect at %s, then " % d.places[job["pickup"]]["name"]) if job["state"] == "collect" else ""
-			var text := "%s  ·  %sdeliver to %s  ·  due in %s  ·  %s" % [_cargo_words(job), where, d.places[job["to"]]["name"], UI.duration(maxf(left, 0.0)) if left > 0.0 else "OVERDUE", UI.money(float(job["reward"]))]
+			var where := ("collect at %s, then " % d.locations[job["pickup"]]["name"]) if job["state"] == "collect" else ""
+			var verb := "release it near" if job.get("release", false) else ("plant it on" if job.get("plant", false) else "deliver to")
+			var text := "%s  ·  %s%s %s  ·  due in %s  ·  %s" % [_cargo_words(job), where, verb, d.locations[job["to"]]["name"], UI.duration(maxf(left, 0.0)) if left > 0.0 else "OVERDUE", UI.money(float(job["reward"]))]
+			if job.get("covert", false):
+				text += "  ·  hidden from %s (suspicion %d%%)" % [job["watcher"], int(100.0 * float(job.get("suspicion_s", 0.0)) / float(d.contracts["covert"]["suspicion_s"]))]
 			var l := UI.label(text, UI.TEXT if left > 0.0 else UI.WARN, 13)
 			l.autowrap_mode = TextServer.AUTOWRAP_WORD
 			l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			row.add_child(l)
+			if job.get("release", false) or job.get("plant", false):
+				var block: String = _contracts_sys().release_block(job)
+				var go := UI.button("Release" if job.get("release", false) else "Plant", send.bind({"type": "release_satellite" if job.get("release", false) else "plant_device", "id": job["id"]}), block == "")
+				go.tooltip_text = block
+				row.add_child(go)
 			row.add_child(UI.button("Abandon", send.bind({"type": "abandon_contract", "id": job["id"]})))
 			mine[1].add_child(row)
 		parts[1].add_child(mine[0])
@@ -600,6 +632,13 @@ func _favours_panels(into: Control, place_id: String) -> void:
 		into.add_child(pan2[0])
 
 
+func _contracts_sys():
+	for sys in sim.systems:
+		if sys is ContractSystem:
+			return sys
+	return null
+
+
 func _cargo_words(job: Dictionary) -> String:
 	if int(job["passengers"]) > 0:
 		return "%s (%d aboard)" % [job["item"], int(job["passengers"])]
@@ -611,7 +650,9 @@ func _cargo_words(job: Dictionary) -> String:
 func _offer_card(place_id: String, offer: Dictionary) -> Control:
 	var s = sim.state
 	var d = sim.data
-	var title: String = {"package": "Courier", "passenger": "Passage", "pickup": "Pick up and deliver", "long_haul": "Long-haul courier"}.get(offer["kind"], "Job")
+	var title: String = {"package": "Courier", "passenger": "Passage", "pickup": "Pick up and deliver", "long_haul": "Long-haul courier",
+		"satellite": "Satellite launch", "covert_delivery": "Quiet delivery", "listening_device": "A listening device", "spy_satellite": "A satellite nobody launched",
+		"covert_drop": "A drop-off nobody saw", "covert_extract": "An extraction"}.get(offer["kind"], "Job")
 	if offer["channel"] == "rumour":
 		title += "  ·  heard through the grapevine"
 	var p := UI.panel(title)
@@ -619,9 +660,13 @@ func _offer_card(place_id: String, offer: Dictionary) -> Control:
 		var o := UI.label(offer["opener"], UI.AMBER, 13)
 		o.autowrap_mode = TextServer.AUTOWRAP_WORD
 		p[1].add_child(o)
-	var route: String = d.places[offer["to"]]["name"]
+	var route: String = d.locations[offer["to"]]["name"]
+	if offer.get("release", false):
+		route = "release into orbit near " + route
+	elif offer.get("plant", false):
+		route = "plant on " + route + ", unseen"
 	if offer["pickup"] != "":
-		route = "collect at %s, deliver to %s" % [d.places[offer["pickup"]]["name"], route]
+		route = "collect at %s, deliver to %s" % [d.locations[offer["pickup"]]["name"], route]
 	var due: float = float(offer["window_s"])
 	p[1].add_child(UI.label("%s  ·  %s" % [_cargo_words(offer), route], UI.TEXT, 14))
 	# How the co-pilot rates our chances at the ship's current mass.
@@ -641,8 +686,17 @@ func _offer_card(place_id: String, offer: Dictionary) -> Control:
 		var kind_line := UI.label("Also: " + Favours.describe(d, offer["in_kind"]), UI.GOOD, 13)
 		kind_line.autowrap_mode = TextServer.AUTOWRAP_WORD
 		p[1].add_child(kind_line)
+	if offer.get("covert", false):
+		var c := UI.label("Secret work. %s must not know: their ports seeing us builds suspicion, fast with the transponder on. Run dark, leave without a plan, keep out of their sight. Caught: a fine, standing, and an offence." % offer["watcher"], UI.HAZARD, 12)
+		c.autowrap_mode = TextServer.AUTOWRAP_WORD
+		c.custom_minimum_size = Vector2(200, 0)
+		p[1].add_child(c)
 	var why := ""
-	if int(offer["passengers"]) > 0 and ContractSystem.free_berths(s, d) < int(offer["passengers"]):
+	if offer.get("lander", false) and not PodSystem.has_mount(s.ship, d):
+		why = "needs a lander: fit a lander bay"
+	elif offer.get("payload", false) and ContractSystem.payload_room_t(s, d) + 1e-9 < float(offer["mass_t"]):
+		why = "needs a payload carrier pod on the lander (%.1f t)" % float(offer["mass_t"])
+	elif int(offer["passengers"]) > 0 and ContractSystem.free_berths(s, d) < int(offer["passengers"]):
 		var yards := ContractSystem.berth_yards(d)
 		why = "needs %d berths: fit passenger berths in a cargo slot%s" % [int(offer["passengers"]), (" (sold at %s)" % ", ".join(yards)) if not yards.is_empty() else ""]
 	elif offer["pickup"] == "" and not ContractSystem.in_cabin(offer) and ShipStats.cargo_t(s.ship) + float(offer["mass_t"]) > ShipStats.cargo_capacity_t(s.ship, d) + 1e-9:
@@ -792,7 +846,7 @@ func _depart(to: String, route_id: String) -> void:
 	var plan_t: float = _last_plan_t.get(to, sim.state.time_s)
 	# Time is left to the departure ramp (travel_system): x1 while we back off the
 	# port and turn to the burn, then up to the default.
-	sim.apply({"type": "depart", "to": to, "route": route_id, "plan_t": plan_t})
+	sim.apply({"type": "depart", "to": to, "route": route_id, "plan_t": plan_t, "filed": not _unfiled})
 
 
 func _shipyard_tab() -> Control:

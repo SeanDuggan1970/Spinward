@@ -127,6 +127,8 @@ func _initialize() -> void:
 	test_detection_and_stealth()
 	test_panel_fold()
 	test_docking_bays()
+	test_satellite_missions()
+	test_secret_work()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -4291,3 +4293,114 @@ func test_docking_bays() -> void:
 	check(not big["bay"]["fits"] and float(big["port_z"]) > float(big["bay"]["z_mouth"]), "A ship too big for the bay berths on the doors")
 	for n in [plain["node"], st["node"], big["node"]]:
 		n.free()
+
+
+## The contract system instance (for driving its rules directly in tests).
+func _contract_system(sim: Sim):
+	for sys in sim.systems:
+		if sys is ContractSystemScript:
+			return sys
+	return null
+
+
+func _offer(sim: Sim, place: String, kind: String, to: String = "") -> Dictionary:
+	var rng := RandomNumberGenerator.new()
+	for i in 200:
+		rng.seed = 1000 + i
+		var o := Contracts.make_offer(sim.data, sim.ephemeris, sim.state, rng, place, kind, "approach")
+		if not o.is_empty() and (to == "" or o["to"] == to):
+			o["id"] = 900 + i
+			sim.state.contracts["board"][place] = sim.state.contracts["board"].get(place, []) + [o]
+			return o
+	return {}
+
+
+func test_satellite_missions() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var o := _offer(sim, "kibo_ring", "satellite")
+	check(not o.is_empty() and o.get("payload", false) and o.get("release", false), "A satellite job: payload, released near its orbit")
+	s.reputation[o["client"]] = 10.0
+	check(sim.apply({"type": "accept_contract", "id": o["id"]}).begins_with("no room in a payload carrier"), "No payload carrier, no satellite")
+	s.ship["modules"]["cargo.1"] = "lander_bay"
+	s.ship["pod"] = "payload_carrier"
+	var mass_before := ShipStats.total_mass_t(s.ship, d)
+	check(sim.apply({"type": "accept_contract", "id": o["id"]}) == "", "With a payload carrier: take the job")
+	check(is_equal_approx(float(s.ship["payload_load_t"]), float(o["mass_t"])) and ShipStats.total_mass_t(s.ship, d) > mass_before, "The satellite rides in the carrier, and weighs")
+	check(sim.apply({"type": "fit_pod", "pod": "cargo_container"}) == "there's a satellite in the payload carrier", "Can't swap the pod with a satellite in it")
+	var where: String = o["to"]
+	check(sim.apply({"type": "release_satellite", "id": o["id"]}).begins_with("too far") or where == "kibo_ring", "Too far from its orbit to release")
+	var credits := s.credits
+	s.location = {"status": "docked", "place": where}
+	check(sim.apply({"type": "release_satellite", "id": o["id"]}) == "", "Released at %s" % d.locations[where]["name"])
+	check(s.sites.get("satellites", []).size() == 1 and s.sites["satellites"][0]["place"] == where, "The satellite stays in the world")
+	check(s.credits > credits and is_zero_approx(float(s.ship["payload_load_t"])), "Paid, and the carrier is empty")
+	var loaded := SaveIO.from_text(SaveIO.to_text(s))
+	check(loaded != null and loaded.sites.get("satellites", []).size() == 1, "Placed satellites are saved")
+
+
+func test_secret_work() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var cs = _contract_system(sim)
+	check(not Contracts.covert_unlocked(s, d), "No secret work for a newcomer")
+	s.ship["fuel_t"] = 3.0
+	check(sim.apply({"type": "depart", "to": "halo_depot", "filed": false}) == "traffic control wants a flight plan", "No free departures yet")
+	s.reputation["Terran Compact"] = 25.0
+	check(Contracts.covert_unlocked(s, d), "Reliable with the Compact: secret work opens")
+	# Every covert kind makes an offer with a watcher who isn't the client.
+	for kind in ["covert_delivery", "listening_device", "spy_satellite", "covert_drop", "covert_extract"]:
+		var o := _offer(sim, "kibo_ring", kind)
+		check(not o.is_empty() and o.get("covert", false) and o.get("watcher", "") != "" and o["watcher"] != o["client"], "%s: hidden from %s" % [kind, o.get("watcher", "?")])
+	# A listening device on Shackleton Port, planted unseen on the way out.
+	var bug := _offer(sim, "kibo_ring", "listening_device", "shackleton_port")
+	check(sim.apply({"type": "accept_contract", "id": bug["id"]}) == "", "Take the device")
+	# Leave without a plan: Kibo Ring is busy, so it costs.
+	var credits := s.credits
+	var rep := float(s.reputation["Terran Compact"])
+	check(sim.apply({"type": "depart", "to": "halo_depot", "filed": false}) == "", "Leave without filing a plan")
+	check(s.location.get("filed", true) == false and s.credits < credits and float(s.reputation["Terran Compact"]) < rep, "Frowned on at a busy port: fined and a dent in standing")
+	sim.advance_game_time(60.0)
+	check(sim.apply({"type": "plant_device", "id": bug["id"]}) == "run dark first: transponder and lights off", "Plant it dark")
+	sim.apply({"type": "dark_running", "on": true})
+	sim.advance_game_time(400.0)
+	var why: String = cs.release_block(cs._job(bug["id"]))
+	if why == "":
+		credits = s.credits
+		check(sim.apply({"type": "plant_device", "id": bug["id"]}) == "" and s.credits > credits, "Planted unseen, coasting dark near the Moon's port")
+	else:
+		check(why.begins_with("not with the drive lit") or why.begins_with("too far"), "Planting waits for a coast within range (%s)" % why)
+	# Suspicion: a watcher's port sees us with covert work aboard.
+	var job := {"id": 7001, "kind": "covert_delivery", "client": "Terran Compact", "watcher": "Luna Cooperative", "covert": true, "state": "carried",
+		"to": "halo_depot", "pickup": "", "mass_t": 0.0, "passengers": 0, "reward": 5000.0, "rep": 4.0, "accepted_t": s.time_s, "deadline_t": s.time_s + 1.0e7, "window_s": 1.0e7, "stowed": "parcels_t"}
+	s.contracts["active"].append(job)
+	s.detection["seen_by"] = ["shackleton_port"]
+	s.detection["dark"] = true
+	cs._watchers(1000.0)
+	check(is_equal_approx(float(job["suspicion_s"]), 1000.0), "Seen dark on a trip without a plan: suspicion builds at 1x")
+	s.detection["seen_by"] = []
+	cs._watchers(100.0)
+	check(is_zero_approx(float(job["suspicion_s"])), "No plan filed, and out of every port's sight: they lost us")
+	s.detection["seen_by"] = ["shackleton_port"]
+	s.detection["dark"] = false
+	credits = s.credits
+	var offences := int(s.detection.get("offences", 0))
+	cs._watchers(3000.0)
+	check(job["outcome"] == "caught" and s.credits < credits and int(s.detection["offences"]) == offences + 1, "Transponder on under a watcher's eye: caught, fined, an offence")
+	# Repeat offenders are impounded until they pay.
+	s.detection["offences"] = int(d.contracts["covert"]["impound_after"]) - 1
+	var job2 := job.duplicate(true)
+	job2.erase("outcome")
+	job2["id"] = 7002
+	job2["suspicion_s"] = 0.0
+	s.contracts["active"].append(job2)
+	s.location = {"status": "docked", "place": "shackleton_port"}
+	s.contracts["last_dock"] = ""
+	sim.advance_game_time(1.0)
+	check(job2.get("outcome", "") == "caught", "Docking at the watcher's port with it aboard: customs")
+	check(float(s.detection.get("impound_cr", 0.0)) > 0.0, "A repeat offender's ship is impounded")
+	check(sim.apply({"type": "depart", "to": "kibo_ring"}).begins_with("your ship is impounded"), "An impounded ship goes nowhere")
+	s.credits = 1.0e5
+	check(sim.apply({"type": "pay_impound"}) == "" and sim.apply({"type": "depart", "to": "kibo_ring"}) == "", "Pay the fee and leave")
