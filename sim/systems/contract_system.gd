@@ -128,7 +128,8 @@ func _refresh_board(place: String) -> void:
 	board = board.filter(func(o): return float(o["expires_t"]) > s.time_s)
 	var cap := int(data.contracts["board"]["max_offers"])
 	var tries := 0
-	while board.filter(func(o): return o["channel"] == "board").size() < cap and tries < cap * 3:
+	# Satellite launches are listed on top of the courier work, not instead of it.
+	while board.filter(func(o): return o["channel"] == "board" and not o.get("payload", false)).size() < cap and tries < cap * 3:
 		tries += 1
 		var kind := Contracts.pick_kind(data, _rng, func(_k): return true)
 		var offer := Contracts.make_offer(data, sim().ephemeris, s, _rng, place, kind, "board")

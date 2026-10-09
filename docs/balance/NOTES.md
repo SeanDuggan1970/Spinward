@@ -251,3 +251,11 @@ Full write-up: [2026-10-07-economy-together.md](2026-10-07-economy-together.md).
 - The fine for running dark near a port is 600 cr and 1.5 standing, once a trip. That's about a small cargo's margin: a nuisance, not ruin. The coating costs a stock Mule (18.8 t dry) 28,200 cr.
 - The balance bot never runs dark, so the rules cost it nothing. The new module only adds to three yards' stock, which the bot doesn't buy from.
 - Panels in (`stowed_area_mult` 0.4, `stowed_heat_mult` 0.3): a dark, coated, sunk Mule drops from about 2,300 km to about 1,500 km. Without the coating or sink, the heat channel falls from about 12,300 km to about 6,800 km. The solar wings matter little in transit, where the reactor runs. The bot never stows.
+
+
+## Satellites and secret work (2026-10-09)
+
+- New contract kinds: `satellite` on the boards (Known standing; it needs a payload carrier), and five covert kinds that come only as approaches once you are Reliable with anyone.
+- First bot run (5 seeds, 180 days, upgrade=1): the mean fell from 117,238 to 89,220 cr. Satellites were taking courier slots on the 4-offer boards, and the bot (a courier) skips them. Fixed: satellites are listed on top of the courier work.
+- After the fix: a mean of 120,534 cr (seeds 123k, 144k, 91k, 137k, 108k) and a median first upgrade on day 21.9 (19.7 before). That's within the seed-to-seed spread. The bot never takes satellites or secret work.
+- Secret work pays roughly 1.5 to 3 times a courier job of the same length (pay_base 6,000 to 12,000). Being caught costs 2,500 cr, and a third offence costs 6,000 more to free the ship.
