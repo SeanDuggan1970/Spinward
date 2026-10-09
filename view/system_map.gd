@@ -1,7 +1,10 @@
 ## Top-down orbital map from real positions: bodies, orbits, places, NPC traffic and
-## (in transit) the player's transfer. Two scales by the trip's frame: the Earth-Moon
-## system, or the Sun's domain out to Saturn and beyond, with AU rings.
-## Mouse wheel zooms. Used full-screen in transit and as a panel at stations.
+## (in transit) the player's transfer. It opens at the trip's own scale (the Earth-Moon
+## system, or the Sun's domain out to the trip's far end), and the mouse wheel zooms
+## all the way: out past the Earth-Moon system the map turns heliocentric, sliding its
+## centre from Earth to the Sun, and on out through the planets, the Kuiper belt and
+## the heliopause to the Oort cloud. Used full-screen in transit and as a panel at
+## stations.
 extends Control
 
 const UI := preload("res://view/ui/ui_kit.gd")
@@ -9,6 +12,13 @@ const Navigation := preload("res://sim/navigation.gd")
 const V := preload("res://sim/v3.gd")
 
 const DAY := 86400.0
+const AU := 1.495978707e11
+## Past this view radius (metres) the map is heliocentric.
+const LOCAL_MAX_M := 2.0e9
+## How far out the wheel goes: the outer Oort cloud, about 1.6 light years.
+const MAX_RADIUS_M := 1.0e5 * AU
+## Rings at these distances from the Sun (AU), drawn when they fit the view.
+const AU_RINGS := [1.0, 2.0, 5.0, 10.0, 20.0, 30.0, 50.0, 100.0, 200.0, 500.0, 1000.0, 2000.0, 5000.0, 10000.0, 20000.0, 50000.0, 100000.0]
 const FLEET_COLOURS := {
 	"Luna Cooperative": Color("d2702c"), "The Commons": Color("7fb8d8"), "Terran Compact": Color("d9d4c7"),
 	"Kernel Settlers": Color("b8d27f"), "Independent": Color("c9a24a"), "Kalpana Settlement Trust": Color("e0a0c8"),
@@ -35,10 +45,18 @@ func _ready() -> void:
 
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed:
+		# Finer steps close in, bigger ones across the outer system.
+		var base := _base_radius(sim.state.time_s)
+		var step := 1.25 if base / zoom < 5.0e11 else 1.8
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
-			zoom = minf(zoom * 1.2, 400.0 if frame == "sun" else 40.0)
+			zoom = minf(zoom * step, 400.0 if frame == "sun" else 40.0)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			zoom = maxf(zoom / 1.2, 0.5)
+			zoom = maxf(zoom / step, base / MAX_RADIUS_M)
+
+
+## The view radius at zoom 1: the trip's own scale.
+func _base_radius(t: float) -> float:
+	return _solar_reach(t) if frame == "sun" else 4.8e8
 
 
 func _process(_dt: float) -> void:
@@ -55,17 +73,27 @@ func _draw() -> void:
 	var eph = sim.ephemeris
 	var t: float = s.time_s
 	var centre := size * 0.5 + centre_offset
-	var solar := frame == "sun"
-	var radius_m := (_solar_reach(t) if solar else 4.8e8) / zoom
+	var radius_m := _base_radius(t) / zoom
+	var solar := frame == "sun" or radius_m > LOCAL_MAX_M
 	var px := (minf(size.x, size.y) * 0.46) / radius_m
+	# Positions are relative to the trip's frame; the view's centre slides from the
+	# frame's body to the Sun as the map pulls out past the inner system.
 	var origin: Array = eph.position(frame, t)
+	var sun: Array = eph.position("sun", t)
+	# The slide never outruns the view: the frame's body stays on screen until the
+	# view is wide enough to hold the Sun too.
+	var w := 1.0 if frame == "sun" else clampf(radius_m / (2.0 * maxf(V.distance(origin, sun), 1.0)), 0.0, 1.0)
+	var view_centre: Array = V.add(origin, V.scale(V.sub(sun, origin), w))
+	var shift: Array = V.sub(origin, view_centre)
 	var to_screen := func(p: Array) -> Vector2:
-		return centre + Vector2(p[0], -p[1]) * px
+		return centre + Vector2(float(p[0]) + float(shift[0]), -(float(p[1]) + float(shift[1]))) * px
+	var abs_screen := func(p: Array) -> Vector2:
+		return centre + Vector2(float(p[0]) - float(view_centre[0]), -(float(p[1]) - float(view_centre[1]))) * px
 	var highlight: String = s.location.get("to", s.location.get("place", ""))
 	var origin_place: String = s.location.get("from", "")
 
 	if solar:
-		_draw_solar(t, px, centre, to_screen)
+		_draw_solar(t, px, radius_m, abs_screen)
 	else:
 		for r in range(1, 6):
 			draw_arc(centre, r * 1.0e8 * px, 0.0, TAU, 96, Color(UI.PANEL_EDGE, 0.35), 1.0)
@@ -94,13 +122,16 @@ func _draw() -> void:
 		draw_string(_font, at + Vector2(6, 14), sim.data.places[place]["name"], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, col)
 
 	# NPC traffic: a dot per ship in flight, with a faint trace of the path still ahead.
+	# Zoomed out to the Sun's domain, the interplanetary traffic shows instead.
+	var traffic_frame := "sun" if solar else frame
+	var npc_screen := to_screen if traffic_frame == frame else (func(p: Array) -> Vector2: return abs_screen.call(V.add(sun, p)))
 	for npc in s.npcs:
-		if npc["location"]["status"] != "transit" or npc["location"].get("frame", "earth") != frame:
+		if npc["location"]["status"] != "transit" or npc["location"].get("frame", "earth") != traffic_frame:
 			continue
 		var loc: Dictionary = npc["location"]
-		var p: Vector2 = to_screen.call(Navigation.transit_position(loc, t))
+		var p: Vector2 = npc_screen.call(Navigation.transit_position(loc, t))
 		var col := fleet_colour(sim, npc)
-		var trace := _path_points(loc, t, float(loc["arrive_t"]), 12, to_screen)
+		var trace := _path_points(loc, t, float(loc["arrive_t"]), 12, npc_screen)
 		if trace.size() >= 2:
 			draw_polyline(trace, Color(col, 0.15), 1.0)
 		draw_circle(p, 2.5, col)
@@ -152,16 +183,32 @@ func _solar_reach(t: float) -> float:
 	return reach
 
 
-## The Sun's domain: AU rings, the Sun, orbits and the worlds on them.
-func _draw_solar(t: float, px: float, centre: Vector2, to_screen: Callable) -> void:
-	var au := 1.495978707e11
-	for r: float in [1.0, 2.0, 5.0, 10.0, 20.0, 30.0, 50.0]:
-		var rp: float = float(r) * au * px
-		if rp > 6.0 and rp < maxf(size.x, size.y) * 1.5:
-			draw_arc(centre, rp, 0.0, TAU, 128, Color(UI.PANEL_EDGE, 0.3), 1.0)
-			draw_string(_font, centre + Vector2(rp + 3, -3), "%d AU" % int(r), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(UI.DIM, 0.6))
-	draw_circle(centre, 5.0, Color("fff2c0"))
+## The Sun's domain: AU rings, the Sun, orbits and the worlds on them, and further
+## out the Kuiper belt, the heliopause and the Oort cloud. to_screen takes absolute
+## positions; radius_m is the view's radius.
+func _draw_solar(t: float, px: float, radius_m: float, to_screen: Callable) -> void:
 	var eph = sim.ephemeris
+	var sun_at: Vector2 = to_screen.call(eph.position("sun", t))
+	var reach := maxf(size.x, size.y) * 1.5
+	# Bands first, under everything: the Kuiper belt and the Oort cloud.
+	_band(sun_at, 30.0 * AU * px, 50.0 * AU * px, Color(0.55, 0.6, 0.75, 0.10), "KUIPER BELT", reach)
+	_band(sun_at, 2000.0 * AU * px, 100000.0 * AU * px, Color(0.5, 0.65, 0.9, 0.07), "OORT CLOUD (comets, mostly unseen)", reach)
+	var hp := 120.0 * AU * px
+	if hp > 20.0 and hp < reach:
+		_dashed_circle(sun_at, hp, Color(0.95, 0.75, 0.45, 0.35))
+		_centred(sun_at + Vector2(0, -hp - 4), "HELIOPAUSE  ·  the Sun's wind gives out", Color(0.95, 0.75, 0.45, 0.6))
+	var last_label := -INF
+	for r: float in AU_RINGS:
+		var rp: float = float(r) * AU * px
+		if rp > 6.0 and rp < reach:
+			draw_arc(sun_at, rp, 0.0, TAU, 128, Color(UI.PANEL_EDGE, 0.3), 1.0)
+			# Labels only where they don't crowd the last one.
+			if rp - last_label > 34.0:
+				draw_string(_font, sun_at + Vector2(rp + 3, -3), ("%d AU" % int(r)) if r < 1000.0 else ("%s AU" % UI.money(r).trim_suffix(" cr")), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(UI.DIM, 0.6))
+				last_label = rp
+	draw_circle(sun_at, 5.0, Color("fff2c0"))
+	if radius_m > 2.0e4 * AU:
+		draw_string(_font, sun_at + Vector2(8, 16), "the Sun, and every world we know", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("fff2c0", 0.7))
 	for body in sim.data.bodies:
 		var b: Dictionary = sim.data.bodies[body]
 		if b.get("parent", "") != "sun":
@@ -176,7 +223,8 @@ func _draw_solar(t: float, px: float, centre: Vector2, to_screen: Callable) -> v
 		var at: Vector2 = to_screen.call(eph.position(body, t))
 		var col: Color = {"planet": Color("c9c4b6"), "dwarf": Color("a8a39b")}.get(kind, Color(UI.DIM, 0.8))
 		draw_circle(at, 4.0 if kind == "planet" else 2.5, col)
-		if major or zoom >= 6.0:
+		# Names only where there is room: not crowded in on the Sun.
+		if (major or radius_m < 5.0e11) and at.distance_to(sun_at) > 28.0:
 			draw_string(_font, at + Vector2(6, -6), b["name"], HORIZONTAL_ALIGNMENT_LEFT, -1, 12 if major else 10, Color(col, 0.9))
 
 
@@ -187,3 +235,25 @@ func _path_points(loc: Dictionary, t0: float, t1: float, n: int, to_screen: Call
 	for k in n + 1:
 		pts.append(to_screen.call(Navigation.transit_position(loc, lerpf(t0, t1, float(k) / float(n)))))
 	return pts
+
+
+## A faint ring between two radii (screen pixels), labelled at the top, if it shows.
+func _band(at: Vector2, r0: float, r1: float, col: Color, label: String, reach: float) -> void:
+	if r1 < 6.0 or r0 > reach:
+		return
+	var inner := maxf(r0, 3.0)
+	var outer := minf(r1, reach)
+	draw_arc(at, (inner + outer) * 0.5, 0.0, TAU, 160, col, outer - inner)
+	_centred(at + Vector2(0, -(inner + outer) * 0.5 + 4), label, Color(col.r, col.g, col.b, 0.75))
+
+
+func _centred(at: Vector2, text: String, col: Color) -> void:
+	var w := _font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 10).x
+	draw_string(_font, at - Vector2(w * 0.5, 0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, col)
+
+
+func _dashed_circle(at: Vector2, r: float, col: Color) -> void:
+	var n := 96
+	for k in n:
+		if k % 2 == 0:
+			draw_arc(at, r, TAU * float(k) / float(n), TAU * float(k + 1) / float(n), 4, col, 1.0)
