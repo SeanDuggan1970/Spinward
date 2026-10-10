@@ -16,6 +16,7 @@ Push-Location $projectRoot
 try {
     Invoke-Godot 'Godot import' @('--headless', '--path', $projectRoot, '--editor', '--import', '--quit')
     Invoke-Godot 'Sim tests' @('--headless', '--path', $projectRoot, '--script', 'res://tests/run_tests.gd')
+    Invoke-Godot 'Site departures' @('--headless', '--path', $projectRoot, '--script', 'res://tests/site_departures.gd')
     Invoke-Godot 'Scene smoke check' @('--headless', '--path', $projectRoot, '--', '--smoke')
     Invoke-Godot 'Docking trial' @('--headless', '--path', $projectRoot, '--', '--dock-trial')
 } finally { Pop-Location }

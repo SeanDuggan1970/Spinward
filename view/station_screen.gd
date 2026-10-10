@@ -289,7 +289,8 @@ func _departures_tab(place_id: String) -> Control:
 	# to your ship).
 	for ride in ElevatorSystem.rides_here(d, place_id):
 		parts[1].add_child(_elevator_panel(place_id, ride))
-	if d.places[place_id].has("foot_of"):
+	# Sites share the departures screen, but only ports live in data.places.
+	if d.locations[place_id].has("foot_of"):
 		return parts[0]
 	parts[1].add_child(UI.label("Plot routes and your co-pilot flies trial courses under real Earth and Moon gravity: Express burns hard, Economy lets gravity do the work, lunar flybys are for the view (and occasionally the fuel). Prices elsewhere are what you last saw there, or what you have been told: buy tips on the Tip Line.", UI.DIM, 13))
 	var held := float(s.detection.get("impound_cr", 0.0))
@@ -1019,7 +1020,7 @@ func _ship_panel(place_id: String) -> Control:
 		if slot != "keel" and float(s.ship["damage"][slot]) > 0.005:
 			v.add_child(UI.label("  %s  %d%% damaged" % [d.modules[s.ship["modules"][slot]]["name"], int(round(float(s.ship["damage"][slot]) * 100.0))], UI.WARN, 13))
 	var repair := DamageSystem.repair_cost(s, d)
-	if repair > 0.5 and not d.places[place_id].has("foot_of"):
+	if repair > 0.5 and s.location.get("status") == "docked" and not d.locations[place_id].has("foot_of"):
 		var at_yard: bool = "shipyard" in d.places[place_id].get("services", [])
 		v.add_child(UI.button(("Repair  (%s)" if at_yard else "Patch up  (%s)") % UI.money(repair), send.bind({"type": "repair"}), repair <= s.credits))
 	var services: Array = d.locations[place_id].get("services", [])
