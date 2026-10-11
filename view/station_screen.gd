@@ -208,10 +208,15 @@ func _market_tab(place_id: String) -> Control:
 		var max_buy := floorf(Market.affordable_tonnes(s, d, place_id, good, _spendable(place_id), minf(free, Market.stock(s, place_id, good))) * 10.0) / 10.0
 		grid.add_child(UI.button("Buy 1", send.bind({"type": "buy", "good": good, "tonnes": 1.0}), max_buy >= 1.0))
 		grid.add_child(UI.button("Buy max", _buy_max.bind(good), max_buy >= 0.1))
+		var sell_actions := HBoxContainer.new()
+		grid.add_child(sell_actions)
+		var sell_one := UI.button("Sell 1", send.bind({"type": "sell", "good": good, "tonnes": 1.0}), aboard >= 1.0)
+		sell_one.tooltip_text = "Sell one tonne."
+		sell_actions.add_child(sell_one)
 		# Selling it all: what it fetches here (your sale moves the price, so the whole
 		# load is priced together) against what you paid. Green at a profit, red at a loss.
 		var sell_all := UI.button("Sell all", send.bind({"type": "sell", "good": good, "tonnes": aboard}), aboard > 0.0)
-		grid.add_child(sell_all)
+		sell_actions.add_child(sell_all)
 		if aboard > 0.0:
 			var income := Market.sell_price(s, d, place_id, good, aboard) * aboard
 			var paid := float(s.ship.get("cargo_paid", {}).get(good, 0.0))
@@ -459,6 +464,9 @@ func _site_tab(site_id: String) -> Control:
 	var s = sim.state
 	var d = sim.data
 	var site: Dictionary = d.sites[site_id]
+	var pickup_panel := _pickup_panel(site_id)
+	if pickup_panel != null:
+		parts[1].add_child(pickup_panel)
 	var work: Dictionary = s.sites.get("work", {})
 	if not work.is_empty():
 		var act: Dictionary = site["activities"][work["activity"]]
@@ -513,6 +521,9 @@ func _contracts_tab(place_id: String) -> Control:
 	var parts := _scroll("Contracts")
 	var s = sim.state
 	var d = sim.data
+	var pickup_panel := _pickup_panel(place_id)
+	if pickup_panel != null:
+		parts[1].add_child(pickup_panel)
 	var client := Contracts.client_of(d, place_id)
 	var rep := Contracts.rep_of(s, client)
 	parts[1].add_child(UI.label("Standing with %s: %s (%d).  Deliver on time to be known; known pilots get the better jobs, and people come to find them." % [client, Contracts.tier(d, rep), int(round(rep))], UI.DIM, 13))
@@ -583,6 +594,26 @@ func _contracts_tab(place_id: String) -> Control:
 	if gated > 0:
 		parts[1].add_child(UI.label("%d more job%s here for pilots they know (%s)." % [gated, "s" if gated > 1 else "", gate_tier], UI.HAZARD, 13))
 	return parts[0]
+
+
+## A failed arrival pickup remains actionable without undocking or advancing time.
+func _pickup_panel(place_id: String) -> Control:
+	var waiting: Array = sim.state.contracts.get("active", []).filter(func(job): return job["state"] == "collect" and job["pickup"] == place_id)
+	if waiting.is_empty():
+		return null
+	var panel := UI.panel("Awaiting pickup")
+	for job in waiting:
+		panel[1].add_child(UI.label("%s  ·  deliver to %s" % [_cargo_words(job), sim.data.locations[job["to"]]["name"]], UI.TEXT, 13))
+		var why: String = _contracts_sys().collection_block(job)
+		var row := HBoxContainer.new()
+		var hint := UI.label("Can't collect: " + why if why != "" else "Ready to board", UI.WARN if why != "" else UI.GOOD, 12)
+		hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(hint)
+		var collect := UI.button("Collect", send.bind({"type": "collect_contract", "id": job["id"]}), why == "")
+		collect.tooltip_text = why
+		row.add_child(collect)
+		panel[1].add_child(row)
+	return panel[0]
 
 
 ## Hitchhikers asking for a ride here, those aboard, and the vouchers you hold.

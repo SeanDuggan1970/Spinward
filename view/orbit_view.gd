@@ -10,6 +10,7 @@ const Navigation := preload("res://sim/navigation.gd")
 const Kit := preload("res://view/flight/kit.gd")
 const Models := preload("res://view/flight/models.gd")
 const ShipRig := preload("res://view/flight/ship_rig.gd")
+const Departure := preload("res://view/flight/departure.gd")
 const LightTime := preload("res://sim/light_time.gd")
 const Livery := preload("res://view/flight/livery.gd")
 const SkyKit := preload("res://view/flight/sky.gd")
@@ -37,6 +38,7 @@ var _moon: MeshInstance3D
 var _ship: Node3D
 var _ship_len := 26.0
 var _rig: Dictionary = {}
+var _departure := Departure.new()
 var _plume: Node3D
 var _path_ahead: ImmediateMesh
 var _path_behind: ImmediateMesh
@@ -118,6 +120,7 @@ func _ready() -> void:
 		add_child(label)
 		_places[place] = {"marker": marker, "label": label}
 	var model := Models.ship(sim.state.ship, sim.data, Livery.for_ship(sim.data, "", sim.state.ship.get("name", ""), true))
+	_departure.setup(model, sim.data, sim.state.location)
 	_ship = Node3D.new()
 	var inner: Node3D = model["node"]
 	_ship.add_child(inner)
@@ -282,8 +285,7 @@ func _process(dt: float) -> void:
 	var ship_abs := V.add(eph.position(frame, t), Navigation.transit_position(loc, t))
 	var ship_vel := V.add(eph.velocity(frame, t), Navigation.transit_velocity(loc, t))
 	var comms := LightTime.pointing(eph, loc["to"], ship_abs, ship_vel, t)
-	ShipRig.set_fold(_rig, ShipRig.transit_fold(loc, t, sim.state.ship))
-	ShipRig.aim(_rig, _attitude, sun_dir, _d(comms["transmit"]["dir"]), dt)
+	_departure.aim(_rig, _attitude, sun_dir, _d(comms["transmit"]["dir"]), loc, t, sim.state.ship)
 	_ship.find_child("Streak", true, false).visible = thrusting
 	var into := V.dot(V.normalized(Navigation.transit_accel(loc, t)), V.normalized(Navigation.transit_velocity(loc, t)))
 	readout = {

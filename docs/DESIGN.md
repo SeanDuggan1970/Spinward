@@ -456,6 +456,7 @@ Sean's direction (2026-10-04). It goes beyond trade into opportunities, refits a
      - packages, light and urgent
      - passengers, who need berths
      - pickups: collect at A, deliver to B
+       - If the ship has no room on arrival, the consignment waits ashore. Retry automatically while stopped there once space or berths become available. An "Awaiting pickup" panel at ports and sites explains the shortage and offers "Collect", which also works while paused and in existing saves.
      - long hauls between worlds; a port alone at its world offers only these
    - **Deadlines:** each job allows a window from when it is taken, set from a stock Mule's (or long-haul refit's) fastest trip x slack. A light, direct ship makes it; a laden one may not. The board shows the co-pilot's estimate at your current mass.
    - **Outcomes:**
@@ -814,7 +815,9 @@ Sean's request (2026-10-08): solar wings and radiators should fold back for dock
 - **Stowing** (`ShipRig.set_fold`, `rig.fold` from 0 out to 1 stowed): over about 25 s, each panel first turns flat into the hull's plane. Then its segments fold accordion-fashion into a short stack standing at the boom's end, and the dish parks facing ahead. Deploying runs the same steps in reverse.
 - **When:**
   - The player's ship stows on the final approach in the docking scene.
-  - Leaving port, it keeps the panels stowed for the first minute of game time (`ShipRig.DEPLOY_AFTER_S`), then unfolds them in every transit view.
+  - Leaving a station (`view/flight/departure.gd`), wait for the bay doors, then back out along its centre line with the ship's roll matching the rotor (including negative spin). Keep the main drive off and the panels stowed until the whole ship's turning envelope is clear of the mouth. Only then turn toward the burn and ease the roll toward the Sun. Ships too big for the tunnel use the exterior collar.
+  - Deployment takes about 25 game seconds after clearance in every transit view and the audio rig. Time compression, save/load and changing views use that same game-time schedule.
+  - Departures from exploration sites have no docking fold or back-out sequence. Panels stay deployed unless the pilot manually stowed them for stealth. The existing co-pilot rule still deploys manually stowed panels for a main-engine burn's cooling.
   - Ships moored at a station are stowed. Lane traffic stows over the 30% of its lane nearest the station.
 - **Running quiet:** the same fold, held in transit while `ship.stowed` is set (see "Detection and stealth").
 - The sail freighter's sail is not folded.
@@ -856,10 +859,10 @@ Sean's direction (2026-10-11): outside shots of any kind should be totally silen
 
 Sean's direction (2026-10-10): the ship should leave through the bay doors, seen from inside the dock, reversing out gently on its thrusters with everything stowed, then unstowing and aligning for its burn. It should be cinematic: a camera that follows the ship out without passing through walls, and ship, camera and station turning together until the ship is out.
 
-- **The timeline** (`view/flight/undock.gd`, `balance.undock`, game seconds since departure, at ×1):
+- **The timeline** (`view/flight/undock.gd`, `view/flight/departure.gd`, `balance.undock`, game seconds since departure):
   - At 1 s the doors start to open (12 s).
-  - At 7 s the ship eases astern on its thrusters, gathering way at 0.2 m/s² to 2.5 m/s.
-  - Once its nose is 8 m past the mouth (about 48 s for an 80 m bay), the panels and dish unfold and the roll jets brake its spin over 5 s.
+  - Once the doors are fully open (13 s with the current settings), the ship eases astern on its thrusters, gathering way at 0.2 m/s² to 2.5 m/s. This uses the later of `move_at_s` and the end of the door animation.
+  - Once the whole hull's turning envelope, including deployed panels, is 8 m past the mouth, the panels and dish unfold over 25 game seconds and the roll jets brake its spin over 5 s. Clearance depends on the current ship's dimensions.
   - After 3 s more it turns for its burn.
   - `time.departure_ramp` holds ×1 for the first 60 s for this (it was 20 s).
 - **Lockstep:** in the bay the ship is held on the berth's axis, turning with the station's spin, so the tunnel and doors stand still around it. Once clear its roll brakes smoothly to a stop. Then its attitude blends into normal flight (rolled to the Sun) as it turns.

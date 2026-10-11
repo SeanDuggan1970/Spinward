@@ -15,6 +15,7 @@ const Navigation := preload("res://sim/navigation.gd")
 const Models := preload("res://view/flight/models.gd")
 const Livery := preload("res://view/flight/livery.gd")
 const ShipRig := preload("res://view/flight/ship_rig.gd")
+const Departure := preload("res://view/flight/departure.gd")
 const SkyKit := preload("res://view/flight/sky.gd")
 const ShipAudio := preload("res://view/audio/ship_audio.gd")
 
@@ -24,6 +25,7 @@ var sim
 var audio: ShipAudio
 var _ship: Node3D
 var _rig: Dictionary
+var _departure := Departure.new()
 var _basis := Basis.IDENTITY
 var _ready_basis := false
 
@@ -34,6 +36,7 @@ func _init(owner_sim) -> void:
 
 func _ready() -> void:
 	var model := Models.ship(sim.state.ship, sim.data, Livery.for_ship(sim.data, "", sim.state.ship.get("name", ""), true))
+	_departure.setup(model, sim.data, sim.state.location)
 	_ship = model["node"]
 	_rig = model["rig"]
 	_ship.visible = false
@@ -62,7 +65,7 @@ func _process(dt: float) -> void:
 	var cfg: Dictionary = sim.data.balance["undock"]
 	var elapsed := t - float(loc["depart_t"])
 	var from_bay: bool = sim.data.places.get(loc["from"], {}).has("station")
-	var clear := Undock.clear_t(cfg, float(sim.data.balance["bays"]["depth_m"]), 0.5) if from_bay else -1.0
+	var clear := _departure.clear_after_s if from_bay else -1.0
 	var held := from_bay and elapsed < Undock.turn_t(cfg, clear)
 	if held and _ready_basis:
 		want = _basis
@@ -79,15 +82,11 @@ func _process(dt: float) -> void:
 		turn = step / dt
 	var sun := SkyKit.dir_between(eph.position("sun", t), here)
 	_ship.basis = ShipRig.roll_to_sun(-_basis.z, sun)
-	if from_bay:
-		ShipRig.set_fold(_rig, 1.0 if elapsed < clear or sim.state.ship.get("stowed", false) else 0.0, elapsed < 1.0)
-	else:
-		ShipRig.set_fold(_rig, ShipRig.transit_fold(loc, t, sim.state.ship))
-	ShipRig.aim(_rig, _ship.basis, sun, SkyKit.dir_between(eph.position(loc["to"], t), here), dt)
+	_departure.aim(_rig, _ship.basis, sun, SkyKit.dir_between(eph.position(loc["to"], t), here), loc, t, sim.state.ship)
 	# Swinging round, the attitude jets fire; burning, the drive does.
 	var spin := Vector3(0, 1, 0) * (1.0 if turn > 0.05 else 0.0)
 	var move := Vector3.ZERO
 	if held:
-		move = Vector3(0, 0, 1) if Undock.pushing(cfg, elapsed) else Vector3.ZERO
+		move = Vector3(0, 0, 1) if Undock.pushing(_departure.motion, elapsed) else Vector3.ZERO
 		spin = Vector3(0, 0, 1) if elapsed > clear and Undock.roll_share(cfg, elapsed, clear) > 0.05 else Vector3.ZERO
-	audio.update(dt, {"thrust": 1.0 if thrusting else 0.0, "move": move, "spin": spin, "turn": turn, "time_scale": s.time_scale})
+	audio.update(dt, {"thrust": 1.0 if thrusting and not held else 0.0, "move": move, "spin": spin, "turn": turn, "time_scale": s.time_scale})

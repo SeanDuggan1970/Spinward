@@ -38,6 +38,7 @@ var _rng := RandomNumberGenerator.new()
 func setup(owner) -> void:
 	super.setup(owner)
 	owner.register("accept_contract", _accept)
+	owner.register("collect_contract", _collect_command)
 	owner.register("abandon_contract", _abandon)
 	owner.register("release_satellite", _release)
 	owner.register("plant_device", _plant)
@@ -74,6 +75,7 @@ func tick(game_dt: float) -> void:
 		c["last_site"] = ""
 	_watchers(game_dt)
 	_check_failures()
+	_retry_pickups()
 
 
 func _with_rng(f: Callable) -> void:
@@ -234,6 +236,41 @@ func _accept(command: Dictionary) -> String:
 	s.contracts["active"].append(job)
 	sim().emit("contract_accepted", {"id": job["id"], "to": job["to"], "pickup": job["pickup"], "reward": job["reward"]})
 	return ""
+
+
+## Retry waiting work after cargo sales, berth refits or other jobs unloading.
+## Check first so a full hold does not emit a warning every simulation tick.
+func _retry_pickups() -> void:
+	var s = sim().state
+	if not s.location.get("status") in ["docked", "on_site"]:
+		return
+	for job in s.contracts["active"]:
+		if job["state"] == "collect" and job["pickup"] == s.location["place"] and collection_block(job) == "":
+			_collect(job)
+
+
+func collection_block(job: Dictionary) -> String:
+	var s = sim().state
+	if job.get("state") != "collect":
+		return "that consignment is not waiting for collection"
+	if not s.location.get("status") in ["docked", "on_site"] or s.location.get("place", "") != job["pickup"]:
+		return "collect at %s" % sim().data.locations[job["pickup"]]["name"]
+	if not Fleet.is_craft(sim().data, s.ship, job.get("craft", [])):
+		return "that needs %s" % Fleet.craft_words(sim().data, job["craft"])
+	return _room_for(job)
+
+
+## {id}: collect waiting cargo or passengers here, including while paused.
+func _collect_command(command: Dictionary) -> String:
+	for job in sim().state.contracts["active"]:
+		if int(job["id"]) != int(command.get("id", -1)):
+			continue
+		var why := collection_block(job)
+		if why != "":
+			return why
+		_collect(job)
+		return ""
+	return "that job is not active"
 
 
 func _room_for(job: Dictionary) -> String:
