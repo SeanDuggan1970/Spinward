@@ -15,6 +15,7 @@ const FollowView := preload("res://view/follow_view.gd")
 const FollowHud := preload("res://view/follow_hud.gd")
 const VIEWS := ["ship", "orbit", "cockpit", "map"]
 const TransitAudio := preload("res://view/audio/transit_audio.gd")
+const ShipAudio := preload("res://view/audio/ship_audio.gd")
 
 var sim
 var view_name := "orbit"
@@ -65,6 +66,8 @@ func _ready() -> void:
 
 func set_view(name: String) -> void:
 	view_name = name
+	# The ship and orbit views look at the ship from outside, in vacuum: silent there.
+	ShipAudio.set_outside(sim.data, name in ["ship", "orbit"])
 	var flat := name == "map"
 	_map.visible = flat
 	_panel.visible = flat
@@ -116,3 +119,7 @@ func _process(_dt: float) -> void:
 
 func _date(t: float) -> String:
 	return Time.get_datetime_string_from_unix_time(int(t + 946728000.0)).replace("T", " ").substr(0, 16)
+
+
+func _exit_tree() -> void:
+	ShipAudio.set_outside(sim.data, false)

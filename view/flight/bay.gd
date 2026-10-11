@@ -13,6 +13,10 @@ extends RefCounted
 const Kit := preload("res://view/flight/kit.gd")
 
 const LAMP := Color("ffe2b0")
+## The bay's interior is drawn on this render layer, which the Sun and planetshine
+## lights leave out (shade_interior): inside, only its own lamps light it, so no
+## sunlight leaks through the walls.
+const INTERIOR_LAYER := 2
 ## Depth of an iris's housing flange at the mouth.
 const IRIS_FLANGE_M := 3.0
 
@@ -24,7 +28,11 @@ static func build(rotor: Node3D, r: float, outer: float, z_back: float, depth: f
 	var z_mouth := z_back + depth
 	var hull: Material = mats["hull"]
 	# The shell: outer wall, the front face round the mouth, a lip, and the tunnel.
+	# A closed shell, so it reads solid from any side: the back face (where it meets
+	# the hub; on a habitat it stands proud of the docking nub), the outer wall, the
+	# front face round the mouth and the lip.
 	var strips := [
+		PackedVector2Array([Vector2(r, z_back), Vector2(outer, z_back)]),
 		PackedVector2Array([Vector2(outer, z_back), Vector2(outer, z_mouth)]),
 		PackedVector2Array([Vector2(outer, z_mouth), Vector2(r + 1.2, z_mouth)]),
 		PackedVector2Array([Vector2(r + 1.2, z_mouth), Vector2(r + 1.2, z_mouth + 0.8), Vector2(r, z_mouth + 0.8)]),
@@ -32,24 +40,22 @@ static func build(rotor: Node3D, r: float, outer: float, z_back: float, depth: f
 	rotor.add_child(Kit.lathe(strips, hull, 64))
 	# The tunnel itself is lined in pale steel, so the lamps light it.
 	var lining := [PackedVector2Array([Vector2(r, z_mouth + 0.8), Vector2(r, z_back)])]
-	rotor.add_child(Kit.lathe(lining, Kit.mat("offwhite"), 64))
+	rotor.add_child(_inside(Kit.lathe(lining, Kit.mat("offwhite"), 64)))
 	# The back wall round the port (the port's own dressing sits on it).
 	var back := [PackedVector2Array([Vector2(r, z_back), Vector2(0.01, z_back)])]
-	rotor.add_child(Kit.lathe(back, mats["dark"], 48))
+	rotor.add_child(_inside(Kit.lathe(back, mats["dark"], 48)))
 	rotor.add_child(Kit.hazard_band(r + 0.6, 0.6, Vector3(0, 0, z_mouth + 0.85), 32))
 	# Inside: rings of lamps down the tunnel and guide stripes along the floor-less walls.
 	var lamp := Kit.glow(LAMP, 1.3)
 	var rings := maxi(2, int(depth / 14.0))
 	for k in rings:
 		var z := z_back + depth * (float(k) + 0.5) / float(rings)
-		var ring := Kit.torus(r - 0.2, 0.1, lamp, Vector3(0, 0, z), 48)
-		ring.set_meta("no_merge", true)
-		rotor.add_child(ring)
+		rotor.add_child(_inside(Kit.torus(r - 0.2, 0.1, lamp, Vector3(0, 0, z), 48)))
 	for k in 4:
 		var a := TAU * float(k) / 4.0 + PI * 0.25
 		var stripe := Kit.box(Vector3(0.5, 0.06, depth - 2.0), Kit.mat("yellow"), Vector3(cos(a), sin(a), 0.0) * (r - 0.05) + Vector3(0, 0, z_back + depth * 0.5))
 		stripe.rotation.z = a + PI * 0.5
-		rotor.add_child(stripe)
+		rotor.add_child(_inside(stripe))
 	# Light inside the tunnel (a few lights, not one per ring).
 	var lights := []
 	for k in 3:
@@ -83,6 +89,19 @@ static func build(rotor: Node3D, r: float, outer: float, z_back: float, depth: f
 	bay["warn"] = warn
 	set_open(bay, 0.0)
 	return bay
+
+
+## A piece of the interior: on the interior layer, kept out of the merge (which would
+## put it back on the default layer).
+static func _inside(mi: MeshInstance3D) -> MeshInstance3D:
+	mi.layers = INTERIOR_LAYER
+	mi.set_meta("no_merge", true)
+	return mi
+
+
+## A light from outside (the Sun, planetshine) leaves bay interiors alone.
+static func shade_interior(light: Light3D) -> void:
+	light.light_cull_mask &= ~INTERIOR_LAYER
 
 
 ## The doors, built shut; set_open moves them.

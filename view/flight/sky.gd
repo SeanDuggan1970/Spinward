@@ -186,6 +186,9 @@ static func shine_light() -> DirectionalLight3D:
 	var l := DirectionalLight3D.new()
 	l.name = "Planetshine"
 	l.shadow_enabled = false
+	# It casts no shadows, so it would light a docking bay's interior through the walls:
+	# leave out the bay interior layer (view/flight/bay.gd INTERIOR_LAYER, 2).
+	l.light_cull_mask &= ~2
 	l.light_energy = 0.0
 	return l
 

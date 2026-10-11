@@ -196,6 +196,7 @@ func _build_environment() -> void:
 	var t: float = sim.state.time_s
 	var here: Array = eph.position(place_id, t)
 	var sun := DirectionalLight3D.new()
+	Bay.shade_interior(sun)
 	var sun_dir := _dir_to(eph.position("sun", t), here)
 	body_dirs["sun"] = sun_dir
 	# Sunlight fades with distance, gently: eyes and cameras adapt.
@@ -294,6 +295,8 @@ func _request_tug() -> void:
 
 
 func _physics_process(dt: float) -> void:
+	# Watching from outside (chase, wide): the silence of vacuum (balance.audio).
+	ShipAudio.set_outside(sim.data, view_mode != "cockpit")
 	if docked or sim.state.paused:
 		return
 	if wrecked:
@@ -1039,3 +1042,7 @@ func _time_to_rock() -> float:
 		if miss < float(rock["r"]) + ship_radius * 1.5:
 			best = minf(best, t)
 	return best
+
+
+func _exit_tree() -> void:
+	ShipAudio.set_outside(sim.data, false)

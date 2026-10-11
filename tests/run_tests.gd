@@ -129,6 +129,8 @@ func _initialize() -> void:
 	test_docking_bays()
 	test_satellite_missions()
 	test_secret_work()
+	test_undock_timing()
+	test_silent_outside()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -2450,7 +2452,8 @@ func test_ship_audio() -> void:
 	for _k in 30:
 		audio.update(1.0 / 30.0, {"thrust": 1.0, "spin": Vector3(0, 1, 0), "turn": 0.6})
 	check(audio._drive_on and audio._drive_level > 0.5, "The drive lights and builds to a roar")
-	check(int(audio.sounds_played) >= 4, "A turn fires the jets and the frame creaks (%d sounds)" % int(audio.sounds_played))
+	# The drive lights, a jet fires (one at a time: no rattle), and the frame creaks.
+	check(int(audio.sounds_played) >= 3, "A turn fires a jet and the frame creaks (%d sounds)" % int(audio.sounds_played))
 	var panel: Node3D = model["rig"]["arrays"][0]["node"]
 	for _k in 10:
 		panel.rotation.x += 0.03
@@ -2481,12 +2484,12 @@ func test_time_ramps() -> void:
 	s.time_scale = 100.0
 	check(sim.apply({"type": "depart", "to": "halo_depot"}) == "", "Depart for the ramp test")
 	check(s.time_scale == 1.0, "Departure starts at x1 (%.0f)" % s.time_scale)
-	for _i in 200:
+	for _i in 1000:
 		sim.tick(0.05)
-	check(s.time_scale == 1.0, "Ten seconds out, still at x1 to watch the port fall away (%.0f)" % s.time_scale)
+	check(s.time_scale == 1.0, "Fifty seconds out, still at x1 to watch the ship back out of the bay (%.0f)" % s.time_scale)
 	for _i in 500:
 		sim.tick(0.05)
-	check(s.time_scale == 1000.0, "Thirty-five seconds out, time has stepped up to x1000 (%.0f)" % s.time_scale)
+	check(s.time_scale == 1000.0, "Seventy-five seconds out, time has stepped up to x1000 (%.0f)" % s.time_scale)
 	s.time_scale = 100000.0
 	var last_scale := -1.0
 	var seen_slow := false
@@ -4404,3 +4407,31 @@ func test_secret_work() -> void:
 	check(sim.apply({"type": "depart", "to": "kibo_ring"}).begins_with("your ship is impounded"), "An impounded ship goes nowhere")
 	s.credits = 1.0e5
 	check(sim.apply({"type": "pay_impound"}) == "" and sim.apply({"type": "depart", "to": "kibo_ring"}) == "", "Pay the fee and leave")
+
+
+func test_undock_timing() -> void:
+	var d = DataCatalog.load_default()
+	var Undock = load("res://view/flight/undock.gd")
+	var cfg: Dictionary = d.balance["undock"]
+	var depth := float(d.balance["bays"]["depth_m"])
+	var clear: float = Undock.clear_t(cfg, depth, 0.5)
+	check(is_zero_approx(Undock.moved(cfg, float(cfg["move_at_s"]) - 0.1)), "The ship waits on its berth while the doors open")
+	check(absf(Undock.moved(cfg, clear) - (depth + float(cfg["clear_m"]) - 0.5)) < 0.01, "At clear_t the nose is clear of the mouth")
+	check(Undock.pushing(cfg, float(cfg["move_at_s"]) + 1.0) and not Undock.pushing(cfg, clear), "Thrusters push while it gathers way, then it coasts out")
+	check(Undock.roll_share(cfg, clear - 1.0, clear) == 1.0 and Undock.roll_share(cfg, clear + float(cfg["roll_stop_s"]), clear) == 0.0, "It turns with the station in the bay and has stopped its roll once clear")
+	# The departure ramp holds x1 until the ship has turned for its burn.
+	check(float(d.balance["time"]["departure_ramp"][0][0]) >= Undock.turn_t(cfg, clear), "Time holds at x1 through the undock (%.0f s)" % Undock.turn_t(cfg, clear))
+
+
+func test_silent_outside() -> void:
+	var d = DataCatalog.load_default()
+	var ShipAudioScript = load("res://view/audio/ship_audio.gd")
+	check(bool(d.balance["audio"]["silent_outside"]), "Space is silent from outside by default")
+	ShipAudioScript.set_outside(d, true)
+	check(ShipAudioScript.is_silent(), "An outside camera mutes the ship's sounds")
+	ShipAudioScript.set_outside(d, false)
+	check(not ShipAudioScript.is_silent(), "Back in the cockpit, the ship is heard again")
+	d.balance["audio"]["silent_outside"] = false
+	ShipAudioScript.set_outside(d, true)
+	check(not ShipAudioScript.is_silent(), "Switched off, the ship is heard from outside too")
+	ShipAudioScript.set_outside(d, false)
