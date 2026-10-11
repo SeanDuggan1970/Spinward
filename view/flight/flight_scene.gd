@@ -196,6 +196,7 @@ func _build_environment() -> void:
 	var t: float = sim.state.time_s
 	var here: Array = eph.position(place_id, t)
 	var sun := DirectionalLight3D.new()
+	Bay.shade_interior(sun)
 	var sun_dir := _dir_to(eph.position("sun", t), here)
 	body_dirs["sun"] = sun_dir
 	# Sunlight fades with distance, gently: eyes and cameras adapt.

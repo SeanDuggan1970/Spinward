@@ -170,6 +170,7 @@ func _light(sun_dir: Vector3, energy: float = 1.5, flood_at: Vector3 = Vector3(-
 	_sun_dir = sun_dir.normalized()
 	SkyKit.set_eclipse(_sun_dir)
 	var sun := DirectionalLight3D.new()
+	Bay.shade_interior(sun)
 	sun.light_energy = energy
 	_stage.add_child(sun)
 	sun.look_at_from_position(Vector3.ZERO, -_sun_dir, Vector3.UP if absf(_sun_dir.y) < 0.99 else Vector3.RIGHT)

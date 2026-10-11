@@ -26,6 +26,8 @@ const Livery := preload("res://view/flight/livery.gd")
 const ShipRig := preload("res://view/flight/ship_rig.gd")
 const ProjectSystem := preload("res://sim/systems/project_system.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
+const Bay := preload("res://view/flight/bay.gd")
+const Undock := preload("res://view/flight/undock.gd")
 
 const SKY_DISTANCE := 60000.0
 ## Burning, a thrust direction this far off the present one (radians) is a flip coming:
@@ -33,9 +35,12 @@ const SKY_DISTANCE := 60000.0
 const FLIP_ANGLE := 1.05
 ## Coasting, start round for the next burn this many real seconds earlier than the turn needs.
 const TURN_MARGIN_S := 1.0
-## RCS puffs: how long each lasts (real seconds), and the least time between puffs from one quad.
-const PUFF_S := 0.45
-const PUFF_GAP_S := 0.12
+## Thruster plumes: how long each lasts (real seconds); a held turn's trim pulses come
+## no closer than RCS_TRIM_S (more under time compression); at most RCS_MAX_JETS fire
+## together.
+const PUFF_S := 0.35
+const RCS_TRIM_S := 1.6
+const RCS_MAX_JETS := 4
 ## Hands off this long (real seconds) and the director takes the camera.
 const IDLE_S := 8.0
 const SHOT_S := 11.0
@@ -45,9 +50,12 @@ const STATION_RANGE_M := 30000.0
 ## Ports are drawn for the first and last game seconds of a trip: leaving, backing
 ## out and pulling away; arriving, closing in to where the approach takes over.
 const PORT_WINDOW_S := 1200.0
-## Leaving, the ship backs off the port nose-first for this long (game seconds, at x1),
-## then turns to point along its first burn and holds there until the drive lights.
+## Leaving a port without a bay, the ship backs off nose-first for this long (game
+## seconds, at x1), then turns to point along its first burn and holds there until the
+## drive lights. Leaving through a bay, balance.undock sets the pace instead.
 const BACKOUT_S := 12.0
+## Docked, the nose sits this far off the port (metres).
+const BERTH_GAP_M := 0.5
 
 var sim
 var camera: Camera3D
@@ -88,7 +96,11 @@ var _drive_mps2 := 0.03
 ## This trip's burns: [start game time, end game time, view direction at the start].
 var _burns: Array = []
 var _puffs: Array = []
-var _puff_mat: StandardMaterial3D
+var _jet_mat: ShaderMaterial
+var _flash_mat: StandardMaterial3D
+## The last thruster demand (ship axes) and when it fired (real seconds).
+var _rcs_dir := Vector3.ZERO
+var _rcs_t := -10.0
 var _thrusting := false
 var _sun_dir := Vector3.UP
 var _stations: Dictionary = {}
@@ -108,6 +120,15 @@ var _shine: DirectionalLight3D
 var _dust: CPUParticles3D
 ## What the current set-up looks at and from where (shot-specific state).
 var _target_body := ""
+## The ship's radius with its panels stowed (what goes through a bay's doors).
+var _stowed_r := 5.0
+## Leaving through a bay: {bay, clear_t, turn_t, rate, facing} for this trip's port of
+## departure (empty when it has no bay we fit); see balance.undock.
+var _undock: Dictionary = {}
+## The ship's attitude as it left the bay's lockstep, blended into normal flight.
+var _undock_basis := Basis.IDENTITY
+## Thruster pulses during the undock: the next one due (real seconds).
+var _undock_jet_t := 0.0
 
 
 func _init(owner_sim) -> void:
@@ -118,6 +139,7 @@ func _init(owner_sim) -> void:
 func _ready() -> void:
 	add_child(SkyKit.environment())
 	_sun = DirectionalLight3D.new()
+	Bay.shade_interior(_sun)
 	_sun.light_energy = 1.6
 	_sun.shadow_enabled = true
 	_sun.directional_shadow_max_distance = 600.0
@@ -139,6 +161,7 @@ func _ready() -> void:
 	_radius = float(model["radius"])
 	_nose_z = float(model["nose_z"])
 	_pivot = Vector3(0, 0, _nose_z + _length * 0.5)
+	_stowed_r = ShipRig.stowed_radius(model)
 	add_child(_ship)
 	_dist = _length * 2.4
 	camera = Camera3D.new()
@@ -214,6 +237,12 @@ func _process(dt: float) -> void:
 			_idle += dt
 		if _idle > IDLE_S:
 			mode = "director"
+			_next_shot()
+	elif shot == "undock":
+		# One unbroken shot out of the bay; the director takes over once we turn.
+		shot_clock += dt
+		_fade.color.a = 0.0
+		if not _undocking():
 			_next_shot()
 	else:
 		shot_clock += dt
@@ -300,13 +329,19 @@ func _update_world(dt: float) -> void:
 			near = from_port.length() < STATION_RANGE_M
 		if near and not _stations.has(place):
 			var geom: Dictionary = sim.data.places[place]["station"]
-			var st := Models.station(geom, sim.data.places[place]["name"], Livery.for_station(sim.data, place), sim.data.balance["bays"])
+			var st := Models.station(geom, sim.data.places[place]["name"], Livery.for_station(sim.data, place), sim.data.balance["bays"], _stowed_r)
 			# The approach corridor's lights are for pilots coming in, not for the camera.
 			for c in st["node"].get_children():
 				if c is MeshInstance3D:
 					c.visible = false
 			add_child(st["node"])
 			_stations[place] = {"model": st, "rate": float(geom["spin_rpm"]) * TAU / 60.0}
+			# Leaving through a bay we fit: the undock plays out (balance.undock).
+			var bay: Dictionary = st.get("bay", {})
+			if leaving and not bay.is_empty() and bay["fits"] and _undock.is_empty():
+				var cfg: Dictionary = sim.data.balance["undock"]
+				var clear := Undock.clear_t(cfg, float(bay["z_mouth"]) - float(st["port_z"]), BERTH_GAP_M)
+				_undock = {"bay": bay, "clear_t": clear, "turn_t": Undock.turn_t(cfg, clear), "rate": float(geom["spin_rpm"]) * TAU / 60.0, "facing": Basis.IDENTITY, "place": place}
 		if _stations.has(place):
 			var entry: Dictionary = _stations[place]
 			var st: Dictionary = entry["model"]
@@ -325,6 +360,10 @@ func _update_world(dt: float) -> void:
 			st["node"].position = at
 			st["node"].basis = facing
 			st["rotor"].rotation.z = fposmod(t * float(entry["rate"]), TAU)
+			if leaving and not _undock.is_empty() and _undock["place"] == place:
+				_undock["facing"] = facing
+				var bays: Dictionary = sim.data.balance["bays"]
+				Bay.set_open(_undock["bay"], (tau - float(sim.data.balance["undock"]["doors_at_s"])) / float(bays["door_s"]))
 			entry["dist"] = at.length() if near else INF
 	# Attitude: along the thrust while burning (from toward the target round to braking
 	# against it); coasting, hold it. The ship turns with inertia (ShipRig.turn_step),
@@ -358,6 +397,10 @@ func _update_world(dt: float) -> void:
 		forward = Vector3.FORWARD
 	elif left < PORT_WINDOW_S and app[3] == "":
 		forward = _corridor[1]
+	# Leaving a bay: held on the berth's axis, turning with the station, until clear.
+	var undocking := not _undock.is_empty() and elapsed < float(_undock["turn_t"])
+	if undocking:
+		forward = -_corridor[0]
 	var omega_was := _omega
 	if not _ready_basis:
 		_fwd = forward
@@ -367,9 +410,22 @@ func _update_world(dt: float) -> void:
 		var step := ShipRig.turn_step(_fwd, _omega, forward, _turn_rate, _turn_accel, dt * speedup)
 		_fwd = step[0]
 		_omega = step[1]
-	_ship.basis = ShipRig.roll_to_sun(_fwd, _sun_dir)
+	var normal := ShipRig.roll_to_sun(_fwd, _sun_dir)
+	if not _undock.is_empty() and elapsed < float(_undock["turn_t"]) + float(sim.data.balance["undock"]["settle_s"]):
+		if undocking:
+			_undock_basis = _held_basis(t, elapsed)
+			_ship.basis = _undock_basis
+		else:
+			# Out of the lockstep into normal flight: roll round to the Sun, smoothly.
+			var k := clampf((elapsed - float(_undock["turn_t"])) / float(sim.data.balance["undock"]["settle_s"]), 0.0, 1.0)
+			k = k * k * (3.0 - 2.0 * k)
+			_ship.basis = Basis(_undock_basis.get_rotation_quaternion().slerp(normal.get_rotation_quaternion(), k))
+	else:
+		_ship.basis = normal
 	if dt > 0.0:
 		_rcs_puffs((_omega - omega_was) / (dt * speedup), dt)
+		if undocking:
+			_undock_jets(elapsed, dt)
 	# The drive lights once the nose is round to the thrust, and stays lit until it
 	# falls well behind (twice as far), so it doesn't flicker under high compression.
 	var off := _fwd.angle_to(thrust_dir) if _thrusting else PI
@@ -377,7 +433,13 @@ func _update_world(dt: float) -> void:
 	if _plume:
 		_plume.visible = _lit
 	var dest_dir := SkyKit.dir_between(eph.position(loc["to"], t), here)
-	ShipRig.set_fold(_rig, ShipRig.transit_fold(loc, t, sim.state.ship))
+	# Through a bay the panels and dish stay stowed until the nose is clear of it.
+	if not _undock.is_empty() and elapsed < float(_undock["clear_t"]):
+		ShipRig.set_fold(_rig, 1.0, elapsed < 1.0)
+	elif not _undock.is_empty():
+		ShipRig.set_fold(_rig, 1.0 if sim.state.ship.get("stowed", false) else 0.0)
+	else:
+		ShipRig.set_fold(_rig, ShipRig.transit_fold(loc, t, sim.state.ship))
 	ShipRig.aim(_rig, _ship.basis, _sun_dir, dest_dir * 1.0e6, dt)
 	_drift_satellites(dt)
 	var v_now: Array = Navigation.transit_velocity(loc, t)
@@ -389,6 +451,24 @@ func _update_world(dt: float) -> void:
 	readout["phase"] = ("TURNING" if _omega.length() > 0.02 else "COASTING") if not _thrusting else ("TURNING" if not _lit else ("ACCELERATING" if V.dot(V.normalized(thrust), V.normalized(v_now)) > 0.3 else ("BRAKING" if V.dot(V.normalized(thrust), V.normalized(v_now)) < -0.3 else "BURNING ACROSS")))
 	if app[3] in ["corridor", "hold"] or app[3] == "swing" and not _thrusting:
 		readout["phase"] = "ON APPROACH"
+
+
+## Undocking: the ship held on the berth's axis (nose to the port), turning with the
+## station while in the bay, then braking its roll once clear.
+func _held_basis(t: float, elapsed: float) -> Basis:
+	var cfg: Dictionary = sim.data.balance["undock"]
+	var clear := float(_undock["clear_t"])
+	var rate := float(_undock["rate"])
+	var depart := t - elapsed
+	var spin := (depart + minf(elapsed, clear)) * rate + Undock.roll_after(cfg, elapsed, clear, rate)
+	return (_undock["facing"] as Basis) * Basis(Vector3(0, 0, 1), fposmod(spin, TAU))
+
+
+func _undocking() -> bool:
+	if _undock.is_empty():
+		return false
+	var loc: Dictionary = sim.state.location
+	return loc.get("status") == "transit" and sim.state.time_s - float(loc["depart_t"]) < float(_undock["turn_t"])
 
 
 ## Satellites released on this trip drift clear of the ship and unfold their wings.
@@ -520,30 +600,29 @@ func _burn_end(t: float) -> float:
 	return float(_burns[k][1]) if k >= 0 and t >= float(_burns[k][0]) else t
 
 
-## Puffs from the RCS quads that would push the way the ship is being swung
-## (alpha: angular acceleration, a world vector): as a turn starts and as it stops.
+## Thruster plumes, as cold gas looks in vacuum: a short, faint, flaring cone off the
+## nozzle that is gone in a third of a second, with a brief flash at its root. They
+## fire as a turn starts and as it stops (alpha: the ship's angular acceleration, a
+## world vector), not continuously: a held turn gets an occasional trim pulse, and
+## under time compression fewer still.
 func _rcs_puffs(alpha: Vector3, dt: float) -> void:
 	var clock := Time.get_ticks_msec() / 1000.0
-	for k in range(_puffs.size() - 1, -1, -1):
-		var p: Dictionary = _puffs[k]
-		var age := clock - float(p["born"])
-		var node: MeshInstance3D = p["node"]
-		if age > PUFF_S or not is_instance_valid(node):
-			if is_instance_valid(node):
-				node.queue_free()
-			_puffs.remove_at(k)
-			continue
-		var u := age / PUFF_S
-		node.position += p["vel"] * dt
-		node.scale = Vector3.ONE * (0.3 + 2.2 * u) * (1.0 - u * u)
+	_age_jets(clock)
 	if alpha.length() < _turn_accel * 0.3:
+		_rcs_dir = Vector3.ZERO
 		return
-	if _puff_mat == null:
-		_puff_mat = Kit.glow(Color(0.86, 0.9, 0.96), 1.2)
 	var local := (_ship.basis.inverse() * alpha).normalized()
+	# A new demand (or a reversal) fires a burst; a steady one only trims now and then.
+	var fresh := _rcs_dir == Vector3.ZERO or _rcs_dir.angle_to(local) > 0.6
+	var calm := 1.0 + log(maxf(1.0, float(sim.state.time_scale))) / log(10.0)
+	if not fresh and clock - _rcs_t < RCS_TRIM_S * calm:
+		return
+	_rcs_dir = local
+	_rcs_t = clock
+	var fired := 0
 	for j in _rig.get("rcs", []):
 		var quad: Node3D = j["node"]
-		if not is_instance_valid(quad) or clock < float(j.get("puff_next", 0.0)):
+		if not is_instance_valid(quad):
 			continue
 		var out: Vector3 = j["outward"]
 		var lever := _ship.to_local(quad.global_position) - _pivot
@@ -551,10 +630,99 @@ func _rcs_puffs(alpha: Vector3, dt: float) -> void:
 		var torque := lever.cross(-out)
 		if torque.length() < 1e-3 or torque.normalized().dot(local) < 0.4:
 			continue
-		j["puff_next"] = clock + PUFF_GAP_S * randf_range(0.8, 1.3)
-		var puff := Kit.sphere(0.25, _puff_mat, quad.global_position + _ship.basis * out * 0.4)
-		add_child(puff)
-		_puffs.append({"node": puff, "born": clock, "vel": _ship.basis * out * randf_range(2.5, 4.0)})
+		_jet(quad.global_position + _ship.basis * out * 0.3, _ship.basis * out, 1.0)
+		fired += 1
+		if fired >= RCS_MAX_JETS:
+			break
+
+
+## Thrusters while backing out of a bay: pulses pushing the ship astern (exhaust
+## toward the nose) as it gathers way, then roll jets braking its spin once clear.
+func _undock_jets(elapsed: float, _dt: float) -> void:
+	var cfg: Dictionary = sim.data.balance["undock"]
+	var clock := Time.get_ticks_msec() / 1000.0
+	if clock < _undock_jet_t:
+		return
+	var quads: Array = _rig.get("rcs", [])
+	if quads.is_empty():
+		return
+	var clear := float(_undock["clear_t"])
+	if Undock.pushing(cfg, elapsed):
+		_undock_jet_t = clock + randf_range(0.9, 1.4)
+		for j in quads:
+			var quad: Node3D = j["node"]
+			if is_instance_valid(quad) and _ship.to_local(quad.global_position).z < _pivot.z:
+				_jet(quad.global_position, _ship.basis * Vector3.FORWARD, 0.8)
+	elif elapsed > clear and Undock.roll_share(cfg, elapsed, clear) > 0.05:
+		_undock_jet_t = clock + randf_range(0.8, 1.2)
+		# Against the roll: each jet fires along the turn's tangent at its quad.
+		for j in quads:
+			var quad: Node3D = j["node"]
+			if not is_instance_valid(quad):
+				continue
+			var p := _ship.to_local(quad.global_position)
+			var tangent := Vector3(-p.y, p.x, 0.0)
+			if tangent.length() > 0.3:
+				_jet(quad.global_position, _ship.basis * tangent.normalized() * signf(float(_undock["rate"])), 0.8)
+
+
+## One plume from `at` along `dir` (world), `size` about 1 for a working quad.
+func _jet(at: Vector3, dir: Vector3, size: float) -> void:
+	if _puffs.size() >= RCS_MAX_JETS * 3:
+		return
+	if _jet_mat == null:
+		_jet_mat = ShaderMaterial.new()
+		_jet_mat.shader = load("res://view/shaders/rcs_plume.gdshader")
+		_flash_mat = Kit.glow(Color(1.0, 0.95, 0.85), 2.0)
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = 0.03 * size
+	mesh.bottom_radius = 0.38 * size
+	mesh.height = 1.0
+	mesh.radial_segments = 16
+	mesh.rings = 1
+	mesh.cap_top = false
+	mesh.cap_bottom = false
+	var cone := MeshInstance3D.new()
+	cone.mesh = mesh
+	cone.material_override = _jet_mat
+	cone.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(cone)
+	var flash := Kit.sphere(0.09 * size, _flash_mat, at)
+	flash.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(flash)
+	var d := dir.normalized()
+	_puffs.append({"node": cone, "flash": flash, "born": Time.get_ticks_msec() / 1000.0, "at": at, "dir": d, "size": size})
+	_place_jet(_puffs[-1], 0.0)
+
+
+func _place_jet(p: Dictionary, u: float) -> void:
+	var node: MeshInstance3D = p["node"]
+	var d: Vector3 = p["dir"]
+	# The cone's narrow top at the nozzle, flaring out along d; it lengthens as the
+	# gas leaves and thins away.
+	var length := float(p["size"]) * (0.6 + 1.6 * minf(u * 3.0, 1.0))
+	var y := -d
+	var x := y.cross(Vector3.UP if absf(y.y) < 0.95 else Vector3.RIGHT).normalized()
+	var z := x.cross(y)
+	node.basis = Basis(x, y, z) * Basis.from_scale(Vector3(1.0 + u, length, 1.0 + u))
+	node.position = (p["at"] as Vector3) + d * length * 0.5
+	node.set_instance_shader_parameter("fade", clampf(u, 0.0, 1.0))
+	var flash: MeshInstance3D = p["flash"]
+	flash.visible = u < 0.25
+	flash.transparency = clampf(u * 4.0, 0.0, 1.0)
+
+
+func _age_jets(clock: float) -> void:
+	for k in range(_puffs.size() - 1, -1, -1):
+		var p: Dictionary = _puffs[k]
+		var age := clock - float(p["born"])
+		if age > PUFF_S or not is_instance_valid(p["node"]):
+			for key in ["node", "flash"]:
+				if is_instance_valid(p[key]):
+					p[key].queue_free()
+			_puffs.remove_at(k)
+			continue
+		_place_jet(p, age / PUFF_S)
 
 
 ## How far the ship is from a port's docking face tau seconds after leaving it (or
@@ -562,6 +730,10 @@ func _rcs_puffs(alpha: Vector3, dt: float) -> void:
 ## the same in reverse, ending where the approach scene starts us.
 func _port_gap(place: String, tau: float, leaving: bool) -> float:
 	var half := _length * 0.5
+	if leaving and not _undock.is_empty() and _undock["place"] == place:
+		# Out of the bay on the thrusters, then pulling away once it has turned.
+		var after := maxf(0.0, tau - float(_undock["turn_t"]))
+		return -_nose_z + BERTH_GAP_M + Undock.moved(sim.data.balance["undock"], tau) + 0.03 * after * after
 	if leaving:
 		return half + 2.0 + 1.5 * tau + 0.02 * tau * tau
 	var geom: Dictionary = sim.data.places[place]["station"]
@@ -612,6 +784,10 @@ func _nearest_station() -> String:
 func _next_shot() -> void:
 	shot_clock = 0.0
 	_shot_seed = _rng.randf()
+	if _undocking():
+		shot = "undock"
+		shot_label = "LEAVING " + String(sim.data.places[_undock["place"]]["name"]).to_upper()
+		return
 	var pool := ["chase", "orbit", "flyby", "dolly", "rim"]
 	if _thrusting:
 		pool += ["plume", "plume"]
@@ -653,6 +829,24 @@ func _update_camera(dt: float) -> void:
 	var fov := 50.0
 	var sky_up := up
 	match shot:
+		"undock":
+			# Inside the bay with the ship, turning with it and the station: off the axis
+			# (clear of the hull, inside the tunnel's walls), trailing the nose deeper in,
+			# looking out past the ship to the doors and space as it backs out; the
+			# camera follows it out.
+			var bay: Dictionary = _undock["bay"]
+			var cfg: Dictionary = sim.data.balance["undock"]
+			var elapsed: float = sim.state.time_s - float(sim.state.location["depart_t"])
+			var r_cam := minf(_stowed_r + 3.5, float(bay["r"]) - 2.0)
+			var a0 := 1.15 + 0.15 * sway
+			var radial := Vector3(cos(a0), sin(a0), 0.0)
+			var nose_depth := BERTH_GAP_M + Undock.moved(cfg, elapsed)
+			var cam_depth := maxf(1.5, nose_depth - (L * 0.3 + 8.0))
+			var z_local := _nose_z - (nose_depth - cam_depth)
+			pos = _ship.position + B * (radial * r_cam + Vector3(0, 0, z_local))
+			at = _ship.position + B * Vector3(0, 0, _nose_z + L * 1.15)
+			sky_up = B * radial
+			fov = 62.0
 		"chase":
 			# Behind and above, the ship heading into the frame toward where it is going.
 			pos = centre + B * Vector3(sway * L * 0.15, L * (0.32 + 0.05 * f), L * (1.55 - 0.15 * f))

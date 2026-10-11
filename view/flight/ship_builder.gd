@@ -167,14 +167,23 @@ static func dish(base: Vector3, facing: Vector3, r: float, ctx: Dictionary) -> N
 ## The high-gain dish on an azimuth/elevation mount atop a mast at `base` (mast +Y):
 ## a turntable drum, a yoke, and the elevation axle with the reflector hung in front
 ## of it. A big dish gets braces at the mast's foot. Registers itself as the rig's
-## dish; ship_rig.gd turns "az" about Y and "el" about X.
+## dish; ship_rig.gd turns "az" about Y and "el" about X, and for stowing folds the
+## whole mast down aft on a hinge at its foot ("fold", about X), the bowl face-up.
 static func steerable_dish(base: Vector3, r: float, ctx: Dictionary) -> Node3D:
 	var mats: Dictionary = ctx["mats"]
+	var root := Node3D.new()
+	# The hinge at the mast's foot, with a bracket either side.
 	var n := Node3D.new()
+	n.position = base
+	n.set_meta("no_merge", true)
+	root.add_child(n)
+	var mast_w := 0.16 + r * 0.03
+	for s in [-1.0, 1.0]:
+		root.add_child(Kit.box(Vector3(0.08 + r * 0.02, mast_w * 1.6, mast_w * 1.6), mats["dark"], base + Vector3(s * (mast_w * 0.5 + 0.06), mast_w * 0.4, 0)))
+	base = Vector3.ZERO
 	var yoke_h := 0.3 + r * 0.12
 	var mast_h := maxf(1.0, r * 1.05 + 0.4 - yoke_h)
 	var mast_top := base + Vector3(0, mast_h, 0)
-	var mast_w := 0.16 + r * 0.03
 	n.add_child(strut(base, mast_top, mast_w, mats["steel"]))
 	if r > 2.0:
 		for s in [-1.0, 1.0]:
@@ -197,8 +206,8 @@ static func steerable_dish(base: Vector3, r: float, ctx: Dictionary) -> Node3D:
 	reflector.position = Vector3(0, 0, maxf(0.08, r * 0.2) + r * 0.12 + 0.05)
 	el.add_child(reflector)
 	n.add_child(az)
-	ctx["rig"]["dish"] = {"az": az, "el": el}
-	return n
+	ctx["rig"]["dish"] = {"az": az, "el": el, "fold": n}
+	return root
 
 
 ## A panel on a boom: the boom is fixed, the panel turns about it. The panel spans

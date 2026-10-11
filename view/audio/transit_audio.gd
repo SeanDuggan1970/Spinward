@@ -9,6 +9,7 @@
 ## ship_audio.gd plays it all, heard from the crew section.
 extends Node3D
 
+const Undock := preload("res://view/flight/undock.gd")
 const V := preload("res://sim/v3.gd")
 const Navigation := preload("res://sim/navigation.gd")
 const Models := preload("res://view/flight/models.gd")
@@ -56,6 +57,15 @@ func _process(dt: float) -> void:
 	var thrusting := V.length(thrust) > 1e-6
 	var forward := Vector3(thrust[0], thrust[2], -thrust[1]).normalized() if thrusting else -_basis.z
 	var want := Basis.looking_at(forward, Vector3.UP if absf(forward.y) < 0.98 else Vector3.RIGHT)
+	# Backing out of a bay (as the ship view plays it, balance.undock): held on the
+	# berth's axis, the thrusters pushing it astern, then braking its roll once clear.
+	var cfg: Dictionary = sim.data.balance["undock"]
+	var elapsed := t - float(loc["depart_t"])
+	var from_bay: bool = sim.data.places.get(loc["from"], {}).has("station")
+	var clear := Undock.clear_t(cfg, float(sim.data.balance["bays"]["depth_m"]), 0.5) if from_bay else -1.0
+	var held := from_bay and elapsed < Undock.turn_t(cfg, clear)
+	if held and _ready_basis:
+		want = _basis
 	var turn := 0.0
 	if not _ready_basis:
 		_basis = want
@@ -69,8 +79,15 @@ func _process(dt: float) -> void:
 		turn = step / dt
 	var sun := SkyKit.dir_between(eph.position("sun", t), here)
 	_ship.basis = ShipRig.roll_to_sun(-_basis.z, sun)
-	ShipRig.set_fold(_rig, ShipRig.transit_fold(loc, t, sim.state.ship))
+	if from_bay:
+		ShipRig.set_fold(_rig, 1.0 if elapsed < clear or sim.state.ship.get("stowed", false) else 0.0, elapsed < 1.0)
+	else:
+		ShipRig.set_fold(_rig, ShipRig.transit_fold(loc, t, sim.state.ship))
 	ShipRig.aim(_rig, _ship.basis, sun, SkyKit.dir_between(eph.position(loc["to"], t), here), dt)
 	# Swinging round, the attitude jets fire; burning, the drive does.
 	var spin := Vector3(0, 1, 0) * (1.0 if turn > 0.05 else 0.0)
-	audio.update(dt, {"thrust": 1.0 if thrusting else 0.0, "spin": spin, "turn": turn, "time_scale": s.time_scale})
+	var move := Vector3.ZERO
+	if held:
+		move = Vector3(0, 0, 1) if Undock.pushing(cfg, elapsed) else Vector3.ZERO
+		spin = Vector3(0, 0, 1) if elapsed > clear and Undock.roll_share(cfg, elapsed, clear) > 0.05 else Vector3.ZERO
+	audio.update(dt, {"thrust": 1.0 if thrusting else 0.0, "move": move, "spin": spin, "turn": turn, "time_scale": s.time_scale})

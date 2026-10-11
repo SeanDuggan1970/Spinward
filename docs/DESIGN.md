@@ -842,6 +842,31 @@ Ships fly into a station instead of nosing up to a collar on a small hub (`view/
 - **Too big for the bay:** a ship whose stowed radius plus 3 m won't go in berths on a collar on the shut doors. Only the sail freighters are that big, and they never dock in the flight scene.
 - Only the view changed: the sim never sees the bay.
 
+## Leaving a bay (Oct 2026)
+
+Sean's direction (2026-10-10): the ship should leave through the bay doors, seen from inside the dock, reversing out gently on its thrusters with everything stowed, then unstowing and aligning for its burn. It should be cinematic: a camera that follows the ship out without passing through walls, and ship, camera and station turning together until the ship is out.
+
+- **The timeline** (`view/flight/undock.gd`, `balance.undock`, game seconds since departure, at ×1):
+  - At 1 s the doors start to open (12 s).
+  - At 7 s the ship eases astern on its thrusters, gathering way at 0.2 m/s² to 2.5 m/s.
+  - Once its nose is 8 m past the mouth (about 48 s for an 80 m bay), the panels and dish unfold and the roll jets brake its spin over 5 s.
+  - After 3 s more it turns for its burn.
+  - `time.departure_ramp` holds ×1 for the first 60 s for this (it was 20 s).
+- **Lockstep:** in the bay the ship is held on the berth's axis, turning with the station's spin, so the tunnel and doors stand still around it. Once clear its roll brakes smoothly to a stop. Then its attitude blends into normal flight (rolled to the Sun) as it turns.
+- **The camera** (follow view's "undock" set-up, one unbroken shot until the ship turns):
+  - It rides in the ship's frame, so it turns with ship and station.
+  - It sits off the axis, clear of the stowed hull and inside the tunnel's walls, trailing the nose deeper into the bay. It looks out past the ship to the doors and space, and follows it out.
+- **Stowed for the bay:** panels fold as before. The high-gain dish now stows too: it turns to face forward and level, then its mast folds down aft on a foot hinge, leaving the bowl face-up on the hull. It works at every dish size. Motors whine at each fold hinge and the dish's foot hinge.
+- **The sound** (`view/audio/transit_audio.gd`) follows the same timeline: thrusters as the ship gathers way, roll jets once clear, motors as it unfolds.
+- **Solid bays:**
+  - The bay's shell is closed at the back too, where it meets the hub, so it reads solid from any side.
+  - The interior (lining, back wall, stripes, lamps) is drawn on its own render layer (`Bay.INTERIOR_LAYER`), which the Sun and planetshine leave out. Inside, only the bay's lamps light it, so no sunlight leaks through the walls.
+
+## Thrusters (Oct 2026)
+
+- **Plumes** (`view/shaders/rcs_plume.gdshader`, follow view): cold gas in vacuum. A short, faint cone flaring off the nozzle, brightest at the nozzle and soft at its edges, with a brief flash at its root, gone in a third of a second. It replaces the glowing balls.
+- **Calmer firing:** jets fire as a turn starts, reverses or stops, and only trim every 1.6 s while it is held, at most four at once. Under time compression they come less often again, by 1 + log10(scale). The sound follows the same rule (`ShipAudio`): a jet sounds as it starts firing, pulses again only every 0.75 s while held, and no two jets sound within 0.16 s. Firm, separate puffs, not a rattle.
+
 ## Satellites (Oct 2026, roadmap step 5)
 
 - **The job** (`contracts.json` kind `satellite`, Known standing):

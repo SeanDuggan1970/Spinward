@@ -20,7 +20,11 @@ const DIR := "res://assets/audio/"
 const RCS_SOUNDS := ["rcs_1", "rcs_2", "rcs_3", "rcs_4"]
 const CREAKS := ["creak_1", "creak_2", "creak_3", "creak_4", "creak_5", "creak_6"]
 ## Seconds between pulses from one jet cluster while it keeps firing.
-const RCS_PULSE_S := 0.13
+## A jet that starts firing pulses at once; held on, it pulses again only every
+## RCS_HOLD_S (more under time compression), and no two jets sound within RCS_GAP_S:
+## firm, separate puffs, not a rattle.
+const RCS_HOLD_S := 0.75
+const RCS_GAP_S := 0.16
 const POOL := 10
 
 var listener: AudioListener3D
@@ -30,6 +34,8 @@ var _cabin: AudioStreamPlayer
 var _alarm: AudioStreamPlayer
 var _motors: Array = []
 var _jets: Array = []
+## When a jet last sounded (real seconds).
+var _last_jet := -10.0
 var _creak_at: Array = []
 var _pool: Array = []
 var _pool_next := 0
@@ -128,10 +134,15 @@ func setup(model: Dictionary) -> void:
 	var hinges := []
 	for a in rig.get("arrays", []):
 		hinges.append([a["node"], "rotation:x"])
+		# The panel's fold: one motor at its root hinge drives the segments.
+		if not a.get("hinges", []).is_empty():
+			hinges.append([a["hinges"][0], "rotation:z"])
 	var dish: Dictionary = rig.get("dish", {})
 	if not dish.is_empty():
 		hinges.append([dish["az"], "rotation:y"])
 		hinges.append([dish["el"], "rotation:x"])
+		if dish.get("fold") != null:
+			hinges.append([dish["fold"], "rotation:x"])
 	for h in hinges:
 		var node: Node3D = h[0]
 		if not is_instance_valid(node):
@@ -255,20 +266,24 @@ func update(dt: float, state: Dictionary) -> void:
 	var move: Vector3 = state.get("move", Vector3.ZERO)
 	var spin: Vector3 = state.get("spin", Vector3.ZERO)
 	var t := Time.get_ticks_msec() / 1000.0
-	if move.length() > 0.05 or spin.length() > 0.05:
-		for j in _jets:
-			if t < float(j["next"]):
-				continue
+	var calm := 1.0 + log(maxf(1.0, time_scale)) / log(10.0)
+	for j in _jets:
+		var fires := false
+		if move.length() > 0.05 or spin.length() > 0.05:
 			var out: Vector3 = j["outward"]
 			# A jet pushes against where it points; rotation fires opposed pairs fore and aft.
-			var fires := out.dot(-move.normalized()) > 0.5 if move.length() > 0.05 else false
+			fires = out.dot(-move.normalized()) > 0.5 if move.length() > 0.05 else false
 			if spin.length() > 0.05:
 				var lever: Vector3 = j["at"]
 				var torque := lever.cross(-out)
 				fires = fires or torque.normalized().dot(Vector3(spin.x, spin.y, spin.z).normalized()) > 0.4
-			if fires:
-				j["next"] = t + RCS_PULSE_S * randf_range(0.85, 1.25)
-				play_at(RCS_SOUNDS[randi() % RCS_SOUNDS.size()], j["at"], -5.0, randf_range(0.9, 1.12))
+		var starting := fires and not bool(j.get("on", false))
+		j["on"] = fires
+		if not fires or (not starting and t < float(j["next"])) or t - _last_jet < RCS_GAP_S * calm:
+			continue
+		j["next"] = t + RCS_HOLD_S * calm * randf_range(0.8, 1.3)
+		_last_jet = t
+		play_at(RCS_SOUNDS[randi() % RCS_SOUNDS.size()], j["at"], -6.0 if starting else -9.0, randf_range(0.9, 1.1))
 	# The frame: strain builds as the ship turns and changes how hard it turns.
 	var turn := float(state.get("turn", 0.0))
 	_strain += (absf(turn - _last_turn) / dt * 0.08 + turn * 0.35) * dt
