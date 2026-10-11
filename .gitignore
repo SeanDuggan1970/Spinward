@@ -4,3 +4,4 @@ build/
 *.translation
 __pycache__/
 *.pyc
+build_id.txt

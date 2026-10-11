@@ -3,6 +3,7 @@ extends Control
 
 const UI := preload("res://view/ui/ui_kit.gd")
 const Bindings := preload("res://view/bindings.gd")
+const BuildInfo := preload("res://view/build_info.gd")
 
 var title
 var _font: Font
@@ -68,6 +69,10 @@ func _draw() -> void:
 	var kw := _font.get_string_size(keys, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x
 	draw_string(_font, Vector2((w - kw) * 0.5, h - 38), keys, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, UI.DIM)
 	draw_string(_font, Vector2(16, h - 14), "Real orbits from JPL data  ·  in the spirit of Elite (1984)", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(UI.DIM, 0.7))
+	# Which build this is, so an out-of-date copy is easy to spot.
+	var build := BuildInfo.text()
+	var bw := _font.get_string_size(build, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x
+	draw_string(_font, Vector2(w - bw - 16, h - 14), build, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(UI.DIM, 0.85))
 
 
 func _wrap(text: String, width: float, font_size: int) -> PackedStringArray:
