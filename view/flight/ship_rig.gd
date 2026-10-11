@@ -20,7 +20,7 @@ const ARRAY_RATE := 0.5
 const DISH_RATE := 0.8
 ## The mast can't look down through the hull.
 const DISH_MIN_EL := -0.35
-## Folding, fraction of the whole stow per real second (about 25 s end to end).
+## Folding, fraction of the whole stow per second (game seconds in transit).
 const FOLD_RATE := 0.04
 ## The share of the stow spent turning the panels flat before the segments fold.
 const FLATTEN := 0.25
@@ -172,12 +172,14 @@ static func stowed_radius(model: Dictionary) -> float:
 	return r
 
 
-## In transit, a ship leaving port keeps its panels stowed until it is clear, and a
-## ship running quiet (ship.stowed, sim/systems/detection_system.gd) keeps them in.
-static func transit_fold(location: Dictionary, t: float, ship: Dictionary = {}) -> float:
+## In transit, deploy over game seconds after station clearance. Sites have no
+## automatic docking fold; ship.stowed always takes priority over this schedule.
+static func transit_fold(location: Dictionary, t: float, ship: Dictionary = {}, from_station: bool = true, clear_after_s: float = DEPLOY_AFTER_S) -> float:
 	if ship.get("stowed", false):
 		return 1.0
-	return 1.0 if t - float(location.get("depart_t", -INF)) < DEPLOY_AFTER_S else 0.0
+	if not from_station:
+		return 0.0
+	return clampf(1.0 - maxf(0.0, t - float(location.get("depart_t", -INF)) - clear_after_s) * FOLD_RATE, 0.0, 1.0)
 
 
 static func _fold_step(rig: Dictionary, dt: float) -> float:

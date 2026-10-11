@@ -79,6 +79,7 @@ func _initialize() -> void:
 	test_interplanetary()
 	test_refits()
 	test_contracts()
+	test_contract_pickup_retry()
 	test_project_pitches()
 	test_sites()
 	test_story_arc()
@@ -4248,6 +4249,97 @@ func test_detection_and_stealth() -> void:
 	check(sim.apply({"type": "coat_hull"}) == "she's already coated", "Once is enough")
 
 
+func test_contract_pickup_retry() -> void:
+	var offer := {"id": 9601, "kind": "pickup", "client": "Terran Compact", "issued_at": "kibo_ring", "pickup": "clarke_exchange", "to": "kernel_l5",
+		"item": "replacement parts", "mass_t": 1.0, "passengers": 0, "reward": 2000.0, "window_s": 30.0 * DAY, "expires_t": 1.0e20, "min_rep": 0.0, "rep": 2.0, "channel": "board", "hidden": false}
+	var sim := fresh()
+	var s = sim.state
+	s.ship["cargo"]["electronics"] = ShipStats.cargo_capacity_t(s.ship, sim.data)
+	s.contracts["board"]["kibo_ring"] = [offer.duplicate(true)]
+	check(sim.apply({"type": "accept_contract", "id": 9601}) == "", "Accept a remote pickup with a full hold")
+	_dock_at(sim, "clarke_exchange")
+	var job: Dictionary = s.contracts["active"][0]
+	check(job["state"] == "collect" and is_zero_approx(float(s.ship["parcels_t"])), "No room on arrival leaves cargo waiting ashore")
+	sim.take_events()
+	sim.advance_game_time(1.0)
+	check(not sim.take_events().any(func(e): return e["type"] == "contract_no_room"), "Waiting pickups do not repeat no-room notices each tick")
+	check(String(sim.apply({"type": "collect_contract", "id": 9601})).begins_with("no room"), "Manual collection explains the full hold")
+	check(sim.apply({"type": "sell", "good": "electronics", "tonnes": 0.5}) == "", "Sell part of the load")
+	sim.advance_game_time(1.0)
+	check(job["state"] == "collect", "Insufficient space still leaves the crate ashore")
+	check(sim.apply({"type": "sell", "good": "electronics", "tonnes": 0.5}) == "", "Make exactly enough space")
+	s.paused = true
+	check(sim.apply({"type": "collect_contract", "id": 9601}) == "" and job["state"] == "carried", "Collect after selling without leaving port, even while paused")
+	check(is_equal_approx(float(s.ship["parcels_t"]), 1.0), "Load the consignment once")
+	check(sim.apply({"type": "collect_contract", "id": 9601}) != "" and is_equal_approx(float(s.ship["parcels_t"]), 1.0), "Duplicate collection cannot duplicate cargo")
+	s.paused = false
+	sim.advance_game_time(1.0)
+	check(is_equal_approx(float(s.ship["parcels_t"]), 1.0), "Automatic retries cannot reload a carried job")
+	var credits: float = s.credits
+	_dock_at(sim, "kernel_l5")
+	check(is_equal_approx(s.credits, credits + 2000.0) and is_zero_approx(float(s.ship["parcels_t"])), "Retried pickup delivers and pays normally")
+	check(sim.apply({"type": "collect_contract", "id": 9601}) != "", "Completed jobs cannot be collected again")
+	# A save retains last_dock; it must still retry after making room.
+	sim = fresh()
+	s = sim.state
+	s.ship["cargo"]["electronics"] = ShipStats.cargo_capacity_t(s.ship, sim.data)
+	s.contracts["board"]["kibo_ring"] = [offer.duplicate(true)]
+	sim.apply({"type": "accept_contract", "id": 9601})
+	check(sim.apply({"type": "collect_contract", "id": 9601}) != "", "No collecting at the wrong port")
+	_dock_at(sim, "clarke_exchange")
+	sim.load_state(SaveIO.from_text(SaveIO.to_text(s)))
+	s = sim.state
+	check(s.contracts["last_dock"] == "clarke_exchange", "Load a save from the blocked pickup port")
+	check(sim.apply({"type": "sell", "good": "electronics", "tonnes": 1.0}) == "", "Make room in the loaded save")
+	sim.take_events()
+	sim.advance_game_time(1.0)
+	check(s.contracts["active"][0]["state"] == "carried", "Automatic retry collects after a sale in an existing save")
+	check(sim.take_events().filter(func(e): return e["type"] == "contract_collected").size() == 1, "Automatic retry emits one collection notice")
+	# Capacity is rechecked for each job; one empty tonne cannot take two crates.
+	sim = fresh()
+	s = sim.state
+	var second := offer.duplicate(true)
+	second["id"] = 9603
+	s.contracts["board"]["kibo_ring"] = [offer.duplicate(true), second]
+	sim.apply({"type": "accept_contract", "id": 9601})
+	sim.apply({"type": "accept_contract", "id": 9603})
+	s.ship["cargo"]["electronics"] = ShipStats.cargo_capacity_t(s.ship, sim.data)
+	_dock_at(sim, "clarke_exchange")
+	sim.apply({"type": "sell", "good": "electronics", "tonnes": 1.0})
+	sim.advance_game_time(1.0)
+	check(s.contracts["active"].filter(func(j): return j["state"] == "carried").size() == 1 and s.contracts["active"].filter(func(j): return j["state"] == "collect").size() == 1, "Only the pickup that fits is loaded")
+	check(ShipStats.cargo_t(s.ship) <= ShipStats.cargo_capacity_t(s.ship, sim.data) + 1e-9, "Multiple retries cannot overfill the hold")
+	# Passengers need berths, rather than free cargo tonnage.
+	sim = fresh()
+	s = sim.state
+	var pax := offer.duplicate(true)
+	pax.merge({"id": 9602, "pickup": "trojan_yards", "passengers": 2, "mass_t": 0.2, "item": "two engineers"}, true)
+	s.contracts["board"]["kibo_ring"] = [pax]
+	check(sim.apply({"type": "accept_contract", "id": 9602}) == "", "Accept passenger pickup before fitting berths")
+	_dock_at(sim, "trojan_yards")
+	check(String(sim.apply({"type": "collect_contract", "id": 9602})).begins_with("no berths"), "Passenger collection explains missing berths")
+	s.credits = 1.0e6
+	check(sim.apply({"type": "install_module", "slot": "cargo.1", "module": "passenger_berths"}) == "", "Fit berths at the pickup port")
+	sim.advance_game_time(1.0)
+	check(s.contracts["active"][0]["state"] == "carried" and int(s.ship["passengers"]) == 2, "Passenger pickup retries after fitting berths")
+	check(is_zero_approx(float(s.ship["parcels_t"])) and is_equal_approx(float(s.ship["cabin_t"]), 0.2), "Passengers use cabin mass and berths, not hold space")
+	# Reconciliation with fleet work: changing to the wrong craft cannot bypass its requirement.
+	sim = fresh()
+	s = sim.state
+	s.contracts["board"]["kibo_ring"] = [offer.duplicate(true)]
+	sim.apply({"type": "accept_contract", "id": 9601})
+	job = s.contracts["active"][0]
+	job["craft"] = ["bulk"]
+	_dock_at(sim, "clarke_exchange")
+	check(String(sim.apply({"type": "collect_contract", "id": 9601})).begins_with("that needs"), "Manual retry respects a pickup's required craft")
+	sim.take_events()
+	sim.advance_game_time(1.0)
+	check(job["state"] == "collect" and not sim.take_events().any(func(e): return e["type"] == "contract_no_room"), "Automatic retry waits quietly for the right craft")
+	job["craft"] = ["utility"]
+	sim.advance_game_time(1.0)
+	check(job["state"] == "carried", "Automatic retry collects when the craft requirement is met")
+
+
 func test_panel_fold() -> void:
 	var sim := fresh()
 	var Models = load("res://view/flight/models.gd")
@@ -4269,7 +4361,7 @@ func test_panel_fold() -> void:
 	check(is_equal_approx(absf(a["hinges"][0].rotation.z), PI * 0.5), "Stowed: the first segment stands up off the boom")
 	# In transit the panels stay stowed just after leaving port.
 	var loc := {"depart_t": 1000.0}
-	check(ShipRig.transit_fold(loc, 1010.0) == 1.0 and ShipRig.transit_fold(loc, 1000.0 + ShipRig.DEPLOY_AFTER_S + 1.0) == 0.0, "Panels unfold once clear of the port")
+	check(ShipRig.transit_fold(loc, 1010.0) == 1.0 and ShipRig.transit_fold(loc, 1000.0 + ShipRig.DEPLOY_AFTER_S + 1.0 / ShipRig.FOLD_RATE) == 0.0, "Panels unfold once clear of the port")
 	model["node"].free()
 
 

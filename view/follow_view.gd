@@ -24,6 +24,7 @@ const SkyKit := preload("res://view/flight/sky.gd")
 const Models := preload("res://view/flight/models.gd")
 const Livery := preload("res://view/flight/livery.gd")
 const ShipRig := preload("res://view/flight/ship_rig.gd")
+const Departure := preload("res://view/flight/departure.gd")
 const ProjectSystem := preload("res://sim/systems/project_system.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
 const Bay := preload("res://view/flight/bay.gd")
@@ -50,10 +51,6 @@ const STATION_RANGE_M := 30000.0
 ## Ports are drawn for the first and last game seconds of a trip: leaving, backing
 ## out and pulling away; arriving, closing in to where the approach takes over.
 const PORT_WINDOW_S := 1200.0
-## Leaving a port without a bay, the ship backs off nose-first for this long (game
-## seconds, at x1), then turns to point along its first burn and holds there until the
-## drive lights. Leaving through a bay, balance.undock sets the pace instead.
-const BACKOUT_S := 12.0
 ## Docked, the nose sits this far off the port (metres).
 const BERTH_GAP_M := 0.5
 
@@ -74,6 +71,7 @@ var _bodies: Dictionary = {}
 var _dressed: Dictionary = {}
 var _ship: Node3D
 var _rig: Dictionary = {}
+var _departure := Departure.new()
 var _plume: Node3D
 var _length := 30.0
 var _radius := 6.0
@@ -154,6 +152,7 @@ func _ready() -> void:
 		add_child(mesh)
 		_bodies[body] = mesh
 	var model := Models.ship(sim.state.ship, sim.data, Livery.for_ship(sim.data, "", sim.state.ship.get("name", ""), true))
+	_departure.setup(model, sim.data, sim.state.location)
 	_ship = model["node"]
 	_rig = model["rig"]
 	_plume = _ship.find_child("DrivePlume", true, false)
@@ -340,7 +339,7 @@ func _update_world(dt: float) -> void:
 			var bay: Dictionary = st.get("bay", {})
 			if leaving and not bay.is_empty() and bay["fits"] and _undock.is_empty():
 				var cfg: Dictionary = sim.data.balance["undock"]
-				var clear := Undock.clear_t(cfg, float(bay["z_mouth"]) - float(st["port_z"]), BERTH_GAP_M)
+				var clear := _departure.clear_after_s
 				_undock = {"bay": bay, "clear_t": clear, "turn_t": Undock.turn_t(cfg, clear), "rate": float(geom["spin_rpm"]) * TAU / 60.0, "facing": Basis.IDENTITY, "place": place}
 		if _stations.has(place):
 			var entry: Dictionary = _stations[place]
@@ -380,7 +379,8 @@ func _update_world(dt: float) -> void:
 	var next := _next_burn(t)
 	# Backing off the port, nose to it; then round to the next burn's direction once it
 	# is due within the time a turn takes; coming in on the last stretch, nose to the port.
-	if elapsed < BACKOUT_S:
+	var backing_out := _departure.in_corridor(elapsed)
+	if backing_out:
 		forward = -_corridor[0]
 	elif _thrusting:
 		forward = thrust_dir
@@ -402,7 +402,11 @@ func _update_world(dt: float) -> void:
 	if undocking:
 		forward = -_corridor[0]
 	var omega_was := _omega
-	if not _ready_basis:
+	if backing_out:
+		_fwd = forward
+		_omega = Vector3.ZERO
+		_ready_basis = true
+	elif not _ready_basis:
 		_fwd = forward
 		_omega = Vector3.ZERO
 		_ready_basis = true
@@ -417,11 +421,15 @@ func _update_world(dt: float) -> void:
 			_ship.basis = _undock_basis
 		else:
 			# Out of the lockstep into normal flight: roll round to the Sun, smoothly.
+			_undock_basis = _held_basis(float(loc["depart_t"]) + float(_undock["turn_t"]), float(_undock["turn_t"]))
 			var k := clampf((elapsed - float(_undock["turn_t"])) / float(sim.data.balance["undock"]["settle_s"]), 0.0, 1.0)
 			k = k * k * (3.0 - 2.0 * k)
 			_ship.basis = Basis(_undock_basis.get_rotation_quaternion().slerp(normal.get_rotation_quaternion(), k))
 	else:
 		_ship.basis = normal
+	if backing_out and _undock.is_empty():
+		var facing := Basis.looking_at(-_corridor[0], Vector3.UP if absf(_corridor[0].y) < 0.98 else Vector3.RIGHT)
+		_ship.basis = _departure.axis_basis(facing, t)
 	if dt > 0.0:
 		_rcs_puffs((_omega - omega_was) / (dt * speedup), dt)
 		if undocking:
@@ -429,18 +437,11 @@ func _update_world(dt: float) -> void:
 	# The drive lights once the nose is round to the thrust, and stays lit until it
 	# falls well behind (twice as far), so it doesn't flicker under high compression.
 	var off := _fwd.angle_to(thrust_dir) if _thrusting else PI
-	_lit = _thrusting and off < _plume_align * (2.0 if _lit else 1.0)
+	_lit = not backing_out and not undocking and _thrusting and off < _plume_align * (2.0 if _lit else 1.0)
 	if _plume:
 		_plume.visible = _lit
 	var dest_dir := SkyKit.dir_between(eph.position(loc["to"], t), here)
-	# Through a bay the panels and dish stay stowed until the nose is clear of it.
-	if not _undock.is_empty() and elapsed < float(_undock["clear_t"]):
-		ShipRig.set_fold(_rig, 1.0, elapsed < 1.0)
-	elif not _undock.is_empty():
-		ShipRig.set_fold(_rig, 1.0 if sim.state.ship.get("stowed", false) else 0.0)
-	else:
-		ShipRig.set_fold(_rig, ShipRig.transit_fold(loc, t, sim.state.ship))
-	ShipRig.aim(_rig, _ship.basis, _sun_dir, dest_dir * 1.0e6, dt)
+	_departure.aim(_rig, _ship.basis, _sun_dir, dest_dir * 1.0e6, loc, t, sim.state.ship)
 	_drift_satellites(dt)
 	var v_now: Array = Navigation.transit_velocity(loc, t)
 	readout["speed"] = V.length(v_now)
@@ -449,6 +450,8 @@ func _update_world(dt: float) -> void:
 	readout["remaining"] = V.distance(here, eph.position(loc["to"], t))
 	readout["dest_dir"] = dest_dir
 	readout["phase"] = ("TURNING" if _omega.length() > 0.02 else "COASTING") if not _thrusting else ("TURNING" if not _lit else ("ACCELERATING" if V.dot(V.normalized(thrust), V.normalized(v_now)) > 0.3 else ("BRAKING" if V.dot(V.normalized(thrust), V.normalized(v_now)) < -0.3 else "BURNING ACROSS")))
+	if backing_out:
+		readout["phase"] = "OPENING BAY" if elapsed < _departure.opening_s else "BACKING OUT"
 	if app[3] in ["corridor", "hold"] or app[3] == "swing" and not _thrusting:
 		readout["phase"] = "ON APPROACH"
 
@@ -647,7 +650,7 @@ func _undock_jets(elapsed: float, _dt: float) -> void:
 	if quads.is_empty():
 		return
 	var clear := float(_undock["clear_t"])
-	if Undock.pushing(cfg, elapsed):
+	if Undock.pushing(_departure.motion, elapsed):
 		_undock_jet_t = clock + randf_range(0.9, 1.4)
 		for j in quads:
 			var quad: Node3D = j["node"]
@@ -733,9 +736,9 @@ func _port_gap(place: String, tau: float, leaving: bool) -> float:
 	if leaving and not _undock.is_empty() and _undock["place"] == place:
 		# Out of the bay on the thrusters, then pulling away once it has turned.
 		var after := maxf(0.0, tau - float(_undock["turn_t"]))
-		return -_nose_z + BERTH_GAP_M + Undock.moved(sim.data.balance["undock"], tau) + 0.03 * after * after
+		return _departure.gap(tau) + 0.03 * after * after
 	if leaving:
-		return half + 2.0 + 1.5 * tau + 0.02 * tau * tau
+		return _departure.gap(tau)
 	var geom: Dictionary = sim.data.places[place]["station"]
 	var spawn := maxf(float(sim.data.balance["docking"]["spawn_distance_m"]), float(geom["hub_radius_m"]) * 3.0)
 	return half + spawn + 1.0 * tau + 0.02 * tau * tau
