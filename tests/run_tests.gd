@@ -2451,7 +2451,8 @@ func test_ship_audio() -> void:
 	for _k in 30:
 		audio.update(1.0 / 30.0, {"thrust": 1.0, "spin": Vector3(0, 1, 0), "turn": 0.6})
 	check(audio._drive_on and audio._drive_level > 0.5, "The drive lights and builds to a roar")
-	check(int(audio.sounds_played) >= 4, "A turn fires the jets and the frame creaks (%d sounds)" % int(audio.sounds_played))
+	# The drive lights, a jet fires (one at a time: no rattle), and the frame creaks.
+	check(int(audio.sounds_played) >= 3, "A turn fires a jet and the frame creaks (%d sounds)" % int(audio.sounds_played))
 	var panel: Node3D = model["rig"]["arrays"][0]["node"]
 	for _k in 10:
 		panel.rotation.x += 0.03
