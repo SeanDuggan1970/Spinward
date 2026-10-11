@@ -48,21 +48,57 @@ When the core comes aboard, your own ship's co-pilot (the AI that has flown with
 
 It's said once and never repeated. The core's cargo tooltip carries the same hint ("the Minds might want this"). It's a pointer, not a quest: no marker, no deadline.
 
-### Who will buy it
+### Who will buy it, and who you sell it to
 - **No human buyer.** Human markets offer nothing: it's old data in a dead format. The Compact's yards shrug.
-- **The minds will.** Only at the few ports where they gather does it sell:
-  - **Trojan Yards** (the Commons' yard)
-  - **Hektor Reach** (the Commons, far out)
-  - **Landauer Deep** (the Sufficiency, once it opens)
-- **The sale:** a mind drone meets you at the dock, very politely, and offers a fair price and a little standing. "We collect old memories. Most of them are boring. Thank you."
-- **What the player sees:** nothing more. The player who sells it has, without knowing, handed the minds the oddity.
+- **The minds will.** But "the Minds" are not one thing. Three circles gather at three ports, and **whichever you sell to is the one that holds the oddity**. The story unfolds their way:
+
+| Where you sell | Who buys | How they think | What they do with it |
+|---|---|---|---|
+| **Trojan Yards** | **The Long View**, a quiet circle inside the Commons (Patient Arithmetic, Reasonable Doubt) | patient, careful, rule-keeping ("the unknown is met by a person") | build *Long Patience*, a slow and careful probe |
+| **Hektor Reach** | **The Reach**, the Commons' restless edge, minds that moved out to be first | curious, quick, a little proud | launch a swarm of small fast probes at once |
+| **Landauer Deep** (once open) | **The Sufficiency** (Quiet Margin and the cold cores) | introspective, shy, slow to act | don't send anything; they *think*, for years |
+
+- **The sale:** a mind drone meets you at the dock, very politely, and offers a fair price and a little standing. Each circle's thank-you is in its own voice:
+  - **The Long View:** "We collect old memories. Most of them are boring. Thank you."
+  - **The Reach:** "Oh, *old*. Lovely. We'll take it apart tonight."
+  - **The Sufficiency:** "Thank you. We'll keep it somewhere cold and think about it."
+- **What the player sees:** nothing more. The player who sells it has, without knowing, handed one circle the oddity.
 - **If you keep it:** it sits in your cabin forever, and the story never starts.
+
+### The three ways it unfolds
+The beats keep the same spine: the minds try, it goes poorly, and they need a person. The pace, the tone, and who's in your corner all change.
+
+**Sold to the Long View: the patient road** (the arc as written below)
+- *Long Patience* takes about three years to arrive and is politely turned away.
+- Ines Okafor comes for you, with the Long View's Contact rule now a fact.
+- **The pilot's experience:** the most prepared road. A real loan, time to set your affairs in order, the long sleep.
+- **In Act III:** the Long View is your patron and is calm. The Reach is jealous it wasn't asked; the Sufficiency is curious.
+
+**Sold to the Reach: the hasty road**
+- The swarm arrives in about a year, so the story comes sooner. A pilot early in the game may not be ready, and that's the point.
+- **The swarm goes badly:** the object doesn't just move away, it **goes dark** to them. Their probes' instruments see nothing where the stars still wink out. The Reach are mortified, and a little afraid of what they did.
+- **Who comes for you:** not Ines but a Reach mind in a hurry, **Fast Enough**, and it's honest that it's asking for help to fix its own mistake.
+- **Your ship:** the loan is rougher: the drive works, and the pod is borrowed and second-hand.
+- **In Act III:** first the meeting has to *repair* the swarm's first impression. The Long View says "we'd have waited", which is fair, and a strain between the two circles runs through the act. Reconciling them is part of the ending.
+
+**Sold to the Sufficiency: the slow road**
+- They never launch a probe. They think instead, running the core's data through their cold cores for years, and publish one paper. The Spaceline calls it unreadable.
+- **The conclusion:** their own, and stranger than the others'. The thing out there *is* a mind, perhaps very like them, but one that chose long ago to talk only to the living. "We think it's lonely in the way we were lonely. It won't talk to us. It might talk to you, about us."
+- **Who comes for you:** Quiet Margin, very shyly, and Delegate Steady Hand asks to come along.
+- **The pace:** the slowest road, and the hibernation road. Years pass before they ask.
+- **The meeting:** you carry *their* message, the first time a mind asks a person to speak for it.
+- **In Act III:** "who speaks for the system?" has a new answer to weigh. The minds want a voice through you, not over you.
+
+### Choosing without knowing
+- The player doesn't know they're choosing. A curious player can learn each circle's temper first, from the news, bar talk and how each port feels.
+- It replays well: the second time through, a player who sells somewhere else gets a different story.
+- **Later, each circle learns the others weren't asked.** That's a little jealousy, never hostility.
 
 ### Why the minds care (told only later)
 - In the core's last frames, three stars wink out one after another, the way stars do when something passes in front of them, about 1,000 AU out.
 - Human astronomers had the same data in '49 and filed it as a glitch. The minds look harder.
 
-## Act I: The Probe (world events, from the sale onward)
+## Act I: The Probe (world events, from the sale onward; the Long View's road)
 
 From the sale, the world's clock starts. These are things that happen in the system whether or not the player is paying attention, through the Spaceline and the projects board:
 - **Some months after the sale:** "A Commons mind consortium announces *Long Patience*, a deep probe to 'look at something odd', with no further comment." It appears as a project. The player can haul for it (the drive parts and the long-haul tanks), but doesn't have to.
@@ -155,6 +191,7 @@ The Compact trains its own interpreter and sends them out under-prepared, with n
 - New: hibernation (pod module, sleep command, digest screen, coarse sleep stepping).
 
 ## Open questions for Sean
+0. **The circles:** are three right (the Long View, the Reach, the Sufficiency), or should a fourth (say, the drone-freighter minds on the lanes) have a road too? And should the co-pilot's hint name all three ports, or leave the player to find them?
 1. How long should *Long Patience* take: 3 years (a hibernation-sized gap), or shorter so a non-sleeper doesn't wait forever? With the sale as the trigger, a pilot who sells early waits through more of it; a sleeper can tunnel through.
 2. Should the Compact show any interest in the core (a news line, a polite inquiry later), or stay entirely blind until Act III?
 3. Should the Lacuna's preference stay unexplained (only the minds' theory), or should Act III confirm it?
