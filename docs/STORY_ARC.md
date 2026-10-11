@@ -41,6 +41,13 @@ A new pilot has the whole economy to learn: markets, contracts, the fleet, the y
 ### Salvaging it
 The salvage job (lander or EVA, later with walking) recovers its **memory core**. It is a unique cargo item, a few kilograms, carried by hand in the cabin. The salvage itself pays only scrap.
 
+### The co-pilot's nudge
+When the core comes aboard, your own ship's co-pilot (the AI that has flown with you all game) offers one quiet line in the comms log, in its usual voice:
+
+> "Nobody's going to pay for a dead format. Mind you, I hear the Minds have an insatiable appetite for new data. Might be worth showing it to them. Trojan Yards, Hektor Reach, Landauer Deep, if it's open."
+
+It's said once and never repeated. The core's cargo tooltip carries the same hint ("the Minds might want this"). It's a pointer, not a quest: no marker, no deadline.
+
 ### Who will buy it
 - **No human buyer.** Human markets offer nothing: it's old data in a dead format. The Compact's yards shrug.
 - **The minds will.** Only at the few ports where they gather does it sell:
