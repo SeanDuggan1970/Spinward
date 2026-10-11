@@ -295,6 +295,8 @@ func _request_tug() -> void:
 
 
 func _physics_process(dt: float) -> void:
+	# Watching from outside (chase, wide): the silence of vacuum (balance.audio).
+	ShipAudio.set_outside(sim.data, view_mode != "cockpit")
 	if docked or sim.state.paused:
 		return
 	if wrecked:
@@ -1040,3 +1042,7 @@ func _time_to_rock() -> float:
 		if miss < float(rock["r"]) + ship_radius * 1.5:
 			best = minf(best, t)
 	return best
+
+
+func _exit_tree() -> void:
+	ShipAudio.set_outside(sim.data, false)

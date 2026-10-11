@@ -130,6 +130,7 @@ func _initialize() -> void:
 	test_satellite_missions()
 	test_secret_work()
 	test_undock_timing()
+	test_silent_outside()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -4420,3 +4421,17 @@ func test_undock_timing() -> void:
 	check(Undock.roll_share(cfg, clear - 1.0, clear) == 1.0 and Undock.roll_share(cfg, clear + float(cfg["roll_stop_s"]), clear) == 0.0, "It turns with the station in the bay and has stopped its roll once clear")
 	# The departure ramp holds x1 until the ship has turned for its burn.
 	check(float(d.balance["time"]["departure_ramp"][0][0]) >= Undock.turn_t(cfg, clear), "Time holds at x1 through the undock (%.0f s)" % Undock.turn_t(cfg, clear))
+
+
+func test_silent_outside() -> void:
+	var d = DataCatalog.load_default()
+	var ShipAudioScript = load("res://view/audio/ship_audio.gd")
+	check(bool(d.balance["audio"]["silent_outside"]), "Space is silent from outside by default")
+	ShipAudioScript.set_outside(d, true)
+	check(ShipAudioScript.is_silent(), "An outside camera mutes the ship's sounds")
+	ShipAudioScript.set_outside(d, false)
+	check(not ShipAudioScript.is_silent(), "Back in the cockpit, the ship is heard again")
+	d.balance["audio"]["silent_outside"] = false
+	ShipAudioScript.set_outside(d, true)
+	check(not ShipAudioScript.is_silent(), "Switched off, the ship is heard from outside too")
+	ShipAudioScript.set_outside(d, false)

@@ -12,6 +12,9 @@
 ## and a low-pass that closes with distance). The "Hull" bus adds a short metallic
 ## ring and rolls off the highs, as a frame carries sound.
 ##
+## Outside the ship (an external camera) space is silent: set_outside() mutes the
+## Hull bus and the cabin air while balance.audio.silent_outside is on.
+##
 ## Add as a child of a ship model's root node and call setup() with the model.
 ## Feed update() each frame with what the ship is doing.
 extends Node3D
@@ -62,6 +65,18 @@ var _loops: Array = []
 ## device: the sources are built but nothing plays, so no playback outlives them.
 static func audible() -> bool:
 	return DisplayServer.get_name() != "headless"
+
+
+## The camera is outside the ship (or back aboard). With balance.audio.silent_outside
+## on, the ship falls silent outside: the Hull bus is muted, not stopped, so every
+## sound carries on and comes back the moment the camera does.
+static func set_outside(data, outside: bool) -> void:
+	var silent: bool = outside and bool(data.balance.get("audio", {}).get("silent_outside", false))
+	AudioServer.set_bus_mute(AudioServer.get_bus_index(hull_bus()), silent)
+
+
+static func is_silent() -> bool:
+	return AudioServer.is_bus_mute(AudioServer.get_bus_index(hull_bus()))
 
 
 static func hull_bus() -> String:
@@ -241,7 +256,8 @@ func update(dt: float, state: Dictionary) -> void:
 	_duck_db = move_toward(_duck_db, duck_for(time_scale), dt * 20.0)
 	var bus := AudioServer.get_bus_index(hull_bus())
 	AudioServer.set_bus_volume_db(bus, _duck_db)
-	_cabin.volume_db = -21.0 + _duck_db * 0.5
+	# The cabin air is heard only aboard: outside, with the Hull bus muted, it goes too.
+	_cabin.volume_db = -80.0 if is_silent() else -21.0 + _duck_db * 0.5
 	var thrust := clampf(float(state.get("thrust", 0.0)), 0.0, 1.0)
 	var now := Time.get_ticks_msec() / 1000.0
 	# Under time compression burns can flick on and off: the rumble follows, but the

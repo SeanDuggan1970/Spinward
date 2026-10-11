@@ -71,6 +71,10 @@
 		"stowed_heat_mult": 0.3,
 		"check_s": 300.0
 	},
+	"audio": {
+		"_note": "silent_outside: with the camera outside the ship (the transit ship and orbit views, the docking scene's chase and wide views) space is utterly silent: the ship's sounds (the Hull bus) and its cabin air are muted, not removed. Set false to hear the ship from outside as from the cabin.",
+		"silent_outside": true
+	},
 	"undock": {
 		"_note": "Leaving a bay (view/flight/undock.gd), in game seconds after departure (time holds at x1 for it: time.departure_ramp). The doors start opening at doors_at_s (over bays.door_s); the ship eases backwards from move_at_s on its thrusters, accelerating at accel_mps2 to speed_mps. Docked, it turns with the station; once its nose is clear_m past the mouth its thrusters stop the roll over roll_stop_s, its panels and dish unfold, and after settle_s more it turns for its burn.",
 		"doors_at_s": 1.0,

@@ -842,6 +842,16 @@ Ships fly into a station instead of nosing up to a collar on a small hub (`view/
 - **Too big for the bay:** a ship whose stowed radius plus 3 m won't go in berths on a collar on the shut doors. Only the sail freighters are that big, and they never dock in the flight scene.
 - Only the view changed: the sim never sees the bay.
 
+## Silence outside (Oct 2026)
+
+Sean's direction (2026-10-11): outside shots of any kind should be totally silent. With the camera in vacuum it is purely visual, as in *Interstellar*: adding by subtraction.
+
+- With `balance.audio.silent_outside` on (the default), these mute the ship's sounds (the Hull bus) and the cabin air:
+  - the transit ship and orbit views;
+  - the docking scene's chase and wide cameras.
+- The cockpit views (transit and docking) and the map keep the ship's sounds, heard through the hull as before.
+- Nothing is removed: the sounds keep running muted (`ShipAudio.set_outside`), so they come back the moment the camera does, or everywhere if the switch is turned off.
+
 ## Leaving a bay (Oct 2026)
 
 Sean's direction (2026-10-10): the ship should leave through the bay doors, seen from inside the dock, reversing out gently on its thrusters with everything stowed, then unstowing and aligning for its burn. It should be cinematic: a camera that follows the ship out without passing through walls, and ship, camera and station turning together until the ship is out.
