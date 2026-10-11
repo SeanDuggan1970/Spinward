@@ -100,8 +100,9 @@ static func _inside(mi: MeshInstance3D) -> MeshInstance3D:
 
 
 ## A light from outside (the Sun, planetshine) leaves bay interiors alone.
+## Also the cockpit cabin's layer (flight_deck.gd CABIN_LAYER, 4): it has its own sun.
 static func shade_interior(light: Light3D) -> void:
-	light.light_cull_mask &= ~INTERIOR_LAYER
+	light.light_cull_mask &= ~(INTERIOR_LAYER | 4)
 
 
 ## The doors, built shut; set_open moves them.
