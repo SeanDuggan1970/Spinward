@@ -134,6 +134,7 @@ func _initialize() -> void:
 	test_silent_outside()
 	test_fleet()
 	test_craft_contracts()
+	test_build_info()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -4542,3 +4543,19 @@ func test_craft_contracts() -> void:
 	s.contracts["board"]["kibo_ring"] = [ex]
 	check(sim.apply({"type": "accept_contract", "id": ex["id"]}) == "", "A courier takes the express run")
 	check(float(ex["window_s"]) / DAY < float(ex["quick_days"]) * 1.4, "Express deadlines are tight (%.1f d for %.1f d)" % [float(ex["window_s"]) / DAY, float(ex["quick_days"])])
+
+
+func test_build_info() -> void:
+	var BuildInfo = load("res://view/build_info.gd")
+	BuildInfo._text = ""
+	var had := FileAccess.file_exists(BuildInfo.BUILD_FILE)
+	if not had:
+		var local: String = BuildInfo.text()
+		check(local.begins_with("dev"), "A clone shows its commit as a dev build (%s)" % local)
+		var f := FileAccess.open(BuildInfo.BUILD_FILE, FileAccess.WRITE)
+		f.store_string("19-14d3d67\n")
+		f.close()
+		BuildInfo._text = ""
+		check(BuildInfo.text() == "build 19-14d3d67", "A deployed build shows its run number and commit (%s)" % BuildInfo.text())
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(BuildInfo.BUILD_FILE))
+		BuildInfo._text = ""
