@@ -136,6 +136,7 @@ func _initialize() -> void:
 	test_fleet()
 	test_craft_contracts()
 	test_build_info()
+	test_hibernation()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -4651,3 +4652,68 @@ func test_build_info() -> void:
 		check(BuildInfo.text() == "build 19-14d3d67", "A deployed build shows its run number and commit (%s)" % BuildInfo.text())
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(BuildInfo.BUILD_FILE))
 		BuildInfo._text = ""
+
+
+func test_hibernation() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	check(sim.apply({"type": "sleep", "days": 30}) != "", "No pod, no sleep")
+	s.ship["modules"]["cargo.1"] = "hibernation_pod"
+	check(d.modules["hibernation_pod"].get("sleep", false) and d.modules["sleep_berth"].get("sleep", false), "The pod and the Long View's berth are both sleep pods")
+	# At port: a month goes by in a day-sized stride, and you wake at x1.
+	var t0: float = s.time_s
+	check(sim.apply({"type": "sleep", "days": 30}) == "" and sim.asleep(), "Sleep at port for a month")
+	check(sim.step_s() == float(d.balance["sleep"]["step_hours"]) * 3600.0, "Asleep, the world steps a day at a time")
+	check(s.time_scale == float(d.balance["sleep"]["time_scale"]), "and time runs fast")
+	sim.take_events()
+	sim.advance_game_time(40.0 * DAY)
+	var woke := sim.take_events().filter(func(e): return e["type"] == "woke")
+	check(not sim.asleep() and woke.size() == 1, "Woke once")
+	check(absf(float(woke[0]["data"]["to_t"]) - (t0 + 30.0 * DAY)) < 1.0, "Woke on the day (%.2f d late)" % ((float(woke[0]["data"]["to_t"]) - t0 - 30.0 * DAY) / DAY))
+	check(absf(float(s.sleep["total_s"]) - 30.0 * DAY) < 1.0 and s.time_scale == 1.0, "Thirty days slept, back to x1")
+	check(sim.step_s() == float(d.balance["economy"]["step_hours"]) * 3600.0, "Awake, the world steps an hour again")
+	# On a voyage: sleep until shortly before arrival; the approach is yours.
+	check(sim.apply({"type": "depart", "to": "trojan_yards"}) == "", "Depart for Trojan Yards")
+	sim.advance_game_time(600.0)
+	var arrive := float(s.location["arrive_t"])
+	check(sim.apply({"type": "sleep"}) == "", "Sleep through the voyage")
+	var lead := float(d.balance["sleep"]["wake_before_arrival_h"]) * 3600.0
+	sim.advance_game_time(10.0 * DAY)
+	check(s.location["status"] == "approach" or s.location["status"] == "docked", "Arrived (%s)" % s.location["status"])
+	var wake := sim.take_events().filter(func(e): return e["type"] == "woke")
+	check(wake.size() == 1 and absf(float(wake[0]["data"]["to_t"]) - (arrive - lead)) < 1.0, "Woke once, %.0f h out, for the approach" % (lead / 3600.0))
+	check(not sim.asleep(), "Awake for the approach")
+	# NPC trips set out while asleep are planned in full on waking.
+	check(s.npcs.all(func(n): return not n["location"].get("sketch", false)), "No NPC flies a sketch once the pilot is awake")
+	check(s.npcs.all(func(n): return n["location"]["status"] != "transit" or n["location"].has("from_pos")), "Every NPC in flight has a real path")
+	# In play (real-time ticks at the sleep's pace) the clock stops on waking, short of the port.
+	var live := fresh()
+	live.state.ship["modules"]["cargo.1"] = "hibernation_pod"
+	live.apply({"type": "depart", "to": "trojan_yards"})
+	live.advance_game_time(600.0)
+	var live_arrive := float(live.state.location["arrive_t"])
+	live.apply({"type": "sleep"})
+	var frames := 0
+	while live.asleep() and frames < 10000:
+		live.tick(0.25)
+		frames += 1
+	check(live.state.location["status"] == "transit" and absf(live_arrive - live.state.time_s - lead) < 1.0, "Played in real time, you wake %.1f h out, not at the port" % ((live_arrive - live.state.time_s) / 3600.0))
+	check(live.state.time_scale == float(d.balance["sleep"]["wake_scale"]), "and the clock is set to close the last hours")
+	# Saves keep the sleep, and a game saved asleep wakes as one that never was.
+	var a := fresh()
+	var b := fresh()
+	for x in [a, b]:
+		x.state.ship["modules"]["cargo.1"] = "hibernation_pod"
+		x.apply({"type": "sleep", "days": 60})
+		x.advance_game_time(20.0 * DAY)
+	b.load_state(SaveIO.from_text(SaveIO.to_text(b.state)))
+	check(b.asleep(), "A game saved asleep loads asleep")
+	a.advance_game_time(50.0 * DAY)
+	b.advance_game_time(50.0 * DAY)
+	check(a.state.credits == b.state.credits and a.state.time_s == b.state.time_s and a.state.rng_state == b.state.rng_state, "Saved and reloaded mid-sleep, the world comes out the same")
+	check(JSON.stringify(a.state.npcs) == JSON.stringify(b.state.npcs), "Every NPC in the same place")
+	# Ten years asleep makes a Bookworm.
+	s.sleep["total_s"] = 3651.0 * DAY
+	sim.advance_game_time(3600.0)
+	check(s.badges["earned"].has("bookworm"), "Ten years slept earns the Bookworm badge")

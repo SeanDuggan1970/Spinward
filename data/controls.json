@@ -39,7 +39,8 @@
 				{"action": "flight_view", "label": "Cockpit or chase view", "key": ["C"], "pad": ["dpad_down"]},
 				{"action": "flight_computer", "label": "Docking computer (if fitted)", "key": ["K"], "pad": ["dpad_left"]},
 				{"action": "flight_tug", "label": "Call the tug (a fee; on credit if broke)", "key": ["T"], "pad": ["lstick"]},
-				{"action": "flight_keys", "label": "Show or hide the key strip", "key": ["H"], "pad": ["dpad_right"]}
+				{"action": "flight_keys", "label": "Show or hide the key strip", "key": ["H"], "pad": ["dpad_right"]},
+				{"text": "Mouse drag", "label": "Look about the cabin (the head comes back when you let go)"}
 			]
 		},
 		{
@@ -55,6 +56,8 @@
 				{"action": "transit_dark", "label": "Run dark: transponder and lights off (fined near ports if seen)", "key": ["D"], "pad": []},
 				{"action": "transit_release", "label": "Release a satellite, or plant a device, when in reach", "key": ["R"], "pad": []},
 				{"action": "transit_stow", "label": "Fold the panels in (smaller signature; unfold before a burn)", "key": ["F"], "pad": []},
+				{"action": "transit_sleep", "label": "Sleep through the voyage in a hibernation pod, or wake", "key": ["S"], "pad": ["dpad_down"]},
+				{"text": "Mouse drag", "label": "Look about the cabin"},
 				{"action": "transit_time_slower", "label": "Slow down time", "key": [], "pad": ["lb"]},
 				{"action": "transit_time_faster", "label": "Speed up time", "key": [], "pad": ["rb"]},
 				{"text": "Mouse drag", "label": "Orbit the ship (ship view)"},

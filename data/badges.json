@@ -1,5 +1,5 @@
 {
-	"_note": "Badges (sim/systems/badge_system.gd): one-off marks for doing something few do, kept in state.badges. Each has a name, a line for the log, and what earns it: 'visit' (be docked at any of these places), 'visit_all' (have been to all of them), or 'rounds' (have bought a bar this many rounds; 'at' limits it to these places). Each adds 'renown', and may add 'rep' with operators. Renown gets you noticed: each point raises the chance a hitchhiker asks at a port and a client approaches you by name, by the fractions in 'renown', up to max_mult times the usual chance. Buying a round costs a bar's patrons times its round_cr, and adds round_rep with the bar's operator.",
+	"_note": "Badges (sim/systems/badge_system.gd): one-off marks for doing something few do, kept in state.badges. Each has a name, a line for the log, and what earns it: 'visit' (be docked at any of these places), 'visit_all' (have been to all of them), 'rounds' (have bought a bar this many rounds; 'at' limits it to these places), or 'slept_days' (have slept this many days in a hibernation pod, all told). Each adds 'renown', and may add 'rep' with operators. Renown gets you noticed: each point raises the chance a hitchhiker asks at a port and a client approaches you by name, by the fractions in 'renown', up to max_mult times the usual chance. Buying a round costs a bar's patrons times its round_cr, and adds round_rep with the bar's operator.",
 	"renown": {
 		"hitchhiker_per_point": 0.06,
 		"approach_per_point": 0.05,
@@ -7,6 +7,7 @@
 	},
 	"round_rep": 0.5,
 	"badges": {
+		"bookworm": {"name": "Bookworm", "text": "Has slept ten years away in a hibernation pod, and woken each time to a system that had moved on without asking.", "slept_days": 3650, "renown": 2},
 		"past_the_point": {
 			"name": "Past the Point",
 			"text": "Rode the Luna Line out beyond L1 to Ballast Point, and stood on the ceiling.",

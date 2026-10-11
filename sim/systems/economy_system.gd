@@ -32,7 +32,8 @@ func start_game() -> void:
 
 func tick(_game_dt: float) -> void:
 	var s = sim().state
-	var step := float(sim().data.balance["economy"]["step_hours"]) * 3600.0
+	# A day at a time while the player sleeps (Sim.step_s).
+	var step: float = sim().step_s()
 	while s.economy_t + step <= s.time_s:
 		_integrate(step / 86400.0)
 		s.economy_t += step

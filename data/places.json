@@ -301,6 +301,7 @@
 			"shipyard"
 		],
 		"shipyard_stock": [
+			"hibernation_pod",
 			"cargo_pod_s",
 			"cargo_pod_m",
 			"cargo_pod_l",
@@ -581,6 +582,7 @@
 			"shipyard"
 		],
 		"shipyard_stock": [
+			"hibernation_pod",
 			"cargo_pod_m",
 			"tank_m",
 			"radiator_panel_l",
@@ -1030,6 +1032,7 @@
 			"shipyard"
 		],
 		"shipyard_stock": [
+			"hibernation_pod",
 			"tank_l",
 			"hab_extended",
 			"lander_bay",
@@ -1117,6 +1120,7 @@
 			"shipyard"
 		],
 		"shipyard_stock": [
+			"hibernation_pod",
 			"pathfinder_mk3",
 			"radiator_array",
 			"tank_l",

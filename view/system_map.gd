@@ -126,7 +126,7 @@ func _draw() -> void:
 	var traffic_frame := "sun" if solar else frame
 	var npc_screen := to_screen if traffic_frame == frame else (func(p: Array) -> Vector2: return abs_screen.call(V.add(sun, p)))
 	for npc in s.npcs:
-		if npc["location"]["status"] != "transit" or npc["location"].get("frame", "earth") != traffic_frame:
+		if npc["location"]["status"] != "transit" or npc["location"].get("sketch", false) or npc["location"].get("frame", "earth") != traffic_frame:
 			continue
 		var loc: Dictionary = npc["location"]
 		var p: Vector2 = npc_screen.call(Navigation.transit_position(loc, t))

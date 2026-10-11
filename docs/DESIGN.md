@@ -1096,6 +1096,29 @@ Owner's brief: *if you turn about in the cockpit there is nothing else; we need 
 - **Looking about.** Drag with the mouse in either cockpit. On approach the head comes back to the windscreen when you let go; in transit it stays where you put it (C centres it), as the arrow keys do.
 - The solids were wound inside out before this (the eye saw the back faces of every box), which is why the old panel looked flat and dark; fixed in `_hexa`.
 
+## Hibernation (Oct 2026)
+
+Owner's brief: *hibernation lets the player tunnel through deep time like a bookworm, disjointed from smaller human affairs but getting to witness a grander stage.* Rules in `sim/systems/sleep_system.gd`, numbers in `data/balance.json` `sleep`, screens in `view/sleep_overlay.gd` and `view/wake_digest.gd`.
+
+- **The pod:** any module with `"sleep": true`.
+  - The Long View's lent berth is one.
+  - The **hibernation pod** (85,000 cr, a cargo slot, 600 days of life support) is sold at Trojan Yards, Ares Ring, Hektor Reach and Landauer Deep.
+- **On a voyage:** `sleep` in transit (key S, pad d-pad down; the comms suggest it on departure) sleeps until **12 hours before arrival**. You wake at x10,000, which the approach caps slow as the port nears, so the approach is always yours. A trip with less than a day left isn't worth it.
+- **At port:** `sleep {days}` (the ship panel offers a week, a month, six months, a year) lets time pass. Jobs run late, and rent and premiums come due: the world goes on.
+- **The dark:**
+  - **What you see:** the screen goes dark and the date runs. The ship's mind keeps a log: a line as the ship crosses each planet's distance from the Sun (out to the heliopause and beyond), and one a year.
+  - **Waking:** "Wake now" (or S) wakes you early.
+  - **The screen underneath:** it neither draws nor runs while you sleep.
+- **Waking:** a digest shows how long you slept, the money in and out, the Spaceline headlines from the time you were under, and the messages that came in. The game holds still until you've read it.
+- **Your own clock:** `state.sleep.total_s` is the time you've slept all told (shown on the ship panel). Ten years earns the **Bookworm** badge.
+- **Why it's fast:** the world goes on, but coarsely, while you sleep:
+  - **Steps:** every system steps a day at a time (`Sim.step_s`, `sleep.step_hours`), the economy included.
+  - **NPC traders:** they weigh and fly routes on estimates: the hull's stock ship, planned once per route per 30 days (`estimate_days`). A trip flown on an estimate is a *sketch* (no path) until the pilot wakes, when every ship still in flight is planned in full (`NpcSystem._plan_sketches`). The maps skip sketches.
+  - **Frames:** a frame runs at most three day-steps, so the dark screen stays live.
+  - **Result:** 900 days asleep take about 45 s of simulation (190 s awake).
+  - **Saves:** the estimates are a pure function of hull, route and period, so a game saved asleep wakes exactly as one that never was.
+- **Departures from reality, on purpose:** the pod has no medical side to it (no recovery time, no ageing effects), and the world's coarse steps while you sleep are a little less detailed than when you're awake.
+
 ## Performance (Oct 2026)
 
 Long skips (time compression, a yard's days in port, a long transit, the headless tests, the balance bot) spend nearly all their time planning NPC trips. The speed-ups are exact: the same inputs give bit-identical state and events, and no number in `data/` changed. What is cached or skipped, and what must not be broken:
