@@ -152,5 +152,24 @@
 			"loan_repay_cr_per_day": 150,
 			"loan_keep_cr": 500
 		}
+	},
+	"fleet": {
+		"_note": "Owning more than one ship (sim/fleet.gd, sim/systems/fleet_system.gd). Shipyards sell the hulls listed here (yards: place ids, or 'all' for every shipyard) at price_cr, a sound second-hand example: each module at bought_wear, bought_age_days in service, a fresh Warrant of Fitness. A ship you are not flying is laid up in a yard berth: berth_month_cr per month_days, times the hull's berth_mult and the yard's 'berth' rate (yards, default 1), charged a month ahead. Unpaid rent is owed against that ship; after seize_after unpaid months the yard sells it and keeps what is owed. Selling pays price_cr * the resale value factor of the ship's mean condition and age, times sell_fraction, less keel damage, plus the trade-in of any module that differs from the stock fit. max_ships counts the one you fly. class names the craft a contract can ask for (data/contracts.json kinds 'craft'); a hull not listed is 'utility'.",
+		"month_days": 30,
+		"berth_month_cr": 1500,
+		"seize_after": 3,
+		"sell_fraction": 0.85,
+		"max_ships": 4,
+		"bought_wear": 0.08,
+		"bought_age_days": 400,
+		"classes": {"utility": "utility hauler", "fast": "fast courier", "passenger": "passenger shuttle", "bulk": "bulk carrier", "heavy": "heavy freighter"},
+		"hulls": {
+			"mule": {"class": "utility", "price_cr": 160000, "berth_mult": 1.0, "yards": "all"},
+			"courier": {"class": "fast", "price_cr": 380000, "berth_mult": 1.0, "yards": ["kibo_ring", "trojan_yards", "ares_ring"]},
+			"shuttle": {"class": "passenger", "price_cr": 340000, "berth_mult": 1.2, "yards": ["kibo_ring", "trojan_yards"]},
+			"lunar_tanker": {"class": "bulk", "price_cr": 420000, "berth_mult": 1.6, "yards": ["kibo_ring", "piazzi_station"]},
+			"heavy_freighter": {"class": "heavy", "price_cr": 1150000, "berth_mult": 3.0, "yards": ["trojan_yards", "piazzi_station"]}
+		},
+		"names": ["Fair Weather", "Quiet Hours", "Long Way Round", "Good Neighbour", "Second Breakfast", "Patience", "Lantern", "Margin of Error", "Homeward", "Small Mercies"]
 	}
 }

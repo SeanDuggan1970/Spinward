@@ -842,6 +842,41 @@ Ships fly into a station instead of nosing up to a collar on a small hub (`view/
 - **Too big for the bay:** a ship whose stowed radius plus 3 m won't go in berths on a collar on the shut doors. Only the sail freighters are that big, and they never dock in the flight scene.
 - Only the view changed: the sim never sees the bay.
 
+## Silence outside (Oct 2026)
+
+Sean's direction (2026-10-11): outside shots of any kind should be totally silent. With the camera in vacuum it is purely visual, as in *Interstellar*: adding by subtraction.
+
+- With `balance.audio.silent_outside` on (the default), these mute the ship's sounds (the Hull bus) and the cabin air:
+  - the transit ship and orbit views;
+  - the docking scene's chase and wide cameras.
+- The cockpit views (transit and docking) and the map keep the ship's sounds, heard through the hull as before.
+- Nothing is removed: the sounds keep running muted (`ShipAudio.set_outside`), so they come back the moment the camera does, or everywhere if the switch is turned off.
+
+## Leaving a bay (Oct 2026)
+
+Sean's direction (2026-10-10): the ship should leave through the bay doors, seen from inside the dock, reversing out gently on its thrusters with everything stowed, then unstowing and aligning for its burn. It should be cinematic: a camera that follows the ship out without passing through walls, and ship, camera and station turning together until the ship is out.
+
+- **The timeline** (`view/flight/undock.gd`, `balance.undock`, game seconds since departure, at ×1):
+  - At 1 s the doors start to open (12 s).
+  - At 7 s the ship eases astern on its thrusters, gathering way at 0.2 m/s² to 2.5 m/s.
+  - Once its nose is 8 m past the mouth (about 48 s for an 80 m bay), the panels and dish unfold and the roll jets brake its spin over 5 s.
+  - After 3 s more it turns for its burn.
+  - `time.departure_ramp` holds ×1 for the first 60 s for this (it was 20 s).
+- **Lockstep:** in the bay the ship is held on the berth's axis, turning with the station's spin, so the tunnel and doors stand still around it. Once clear its roll brakes smoothly to a stop. Then its attitude blends into normal flight (rolled to the Sun) as it turns.
+- **The camera** (follow view's "undock" set-up, one unbroken shot until the ship turns):
+  - It rides in the ship's frame, so it turns with ship and station.
+  - It sits off the axis, clear of the stowed hull and inside the tunnel's walls, trailing the nose deeper into the bay. It looks out past the ship to the doors and space, and follows it out.
+- **Stowed for the bay:** panels fold as before. The high-gain dish now stows too: it turns to face forward and level, then its mast folds down aft on a foot hinge, leaving the bowl face-up on the hull. It works at every dish size. Motors whine at each fold hinge and the dish's foot hinge.
+- **The sound** (`view/audio/transit_audio.gd`) follows the same timeline: thrusters as the ship gathers way, roll jets once clear, motors as it unfolds.
+- **Solid bays:**
+  - The bay's shell is closed at the back too, where it meets the hub, so it reads solid from any side.
+  - The interior (lining, back wall, stripes, lamps) is drawn on its own render layer (`Bay.INTERIOR_LAYER`), which the Sun and planetshine leave out. Inside, only the bay's lamps light it, so no sunlight leaks through the walls.
+
+## Thrusters (Oct 2026)
+
+- **Plumes** (`view/shaders/rcs_plume.gdshader`, follow view): cold gas in vacuum. A short, faint cone flaring off the nozzle, brightest at the nozzle and soft at its edges, with a brief flash at its root, gone in a third of a second. It replaces the glowing balls.
+- **Calmer firing:** jets fire as a turn starts, reverses or stops, and only trim every 1.6 s while it is held, at most four at once. Under time compression they come less often again, by 1 + log10(scale). The sound follows the same rule (`ShipAudio`): a jet sounds as it starts firing, pulses again only every 0.75 s while held, and no two jets sound within 0.16 s. Firm, separate puffs, not a rattle.
+
 ## Satellites (Oct 2026, roadmap step 5)
 
 - **The job** (`contracts.json` kind `satellite`, Known standing):
@@ -1038,6 +1073,25 @@ Owner's brief: *the flat 50% resale seems wrong; it should be about wear and tea
 - **Start.** The stock second-hand Mule starts **part-worn** (conditions 0.70 to 0.85, 900 days old), with 120 days of WoF and the Commons mutual's `basic` cover paid for 30 days. A pilot needs to start visiting a yard within a month or two; nothing breaks in the first weeks.
 - **The bill.** `ShipBill.quote(state, data, request)` is a pure function (no state change) returning every line (parts, trade-in credit by condition, labour, service, overhaul, inspection), the total, days in port, the effect on the WoF (valid after? would it pass? what must be fixed?) and on the insurance (state and premium before and after), and the ship as it would be. The commands charge exactly the quote. The graphical ship-builder should call this. A **module-condition API** (`Condition.condition`, `restore`, `add_wear`, `clear_faults`) is there for later engine tunes or repair vouchers.
 - **Departures from reality, on purpose:** wear is one number per module (real hardware has many failure modes); a service is a single flat step; the WoF is a gameplay inspection, not an engineering one; cover is simple tiers; faults are mild and never lethal so the hopeful tone holds. Hazards are wear and paperwork, not villains.
+
+## A fleet of your own (Oct 2026)
+
+Owner's brief: *it should be possible to own different ships, kept at a shipyard for a monthly berth fee, and some missions should need a certain type of craft.* Numbers in `data/ship_economy.json` `fleet`; rules in `sim/fleet.gd` and `sim/systems/fleet_system.gd`.
+
+- **Buying.** Each shipyard sells some hulls (`fleet.hulls[hull].yards`): the Mule everywhere, couriers and shuttles at the busy inner yards, the bulk tanker at Kibo Ring and Piazzi, the heavy freighter only at Trojan Yards and Piazzi. A bought hull is a sound second-hand example (all modules at 8% wear, 400 days in service) with a fresh Warrant of Fitness and full tanks. `buy_ship {hull, name?, board?}` lays her up in a berth here, or with `board` you fly her away and the old ship takes the berth.
+- **Berths.** A ship you are not flying waits at the yard where you left her and keeps everything that is hers (fit, wear, WoF, fuel, trade cargo). Rent is charged a month (30 days) ahead: 1,500 cr times the hull's `berth_mult` (heavy freighters take three berths' worth) times the yard's `berth` rate. Rent you cannot pay is owed and settled as soon as there is money; after three unpaid months the yard sells her (`sale_value`) and sends on what is left after the debt. No pilot ends up in debt to a yard.
+- **Changing ships** (`switch_ship {index}`) happens docked at the yard where she is berthed, and only with no contract work, passengers or hitchhikers aboard and the ship not impounded, so a job can never be stranded in a ship you left behind. Her batteries were on shore power. Insurance follows the ship you fly (a laid-up ship sits in a yard, covered by the yard).
+- **Selling** (`sell_ship {index}`) pays the hull's price by her mean condition and age (the module resale curve), times 0.85, less keel damage, plus the trade-in of any module that differs from the stock fit, less any rent owed. You can own at most four ships.
+- **Work for a type of craft.** Each hull has a class (`utility`, `fast`, `passenger`, `bulk`, `heavy`). Contract kinds with `craft` can be taken only in one of those: **bulk freight** (30 to 65 t, a heavy freighter or bulk carrier), **express runs** (a fast courier, deadlines set by a courier's own time), and **charters** (8 to 20 passengers, a passenger shuttle). Their deadlines come from `reference_hull`. The job card says what it needs and where to get one (one of yours laid up, or the yards that sell it). They start at standing 3, so a new pilot sees them as something to aim for, and they are listed on top of the courier work (at most `board.max_craft_offers`, 2, per board), so they never crowd out jobs any ship can do.
+- **Departures from reality, on purpose:** the berth is a flat monthly fee whatever the yard's traffic; a laid-up ship neither wears nor needs crew; changing ships is instant.
+
+## The cockpit cabin (Oct 2026)
+
+Owner's brief: *if you turn about in the cockpit there is nothing else; we need a much better experience there.* The flight deck (`view/flight/flight_deck.gd`) now has the rest of a two-seat command pod round the pilot, built in eye space like the panel so it fits any window: side walls with a window each, quarter lights between the windscreen pillars and the walls, side consoles with switch rows and lit placards, the overhead panel, the seat's bolsters and a throttle quadrant, a floor grating, and the back bulkhead with the hatch, lockers, a cargo strap, the checklist, photos from home, a fire extinguisher and a basil plant on the console.
+
+- **Light.** The cabin is on its own render layer (`CABIN_LAYER`, 4). Every scene sun leaves it out (`Bay.shade_interior`, planetshine too) and the cabin has its own copy of the sun with short, sharp shadows (`sync_sun`), so sunlight comes in only through the glass and its patches sweep across the walls and floor as the ship turns. A warm dome light, the overhead spill and two low console lights keep it a lived-in place in the shade.
+- **Looking about.** Drag with the mouse in either cockpit. On approach the head comes back to the windscreen when you let go; in transit it stays where you put it (C centres it), as the arrow keys do.
+- The solids were wound inside out before this (the eye saw the back faces of every box), which is why the old panel looked flat and dark; fixed in `_hexa`.
 
 ## Performance (Oct 2026)
 

@@ -105,13 +105,32 @@ static func aim(rig: Dictionary, ship_basis: Basis, sun: Vector3, target: Vector
 	var az := atan2(d.x, d.z)
 	var el := clampf(atan2(d.y, Vector2(d.x, d.z).length()), DISH_MIN_EL, PI * 0.5)
 	if fold > 0.0:
-		# Parked: straight ahead and level.
-		az = 0.0 if fold >= 1.0 else az * (1.0 - fold)
-		el = 0.0 if fold >= 1.0 else el * (1.0 - fold)
+		# Stowing: turned to face forward and level (as the panels go flat), then the
+		# mast folds down aft on its foot hinge, which leaves the bowl facing up.
+		var fold_node = dish.get("fold")
+		if fold_node != null and is_instance_valid(fold_node):
+			az = lerp_angle(az, PI, flat)
+			el = lerpf(el, 0.0, flat)
+			(fold_node as Node3D).rotation.x = bend * PI * 0.5
+			if dt < 0.0 or flat >= 1.0:
+				az_node_set(dish, az, -el)
+				return
+		else:
+			az = 0.0 if fold >= 1.0 else az * (1.0 - fold)
+			el = 0.0 if fold >= 1.0 else el * (1.0 - fold)
+	elif dish.get("fold") != null and is_instance_valid(dish["fold"]):
+		(dish["fold"] as Node3D).rotation.x = 0.0
 	var az_node: Node3D = dish["az"]
 	var el_node: Node3D = dish["el"]
 	az_node.rotation.y = _slew(az_node.rotation.y, az, DISH_RATE, dt)
 	el_node.rotation.x = _slew(el_node.rotation.x, -el, DISH_RATE, dt)
+
+
+## Sets the dish's azimuth and elevation hinges directly (stowing, where the angles
+## follow the fold rather than a target).
+static func az_node_set(dish: Dictionary, az: float, el_rot: float) -> void:
+	(dish["az"] as Node3D).rotation.y = wrapf(az, -PI, PI)
+	(dish["el"] as Node3D).rotation.x = el_rot
 
 
 ## Where the view wants the panels: 0 deployed, 1 stowed. The first call, or snap,

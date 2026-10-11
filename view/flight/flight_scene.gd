@@ -54,6 +54,13 @@ var deck: Node3D
 var _deck_mount: Node3D
 ## The pilot's head, swaying a little against the deck under thrust (eye space, m).
 var _head := Vector3.ZERO
+var _sun_light: DirectionalLight3D
+## Looking about the cabin with the mouse (drag): yaw and pitch of the head. Let go and
+## the head comes back to the windscreen.
+var _look := Vector2.ZERO
+var _looking := false
+const LOOK_PER_PX := 0.005
+const LOOK_RETURN := 3.0
 var _last_vel := Vector3.ZERO
 ## The controls as last flown (for the annunciators).
 var controls_now: Dictionary = {}
@@ -196,6 +203,8 @@ func _build_environment() -> void:
 	var t: float = sim.state.time_s
 	var here: Array = eph.position(place_id, t)
 	var sun := DirectionalLight3D.new()
+	_sun_light = sun
+	Bay.shade_interior(sun)
 	var sun_dir := _dir_to(eph.position("sun", t), here)
 	body_dirs["sun"] = sun_dir
 	# Sunlight fades with distance, gently: eyes and cameras adapt.
@@ -260,6 +269,13 @@ func flash(text: String, colour: Color = Color.WHITE, seconds: float = 3.0) -> v
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT]:
+		_looking = event.pressed and view_mode == "cockpit"
+		return
+	if event is InputEventMouseMotion and _looking:
+		_look.x = wrapf(_look.x - event.relative.x * LOOK_PER_PX, -PI, PI)
+		_look.y = clampf(_look.y - event.relative.y * LOOK_PER_PX, -1.3, 1.3)
+		return
 	if docked or event.is_echo() or not event.is_pressed():
 		return
 	if event.is_action_pressed("flight_assist"):
@@ -294,6 +310,8 @@ func _request_tug() -> void:
 
 
 func _physics_process(dt: float) -> void:
+	# Watching from outside (chase, wide): the silence of vacuum (balance.audio).
+	ShipAudio.set_outside(sim.data, view_mode != "cockpit")
 	if docked or sim.state.paused:
 		return
 	if wrecked:
@@ -601,9 +619,12 @@ func _update_camera(dt: float) -> void:
 		camera.fov = FlightDeck.FOV
 		var eye := Transform3D(t.basis * Basis(Vector3.RIGHT, -deg_to_rad(SEAT_PITCH_DEG)), t * Vector3(0, 0.4, nose_z + 1.2))
 		_deck_mount.global_transform = eye
-		camera.global_transform = eye * Transform3D(Basis.IDENTITY, _head)
+		if not _looking and dt > 0.0:
+			_look = _look.lerp(Vector2.ZERO, clampf(dt * LOOK_RETURN, 0.0, 1.0))
+		camera.global_transform = eye * Transform3D(Basis(Vector3.UP, _look.x) * Basis(Vector3.RIGHT, _look.y), _head)
 		var vp := get_viewport().get_visible_rect().size
 		deck.fit(vp.x / maxf(vp.y, 1.0))
+		deck.sync_sun(_sun_light)
 		return
 	camera.fov = 65.0
 	var want := t * Vector3(0, 8.0, 40.0)
@@ -1039,3 +1060,7 @@ func _time_to_rock() -> float:
 		if miss < float(rock["r"]) + ship_radius * 1.5:
 			best = minf(best, t)
 	return best
+
+
+func _exit_tree() -> void:
+	ShipAudio.set_outside(sim.data, false)

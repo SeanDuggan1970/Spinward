@@ -7,7 +7,8 @@
 			3.0,
 			8.0
 		],
-		"max_active": 4
+		"max_active": 4,
+		"max_craft_offers": 2
 	},
 	"reference_ships": {
 		"local": {
@@ -183,6 +184,71 @@
 				"a space-weather sentinel",
 				"a debris-tracking radar satellite",
 				"a comms relay for the far side"
+			]
+		},
+		"bulk_freight": {
+			"weight": 2,
+			"craft": ["heavy", "bulk"],
+			"reference_hull": "heavy_freighter",
+			"mass_t": [30.0, 65.0],
+			"slack": [1.5, 2.4],
+			"pay_base": 9000,
+			"pay_per_day": 2600,
+			"urgency": 0.5,
+			"rep": 3.0,
+			"min_rep": 3.0,
+			"items": [
+				"a hab ring's worth of pressure-hull plate",
+				"ice for a farm module's first planting",
+				"regolith bricks for a radiation berm",
+				"a desalination plant, in pieces",
+				"reaction mass for a survey fleet",
+				"the parts of a whole greenhouse"
+			]
+		},
+		"express": {
+			"weight": 2,
+			"craft": ["fast"],
+			"reference_hull": "courier",
+			"mass_t": [0.05, 2.0],
+			"slack": [1.08, 1.35],
+			"pay_base": 5000,
+			"pay_per_day": 2600,
+			"urgency": 2.0,
+			"rep": 3.0,
+			"min_rep": 3.0,
+			"items": [
+				"antivenom for a lab accident",
+				"a replacement scrubber core, air running low",
+				"a bone-marrow match, on ice",
+				"a pump seal before a hab loses pressure"
+			],
+			"hand_items": [
+				"a surgeon's own instruments",
+				"the signed treaty, before the vote",
+				"insulin for a child who missed the last ship"
+			],
+			"hand_mass_t": [0.002, 0.03]
+		},
+		"charter": {
+			"weight": 2,
+			"craft": ["passenger"],
+			"reference_hull": "shuttle",
+			"per_head": true,
+			"count": [8, 20],
+			"slack": [1.4, 2.2],
+			"pay_base": 700,
+			"pay_per_day": 380,
+			"urgency": 0.6,
+			"rep": 3.0,
+			"min_rep": 3.0,
+			"who": [
+				"a school trip to see the ring",
+				"a choir on tour",
+				"a shift of construction crew",
+				"settlers with everything they own in a duffel",
+				"a football team and its supporters",
+				"a conference of hydroponics engineers"
 			]
 		},
 		"covert_delivery": {

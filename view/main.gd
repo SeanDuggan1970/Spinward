@@ -368,6 +368,22 @@ func _handle_events() -> void:
 			"impound_paid":
 				notice("Release fee paid (%s). She's yours again." % UI.money(-float(d["credits"])), UI.AMBER)
 				refresh = true
+			"ship_bought":
+				notice("Bought the %s, a %s, for %s." % [d["ship"], sim.data.ships[d["hull"]]["name"].to_lower(), UI.money(-float(d["credits"]))], UI.GOOD)
+				refresh = true
+			"ship_switched":
+				notice("You have the %s now. The %s waits in her berth at %s." % [d["ship"], d["from"], sim.data.places[d["place"]]["name"]], UI.GOOD)
+				refresh = true
+			"ship_sold":
+				notice("Sold the %s for %s." % [d["ship"], UI.money(float(d["credits"]))], UI.AMBER)
+				refresh = true
+			"berth_rent":
+				refresh = true
+			"berth_unpaid":
+				notice("Couldn't pay the %s's berth at %s: %s owed (%d month%s behind). The yard will sell her if it goes on." % [d["ship"], sim.data.places[d["place"]]["name"], UI.money(float(d["owed"])), int(d["months"]), "" if int(d["months"]) == 1 else "s"], UI.WARN)
+			"ship_seized":
+				notice("%s sold the %s for the berth rent owed (%s). They sent on the rest: %s." % [sim.data.places[d["place"]]["name"], d["ship"], UI.money(float(d["owed"])), UI.money(float(d["credits"]))], UI.WARN)
+				refresh = true
 			"unfiled_departure":
 				if float(d["credits"]) < 0.0:
 					notice("Left %s without filing a plan. Traffic control fined us %s%s." % [sim.data.places[d["place"]]["name"], UI.money(-float(d["credits"])), " and they're keeping count" if int(d["times"]) > 1 else ""], UI.WARN)
@@ -896,6 +912,12 @@ func _tour(dir: String) -> void:
 		await get_tree().process_frame
 	_shot(dir + "/2d-tips.png")
 	if _screen is StationScreen:
+		_screen._tab_index = 7
+		_screen.refresh()
+	for _i in 5:
+		await get_tree().process_frame
+	_shot(dir + "/2f-shipyard.png")
+	if _screen is StationScreen:
 		_screen._tab_index = 1
 		_screen.refresh()
 	for _i in 5:
@@ -917,6 +939,13 @@ func _tour(dir: String) -> void:
 	# Telescope on the Moon: the awe shot.
 	var tv = (_screen as MapScreen)._view
 	if tv:
+		# Look about the cabin first: aft to the hatch, then out of the side window.
+		for look in [["3f-transit-cabin-aft", 2.7, -0.25], ["3g-transit-cabin-side", 1.35, -0.2]]:
+			tv.look_yaw = look[1]
+			tv.look_pitch = look[2]
+			for _i in 10:
+				await get_tree().process_frame
+			_shot("%s/%s.png" % [dir, look[0]])
 		var to_moon: Vector3 = tv.camera.global_transform.basis.inverse() * Vector3(tv.readout["moon_dir"])
 		tv.look_yaw = atan2(-to_moon.x, -to_moon.z)
 		tv.look_pitch = asin(clampf(to_moon.y, -1.0, 1.0))
@@ -944,6 +973,14 @@ func _tour(dir: String) -> void:
 	for _i in 30:
 		await get_tree().process_frame
 	_shot(dir + "/5-flight-close.png")
+	# Turn about in the cabin, as a drag with the mouse would.
+	flight._looking = true
+	flight._look = Vector2(-2.5, -0.2)
+	for _i in 10:
+		await get_tree().process_frame
+	_shot(dir + "/5b-flight-cabin.png")
+	flight._looking = false
+	flight._look = Vector2.ZERO
 	flight.view_mode = "chase"
 	for _i in 10:
 		await get_tree().process_frame

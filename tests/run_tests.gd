@@ -36,6 +36,7 @@ const TravelSystem := preload("res://sim/systems/travel_system.gd")
 const PodSystem := preload("res://sim/systems/pod_system.gd")
 const Detection := preload("res://sim/detection.gd")
 const DetectionSystem := preload("res://sim/systems/detection_system.gd")
+const Fleet := preload("res://sim/fleet.gd")
 
 const AU := 1.495978707e11
 const DAY := 86400.0
@@ -129,6 +130,10 @@ func _initialize() -> void:
 	test_docking_bays()
 	test_satellite_missions()
 	test_secret_work()
+	test_undock_timing()
+	test_silent_outside()
+	test_fleet()
+	test_craft_contracts()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -2450,7 +2455,8 @@ func test_ship_audio() -> void:
 	for _k in 30:
 		audio.update(1.0 / 30.0, {"thrust": 1.0, "spin": Vector3(0, 1, 0), "turn": 0.6})
 	check(audio._drive_on and audio._drive_level > 0.5, "The drive lights and builds to a roar")
-	check(int(audio.sounds_played) >= 4, "A turn fires the jets and the frame creaks (%d sounds)" % int(audio.sounds_played))
+	# The drive lights, a jet fires (one at a time: no rattle), and the frame creaks.
+	check(int(audio.sounds_played) >= 3, "A turn fires a jet and the frame creaks (%d sounds)" % int(audio.sounds_played))
 	var panel: Node3D = model["rig"]["arrays"][0]["node"]
 	for _k in 10:
 		panel.rotation.x += 0.03
@@ -2481,12 +2487,12 @@ func test_time_ramps() -> void:
 	s.time_scale = 100.0
 	check(sim.apply({"type": "depart", "to": "halo_depot"}) == "", "Depart for the ramp test")
 	check(s.time_scale == 1.0, "Departure starts at x1 (%.0f)" % s.time_scale)
-	for _i in 200:
+	for _i in 1000:
 		sim.tick(0.05)
-	check(s.time_scale == 1.0, "Ten seconds out, still at x1 to watch the port fall away (%.0f)" % s.time_scale)
+	check(s.time_scale == 1.0, "Fifty seconds out, still at x1 to watch the ship back out of the bay (%.0f)" % s.time_scale)
 	for _i in 500:
 		sim.tick(0.05)
-	check(s.time_scale == 1000.0, "Thirty-five seconds out, time has stepped up to x1000 (%.0f)" % s.time_scale)
+	check(s.time_scale == 1000.0, "Seventy-five seconds out, time has stepped up to x1000 (%.0f)" % s.time_scale)
 	s.time_scale = 100000.0
 	var last_scale := -1.0
 	var seen_slow := false
@@ -4404,3 +4410,135 @@ func test_secret_work() -> void:
 	check(sim.apply({"type": "depart", "to": "kibo_ring"}).begins_with("your ship is impounded"), "An impounded ship goes nowhere")
 	s.credits = 1.0e5
 	check(sim.apply({"type": "pay_impound"}) == "" and sim.apply({"type": "depart", "to": "kibo_ring"}) == "", "Pay the fee and leave")
+
+
+func test_undock_timing() -> void:
+	var d = DataCatalog.load_default()
+	var Undock = load("res://view/flight/undock.gd")
+	var cfg: Dictionary = d.balance["undock"]
+	var depth := float(d.balance["bays"]["depth_m"])
+	var clear: float = Undock.clear_t(cfg, depth, 0.5)
+	check(is_zero_approx(Undock.moved(cfg, float(cfg["move_at_s"]) - 0.1)), "The ship waits on its berth while the doors open")
+	check(absf(Undock.moved(cfg, clear) - (depth + float(cfg["clear_m"]) - 0.5)) < 0.01, "At clear_t the nose is clear of the mouth")
+	check(Undock.pushing(cfg, float(cfg["move_at_s"]) + 1.0) and not Undock.pushing(cfg, clear), "Thrusters push while it gathers way, then it coasts out")
+	check(Undock.roll_share(cfg, clear - 1.0, clear) == 1.0 and Undock.roll_share(cfg, clear + float(cfg["roll_stop_s"]), clear) == 0.0, "It turns with the station in the bay and has stopped its roll once clear")
+	# The departure ramp holds x1 until the ship has turned for its burn.
+	check(float(d.balance["time"]["departure_ramp"][0][0]) >= Undock.turn_t(cfg, clear), "Time holds at x1 through the undock (%.0f s)" % Undock.turn_t(cfg, clear))
+
+
+func test_silent_outside() -> void:
+	var d = DataCatalog.load_default()
+	var ShipAudioScript = load("res://view/audio/ship_audio.gd")
+	check(bool(d.balance["audio"]["silent_outside"]), "Space is silent from outside by default")
+	ShipAudioScript.set_outside(d, true)
+	check(ShipAudioScript.is_silent(), "An outside camera mutes the ship's sounds")
+	ShipAudioScript.set_outside(d, false)
+	check(not ShipAudioScript.is_silent(), "Back in the cockpit, the ship is heard again")
+	d.balance["audio"]["silent_outside"] = false
+	ShipAudioScript.set_outside(d, true)
+	check(not ShipAudioScript.is_silent(), "Switched off, the ship is heard from outside too")
+	ShipAudioScript.set_outside(d, false)
+
+
+func test_fleet() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	check(s.fleet.is_empty() and s.location["place"] == "kibo_ring", "A new game owns one ship, docked at Kibo Ring")
+	check("courier" in Fleet.hulls_sold(d, "kibo_ring") and not "heavy_freighter" in Fleet.hulls_sold(d, "kibo_ring"), "Kibo Ring's yard sells a courier, not a heavy freighter")
+	check(Fleet.hulls_sold(d, "kalpana_one").is_empty(), "No yard, no ships for sale")
+	check(sim.apply({"type": "buy_ship", "hull": "courier"}) != "", "A courier is out of reach on starting credits")
+	check(sim.apply({"type": "buy_ship", "hull": "heavy_freighter"}) != "", "Not sold here")
+	s.credits = 1.0e6
+	var price := Fleet.price(d, "courier")
+	var rent := Fleet.rent(d, "courier", "kibo_ring")
+	check(sim.apply({"type": "buy_ship", "hull": "courier", "name": "Swift"}) == "", "Buy a courier")
+	check(absf(s.credits - (1.0e6 - price - rent)) < 1e-6, "Paid the price and the first month's berth")
+	check(s.fleet.size() == 1 and s.fleet[0]["ship"]["name"] == "Swift" and s.ship["hull"] == "mule", "She waits in a berth; you still fly the Mule")
+	var bought: Dictionary = s.fleet[0]["ship"]
+	check(float(bought["wof"]["valid_until_t"]) > s.time_s + 100.0 * DAY and bought["wof"]["result"] == "pass", "A bought ship comes with a Warrant of Fitness")
+	check(absf(float(bought["fuel_t"]) - ShipStats.fuel_capacity_t(bought, d)) < 1e-6, "and full tanks")
+	# Change ships: the Mule takes the berth.
+	s.ship["cargo"]["water_ice"] = 5.0
+	check(sim.apply({"type": "switch_ship", "index": 0}) == "", "Step across to the courier")
+	check(s.ship["name"] == "Swift" and s.fleet.size() == 1 and s.fleet[0]["ship"]["hull"] == "mule", "Flying the courier; the Mule is laid up")
+	check(float(s.fleet[0]["ship"]["cargo"].get("water_ice", 0.0)) == 5.0, "Her cargo stays in her hold")
+	# Rent: a month on, it comes out of the account.
+	var mule_rent := Fleet.rent(d, "mule", "kibo_ring")
+	sim.take_events()
+	sim.advance_game_time(Fleet.month_s(d) + 3600.0)
+	var charged := 0.0
+	for e in sim.take_events():
+		if e["type"] == "berth_rent":
+			charged -= float(e["data"]["credits"])
+	check(absf(charged - mule_rent) < 1.0, "A month's berth rent is charged (%.0f of %.0f)" % [charged, mule_rent])
+	# You cannot leave a ship with work aboard, or change ships away from a yard.
+	s.contracts["active"].append({"id": 999, "state": "carried", "mass_t": 0.1, "passengers": 0})
+	check(sim.apply({"type": "switch_ship", "index": 0}) != "", "Not with contract work aboard")
+	s.contracts["active"].clear()
+	s.location = {"status": "docked", "place": "kalpana_one"}
+	check(sim.apply({"type": "switch_ship", "index": 0}) != "", "She is berthed at Kibo Ring, not here")
+	s.location = {"status": "docked", "place": "kibo_ring"}
+	# Saves keep the fleet.
+	var copy := GameState.new()
+	copy.load_dict(s.to_dict())
+	check(copy.fleet.size() == 1 and copy.fleet[0]["ship"]["hull"] == "mule", "The fleet is saved")
+	# Unpaid rent: owed, then the yard sells her and sends the rest.
+	s.credits = 0.0
+	sim.take_events()
+	sim.advance_game_time(Fleet.month_s(d) * 3.5)
+	var events := sim.take_events()
+	check(events.any(func(e): return e["type"] == "berth_unpaid"), "Rent that cannot be paid is owed")
+	check(s.fleet.is_empty() and events.any(func(e): return e["type"] == "ship_seized"), "After %d unpaid months the yard sells her" % int(Fleet.cfg(d)["seize_after"]))
+	check(s.credits > 0.0, "and pays over what is left after the rent (%.0f cr)" % s.credits)
+	# Sell one: worth less than new, more than nothing.
+	s.credits = 1.0e6
+	check(sim.apply({"type": "buy_ship", "hull": "mule"}) == "", "Buy a Mule")
+	var value := Fleet.sale_value(d, s.fleet[0]["ship"])
+	check(value > 0.5 * Fleet.price(d, "mule") and value < Fleet.price(d, "mule"), "A sound Mule sells for less than the yard asks (%.0f)" % value)
+	var c0 := s.credits
+	check(sim.apply({"type": "sell_ship", "index": 0}) == "" and absf(s.credits - c0 - value) < 1e-6 and s.fleet.is_empty(), "Sold")
+	# A limit on how many you look after.
+	for i in int(Fleet.cfg(d)["max_ships"]) - 1:
+		check(sim.apply({"type": "buy_ship", "hull": "mule"}) == "", "Buy ship %d" % (i + 2))
+	check(sim.apply({"type": "buy_ship", "hull": "mule"}) != "", "No more than %d ships" % int(Fleet.cfg(d)["max_ships"]))
+	var names := {}
+	for e in s.fleet:
+		names[e["ship"]["name"]] = true
+	check(names.size() == s.fleet.size() and not names.has(s.ship["name"]), "Each new ship gets her own name")
+	# Buy and board at once: the old ship takes the berth.
+	var sim2 := fresh()
+	sim2.state.credits = 1.0e6
+	check(sim2.apply({"type": "buy_ship", "hull": "shuttle", "board": true}) == "" and sim2.state.ship["hull"] == "shuttle" and sim2.state.fleet[0]["ship"]["hull"] == "mule", "Buy a shuttle and fly her away")
+
+
+func test_craft_contracts() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 11
+	var seen := {}
+	for kind in ["bulk_freight", "express", "charter"]:
+		for _i in 20:
+			var offer := Contracts.make_offer(d, sim.ephemeris, s, rng, "kibo_ring", kind, "board")
+			if not offer.is_empty():
+				seen[kind] = offer
+				break
+	check(seen.size() == 3, "Bulk freight, express and charter work is offered (%s)" % ", ".join(seen.keys()))
+	check(Array(seen.get("bulk_freight", {}).get("craft", [])).has("heavy"), "Bulk freight asks for a heavy freighter")
+	check(Array(seen.get("express", {}).get("craft", [])) == ["fast"], "An express run asks for a fast courier")
+	# The Mule cannot take them; the right craft can.
+	s.reputation["Terran Compact"] = 10.0
+	for kind in seen:
+		var offer: Dictionary = seen[kind]
+		offer["id"] = 5000 + seen.keys().find(kind)
+		s.contracts["board"]["kibo_ring"] = [offer]
+		var why := String(sim.apply({"type": "accept_contract", "id": offer["id"]}))
+		check(why.contains(Fleet.class_name_of(d, String(offer["craft"][0]))), "The Mule is turned down for %s: %s" % [kind, why])
+	s.credits = 2.0e6
+	check(sim.apply({"type": "buy_ship", "hull": "courier", "board": true}) == "", "Buy a courier")
+	var ex: Dictionary = seen["express"]
+	s.contracts["board"]["kibo_ring"] = [ex]
+	check(sim.apply({"type": "accept_contract", "id": ex["id"]}) == "", "A courier takes the express run")
+	check(float(ex["window_s"]) / DAY < float(ex["quick_days"]) * 1.4, "Express deadlines are tight (%.1f d for %.1f d)" % [float(ex["window_s"]) / DAY, float(ex["quick_days"])])

@@ -24,6 +24,7 @@ const Contracts := preload("res://sim/contracts.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
 const Favours := preload("res://sim/favours.gd")
 const Fitness := preload("res://sim/fitness.gd")
+const Fleet := preload("res://sim/fleet.gd")
 const Navigation := preload("res://sim/navigation.gd")
 const PodSystem := preload("res://sim/systems/pod_system.gd")
 const V := preload("res://sim/v3.gd")
@@ -128,10 +129,14 @@ func _refresh_board(place: String) -> void:
 	board = board.filter(func(o): return float(o["expires_t"]) > s.time_s)
 	var cap := int(data.contracts["board"]["max_offers"])
 	var tries := 0
-	# Satellite launches are listed on top of the courier work, not instead of it.
-	while board.filter(func(o): return o["channel"] == "board" and not o.get("payload", false)).size() < cap and tries < cap * 3:
+	# Satellite launches and work for a particular craft (sim/fleet.gd) are listed on top
+	# of the courier work, not instead of it; a few craft jobs at most.
+	var extra := func(o): return o.get("payload", false) or o.has("craft")
+	var craft_cap := int(data.contracts["board"].get("max_craft_offers", 2))
+	while board.filter(func(o): return o["channel"] == "board" and not extra.call(o)).size() < cap and tries < cap * 3:
 		tries += 1
-		var kind := Contracts.pick_kind(data, _rng, func(_k): return true)
+		var crafts := board.filter(func(o): return o.has("craft")).size()
+		var kind := Contracts.pick_kind(data, _rng, func(k): return crafts < craft_cap or not data.contracts["kinds"][k].has("craft"))
 		var offer := Contracts.make_offer(data, sim().ephemeris, s, _rng, place, kind, "board")
 		if not offer.is_empty():
 			board.append(_numbered(offer))
@@ -206,6 +211,8 @@ func _accept(command: Dictionary) -> String:
 		var unfit := Fitness.passenger_job_block(s, data)
 		if unfit != "":
 			return unfit
+	if not Fleet.is_craft(data, s.ship, offer.get("craft", [])):
+		return "that needs %s: buy or switch to one at a shipyard" % Fleet.craft_words(data, offer["craft"])
 	if offer.get("lander", false) and not PodSystem.has_mount(s.ship, data):
 		return "that needs a lander: fit a lander bay"
 	var job: Dictionary = offer.duplicate(true)
@@ -292,7 +299,10 @@ func _unload(job: Dictionary) -> void:
 
 
 func _collect(job: Dictionary) -> void:
-	var why := _room_for(job)
+	var data = sim().data
+	var why := "" if Fleet.is_craft(data, sim().state.ship, job.get("craft", [])) else "that needs %s" % Fleet.craft_words(data, job["craft"])
+	if why == "":
+		why = _room_for(job)
 	if why != "":
 		sim().emit("contract_no_room", {"id": job["id"], "reason": why})
 		return
