@@ -12,6 +12,9 @@
 ## listening device, planted near `to`), watched (`to` belongs to the watcher), lander
 ## (needs a lander bay), covert (secret work) with watcher (the operator it is hidden
 ## from). A covert drop goes to a site; an extraction collects at one (pickup).
+## craft (a list of hull classes, sim/fleet.gd) is work only those ships can take: bulk
+## freight for a heavy freighter, an express run for a fast courier, a charter for a
+## passenger shuttle.
 extends RefCounted
 
 const Navigation := preload("res://sim/navigation.gd")
@@ -37,6 +40,13 @@ static func tier(data, rep: float) -> String:
 		if rep >= float(t[0]):
 			name = String(t[1])
 	return name
+
+
+## A fully fuelled stock example of a hull.
+static func hull_ship(data, hull_id: String) -> Dictionary:
+	var ship := {"hull": hull_id, "modules": data.ships[hull_id]["modules"].duplicate(), "cargo": {}, "fuel_t": 0.0}
+	ship["fuel_t"] = ShipStats.fuel_capacity_t(ship, data)
+	return ship
 
 
 ## A fully fuelled reference ship of a range class, for setting deadlines.
@@ -99,6 +109,9 @@ static func make_offer(data, eph, state, rng: RandomNumberGenerator, place: Stri
 	if others.is_empty():
 		return {}
 	var ref := reference_ship(data, "long_haul" if long_haul else "local")
+	# Work for a particular craft sets its deadline by that craft.
+	if spec.has("reference_hull"):
+		ref = hull_ship(data, String(spec["reference_hull"]))
 	var pickup := ""
 	var client := client_of(data, place)
 	var watcher := ""
@@ -199,6 +212,8 @@ static func make_offer(data, eph, state, rng: RandomNumberGenerator, place: Stri
 			offer[flag] = true
 	if watcher != "":
 		offer["watcher"] = watcher
+	if spec.has("craft"):
+		offer["craft"] = (spec["craft"] as Array).duplicate()
 	# Some clients pay part of it in kind (data/favours.json); the cash part drops to match.
 	if not spec.get("covert", false):
 		Favours.maybe_in_kind(data, rng, offer)

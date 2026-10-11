@@ -259,3 +259,12 @@ Full write-up: [2026-10-07-economy-together.md](2026-10-07-economy-together.md).
 - First bot run (5 seeds, 180 days, upgrade=1): the mean fell from 117,238 to 89,220 cr. Satellites were taking courier slots on the 4-offer boards, and the bot (a courier) skips them. Fixed: satellites are listed on top of the courier work.
 - After the fix: a mean of 120,534 cr (seeds 123k, 144k, 91k, 137k, 108k) and a median first upgrade on day 21.9 (19.7 before). That's within the seed-to-seed spread. The bot never takes satellites or secret work.
 - Secret work pays roughly 1.5 to 3 times a courier job of the same length (pay_base 6,000 to 12,000). Being caught costs 2,500 cr, and a third offence costs 6,000 more to free the ship.
+
+
+## A fleet, and work for a type of craft (2026-10-11)
+
+- New data: `ship_economy.fleet` (hull prices 160,000 to 1,150,000 cr, a 1,500 cr/month berth times the hull's `berth_mult`) and three contract kinds that need a particular craft: `bulk_freight`, `express` and `charter`. All start at standing 3.
+- First run (5 seeds): the mean fell from 120,534 to 100,699 cr. As with satellites, the craft jobs were taking slots on the 4-offer boards, and the bot (in a Mule) can't take them. Fixed: they are listed on top of the courier work, at most `board.max_craft_offers` (2) per board.
+- After the fix (seeds 1 to 5): a mean of 105,630 cr (134k, 80k, 139k, 24k, 151k), median first upgrade on day 10.7. Seed 4 is the low one.
+- To check whether that is noise, seeds 6 to 15 were run on this branch and on main: this branch averaged 108,522, main 81,545. Over all 15 seeds this branch averaged 107,558 and main 94,541. The bot's end credits range from 21,000 to 151,000 with seed alone, so the change is within the spread. The bot never buys a second ship or takes craft work.
+- Owning a second ship: a laid-up Mule costs 1,500 cr a month (18,000 a year), about two courier jobs. A heavy freighter's berth is 4,500 a month. A bulk freight job pays roughly 9,000 + 2,600 per day of the trip, so a heavy freighter needs about one job a month to cover a berth for the Mule left behind.

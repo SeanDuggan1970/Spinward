@@ -12,6 +12,7 @@ const Ephemeris := preload("res://sim/ephemeris.gd")
 const CalendarSystem := preload("res://sim/systems/calendar_system.gd")
 const EconomySystem := preload("res://sim/systems/economy_system.gd")
 const ShipyardSystem := preload("res://sim/systems/shipyard_system.gd")
+const FleetSystem := preload("res://sim/systems/fleet_system.gd")
 const TravelSystem := preload("res://sim/systems/travel_system.gd")
 const NpcSystem := preload("res://sim/systems/npc_system.gd")
 const ProjectSystem := preload("res://sim/systems/project_system.gd")
@@ -50,7 +51,7 @@ func _init(catalog: DataCatalog = null) -> void:
 	ephemeris = Ephemeris.new(data.bodies, data.locations)
 	state = GameState.new()
 	# Order matters within a tick: the clock moves first, then everything catches up to it.
-	systems = [CalendarSystem.new(), EconomySystem.new(), ShipyardSystem.new(), WearSystem.new(), FitnessSystem.new(), InsuranceSystem.new(), TravelSystem.new(), NpcSystem.new(), ProjectSystem.new(), TipSystem.new(), ContractSystem.new(), FavourSystem.new(), SiteSystem.new(), StorySystem.new(), ElevatorSystem.new(), DamageSystem.new(), PowerSystem.new(), BadgeSystem.new(), PodSystem.new(), DetectionSystem.new(), NewsSystem.new()]
+	systems = [CalendarSystem.new(), EconomySystem.new(), ShipyardSystem.new(), FleetSystem.new(), WearSystem.new(), FitnessSystem.new(), InsuranceSystem.new(), TravelSystem.new(), NpcSystem.new(), ProjectSystem.new(), TipSystem.new(), ContractSystem.new(), FavourSystem.new(), SiteSystem.new(), StorySystem.new(), ElevatorSystem.new(), DamageSystem.new(), PowerSystem.new(), BadgeSystem.new(), PodSystem.new(), DetectionSystem.new(), NewsSystem.new()]
 	for system in systems:
 		system.setup(self)
 

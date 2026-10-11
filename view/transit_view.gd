@@ -33,6 +33,7 @@ var _ready_basis := false
 var look_yaw := 0.0
 var look_pitch := 0.0
 var telescope := false
+var _dragging := false
 ## Live values for the overlay.
 var readout: Dictionary = {}
 ## The flight deck, fixed to the ship: free look turns the pilot's head inside it.
@@ -47,6 +48,8 @@ func _init(owner_sim) -> void:
 func _ready() -> void:
 	add_child(SkyKit.environment())
 	_sun = DirectionalLight3D.new()
+	# The cockpit cabin has its own shadowed sun (flight_deck.gd sync_sun).
+	_sun.light_cull_mask &= ~FlightDeck.CABIN_LAYER
 	_sun.light_energy = 1.6
 	add_child(_sun)
 	_sun_disc = Kit.sphere(1.0, Kit.glow(Color("fff6e0"), 6.0))
@@ -145,6 +148,7 @@ func _update(dt: float) -> void:
 	deck.visible = camera.fov > WIDE_FOV * 0.8
 	var vp := get_viewport().get_visible_rect().size
 	deck.fit(vp.x / maxf(vp.y, 1.0))
+	deck.sync_sun(_sun)
 
 	var v_now: Array = Navigation.transit_velocity(loc, t)
 	var speed := V.length(v_now)
@@ -167,6 +171,15 @@ func _update(dt: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	# Drag with the mouse to look about the cabin (as the arrow keys do).
+	if event is InputEventMouseButton and event.button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT]:
+		_dragging = event.pressed
+		return
+	if event is InputEventMouseMotion and _dragging:
+		var k := 0.005 * (0.1 if telescope else 1.0)
+		look_yaw -= event.relative.x * k
+		look_pitch = clampf(look_pitch - event.relative.y * k, -1.4, 1.4)
+		return
 	if event.is_echo():
 		return
 	if event.is_action_pressed("transit_telescope"):
