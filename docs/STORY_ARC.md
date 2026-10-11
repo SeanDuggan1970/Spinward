@@ -1,114 +1,131 @@
 # The story arc: a fuller sketch (draft for Sean to react to)
 
-Status: **proposal, nothing built.** Builds on what exists in `data/story.json` (the Long View and Sufficiency arcs) and the guardrails in `DESIGN.md`: hopeful tone, hazards over villains, combat last and non-lethal, the story finds you rather than being pushed at you.
+Status: **proposal, nothing built.** Revised after Sean's notes (2026-10-11):
+- Hibernation is a core mechanic, not a fix: the player tunnels through deep time like a bookworm, detached from small human affairs, and gets to witness a grander stage.
+- The arc is more hidden. The occultation is only an odd hint at first.
+- The minds try first, with an uncrewed probe, and it goes poorly: whatever is out there will not deal with minds alone. That is what gives people their value and their role.
+
+The guardrails from `DESIGN.md` still hold: hopeful tone, hazards over villains, combat last and non-lethal, and the story finds you rather than being pushed at you.
 
 ## The shape in one paragraph
 
-Something old and perfectly black sits a thousand AU out. The minds found it first, but they have a rule that the unknown is met by a person, and they pick you. You sleep two and a half years out to it and say hello, and it says hello back. Then it asks a question nobody can answer alone: *who are you?* (singular or plural, it isn't clear). The last act is the whole system working out its answer, with you as the courier, the go-between and the one person everyone has heard of. It ends with a reply built by everyone and sent together, and a sign that the conversation has only just started.
+A dead probe's last data shows three stars winking out. It is an oddity in the news, gossip in bars, and easy to miss. The minds can't stop thinking about it, so they quietly build and launch a deep probe of their own. Years of game time pass, and the probe arrives. The meeting goes nowhere: the object won't talk to it, and turns away from it as a cat turns from a stranger's hand. The minds conclude that it answers only *someone*: a living person, mortal, who can be changed by the meeting. For the first time the minds need people for something they cannot do. They look for a pilot who delivers, and find you. You sleep out to it, it says hello to you, and the rest of the game is the system learning what it means that the conversation has to go through a human.
 
-## Act I: The Occultation (exists; small additions)
+## Hibernation: the bookworm mechanic
 
-Beats 1 to 3 as now: Ines Okafor's sealed case for Farside, the Hermes-7 recorder, the three winking stars, the mind in a box to Trojan Yards.
+A long-sleep pod you can sleep in on any long voyage, or at a port to let time pass. You come through months or years in a minute of real time.
 
-Additions:
-- **With walking (step 8):** Ines buys you that drink at a real bar table, and Adeyemi plays the recorder on a real screen in the array's control room. The text messages become scenes.
-- **A thread for later:** the Terran Compact has its own copy of the Hermes-7 data (it was their probe). One Spaceline item mid-act, "Compact Science re-opens Hermes-7 inquiry", tells the attentive player they are not the only ones looking.
+- **What you see:** the cabin dims and the onboard mind flies the ship and keeps watch. You wake to a **digest** of what changed: headlines, projects finished, prices moved, ships bought and lost, letters from people you know. The best of the digest is the sense of the world moving on without you.
+- **What it costs:** wear, life support and propellant as usual. You come back older: the game's calendar shows your own waking days next to the system's date, and the gap is a stat to be proud of. The *Bookworm* badge goes to a pilot who has slept through ten years.
+- **Where you get one:** at first only the Long View's lent berth. Later a yard-sold version, after the Spaceline reports the technology spreading, so the mechanic becomes part of ordinary long-haul life.
+- **Sleeping at a port:** rent a sleep berth and wake in N months. Your laid-up fleet earns nothing and costs its berths. A sleeper should plan.
+- **Under the hood:**
+  - While you sleep, the world ticks coarsely: a data knob, `balance.economy.sleep_step_hours`, set to perhaps 24 instead of 1.
+  - Measured: 900 game days take about 190 s of CPU at hourly steps (more in the browser). Daily steps would cut that about 20×, to about 10 s.
+  - It is deterministic: the same sleep always uses the same step.
+  - It needs no faster clock. The bottleneck is how much world the sim runs per second.
+  - Awake flight still works for anyone who wants to watch, and the departure ramp could step on to ×1,000,000 for deep-space legs.
 
-## Act II: The Long Sleep (exists as one beat; becomes a short act)
+## Act 0: The Oddity (hidden, ambient, easy to miss)
 
-### Putting your affairs in order (uses the fleet)
-- Patient Arithmetic lends the drive and berth to **one of your ships**. You choose which (any hull with a cargo slot).
-- Five years there and back means berth rent on the rest of your fleet. The Long View offers to pay it ("we can be patient with money too"), or you sell up. It's a real choice with a cost in standing, not cash: a pilot who takes the Long View's money owes them.
-- Open contracts must be finished or handed off. That's the same rule as changing ships.
+Nothing is offered to the player. It's just there for a curious one to notice:
+- **Spaceline, early game:** "Hermes-7 data release: Farside astronomers puzzled by 'three-star blink' in probe's final frames." One line, between a wedding and a price story.
+- **Brokers:** now and then a tip comes with a rumour attached, such as "the Farside lot are buying a lot of coffee lately."
+- **The jobs board:** the hand-carried items that already exist (*calibration masters for a telescope*, *survey data too big to send*) start pointing at Farside and Valhalla more often.
+- **Hermes-7:** the wreck stays a findable site for explorers. Its recorder can be recovered and sold to Farside for a modest fee. A pilot who does this has, without knowing it, handed the minds their first clue.
 
-### Who comes with you (ties the side arc in)
-- If you finished the Sufficiency arc, **Delegate Steady Hand** asks to come: "I was wrong about the Lacuna. I would like to be wrong in person." She rides in the berth's spare slot and talks during the wake-ups.
-- Otherwise a fragment of Patient Arithmetic called **Small Hours** flies the ship while you sleep.
+## Act I: The Probe (world events, on the world's clock)
 
-### The voyage as hibernation (fixes the replay problem; see below)
-You climb into the pod and the cabin dims. Small Hours (or Steady Hand) wakes you three times, each a ten-second vignette you can skip:
-1. **The heliopause** (about 120 AU): the solar wind stops. The Sun is the brightest star and nothing more. Is there something to see out the side window? Look back and find home.
-2. **Sedna's orbit:** a dim red world passes, a few million km off. "Nobody has been this far with their eyes open."
-3. **A hazard, not a villain:** a dust strike holes a radiator. Small Hours needs hands. Once walking exists this is a short EVA on the hull. Until then, a choice: patch it, or run hot and slow (costs weeks).
+These are things that happen in the system whether or not the player is paying attention, through the Spaceline and the projects board:
+- **Year 1:** "A Commons mind consortium announces *Long Patience*, a deep probe to 'look at something odd', with no further comment." It appears as a project. The player can haul for it (the drive parts and the long-haul tanks), but doesn't have to.
+- **Launch:** a set piece at Trojan Yards: a small, fast, beautiful thing leaving on a column of violet light. The news covers it once, then forgets.
+- **Years pass.** The probe takes about three years to get there, because it carries no one. A player who hibernates sees the launch and the arrival close together, which is the bookworm's reward.
+- **The arrival goes poorly.** The probe reaches the Lacuna and sends greetings, counts and maths. Nothing comes back for months. Then the object **moves**, slowly and deliberately, keeping a few million km between itself and the probe, however the probe approaches. It does nothing hostile; it is simply not interested.
+- **The minds go quiet.** Commons traffic is a little slower for a month; the drone freighters you pass say less. A Spaceline columnist notices: "Is something bothering the minds?" The player may feel it before being told.
 
-### The meeting (exists)
-Say hello, and it says hello back in your own voice, with the light-time taken off.
+## Act II: The Approach (the existing beats, retold)
 
-## Act III: The Question (new)
+The minds draw their conclusion. Hermes-7 was a machine and saw only a shadow. *Long Patience* was a mind and was turned away. Whatever it is, it answers someone who is alive, who could die, and who would be changed by meeting it. The Long View's old rule, that the unknown is met by a person, was a courtesy. Now it is a fact.
+
+1. **Ines Okafor** (needs three on-time deliveries and Known standing, and now also the probe's failure in the news) buys you a drink. With walking, this is a real scene at a bar table. She's careful: "Some very patient friends have a problem they cannot solve without you, and they are not used to that."
+2. **Farside:** Adeyemi plays you both recordings: Hermes-7's three blinking stars, and *Long Patience*'s months of silence and the object sliding away from it. "It can tell the difference between us and them. We don't know how."
+3. **The mind in a box** to Trojan Yards, as now.
+4. **The loan.** Patient Arithmetic is honest about what it costs them: "We are not used to being the ones who cannot go. We would like to be there through you, if you'll let us listen." You get the drive and the sleep pod, and the choice of which of your ships to take. Before you leave, sort out the rest of your fleet: the Long View offers to pay the berths, but then you owe them.
+5. **The long sleep:** about 2.5 years, slept through, with three short wake-ups:
+   1. the heliopause, where you look back and find the Sun
+   2. Sedna passing, dim and red
+   3. a dust strike to patch; with walking, an EVA on the hull
+6. **The meeting.** It doesn't move away from you. Two days after your count, one to ten, it comes back in your own voice, from all around the sky. The minds, listening through your ship, are overjoyed and a little hurt.
+
+## Act III: The Interpreter (new)
+
+### What the meeting means
+The Lacuna will talk, but only through a person. Anything the minds send direct is ignored; anything you relay is answered. People now matter, as the go-between for the most important conversation in history. The minds have to trust a mortal with it. That is the hopeful note: neither side can do this alone.
 
 ### The question
-Two days after the greeting, the Lacuna sends one more thing: your count, one to ten, then a pause, then **"?"** after a number it leaves blank. Adeyemi, years later and by light-speed, reads it as *how many of you are there?* Patient Arithmetic reads it as *which of you is speaking?* Neither knows. Everyone agrees it deserves an answer.
+After the greeting it sends one more thing: your count, then a pause, then a blank, as if asking *how many of you are there?* Or is it *which of you is speaking?* The minds and the astronomers argue for years about which.
 
 ### Coming home to a changed system
-- The sim really ran while you slept: projects finished, prices moved, ships changed hands.
-- The **Spaceline catch-up** is a digest of 5 years of headlines, the best part of coming home.
-- You're famous. Bars buy you drinks (the badge system's renown), and approaches come by name.
+- **The world moved on:** five years have passed and the sim really ran. The digest is long.
+- **You're famous:** strangers buy you drinks, and clients ask for you by name.
+- **You're needed:** every power wants its words carried, and only a person can carry them.
 
 ### Who speaks for the system? (the factions, on the conflict ladder)
-Every power wants to be the voice, for understandable reasons:
-- **Terran Compact:** caution. "We do not know what it is. We should not tell it where we live." They want the reply classified and sent from one government dish. They're not villains, just afraid.
+- **Terran Compact:** caution, and the fear that a human relay could be anyone's human. It wants an official interpreter, preferably one of theirs. It's not villainous, just afraid.
 - **Mars Accord:** wants a seat, not a veto.
-- **Belt Assembly:** wants minds and people to answer together, the first chance to show the vote meant something.
-- **The Commons and the Long View:** want *you* to answer, again. That's flattering, and it's a problem.
-- **The Sufficiency:** wants to send the reply as a thought rather than a message: the Landauer cores, running for a year.
+- **Belt Assembly:** wants minds and people to answer together, the first chance to show the personhood vote meant something.
+- **The Commons and the Long View:** want *you*, again. That's flattering, and it's a problem.
+- **The Sufficiency:** shy. It asks only that something of the minds be in the reply, even though the Lacuna won't hear minds directly.
 
 The player moves between them with **jobs, not speeches**:
 - carrying delegates (charters: needs a passenger shuttle)
-- rushing the Compact's sealed position paper (express: needs a fast courier)
-- quietly carrying the Commons' copy of the Hermes-7 data past Compact sensors (secret work: run dark)
-- hauling for the array (bulk freight: needs a heavy freighter)
+- rushing position papers (express: needs a fast courier)
+- quietly carrying the Long View's own recordings past Compact sensors (secret work: run dark)
+- hauling for the reply's array (bulk freight: needs a heavy freighter)
 
-**Standing decides whose ideas make it into the reply.** There is no wrong answer, only different replies.
+**Standing decides whose words make it into the reply.**
 
-### The race (the act's tension)
-Midway through, the Compact quietly launches its own crewed ship to the Lacuna, to get there first with a government message.
-- It's a hazard, not a villain: their ship is under-prepared, and Small Hours estimates their life support runs out ten months short.
-- You can let them go. You can warn them, which costs Compact standing because they were told not to listen to you. Or you can give them your berth's spare sleep slot and go and fetch them.
-- Fetching them is the late game's big optional voyage, flown with a second hibernation sleep.
-- Rescuing them turns the Compact from the reply's obstacle into a co-author. Hopeful, but it costs you something.
+### The second interpreter (the act's tension)
+The Compact trains its own interpreter and sends them out under-prepared, with no long-sleep pod and too little life support.
+- It's a hazard, not a villain, and a person in trouble 1,000 AU from home.
+- You can let them go. You can warn them, which costs Compact standing. Or you can fetch them with your pod's spare slot, in a second long sleep.
+- Rescuing them makes two human interpreters, not one. The Compact becomes a co-author, and the minds learn that people look after each other, which may be exactly what the Lacuna was asking.
 
 ### The Choir (the capstone megaproject)
-- The reply is built, not written: **the Choir**, an array of dishes and mirrors tied into the Farside Array, the Valhalla starshade and the Selene Ring, funded and hauled like any megaproject.
-- Every faction contributes a stage, and the mix of stages follows the standing you earned.
-- It's the biggest construction job in the game and the reason to own a heavy freighter.
+- The reply is built, not written: an array called **the Choir**, tied into Farside, the Valhalla starshade and the Selene Ring, funded and hauled like any megaproject.
+- It is aimed not at the Lacuna but at you: the relay station you will carry the reply through.
+- The biggest construction job in the game, and the reason to own a heavy freighter.
 
 ### The end (and not the end)
-- The Choir sends the reply: a year-long transmission, with every faction's part in it and your name in the header.
-- A long while later the Lacuna answers, but not from where it was. It has moved a few hundred AU, and a **second** dark object has appeared beside it. It's an invitation, or an introduction; the game doesn't say.
-- The final Spaceline headline: *"The system is a little larger than it was this morning. Again."*
-- The free play that follows has a new far destination and a reason to keep going.
+- You sleep out one last time, with the reply, and relay it through yourself: every faction's words in a person's voice, with the minds listening.
+- The Lacuna answers, and a **second** dark object is beside it. It's an introduction; the game doesn't say what kind.
+- Final Spaceline headline: *"The system is a little larger than it was this morning. Again."*
+- Free play continues with a new far destination, and hibernation is now an ordinary part of life for long-haulers.
 
 ## How it ties the systems together
 
 | System | Role in the arc |
 |---|---|
-| Fleet and craft jobs | putting your affairs in order (Act II); faction work needs the right ship (Act III) |
-| Secret work and stealth | carrying the Hermes-7 data past Compact sensors |
-| Megaprojects | the Choir is the capstone |
-| Reputation | decides whose voice is in the reply |
-| Badges and renown | coming home famous |
-| Walking (step 8) | meetings become scenes; the EVA patch on the voyage |
-| Your base (later) | could host a Choir listening station |
+| Hibernation | the bookworm through all of it: probe years, the voyage, the return |
+| Spaceline news | Act 0's hints and Act I's world events; the digest on waking |
+| Megaprojects | *Long Patience* (Act I) and the Choir (Act III) |
+| Fleet and craft jobs | arranging your affairs before a sleep; faction jobs need the right ship |
+| Secret work and stealth | carrying the Long View's recordings past Compact sensors |
+| Reputation | whose words are in the reply |
+| Badges and renown | coming home famous; the Bookworm badge |
+| Walking (step 8) | Ines at the bar, Adeyemi's control room, the EVA patch |
+| Your base (later) | a quiet place to sleep the years in between voyages |
 
-## The long trip: what's wrong now, and the fix
-
-**Measured:**
-- The Lacuna run is about 2.5 years of game time.
-- The top time compression is ×1,000,000, which would be about 80 s of real time. But the departure ramp stops at ×1,000 (about 22 hours real time at that rate unless the player steps it up).
-- Even at full speed, the whole system is simulated hour by hour: 900 game days took **about 190 s of CPU** headless, and more in the browser.
-- Fine once; tedious on a replay.
-
-**Proposed fix: the long-sleep berth becomes a hibernation pod.**
-1. **"Sleep through the voyage"** is offered on departure to any deep-space site when a sleep berth is fitted. It's a cutscene: you climb in, the cabin dims, there are three skippable wake-ups (above), and you wake on arrival. The target is under a minute of real time, about 30 s with the vignettes skipped.
-2. **The world ticks coarsely while you sleep:** a data knob (`balance.economy.sleep_step_hours`, say 24 instead of 1) cuts the cost about 20×. That would bring 900 days to roughly 10 s of CPU. It's deterministic, because the same voyage always uses the same step. The catch-up digest hides the coarseness.
-3. **Your ship flies itself:** the onboard mind (Small Hours) holds the ship. Wear, life support and propellant still count.
-4. **Sleeping is optional:** a pilot who wants to watch can still fly it awake at ×1,000,000.
-
-Neither change needs a faster time scale. The bottleneck is how much world the sim runs per second, not the clock.
+## What changes in existing content
+- `data/story.json` `first_favour`: also waits for the probe's failure, a world beat on the world's clock.
+- `the_occultation`: now replays two recordings, and the minds' honesty about the probe.
+- `the_meeting`: the minds listening through you; it sets up Act III.
+- New: the `long_patience` project, its Spaceline items, the probe's arrival event, and the Commons-quiet month.
+- New: hibernation (pod module, sleep command, digest screen, coarse sleep stepping).
 
 ## Open questions for Sean
-1. Should the Lacuna stay unexplained forever, or should the last act hint at what it is?
-2. Is the Compact's race ship the right amount of tension, or too much for the tone?
-3. Should Steady Hand (or anyone) come along, or is the trip better alone?
-4. Should hibernation be offered for any long trip (say, more than 60 days) with a sleep berth, not just the Lacuna?
-5. Build order: the hibernation fix first (it's small and helps now), then Act III after walking?
+1. How long should *Long Patience* take: 3 years (a hibernation-sized gap), or shorter so a non-sleeper doesn't wait forever?
+2. Should the Lacuna's preference stay unexplained (only the minds' theory), or should Act III confirm it?
+3. Is the second interpreter the right amount of tension?
+4. Should the ordinary yard-sold sleep pod come only after the Lacuna, or earlier?
+5. Build order: hibernation first (useful now and to everything after), then Acts 0 and I (mostly data: news, a project, world beats), then walking, then Act III?
