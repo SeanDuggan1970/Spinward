@@ -4,12 +4,14 @@ Status: **proposal, nothing built.** Revised after Sean's notes (2026-10-11):
 - Hibernation is a core mechanic, not a fix: the player tunnels through deep time like a bookworm, detached from small human affairs, and gets to witness a grander stage.
 - The arc is more hidden. The occultation is only an odd hint at first.
 - The minds try first, with an uncrewed probe, and it goes poorly: whatever is out there will not deal with minds alone. That is what gives people their value and their role.
+- The early game is long and is just trading, which is all the game ever needs to be for a player who wants that or never goes looking. Nothing pushes the story.
+- The trigger is the player's own choice: salvaging the dead probe Hermes-7 yields its **memory core**, a unique item that only the minds will buy, at the few ports where they gather. Selling it to them starts everything.
 
 The guardrails from `DESIGN.md` still hold: hopeful tone, hazards over villains, combat last and non-lethal, and the story finds you rather than being pushed at you.
 
 ## The shape in one paragraph
 
-A dead probe's last data shows three stars winking out. It is an oddity in the news, gossip in bars, and easy to miss. The minds can't stop thinking about it, so they quietly build and launch a deep probe of their own. Years of game time pass, and the probe arrives. The meeting goes nowhere: the object won't talk to it, and turns away from it as a cat turns from a stranger's hand. The minds conclude that it answers only *someone*: a living person, mortal, who can be changed by the meeting. For the first time the minds need people for something they cannot do. They look for a pilot who delivers, and find you. You sleep out to it, it says hello to you, and the rest of the game is the system learning what it means that the conversation has to go through a human.
+For a long time there's no story at all, just trading, hauling and building a life. Somewhere out past the Moon drifts a dead probe, Hermes-7, known only by rumour. A pilot who goes and salvages it comes back with its memory core. No human buyer wants it, but the minds do. Sell it to them at one of the few ports where they gather, and they find in its last frames three stars winking out. The minds can't stop thinking about it, so they quietly build and launch a deep probe of their own. Years of game time pass, and the probe arrives. The meeting goes nowhere: the object won't talk to it, and turns away from it as a cat turns from a stranger's hand. The minds conclude that it answers only *someone*: a living person, mortal, who can be changed by the meeting. For the first time the minds need people for something they cannot do. They look for a pilot who delivers, and find you. You sleep out to it, it says hello to you, and the rest of the game is the system learning what it means that the conversation has to go through a human.
 
 ## Hibernation: the bookworm mechanic
 
@@ -26,18 +28,37 @@ A long-sleep pod you can sleep in on any long voyage, or at a port to let time p
   - It needs no faster clock. The bottleneck is how much world the sim runs per second.
   - Awake flight still works for anyone who wants to watch, and the departure ramp could step on to ×1,000,000 for deep-space legs.
 
-## Act 0: The Oddity (hidden, ambient, easy to miss)
+## The long early game: just trading
 
-Nothing is offered to the player. It's just there for a curious one to notice:
-- **Spaceline, early game:** "Hermes-7 data release: Farside astronomers puzzled by 'three-star blink' in probe's final frames." One line, between a wedding and a price story.
-- **Brokers:** now and then a tip comes with a rumour attached, such as "the Farside lot are buying a lot of coffee lately."
-- **The jobs board:** the hand-carried items that already exist (*calibration masters for a telescope*, *survey data too big to send*) start pointing at Farside and Valhalla more often.
-- **Hermes-7:** the wreck stays a findable site for explorers. Its recorder can be recovered and sold to Farside for a modest fee. A pilot who does this has, without knowing it, handed the minds their first clue.
+A new pilot has the whole economy to learn: markets, contracts, the fleet, the yards, the megaprojects. That is the game for months of game time, and for a player who wants nothing more, it is the whole game. Nothing in the story nudges them. It is waiting, not pushing.
 
-## Act I: The Probe (world events, on the world's clock)
+## Act 0: The Memory Core (the player's own choice)
 
-These are things that happen in the system whether or not the player is paying attention, through the Spaceline and the projects board:
-- **Year 1:** "A Commons mind consortium announces *Long Patience*, a deep probe to 'look at something odd', with no further comment." It appears as a project. The player can haul for it (the drive parts and the long-haul tanks), but doesn't have to.
+### Finding Hermes-7
+- **The site:** Hermes-7 already exists as a rumoured derelict about four times the Moon's distance out. It stays a rumour: a broker's tip, a bar story, an explorer's job. It is not shown on the chart and the co-pilot never points at it.
+- **Ambient hints, easy to miss:** a Spaceline line about the probe dying in '49 "with its star-tracker running", and a rumour that "nobody ever went and got the recorder".
+
+### Salvaging it
+The salvage job (lander or EVA, later with walking) recovers its **memory core**. It is a unique cargo item, a few kilograms, carried by hand in the cabin. The salvage itself pays only scrap.
+
+### Who will buy it
+- **No human buyer.** Human markets offer nothing: it's old data in a dead format. The Compact's yards shrug.
+- **The minds will.** Only at the few ports where they gather does it sell:
+  - **Trojan Yards** (the Commons' yard)
+  - **Hektor Reach** (the Commons, far out)
+  - **Landauer Deep** (the Sufficiency, once it opens)
+- **The sale:** a mind drone meets you at the dock, very politely, and offers a fair price and a little standing. "We collect old memories. Most of them are boring. Thank you."
+- **What the player sees:** nothing more. The player who sells it has, without knowing, handed the minds the oddity.
+- **If you keep it:** it sits in your cabin forever, and the story never starts.
+
+### Why the minds care (told only later)
+- In the core's last frames, three stars wink out one after another, the way stars do when something passes in front of them, about 1,000 AU out.
+- Human astronomers had the same data in '49 and filed it as a glitch. The minds look harder.
+
+## Act I: The Probe (world events, from the sale onward)
+
+From the sale, the world's clock starts. These are things that happen in the system whether or not the player is paying attention, through the Spaceline and the projects board:
+- **Some months after the sale:** "A Commons mind consortium announces *Long Patience*, a deep probe to 'look at something odd', with no further comment." It appears as a project. The player can haul for it (the drive parts and the long-haul tanks), but doesn't have to.
 - **Launch:** a set piece at Trojan Yards: a small, fast, beautiful thing leaving on a column of violet light. The news covers it once, then forgets.
 - **Years pass.** The probe takes about three years to get there, because it carries no one. A player who hibernates sees the launch and the arrival close together, which is the bookworm's reward.
 - **The arrival goes poorly.** The probe reaches the Lacuna and sends greetings, counts and maths. Nothing comes back for months. Then the object **moves**, slowly and deliberately, keeping a few million km between itself and the probe, however the probe approaches. It does nothing hostile; it is simply not interested.
@@ -47,8 +68,8 @@ These are things that happen in the system whether or not the player is paying a
 
 The minds draw their conclusion. Hermes-7 was a machine and saw only a shadow. *Long Patience* was a mind and was turned away. Whatever it is, it answers someone who is alive, who could die, and who would be changed by meeting it. The Long View's old rule, that the unknown is met by a person, was a courtesy. Now it is a fact.
 
-1. **Ines Okafor** (needs three on-time deliveries and Known standing, and now also the probe's failure in the news) buys you a drink. With walking, this is a real scene at a bar table. She's careful: "Some very patient friends have a problem they cannot solve without you, and they are not used to that."
-2. **Farside:** Adeyemi plays you both recordings: Hermes-7's three blinking stars, and *Long Patience*'s months of silence and the object sliding away from it. "It can tell the difference between us and them. We don't know how."
+1. **Ines Okafor** buys you a drink. She comes only after the probe's failure is in the news, and only to the pilot who sold the core: the minds remember who brought it. With walking, this is a real scene at a bar table. She's careful: "Some very patient friends have a problem they cannot solve without you, and they are not used to that."
+2. **Farside:** the minds share the core with the human astronomers at last. Adeyemi plays you both recordings: Hermes-7's three blinking stars, and *Long Patience*'s months of silence and the object sliding away from it. "It can tell the difference between us and them. We don't know how."
 3. **The mind in a box** to Trojan Yards, as now.
 4. **The loan.** Patient Arithmetic is honest about what it costs them: "We are not used to being the ones who cannot go. We would like to be there through you, if you'll let us listen." You get the drive and the sleep pod, and the choice of which of your ships to take. Before you leave, sort out the rest of your fleet: the Long View offers to pay the berths, but then you owe them.
 5. **The long sleep:** about 2.5 years, slept through, with three short wake-ups:
@@ -107,6 +128,7 @@ The Compact trains its own interpreter and sends them out under-prepared, with n
 | System | Role in the arc |
 |---|---|
 | Hibernation | the bookworm through all of it: probe years, the voyage, the return |
+| Sites and salvage | Hermes-7, the memory core: the trigger |
 | Spaceline news | Act 0's hints and Act I's world events; the digest on waking |
 | Megaprojects | *Long Patience* (Act I) and the Choir (Act III) |
 | Fleet and craft jobs | arranging your affairs before a sleep; faction jobs need the right ship |
@@ -117,15 +139,18 @@ The Compact trains its own interpreter and sends them out under-prepared, with n
 | Your base (later) | a quiet place to sleep the years in between voyages |
 
 ## What changes in existing content
-- `data/story.json` `first_favour`: also waits for the probe's failure, a world beat on the world's clock.
+- `data/sites.json` `hermes_probe`: salvage yields the memory core instead of the Compact's 18,000 cr; it stays a rumour-only site.
+- New unique item: the memory core (hand-carried). Only the mind ports buy it: Trojan Yards, Hektor Reach and Landauer Deep. The sale is a story beat that starts the world clock.
+- `data/story.json` `first_favour`: waits for the sale and the probe's failure, not for delivery counts; `the_recorder` goes (the core replaces it).
 - `the_occultation`: now replays two recordings, and the minds' honesty about the probe.
 - `the_meeting`: the minds listening through you; it sets up Act III.
 - New: the `long_patience` project, its Spaceline items, the probe's arrival event, and the Commons-quiet month.
 - New: hibernation (pod module, sleep command, digest screen, coarse sleep stepping).
 
 ## Open questions for Sean
-1. How long should *Long Patience* take: 3 years (a hibernation-sized gap), or shorter so a non-sleeper doesn't wait forever?
-2. Should the Lacuna's preference stay unexplained (only the minds' theory), or should Act III confirm it?
-3. Is the second interpreter the right amount of tension?
-4. Should the ordinary yard-sold sleep pod come only after the Lacuna, or earlier?
-5. Build order: hibernation first (useful now and to everything after), then Acts 0 and I (mostly data: news, a project, world beats), then walking, then Act III?
+1. How long should *Long Patience* take: 3 years (a hibernation-sized gap), or shorter so a non-sleeper doesn't wait forever? With the sale as the trigger, a pilot who sells early waits through more of it; a sleeper can tunnel through.
+2. Should the Compact show any interest in the core (a news line, a polite inquiry later), or stay entirely blind until Act III?
+3. Should the Lacuna's preference stay unexplained (only the minds' theory), or should Act III confirm it?
+4. Is the second interpreter the right amount of tension?
+5. Should the ordinary yard-sold sleep pod come only after the Lacuna, or earlier?
+6. Build order: hibernation first (useful now and to everything after), then Acts 0 and I (mostly data: news, a project, world beats), then walking, then Act III?
