@@ -368,6 +368,22 @@ func _handle_events() -> void:
 			"impound_paid":
 				notice("Release fee paid (%s). She's yours again." % UI.money(-float(d["credits"])), UI.AMBER)
 				refresh = true
+			"ship_bought":
+				notice("Bought the %s, a %s, for %s." % [d["ship"], sim.data.ships[d["hull"]]["name"].to_lower(), UI.money(-float(d["credits"]))], UI.GOOD)
+				refresh = true
+			"ship_switched":
+				notice("You have the %s now. The %s waits in her berth at %s." % [d["ship"], d["from"], sim.data.places[d["place"]]["name"]], UI.GOOD)
+				refresh = true
+			"ship_sold":
+				notice("Sold the %s for %s." % [d["ship"], UI.money(float(d["credits"]))], UI.AMBER)
+				refresh = true
+			"berth_rent":
+				refresh = true
+			"berth_unpaid":
+				notice("Couldn't pay the %s's berth at %s: %s owed (%d month%s behind). The yard will sell her if it goes on." % [d["ship"], sim.data.places[d["place"]]["name"], UI.money(float(d["owed"])), int(d["months"]), "" if int(d["months"]) == 1 else "s"], UI.WARN)
+			"ship_seized":
+				notice("%s sold the %s for the berth rent owed (%s). They sent on the rest: %s." % [sim.data.places[d["place"]]["name"], d["ship"], UI.money(float(d["owed"])), UI.money(float(d["credits"]))], UI.WARN)
+				refresh = true
 			"unfiled_departure":
 				if float(d["credits"]) < 0.0:
 					notice("Left %s without filing a plan. Traffic control fined us %s%s." % [sim.data.places[d["place"]]["name"], UI.money(-float(d["credits"])), " and they're keeping count" if int(d["times"]) > 1 else ""], UI.WARN)

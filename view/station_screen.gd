@@ -28,6 +28,7 @@ const SiteSystem := preload("res://sim/systems/site_system.gd")
 const PodSystem := preload("res://sim/systems/pod_system.gd")
 const DetectionSystem := preload("res://sim/systems/detection_system.gd")
 const Badges := preload("res://sim/badges.gd")
+const Fleet := preload("res://sim/fleet.gd")
 const DAY := 86400.0
 
 var sim
@@ -652,7 +653,8 @@ func _offer_card(place_id: String, offer: Dictionary) -> Control:
 	var d = sim.data
 	var title: String = {"package": "Courier", "passenger": "Passage", "pickup": "Pick up and deliver", "long_haul": "Long-haul courier",
 		"satellite": "Satellite launch", "covert_delivery": "Quiet delivery", "listening_device": "A listening device", "spy_satellite": "A satellite nobody launched",
-		"covert_drop": "A drop-off nobody saw", "covert_extract": "An extraction"}.get(offer["kind"], "Job")
+		"covert_drop": "A drop-off nobody saw", "covert_extract": "An extraction",
+		"bulk_freight": "Bulk freight", "express": "Express run", "charter": "Passenger charter"}.get(offer["kind"], "Job")
 	if offer["channel"] == "rumour":
 		title += "  ·  heard through the grapevine"
 	var p := UI.panel(title)
@@ -691,8 +693,13 @@ func _offer_card(place_id: String, offer: Dictionary) -> Control:
 		c.autowrap_mode = TextServer.AUTOWRAP_WORD
 		c.custom_minimum_size = Vector2(200, 0)
 		p[1].add_child(c)
+	if offer.has("craft"):
+		var fits := Fleet.is_craft(d, s.ship, offer["craft"])
+		p[1].add_child(UI.label("Needs %s%s" % [Fleet.craft_words(d, offer["craft"]), "" if fits else "  ·  " + _craft_yards(offer["craft"])], UI.GOOD if fits else UI.AMBER, 13))
 	var why := ""
-	if offer.get("lander", false) and not PodSystem.has_mount(s.ship, d):
+	if not Fleet.is_craft(d, s.ship, offer.get("craft", [])):
+		why = "needs %s" % Fleet.craft_words(d, offer["craft"])
+	elif offer.get("lander", false) and not PodSystem.has_mount(s.ship, d):
 		why = "needs a lander: fit a lander bay"
 	elif offer.get("payload", false) and ContractSystem.payload_room_t(s, d) + 1e-9 < float(offer["mass_t"]):
 		why = "needs a payload carrier pod on the lander (%.1f t)" % float(offer["mass_t"])
@@ -708,6 +715,20 @@ func _offer_card(place_id: String, offer: Dictionary) -> Control:
 	row.add_child(UI.button("Take the job", send.bind({"type": "accept_contract", "id": offer["id"]}), why == ""))
 	p[1].add_child(row)
 	return p[0]
+
+
+## Where you could get one of these craft: one of yours laid up, or a yard selling one.
+func _craft_yards(crafts: Array) -> String:
+	var d = sim.data
+	for entry in sim.state.fleet:
+		if Fleet.is_craft(d, entry["ship"], crafts):
+			return "your %s is berthed at %s" % [entry["ship"]["name"], d.places[entry["place"]]["name"]]
+	var yards := []
+	for id in d.places:
+		for hull in Fleet.hulls_sold(d, id):
+			if Fleet.class_of(d, hull) in crafts and not d.places[id]["name"] in yards:
+				yards.append(d.places[id]["name"])
+	return "sold at " + ", ".join(yards) if not yards.is_empty() else "none for sale"
 
 
 ## What you know about a destination: your own last look at its board (with its age)
@@ -860,6 +881,7 @@ func _shipyard_tab() -> Control:
 	UI.tint_button(open, UI.AMBER)
 	parts[1].add_child(open)
 	parts[1].add_child(UI.label("Or swap one module at a time below: parts, fitting labour and days in port, less a trade-in by condition and age. Every price is the bill you will be charged.", UI.DIM, 13))
+	parts[1].add_child(_fleet_panel())
 	parts[1].add_child(_fitness_panel())
 	if PodSystem.has_mount(s.ship, d):
 		var pp := UI.panel("Lander pod")
@@ -918,6 +940,61 @@ func _shipyard_tab() -> Control:
 			p[1].add_child(row)
 		parts[1].add_child(p[0])
 	return parts[0]
+
+
+## Your ships at this yard and the hulls it sells: step across, sell, buy.
+func _fleet_panel() -> Control:
+	var s = sim.state
+	var d = sim.data
+	var place: String = s.location["place"]
+	var p := UI.panel("Your ships")
+	var cfg := Fleet.cfg(d)
+	var leave := Fleet.why_not_leave(s, d)
+	var you := UI.label("Flying the %s, a %s (%s). Laid up here, she'd cost %s a month." % [s.ship["name"], Fleet.class_name_of(d, Fleet.class_of(d, s.ship["hull"])), d.ships[s.ship["hull"]]["name"], UI.money(Fleet.rent(d, s.ship["hull"], place))], UI.TEXT, 13)
+	you.autowrap_mode = TextServer.AUTOWRAP_WORD
+	p[1].add_child(you)
+	if leave != "":
+		p[1].add_child(UI.label("To change ships: " + leave, UI.AMBER, 12))
+	for i in s.fleet.size():
+		var entry: Dictionary = s.fleet[i]
+		var ship: Dictionary = entry["ship"]
+		var here: bool = entry["place"] == place
+		var row := HBoxContainer.new()
+		var owed := float(entry.get("owed_cr", 0.0))
+		var text := "%s  ·  %s  ·  %s  ·  condition %d%%  ·  %s/month%s" % [ship["name"], d.ships[ship["hull"]]["name"], d.places[entry["place"]]["name"],
+			int(round(Condition.mean_condition(ship) * 100.0)), UI.money(Fleet.rent(d, ship["hull"], entry["place"])), ("  ·  OWES %s" % UI.money(owed)) if owed > 0.0 else ""]
+		var l := UI.label(text, UI.WARN if owed > 0.0 else (UI.TEXT if here else UI.DIM), 13)
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD
+		l.custom_minimum_size = Vector2(200, 0)
+		row.add_child(l)
+		if here:
+			row.add_child(UI.button("Take her", send.bind({"type": "switch_ship", "index": i}), leave == ""))
+			var value := Fleet.sale_value(d, ship) - owed
+			row.add_child(UI.button("Sell  %s" % UI.money(value), send.bind({"type": "sell_ship", "index": i}), s.credits + value >= 0.0))
+		p[1].add_child(row)
+	var hulls := Fleet.hulls_sold(d, place)
+	if not hulls.is_empty():
+		var full: bool = s.fleet.size() + 1 >= int(cfg["max_ships"])
+		p[1].add_child(UI.label("For sale here: sound second-hand hulls with a fresh Warrant of Fitness and full tanks. A ship you are not flying waits in a berth, charged monthly; unpaid rent is owed, and after %d months the yard sells her." % int(cfg["seize_after"]), UI.DIM, 12))
+		for hull in hulls:
+			var spec: Dictionary = d.ships[hull]
+			var trial := Fleet.make_ship(d, hull, "", s.time_s)
+			var row := HBoxContainer.new()
+			var info := UI.label("%s  (%s): %d t cargo, %d berths, %.2f milli-g. %s" % [spec["name"], Fleet.class_name_of(d, Fleet.class_of(d, hull)),
+				int(ShipStats.cargo_capacity_t(trial, d)), ShipStats.berths(trial, d), ShipStats.accel_mps2(trial, d) / 9.80665 * 1000.0, spec["description"]], UI.TEXT, 12)
+			info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			info.autowrap_mode = TextServer.AUTOWRAP_WORD
+			info.custom_minimum_size = Vector2(200, 0)
+			row.add_child(info)
+			var cost := Fleet.price(d, hull)
+			var berth := Fleet.rent(d, hull, place)
+			row.add_child(UI.button("Buy  %s" % UI.money(cost), send.bind({"type": "buy_ship", "hull": hull}), not full and s.credits >= cost + berth))
+			row.add_child(UI.button("Buy and fly her", send.bind({"type": "buy_ship", "hull": hull, "board": true}), not full and leave == "" and s.credits >= cost + Fleet.rent(d, s.ship["hull"], place)))
+			p[1].add_child(row)
+		if full:
+			p[1].add_child(UI.label("You own as many ships as you can look after (%d)." % int(cfg["max_ships"]), UI.AMBER, 12))
+	return p[0]
 
 
 func _open_builder() -> void:
@@ -1007,6 +1084,8 @@ func _ship_panel(place_id: String) -> Control:
 	fuel_bar.show_percentage = false
 	fuel_bar.custom_minimum_size = Vector2(0, 8)
 	v.add_child(fuel_bar)
+	if not s.fleet.is_empty():
+		v.add_child(UI.label("Fleet   %d laid up  ·  %s/month in berths" % [s.fleet.size(), UI.money(Fleet.monthly_rent(s, d))], UI.DIM, 13))
 	v.add_child(UI.label("Mass    %.1f t" % ShipStats.total_mass_t(s.ship, d)))
 	v.add_child(UI.label("Accel   %.2f milli-g" % (ShipStats.accel_mps2(s.ship, d) / 9.80665 * 1000.0)))
 	for t in ShipStats.active_tunes(s.ship, d):
