@@ -128,6 +128,8 @@ Sean, Oct 2026: walk around the places you visit, FPS style.
 - It's a big view-side job. It comes after step 3, which gives you somewhere to walk.
 - In the sim it's only a view: what you do while walking (the bar, the market, a
   contact) still goes through the same commands.
+- Movement follows each station's spin gravity: lighter toward the axis, with Coriolis,
+  and nothing on the axis itself. See `docs/FIRST_PERSON.md`.
 
 ## Done alongside the steps
 

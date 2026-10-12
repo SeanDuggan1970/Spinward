@@ -24,6 +24,7 @@ const ProjectSystem := preload("res://sim/systems/project_system.gd")
 const DamageSystem := preload("res://sim/systems/damage_system.gd")
 const ShipAudio := preload("res://view/audio/ship_audio.gd")
 const FlightDeck := preload("res://view/flight/flight_deck.gd")
+const Spin := preload("res://sim/spin.gd")
 
 const ASSIST_MODES := ["full", "assisted", "manual"]
 const SKY_DISTANCE := 60000.0
@@ -87,6 +88,9 @@ var message_colour := Color.WHITE
 var message_until := 0.0
 var clock := 0.0
 var docked := false
+## Captured at the port and being drawn down to the cradle: {t, from, to} (transforms in
+## the station's rotating frame). The dock command goes when the ship is down.
+var _capture: Dictionary = {}
 var _drive_plume: Node3D
 ## The player ship's panels and dish (ship_rig.gd).
 var _rig: Dictionary = {}
@@ -324,6 +328,10 @@ func _physics_process(dt: float) -> void:
 	clock += dt
 	spin_angle = fposmod(spin_angle + spin_rate * dt, TAU)
 	station["rotor"].rotation.z = spin_angle
+	if not _capture.is_empty():
+		_draw_down(dt)
+		_update_camera(dt)
+		return
 	_traffic_check -= dt
 	if _traffic_check <= 0.0:
 		_traffic_check = 1.0
@@ -571,7 +579,10 @@ func _check_docking() -> void:
 	if readout.get("range", INF) > float(tune_dock["capture_distance_m"]):
 		return
 	if readout["ok_speed"] and readout["ok_align"] and readout["ok_roll"]:
-		if sim.apply({"type": "dock", "manual": true}) == "":
+		var bay: Dictionary = station.get("bay", {})
+		if not bay.get("cradles", []).is_empty() and bay["fits"]:
+			_start_capture(bay)
+		elif sim.apply({"type": "dock", "manual": true}) == "":
 			docked = true
 		return
 	var reasons := []
@@ -584,6 +595,34 @@ func _check_docking() -> void:
 	refusals += 1
 	flash("Capture refused: " + ", ".join(reasons), UI.WARN, 3.0)
 	_bounce(Vector3(0, 0, 1), 0.5, true)
+
+
+## Captured: clamps take her at the port, and she is drawn down off the axis to the
+## pilot's cradle (cradle 0), keel to the wall, over balance.bays.hall.draw_s.
+func _start_capture(bay: Dictionary) -> void:
+	var rotor: Node3D = station["rotor"]
+	var a := float(bay["cradles"][0])
+	var out := Vector3(cos(a), sin(a), 0.0)
+	var up := -out
+	var back := Vector3(0, 0, 1)
+	var to := Transform3D(Basis(up.cross(back), up, back), out * Spin.cradle_radius(sim.data, stowed_radius) + Vector3(0, 0, float(bay["z_mid"])))
+	_capture = {"t": 0.0, "from": rotor.global_transform.affine_inverse() * ship_node.global_transform, "to": to}
+	velocity = Vector3.ZERO
+	ang_vel = Vector3.ZERO
+	var geom: Dictionary = sim.data.places[place_id]["station"]
+	flash("Captured. Drawing you down to cradle 1: %s at the berth; the ring rides at %s." % [Spin.describe(Spin.g_at(geom, Spin.cradle_radius(sim.data, stowed_radius))), Spin.describe(Spin.living_g(geom))], UI.GOOD, float(sim.data.balance["bays"]["hall"]["draw_s"]))
+
+
+## Down the hall to the cradle, turning with the station; then she's docked.
+func _draw_down(dt: float) -> void:
+	var draw_s := float(sim.data.balance["bays"]["hall"]["draw_s"])
+	_capture["t"] = float(_capture["t"]) + dt
+	var f := clampf(float(_capture["t"]) / draw_s, 0.0, 1.0)
+	f = f * f * (3.0 - 2.0 * f)
+	var local: Transform3D = (_capture["from"] as Transform3D).interpolate_with(_capture["to"], f)
+	ship_node.global_transform = (station["rotor"] as Node3D).global_transform * local
+	if float(_capture["t"]) >= draw_s and sim.apply({"type": "dock", "manual": true}) == "":
+		docked = true
 
 
 func scanner_range() -> float:
@@ -650,7 +689,7 @@ func _sync_traffic() -> void:
 	for id in docked_here:
 		if not _berths.has(id):
 			var used: Array = _berths.values()
-			for i in BERTH_ANGLES.size():
+			for i in _berth_slots():
 				if not i in used:
 					_berths[id] = i
 					break
@@ -681,7 +720,23 @@ func _sync_traffic() -> void:
 		var operator: String = sim.data.npcs["fleets"][npc["fleet"]]["operator"]
 		var model := Models.ship(npc["ship"], sim.data, Livery.for_ship(sim.data, operator, npc["name"]))
 		var node: Node3D = model["node"]
-		if w["mode"] == "berth":
+		var cradles: Array = station.get("bay", {}).get("cradles", [])
+		if w["mode"] == "berth" and not cradles.is_empty():
+			# In a cradle in the docking hall (cradle 0 is the pilot's), keel to the wall,
+			# nose to the hall's back wall, turning with the station. Lit only by the hall.
+			var holder := Node3D.new()
+			holder.rotation.z = float(cradles[int(w["berth"]) + 1])
+			node.position = Vector3(Spin.cradle_radius(sim.data, ShipRig.stowed_radius(model)), 0, float(station["bay"]["z_mid"]))
+			node.rotation = Vector3(0, 0, PI * 0.5)
+			var cold := node.find_child("DrivePlume", true, false)
+			if cold:
+				cold.visible = false
+			for g in node.find_children("*", "GeometryInstance3D", true, false):
+				(g as GeometryInstance3D).layers = Bay.INTERIOR_LAYER
+			holder.add_child(node)
+			station["rotor"].add_child(holder)
+			_traffic[id] = {"node": holder, "ship": node, "mode": "berth", "npc": w["npc"], "rig": model["rig"], "radius": float(model["radius"])}
+		elif w["mode"] == "berth":
 			# Moored alongside the hub's forward half on a short arm, spinning with the station.
 			var a: float = BERTH_ANGLES[w["berth"]]
 			var r: float = station["hub_radius"] + model["radius"] + 6.0
@@ -707,6 +762,12 @@ func _sync_traffic() -> void:
 			_traffic[id] = {"node": node, "ship": node, "mode": w["mode"], "npc": w["npc"], "rig": model["rig"], "dest_dir": dest_dir, "radius": float(model["radius"])}
 		changed = true
 	_move_traffic(0.0)
+
+
+## Berths for other ships: the hall's cradles after the pilot's, or arms round the hub.
+func _berth_slots() -> int:
+	var cradles: Array = station.get("bay", {}).get("cradles", [])
+	return cradles.size() - 1 if not cradles.is_empty() else BERTH_ANGLES.size()
 
 
 ## Lane traffic flies in and out; everyone keeps panels on the Sun and dish on target.

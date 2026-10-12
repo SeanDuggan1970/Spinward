@@ -26,6 +26,7 @@ const Bindings := preload("res://view/bindings.gd")
 const SleepOverlay := preload("res://view/sleep_overlay.gd")
 const WakeDigest := preload("res://view/wake_digest.gd")
 const SleepSystem := preload("res://sim/systems/sleep_system.gd")
+const Spin := preload("res://sim/spin.gd")
 const COMMS_KEEP := 40
 
 const QUICKSAVE := "user://quicksave.json"
@@ -533,6 +534,9 @@ func _handle_events() -> void:
 					notice("The tug brought you in on credit. You owe %s; sell cargo to clear it." % UI.money(-sim.state.credits), UI.WARN)
 				else:
 					notice("Docked at %s%s" % [sim.data.places[d["place"]]["name"], "  (hand-flown, no fee)" if d["manual"] else ""], UI.GOOD)
+				var geom: Dictionary = sim.data.places[d["place"]].get("station", {})
+				if not geom.is_empty():
+					notice("Local gravity: %s on the %s; %s at your berth." % [Spin.describe(Spin.living_g(geom)), "ring" if geom.get("type", "wheel") in ["wheel", "stanford"] else "hull", Spin.describe(Spin.g_at(geom, Spin.cradle_radius(sim.data, 8.0)))], UI.AMBER)
 				play_sfx("dock_clunk", -2.0)
 	# Asleep, the port screen waits under the dark: it is rebuilt once on waking.
 	if refresh and not sim.asleep() and is_instance_valid(_screen) and _screen is StationScreen:

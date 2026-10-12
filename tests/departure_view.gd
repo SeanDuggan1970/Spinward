@@ -40,11 +40,15 @@ func _run() -> void:
 		var exit = view._departure
 		var st: Dictionary = view._stations[place]["model"]
 		check(exit.fits_bay and exit.clear_after_s > exit.opening_s, place + " waits for its bay doors and hull clearance")
+		check(exit.lift(0.0) > 10.0 and is_zero_approx(exit.lift(exit.opening_s)), place + " starts in a cradle off the axis and is lifted to it while the doors open")
 		for elapsed in [1.0, exit.opening_s + 1.0, exit.clear_after_s - 0.1]:
 			sim.state.time_s = t0 + elapsed
 			view._update_world(1.0 / 60.0)
 			var local_ship: Transform3D = (st["node"] as Node3D).global_transform.affine_inverse() * view._ship.global_transform
-			check(Vector2(local_ship.origin.x, local_ship.origin.y).length() < 0.001, place + " stays on the centre line")
+			# In its cradle at first, off the axis; lifted to the centre line before it moves.
+			check(absf(Vector2(local_ship.origin.x, local_ship.origin.y).length() - exit.lift(elapsed)) < 0.01, place + " is where the lift puts it (%.2f m off the axis, %.2f expected)" % [Vector2(local_ship.origin.x, local_ship.origin.y).length(), exit.lift(elapsed)])
+			if elapsed >= exit.opening_s:
+				check(Vector2(local_ship.origin.x, local_ship.origin.y).length() < 0.001, place + " is on the centre line before it backs out")
 			check(view._ship.global_basis.x.dot((st["rotor"] as Node3D).global_basis.x) > 0.99999 and view._ship.global_basis.y.dot((st["rotor"] as Node3D).global_basis.y) > 0.99999, place + " matches the station spin, including negative RPM")
 			check(is_equal_approx(float(view._rig["fold"]), 1.0) and not view._lit, place + " keeps panels in and the main drive off inside the exit corridor")
 			if elapsed < exit.opening_s:

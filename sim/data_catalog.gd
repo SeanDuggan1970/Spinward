@@ -2,6 +2,8 @@
 ## Keys starting with "_" are comments and are dropped on load.
 extends RefCounted
 
+const Spin := preload("res://sim/spin.gd")
+
 const DATA_ROOT := "res://data"
 
 var balance: Dictionary = {}
@@ -294,6 +296,17 @@ func validate() -> Array[String]:
 				if not modules.has(action["grant"][slot]):
 					problems.append("story %s: lends unknown module %s" % [beat["id"], action["grant"][slot]])
 		seen_beats.append(beat.get("id", ""))
+	# Spin gravity: never more than 1 g where people live, and each station's spin gives
+	# the gravity it says it does (sim/spin.gd).
+	for id in places:
+		var geom: Dictionary = places[id].get("station", {})
+		if geom.is_empty():
+			continue
+		var g := Spin.living_g(geom)
+		if g > 1.0:
+			problems.append("station %s: %.2f g is more than 1 g" % [id, g])
+		if geom.has("gravity_g") and absf(g - float(geom["gravity_g"])) > 0.03 * maxf(float(geom["gravity_g"]), 0.01):
+			problems.append("station %s: spin gives %.3f g, not the gravity_g of %s" % [id, g, geom["gravity_g"]])
 	# The memory core: a real site to find it at, real ports to sell it at, and roads
 	# that some beat waits for.
 	var core: Dictionary = story.get("core", {})

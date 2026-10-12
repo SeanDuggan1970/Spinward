@@ -86,10 +86,11 @@
 		"settle_s": 3.0
 	},
 	"bays": {
-		"_note": "Docking bays you fly into (view/flight/bay.gd): a tunnel radius_m across (at least port_margin times the port's radius) and depth_m deep, built forward of the station's docking face, with wall_m of structure round it; a wheel's hub grows to that width. The port is at the back, where the docking face was, so approaches and trip times are unchanged. Doors (each station's station.door, else door) open door_s after traffic control clears the ship in (clear_s into the docking scene) and close once it is inside. A ship whose stowed radius plus clearance_m won't go in berths on a collar on the shut doors.",
+		"_note": "Docking bays you fly into (view/flight/bay.gd). A tunnel radius_m across (at least port_margin times the port's radius) and depth_m deep leads, through doors at its mouth, into a docking hall (hall) inside the station's docking module: radius_m across and length_m long, with cradles round its wall. wall_m of structure surrounds it; a wheel's hub grows to that width. The port is the hall's back wall, where the docking face was, so approaches and trip times are unchanged. Doors (each station's station.door, else door) open door_s after traffic control clears the ship in (clear_s into the docking scene) and close once it is inside. Captured at the port, a ship is drawn down over draw_s to its cradle, cradle_gap_m off the wall (sim/spin.gd cradle_radius), where spin gravity is a few hundredths of a g; leaving, it is lifted back to the axis from lift_start_s while the doors open. A ship whose stowed radius plus clearance_m won't go through the tunnel berths on a collar on the shut doors.",
 		"radius_m": 16.0,
 		"port_margin": 1.45,
-		"depth_m": 80.0,
+		"depth_m": 30.0,
+		"hall": {"radius_m": 45.0, "length_m": 110.0, "cradles": 8, "cradle_gap_m": 2.5, "draw_s": 10.0, "lift_start_s": 2.0},
 		"wall_m": 8.0,
 		"clearance_m": 3.0,
 		"door": "sliding",

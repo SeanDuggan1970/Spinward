@@ -61,7 +61,8 @@ static func station(geom: Dictionary, name: String = "", livery: Dictionary = {}
 	var bay_outer := 0.0
 	if not bays.is_empty():
 		bay_r = maxf(float(bays["radius_m"]), pr * float(bays["port_margin"]))
-		bay_outer = bay_r + float(bays["wall_m"])
+		# The module holds the docking hall: its wall round the hall, not just the tunnel.
+		bay_outer = maxf(bay_r, float(bays.get("hall", {}).get("radius_m", 0.0))) + float(bays["wall_m"])
 		if geom.get("type", "wheel") in ["wheel", "stanford"]:
 			bay_outer = maxf(bay_outer, rh)
 			rh = bay_outer
@@ -152,7 +153,7 @@ static func station(geom: Dictionary, name: String = "", livery: Dictionary = {}
 	# its back; one that doesn't berths on a collar on the shut doors.
 	var bay := {}
 	if not bays.is_empty():
-		bay = Bay.build(rotor, bay_r, bay_outer, face_z, float(bays["depth_m"]), String(geom.get("door", bays["door"])), mats)
+		bay = Bay.build(rotor, bay_r, bay_outer, face_z, float(bays["depth_m"]), String(geom.get("door", bays["door"])), mats, bays.get("hall", {}))
 		bay["fits"] = ship_r + float(bays["clearance_m"]) <= bay_r
 		if not bay["fits"]:
 			face_z = float(bay["z_mouth"]) + 2.4

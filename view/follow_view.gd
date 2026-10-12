@@ -359,6 +359,12 @@ func _update_world(dt: float) -> void:
 			st["node"].position = at
 			st["node"].basis = facing
 			st["rotor"].rotation.z = fposmod(t * float(entry["rate"]), TAU)
+			# Lifting off the cradle (cradle 0, below the axis) at the start of a departure.
+			if leaving:
+				var off := _departure.lift(tau)
+				if off > 0.0:
+					st["node"].position -= facing * ((st["rotor"] as Node3D).basis * Vector3(0, -off, 0))
+					at = st["node"].position
 			if leaving and not _undock.is_empty() and _undock["place"] == place:
 				_undock["facing"] = facing
 				var bays: Dictionary = sim.data.balance["bays"]

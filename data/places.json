@@ -19,12 +19,13 @@
 		},
 		"station": {
 			"door": "iris",
-			"hub_radius_m": 14,
-			"hub_length_m": 90,
-			"ring_radius_m": 110,
-			"ring_tube_m": 11,
+			"hub_radius_m": 30,
+			"hub_length_m": 170,
+			"ring_radius_m": 380,
+			"ring_tube_m": 24,
 			"spokes": 4,
-			"spin_rpm": 2.6,
+			"spin_rpm": 0.946,
+			"gravity_g": 0.38,
 			"colour": "offwhite"
 		},
 		"services": [
@@ -97,12 +98,13 @@
 		},
 		"station": {
 			"door": "iris",
-			"hub_radius_m": 10,
-			"hub_length_m": 60,
-			"ring_radius_m": 70,
-			"ring_tube_m": 8,
+			"hub_radius_m": 26,
+			"hub_length_m": 140,
+			"ring_radius_m": 260,
+			"ring_tube_m": 18,
 			"spokes": 3,
-			"spin_rpm": 3.2,
+			"spin_rpm": 1.016,
+			"gravity_g": 0.3,
 			"colour": "grey"
 		},
 		"services": [
@@ -147,12 +149,13 @@
 			"point": "L1"
 		},
 		"station": {
-			"hub_radius_m": 9,
-			"hub_length_m": 70,
-			"ring_radius_m": 55,
-			"ring_tube_m": 7,
+			"hub_radius_m": 24,
+			"hub_length_m": 120,
+			"ring_radius_m": 200,
+			"ring_tube_m": 15,
 			"spokes": 2,
-			"spin_rpm": 3.0,
+			"spin_rpm": 0.859,
+			"gravity_g": 0.165,
 			"colour": "orange"
 		},
 		"services": [
@@ -228,12 +231,13 @@
 			}
 		},
 		"station": {
-			"hub_radius_m": 11,
-			"hub_length_m": 75,
-			"ring_radius_m": 80,
-			"ring_tube_m": 9,
+			"hub_radius_m": 26,
+			"hub_length_m": 140,
+			"ring_radius_m": 280,
+			"ring_tube_m": 18,
 			"spokes": 4,
-			"spin_rpm": 2.2,
+			"spin_rpm": 0.726,
+			"gravity_g": 0.165,
 			"colour": "grey"
 		},
 		"services": [
@@ -287,12 +291,13 @@
 		},
 		"station": {
 			"door": "clamshell",
-			"hub_radius_m": 16,
-			"hub_length_m": 120,
-			"ring_radius_m": 95,
-			"ring_tube_m": 10,
+			"hub_radius_m": 34,
+			"hub_length_m": 190,
+			"ring_radius_m": 340,
+			"ring_tube_m": 22,
 			"spokes": 6,
-			"spin_rpm": 1.6,
+			"spin_rpm": 0.811,
+			"gravity_g": 0.25,
 			"colour": "rust"
 		},
 		"services": [
@@ -401,12 +406,13 @@
 		},
 		"station": {
 			"door": "clamshell",
-			"hub_radius_m": 20,
-			"hub_length_m": 140,
-			"ring_radius_m": 160,
-			"ring_tube_m": 14,
+			"hub_radius_m": 38,
+			"hub_length_m": 220,
+			"ring_radius_m": 520,
+			"ring_tube_m": 30,
 			"spokes": 6,
-			"spin_rpm": 1.1,
+			"spin_rpm": 0.927,
+			"gravity_g": 0.5,
 			"colour": "offwhite"
 		},
 		"services": [
@@ -470,7 +476,8 @@
 			"ring_radius_m": 0,
 			"ring_tube_m": 0,
 			"spokes": 0,
-			"spin_rpm": 1.89,
+			"spin_rpm": 1.843,
+			"gravity_g": 0.95,
 			"port_radius_m": 9,
 			"colour": "offwhite"
 		},
@@ -519,12 +526,13 @@
 			"point": "L2"
 		},
 		"station": {
-			"hub_radius_m": 8,
-			"hub_length_m": 55,
-			"ring_radius_m": 45,
-			"ring_tube_m": 6,
+			"hub_radius_m": 22,
+			"hub_length_m": 110,
+			"ring_radius_m": 180,
+			"ring_tube_m": 13,
 			"spokes": 3,
-			"spin_rpm": 3.4,
+			"spin_rpm": 0.905,
+			"gravity_g": 0.165,
 			"colour": "grey"
 		},
 		"features": [
@@ -568,12 +576,13 @@
 		},
 		"station": {
 			"door": "clamshell",
-			"hub_radius_m": 16,
-			"hub_length_m": 110,
-			"ring_radius_m": 120,
-			"ring_tube_m": 12,
+			"hub_radius_m": 34,
+			"hub_length_m": 190,
+			"ring_radius_m": 400,
+			"ring_tube_m": 25,
 			"spokes": 4,
-			"spin_rpm": 2.4,
+			"spin_rpm": 0.922,
+			"gravity_g": 0.38,
 			"colour": "rust"
 		},
 		"services": [
@@ -667,12 +676,13 @@
 		},
 		"station": {
 			"door": "clamshell",
-			"hub_radius_m": 14,
-			"hub_length_m": 90,
-			"ring_radius_m": 100,
-			"ring_tube_m": 10,
+			"hub_radius_m": 30,
+			"hub_length_m": 170,
+			"ring_radius_m": 340,
+			"ring_tube_m": 22,
 			"spokes": 6,
-			"spin_rpm": 2.8,
+			"spin_rpm": 0.725,
+			"gravity_g": 0.2,
 			"colour": "grey"
 		},
 		"services": [
@@ -785,12 +795,13 @@
 		},
 		"station": {
 			"door": "clamshell",
-			"hub_radius_m": 9,
-			"hub_length_m": 60,
-			"ring_radius_m": 50,
-			"ring_tube_m": 6,
+			"hub_radius_m": 22,
+			"hub_length_m": 110,
+			"ring_radius_m": 180,
+			"ring_tube_m": 13,
 			"spokes": 3,
-			"spin_rpm": 3.6,
+			"spin_rpm": 0.772,
+			"gravity_g": 0.12,
 			"colour": "steel"
 		},
 		"services": [
@@ -849,12 +860,13 @@
 			}
 		},
 		"station": {
-			"hub_radius_m": 18,
-			"hub_length_m": 120,
-			"ring_radius_m": 140,
-			"ring_tube_m": 12,
+			"hub_radius_m": 36,
+			"hub_length_m": 210,
+			"ring_radius_m": 480,
+			"ring_tube_m": 28,
 			"spokes": 6,
-			"spin_rpm": 2.0,
+			"spin_rpm": 0.841,
+			"gravity_g": 0.38,
 			"colour": "offwhite"
 		},
 		"services": [
@@ -920,12 +932,13 @@
 			}
 		},
 		"station": {
-			"hub_radius_m": 16,
-			"hub_length_m": 100,
-			"ring_radius_m": 110,
-			"ring_tube_m": 11,
+			"hub_radius_m": 32,
+			"hub_length_m": 180,
+			"ring_radius_m": 380,
+			"ring_tube_m": 24,
 			"spokes": 4,
-			"spin_rpm": 2.5,
+			"spin_rpm": 0.767,
+			"gravity_g": 0.25,
 			"colour": "orange"
 		},
 		"services": [
@@ -971,12 +984,13 @@
 			}
 		},
 		"station": {
-			"hub_radius_m": 8,
-			"hub_length_m": 50,
-			"ring_radius_m": 40,
-			"ring_tube_m": 5,
+			"hub_radius_m": 20,
+			"hub_length_m": 100,
+			"ring_radius_m": 150,
+			"ring_tube_m": 11,
 			"spokes": 3,
-			"spin_rpm": 3.8,
+			"spin_rpm": 0.846,
+			"gravity_g": 0.12,
 			"colour": "offwhite"
 		},
 		"services": [
@@ -1018,12 +1032,13 @@
 		},
 		"station": {
 			"door": "clamshell",
-			"hub_radius_m": 14,
-			"hub_length_m": 90,
-			"ring_radius_m": 95,
-			"ring_tube_m": 9,
+			"hub_radius_m": 30,
+			"hub_length_m": 170,
+			"ring_radius_m": 320,
+			"ring_tube_m": 20,
 			"spokes": 4,
-			"spin_rpm": 2.6,
+			"spin_rpm": 0.748,
+			"gravity_g": 0.2,
 			"colour": "grey"
 		},
 		"services": [
@@ -1106,12 +1121,13 @@
 		},
 		"station": {
 			"door": "clamshell",
-			"hub_radius_m": 20,
-			"hub_length_m": 150,
-			"ring_radius_m": 45,
-			"ring_tube_m": 5,
+			"hub_radius_m": 30,
+			"hub_length_m": 200,
+			"ring_radius_m": 160,
+			"ring_tube_m": 10,
 			"spokes": 2,
-			"spin_rpm": 4.2,
+			"spin_rpm": 0.669,
+			"gravity_g": 0.08,
 			"colour": "dark"
 		},
 		"services": [
@@ -1310,7 +1326,8 @@
 			"ring_radius_m": 900,
 			"ring_tube_m": 65,
 			"spokes": 6,
-			"spin_rpm": 1.0,
+			"spin_rpm": 0.972,
+			"gravity_g": 0.95,
 			"colour": "offwhite",
 			"port_radius_m": 10
 		},
@@ -1368,7 +1385,8 @@
 			"ring_radius_m": 0,
 			"ring_tube_m": 0,
 			"spokes": 0,
-			"spin_rpm": 1.9,
+			"spin_rpm": 1.843,
+			"gravity_g": 0.95,
 			"port_radius_m": 12,
 			"colour": "offwhite"
 		},
@@ -1428,7 +1446,8 @@
 			"ring_radius_m": 0,
 			"ring_tube_m": 0,
 			"spokes": 0,
-			"spin_rpm": -1.89,
+			"spin_rpm": -1.843,
+			"gravity_g": 0.95,
 			"port_radius_m": 9,
 			"colour": "offwhite"
 		},
@@ -1484,7 +1503,8 @@
 			"ring_radius_m": 0,
 			"ring_tube_m": 0,
 			"spokes": 0,
-			"spin_rpm": 1.5,
+			"spin_rpm": 1.457,
+			"gravity_g": 0.95,
 			"port_radius_m": 20,
 			"colour": "offwhite"
 		},
@@ -1545,6 +1565,7 @@
 			"ring_tube_m": 25,
 			"spokes": 6,
 			"spin_rpm": 0.61,
+			"gravity_g": 0.166,
 			"port_radius_m": 14,
 			"colour": "grey"
 		},

@@ -1128,6 +1128,24 @@ Owner's brief: *hibernation lets the player tunnel through deep time like a book
   - **Saves:** the estimates are a pure function of hull, route and period, so a game saved asleep wakes exactly as one that never was.
 - **Departures from reality, on purpose:** the pod has no medical side to it (no recovery time, no ageing effects), and the world's coarse steps while you sleep are a little less detailed than when you're awake.
 
+## Stations and their gravity (Oct 2026)
+
+Owner's brief: *the rotating stations look only big enough for one ship at a time. Ships should come in on the axis and be drawn down to a berth off it for access, maintenance and cargo. The ring should give no more than 1 g, ideally a stately Mars or lunar g to reduce structural strain. Tell the player the local gravity when they dock, and model it when walking comes (`docs/FIRST_PERSON.md`).*
+
+- **Bigger, slower wheels:** rings of 150 to 520 m (Kibo Ring is 380 m), each spun for a chosen gravity on its ring (`places.json` `gravity_g`). Most are Moon- to Mars-like:
+  - **Terran Compact ports:** Mars-like or a little more. Kernel L5 is 0.5 g.
+  - **Luna and the far ports:** lunar.
+  - **Landauer Deep:** 0.08 g; the minds don't need it.
+  - **The O'Neill colonies and the Stanford torus:** 0.95 g, where people raise children.
+
+  Spin rates are now 0.6 to 1.0 rpm on the wheels. The rule is in `sim/spin.gd`. Validation refuses more than 1 g, and a spin that doesn't give the stated gravity.
+- **The docking hall:** the bay's tunnel (`balance.bays.depth_m`, now 30 m) opens into a hall 90 m across and 110 m long (`bays.hall`) inside the docking module. It has eight cradles round its wall, each with saddles, clamp arms, a gantry, a walkway and its number, and lamp bars between them. A wheel's hub grows to the module's width.
+- **Docking:**
+  - You fly in along the axis to the port on the hall's back wall, as before; the port is where the docking face was, so approaches and trip times are unchanged.
+  - Captured, the clamps draw the ship over 10 s (`hall.draw_s`) down off the axis to cradle 1, keel to the wall. Other ships lie in the other cradles, lit only by the hall (no sunlight through the walls), instead of moored outside.
+  - On docking, a notice gives the local gravity: "0.38 g (Mars-like) on the ring; 0.03 g at your berth".
+- **Leaving:** the ship is lifted from its cradle to the axis while the doors open (`hall.lift_start_s` to the doors fully open), then backs out through the hall and the tunnel as before.
+
 ## Performance (Oct 2026)
 
 Long skips (time compression, a yard's days in port, a long transit, the headless tests, the balance bot) spend nearly all their time planning NPC trips. The speed-ups are exact: the same inputs give bit-identical state and events, and no number in `data/` changed. What is cached or skipped, and what must not be broken:
