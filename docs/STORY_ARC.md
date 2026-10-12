@@ -44,9 +44,12 @@ The salvage job (lander or EVA, later with walking) recovers its **memory core**
 ### The co-pilot's nudge
 When the core comes aboard, your own ship's co-pilot (the AI that has flown with you all game) offers one quiet line in the comms log, in its usual voice:
 
-> "Nobody's going to pay for a dead format. Mind you, I hear the Minds have an insatiable appetite for new data. Might be worth showing it to them. Trojan Yards, Hektor Reach, Landauer Deep, if it's open."
+> "That core might be worth something to the Minds. Hard to know its real worth, though: it looks a bit corrupted. I could take a look at it, if I ever get enough downtime to dig into it."
 
-It's said once and never repeated. The core's cargo tooltip carries the same hint ("the Minds might want this"). It's a pointer, not a quest: no marker, no deadline.
+- **Once only:** it's said once and never repeated.
+- **The tooltip:** the core's cargo tooltip carries the same hint ("might be valuable to the Minds; partly corrupted").
+- **A pointer, not a quest:** no marker, no deadline, and no ports named. A curious player finds where the Minds gather.
+- **Two roads in one line:** "the Minds" points at a sale; "enough downtime" points, without saying so, at a long sleep and the Lanes' road. The player who later sleeps a year with the core aboard finds out what the co-pilot meant.
 
 ### Who will buy it, and who you sell it to
 - **No human buyer.** Human markets offer nothing: it's old data in a dead format. The Compact's yards shrug.
@@ -91,9 +94,11 @@ The beats keep the same spine: the minds try, it goes poorly, and they need a pe
 
 **Kept, and slept on: the Lanes' road (the fourth)**
 
-*Your co-pilot.* The AI that has flown with you all game is **from the Lanes**: the loose, chatty, distributed society of minds that run the shipping lanes. That includes drone freighters, traffic control, nav beacons, tugs and co-pilots. It is not a ship system. It's a person who rides with you, and **it moves with you from ship to ship** (it fits the fleet: you change hulls, not companions). Early on you can give it a name.
+*Your co-pilot.* The AI that has flown with you all game is **from the Lanes**: the loose, chatty, distributed society of minds that run the shipping lanes. That includes drone freighters, traffic control, nav beacons, tugs and co-pilots. It is not a ship system. It's a person who rides with you, and **it moves with you from ship to ship** (it fits the fleet: you change hulls, not companions).
 
-*The trigger:* you keep the memory core instead of selling it, and you sleep more than a year with it aboard. Your co-pilot has a year with nobody to talk to. It gets bored. It reads the core.
+*Its name:* **the first time it speaks up** in a game, it asks what you'd like to call it ("Most pilots call me Co-pilot. You can do better."). The name you give it is used in every line from then on.
+
+*The trigger:* you keep the memory core instead of selling it, and you sleep more than a year with it aboard. That's the downtime it mentioned. Your co-pilot has a year with nobody to talk to. It gets bored. It digs into the core and repairs the corrupted parts.
 
 *What it finds:* it notices the three stars wink out, and doesn't know what to make of it. So it does what lane minds always do: **it asks the Lanes**. While you sleep, the question goes out along every beacon and freighter, the way gossip does, and thousands of small minds weigh in.
 
@@ -217,7 +222,7 @@ The Compact trains its own interpreter and sends them out under-prepared, with n
 - New: hibernation (pod module, sleep command, digest screen, coarse sleep stepping).
 
 ## Open questions for Sean
-0. **The circles:** four roads now (the Long View, the Reach, the Sufficiency, and the Lanes through your own co-pilot). Should the co-pilot's hint name the three ports, or leave the player to find them? And should naming the co-pilot happen at the start of the game, or the first time it speaks up?
+0. **Settled:** the co-pilot is named the first time it speaks up, and its hint names no ports (Sean, 2026-10-12).
 1. How long should *Long Patience* take: 3 years (a hibernation-sized gap), or shorter so a non-sleeper doesn't wait forever? With the sale as the trigger, a pilot who sells early waits through more of it; a sleeper can tunnel through.
 2. Should the Compact show any interest in the core (a news line, a polite inquiry later), or stay entirely blind until Act III?
 3. Should the Lacuna's preference stay unexplained (only the minds' theory), or should Act III confirm it?
