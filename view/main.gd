@@ -231,6 +231,14 @@ func _handle_events() -> void:
 	for e in sim.take_events():
 		var d: Dictionary = e["data"]
 		match e["type"]:
+			"traffic_hold":
+				var place_name: String = sim.data.places[d["place"]]["name"]
+				var who := preload("res://view/flight/pattern.gd").describe(sim, d["place"], d["ahead"]) if not (d["ahead"] as Dictionary).is_empty() else "traffic"
+				var going := "in" if d["ahead"].get("kind", "in") == "in" else "out"
+				var line := ("%s Control: hold in your cradle, %d s. %s is cleared %s first." % [place_name, int(ceil(float(d["hold_s"]))), who.substr(0, 1).to_upper() + who.substr(1), going]) if d["control"] == "tower" \
+					else ("%s traffic: %s called it first, coming %s. Holding in the cradle, %d s." % [place_name, who, going, int(ceil(float(d["hold_s"])))])
+				_radio_line(line)
+				notice(line, UI.AMBER)
 			"npc_departed", "npc_arrived", "npc_flyby_plan", "npc_flyby":
 				var text := Comms.line(sim, e)
 				if text != "":
@@ -746,11 +754,20 @@ func _sync_mode() -> void:
 		"approach", "lifeboat":
 			# 3D renders in the root viewport underneath all 2D; its HUD sits in this layer.
 			_screen = FlightScene.new(sim)
+			_screen.radio.connect(_radio_line)
 			_layer.add_child(_screen)
 			_fade_in(0.7)
 		"elevator":
 			_screen = load("res://view/climber_view.gd").new(sim)
 			_layer.add_child(_screen)
+
+
+## A line heard on the radio (traffic control, other pilots), into the comms log.
+func _radio_line(text: String) -> void:
+	comms.append("%s  %s" % [_clock(sim.state.time_s), text])
+	if comms.size() > COMMS_KEEP:
+		comms.pop_front()
+	_ticker.text = "\n".join(comms.slice(maxi(0, comms.size() - 3)))
 
 
 ## Come up from black over `seconds`: the hand-over from one view to the next reads as
@@ -851,6 +868,10 @@ func _smoke() -> void:
 	# Hands-off approach: aligned, creeping in at 0.8 m/s, co-pilot spin match on.
 	# Proves the docking rules can be met by real flight, not just by the command.
 	var flight: FlightScene = _screen
+	# The bay is ours (traffic control is tested in tests/traffic_view.gd; the clock
+	# doesn't run here).
+	if not flight.tc.is_empty():
+		flight.tc["cleared"] = true
 	# First too fast: the port must refuse capture.
 	flight.ship_node.position = Vector3(0.0, 0.0, flight.station["port_z"] + 20.0 - flight.nose_z)
 	flight.ship_node.rotation = Vector3.ZERO
@@ -927,15 +948,20 @@ func _dock_trial() -> void:
 		var flight: FlightScene = _screen
 		var steps := 0
 		var limit := 60 * 900
+		var held := 0
 		while not flight.docked and steps < limit:
 			flight.control_override = Autopilot.controls(flight)
+			# The world runs on at x1, so the port's traffic moves (sim/traffic.gd).
+			sim.tick(1.0 / 60.0)
 			flight._physics_process(1.0 / 60.0)
+			if not flight.cleared():
+				held += 1
 			steps += 1
 		var ok := flight.docked
 		all_ok = all_ok and ok
 		ok = ok and flight.hits == 0
 		all_ok = all_ok and ok
-		print("DOCK_TRIAL %-16s docked=%s time=%5.0f s refusals=%d contacts=%d hits=%d bay=%s" % [place, flight.docked, steps / 60.0, flight.refusals, flight.bumps, flight.hits, flight.bay_doors])
+		print("DOCK_TRIAL %-16s docked=%s time=%5.0f s held=%4.0f s refusals=%d contacts=%d hits=%d bay=%s traffic=%s" % [place, flight.docked, steps / 60.0, held / 60.0, flight.refusals, flight.bumps, flight.hits, flight.bay_doors, flight.tc.get("control", "-")])
 		sim.state.location = {"status": "docked", "place": place}
 	print("DOCK_TRIAL_OK" if all_ok else "DOCK_TRIAL_FAIL")
 	_quit(0 if all_ok else 1)
@@ -1078,6 +1104,32 @@ func _tour(dir: String) -> void:
 	for _i in 10:
 		await get_tree().process_frame
 	_shot(dir + "/6-flight-chase.png")
+	# Traffic: a local ship ahead of us in the pattern, going in through the doors
+	# while we hold (sim/traffic.gd).
+	var place: String = sim.state.location["place"]
+	var lead := {}
+	for m in preload("res://sim/traffic.gd").movements(sim.state, sim.data, place, sim.state.time_s + 600.0, sim.state.time_s + 86400.0):
+		if m.has("local") and m["kind"] == "in":
+			lead = m
+			break
+	if not lead.is_empty():
+		sim.state.time_s = float(lead["t"]) - 20.0
+		sim.state.location = {"status": "approach", "place": place}
+		_mode = ""
+		_sync_mode()
+		await get_tree().physics_frame
+		var held: FlightScene = _screen
+		sim.state.time_s = float(lead["t"]) + 30.0
+		held.ship_node.position = Vector3(6, 4, float(held.station["bay"]["z_mouth"]) + 250.0 - held.nose_z)
+		held.ship_node.rotation = Vector3.ZERO
+		held.view_mode = "chase"
+		for _i in 20:
+			await get_tree().process_frame
+		_shot(dir + "/6b-flight-traffic.png")
+		held.view_mode = "cockpit"
+		for _i in 10:
+			await get_tree().process_frame
+		_shot(dir + "/6c-flight-traffic-cockpit.png")
 	_quit()
 
 

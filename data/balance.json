@@ -97,6 +97,25 @@
 		"door_s": 12.0,
 		"clear_s": 4.0
 	},
+	"traffic": {
+		"_note": "Who uses a port's docking bay, and when (sim/traffic.gd, view/flight/pattern.gd). One ship at a time: each movement holds the bay for cycle_s (doors open, through, doors shut). Long-haul NPCs move when they arrive and leave; the port's own craft (local_traffic in npcs.json) take at most one slot_s slot each, per_hour of them an hour (a place's bay_traffic.per_hour, else this). A tower port sequences everyone; at an open port you give way only to ships committed within lead_s. Leaving, you hold in your cradle until the bay is free for depart_need_s, at most max_hold_s (trip times are unchanged). Arriving, the tower guesses when you'll reach the bay at player_speed_mps and puts at most max_ahead ships before you; while others are ahead you hold hold_m off the doors, and at an open port you claim the bay when within claim_m of the doors with nobody committed. Pattern ships close on the axis at in_speed_mps to the gate (gate_m off the doors), are drawn from horizon_s before they move, peel away for peel_s after, and when held keep separation_m behind you, shuffling at up to max_shuffle_mps.",
+		"slot_s": 120.0,
+		"cycle_s": 90.0,
+		"per_hour": 4.0,
+		"lead_s": 30.0,
+		"depart_need_s": 75.0,
+		"max_hold_s": 240.0,
+		"player_speed_mps": 2.5,
+		"max_ahead": 2,
+		"hold_m": 250.0,
+		"claim_m": 280.0,
+		"gate_m": 120.0,
+		"in_speed_mps": 3.0,
+		"horizon_s": 400.0,
+		"peel_s": 60.0,
+		"separation_m": 150.0,
+		"max_shuffle_mps": 6.0
+	},
 	"approach": {
 		"_note": "The last part of every trip to a port (sim/navigation.gd add_approach), flown in the port's own frame. Over the last window_s before the ship reaches the port, it swings round from wherever the trip brings it to the corridor entry (corridor_m beyond the handover point, on the docking axis), going wide of the station (its bounding radius plus clear_margin_m) if it comes in from behind (when the cosine between its direction and the axis is under swing_cos). Then it brakes along the corridor from corridor_speed_mps to handover_speed_mps, arriving at the handover point, where the docking scene takes over. Docking ports all face view +Z (sim -Y), as in the flight scene. For a port in orbit round a body, a descent over the descent_s before that sweeps the ship down onto the port's orbit, meeting it meet_behind_m behind the port and moving with it; time drops to at most descent_time_scale for it. Trip time and propellant are unchanged.",
 		"window_s": 1200,

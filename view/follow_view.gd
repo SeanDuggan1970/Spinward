@@ -29,6 +29,7 @@ const ProjectSystem := preload("res://sim/systems/project_system.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
 const Bay := preload("res://view/flight/bay.gd")
 const Undock := preload("res://view/flight/undock.gd")
+const Pattern := preload("res://view/flight/pattern.gd")
 
 const SKY_DISTANCE := 60000.0
 ## Burning, a thrust direction this far off the present one (radians) is a flip coming:
@@ -123,6 +124,9 @@ var _stowed_r := 5.0
 ## Leaving through a bay: {bay, clear_t, turn_t, rate, facing} for this trip's port of
 ## departure (empty when it has no bay we fit); see balance.undock.
 var _undock: Dictionary = {}
+## Ships in the traffic pattern at the port we are leaving (view/flight/pattern.gd).
+var _pattern = null
+var _pattern_sync := -INF
 ## The ship's attitude as it left the bay's lockstep, blended into normal flight.
 var _undock_basis := Basis.IDENTITY
 ## Thruster pulses during the undock: the next one due (real seconds).
@@ -341,6 +345,8 @@ func _update_world(dt: float) -> void:
 				var cfg: Dictionary = sim.data.balance["undock"]
 				var clear := _departure.clear_after_s
 				_undock = {"bay": bay, "clear_t": clear, "turn_t": Undock.turn_t(cfg, clear), "rate": float(geom["spin_rpm"]) * TAU / 60.0, "facing": Basis.IDENTITY, "place": place}
+			if leaving and not bay.is_empty() and _pattern == null:
+				_pattern = Pattern.new(sim, place, st, st["node"])
 		if _stations.has(place):
 			var entry: Dictionary = _stations[place]
 			var st: Dictionary = entry["model"]
@@ -365,10 +371,14 @@ func _update_world(dt: float) -> void:
 				if off > 0.0:
 					st["node"].position -= facing * ((st["rotor"] as Node3D).basis * Vector3(0, -off, 0))
 					at = st["node"].position
+			if leaving and _pattern != null and near:
+				_fly_pattern(t, dt, float(loc["depart_t"]), fposmod(t * float(entry["rate"]), TAU), facing.inverse() * _sun_dir)
 			if leaving and not _undock.is_empty() and _undock["place"] == place:
 				_undock["facing"] = facing
 				var bays: Dictionary = sim.data.balance["bays"]
-				Bay.set_open(_undock["bay"], (tau - float(sim.data.balance["undock"]["doors_at_s"])) / float(bays["door_s"]))
+				# Our own doors, or a pattern ship's while we hold for traffic.
+				var ours := (tau - float(_departure.motion["doors_at_s"])) / float(bays["door_s"])
+				Bay.set_open(_undock["bay"], maxf(ours, _pattern.door_open(t) if _pattern else 0.0))
 			entry["dist"] = at.length() if near else INF
 	# Attitude: along the thrust while burning (from toward the target round to braking
 	# against it); coasting, hold it. The ship turns with inertia (ShipRig.turn_step),
@@ -457,9 +467,22 @@ func _update_world(dt: float) -> void:
 	readout["dest_dir"] = dest_dir
 	readout["phase"] = ("TURNING" if _omega.length() > 0.02 else "COASTING") if not _thrusting else ("TURNING" if not _lit else ("ACCELERATING" if V.dot(V.normalized(thrust), V.normalized(v_now)) > 0.3 else ("BRAKING" if V.dot(V.normalized(thrust), V.normalized(v_now)) < -0.3 else "BURNING ACROSS")))
 	if backing_out:
-		readout["phase"] = "OPENING BAY" if elapsed < _departure.opening_s else "BACKING OUT"
+		readout["phase"] = "HOLDING FOR TRAFFIC" if elapsed < _departure.hold_s else ("OPENING BAY" if elapsed < _departure.opening_s else "BACKING OUT")
 	if app[3] in ["corridor", "hold"] or app[3] == "swing" and not _thrusting:
 		readout["phase"] = "ON APPROACH"
+
+
+## The port's traffic as we leave: the ship we held for goes through first; anyone
+## due while we use the bay waits off the axis until we are clear.
+func _fly_pattern(t: float, dt: float, depart_t: float, spin: float, sun_local: Vector3) -> void:
+	if absf(t - _pattern_sync) >= 1.0:
+		_pattern_sync = t
+		var ours_from := depart_t + _departure.hold_s - 0.5
+		var ours_to := depart_t + _departure.clear_after_s + float(sim.data.balance["bays"]["door_s"])
+		for m in _pattern.sync(t):
+			if float(m["t"]) >= ours_from and float(m["t"]) < ours_to:
+				_pattern.held[Pattern.key(m)] = true
+	_pattern.update(t, dt, spin, sun_local, INF, float(sim.data.balance["traffic"]["separation_m"]) * 0.5)
 
 
 ## Undocking: the ship held on the berth's axis (nose to the port), turning with the

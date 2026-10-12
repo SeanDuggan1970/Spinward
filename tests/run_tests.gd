@@ -23,6 +23,7 @@ const Favours := preload("res://sim/favours.gd")
 const SiteSystemScript := preload("res://sim/systems/site_system.gd")
 const EconomySystemScript := preload("res://sim/systems/economy_system.gd")
 const NpcSystem := preload("res://sim/systems/npc_system.gd")
+const Traffic := preload("res://sim/traffic.gd")
 const Bindings := preload("res://view/bindings.gd")
 const DamageSystem := preload("res://sim/systems/damage_system.gd")
 const Power := preload("res://sim/power.gd")
@@ -138,6 +139,7 @@ func _initialize() -> void:
 	test_craft_contracts()
 	test_build_info()
 	test_hibernation()
+	test_traffic_control()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -2579,6 +2581,9 @@ func test_time_ramps() -> void:
 	s.time_scale = 100.0
 	check(sim.apply({"type": "depart", "to": "halo_depot"}) == "", "Depart for the ramp test")
 	check(s.time_scale == 1.0, "Departure starts at x1 (%.0f)" % s.time_scale)
+	# Any hold in the cradle for traffic comes first; the ramp counts from its end.
+	for _i in int(ceil(float(s.location.get("hold_s", 0.0)) / 0.05)):
+		sim.tick(0.05)
 	for _i in 1000:
 		sim.tick(0.05)
 	check(s.time_scale == 1.0, "Fifty seconds out, still at x1 to watch the ship back out of the bay (%.0f)" % s.time_scale)
@@ -4806,3 +4811,63 @@ func test_hibernation() -> void:
 	s.sleep["total_s"] = 3651.0 * DAY
 	sim.advance_game_time(3600.0)
 	check(s.badges["earned"].has("bookworm"), "Ten years slept earns the Bookworm badge")
+
+
+func test_traffic_control() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var cfg: Dictionary = d.balance["traffic"]
+	check(Traffic.control(d, "kibo_ring") == "tower" and Traffic.control(d, "landauer_deep") == "open", "Kibo Ring has a tower; Landauer Deep is a free-for-all")
+	# A day at Kibo Ring: the local craft keep to their rate, one at a time, clear of the
+	# long-haul ships, and the schedule is the same however often it is asked.
+	var t0: float = s.time_s
+	var day: Array = Traffic.movements(s, d, "kibo_ring", t0, t0 + DAY)
+	check(day == Traffic.movements(s, d, "kibo_ring", t0, t0 + DAY), "The schedule is deterministic")
+	var locals := day.filter(func(m): return m.has("local"))
+	var expect := Traffic.per_hour(d, "kibo_ring") * 24.0
+	check(absf(float(locals.size()) - expect) <= maxf(3.0, expect * 0.1), "Local craft through the bay: %d in a day (about %.0f)" % [locals.size(), expect])
+	var overlap := false
+	for i in day.size():
+		for j in range(i + 1, day.size()):
+			var a: Dictionary = day[i]
+			var b: Dictionary = day[j]
+			if (a.has("local") or b.has("local")) and float(a["t"]) < float(b["end"]) and float(b["t"]) < float(a["end"]):
+				overlap = true
+	check(not overlap, "Local craft never share the bay")
+	check(day.all(func(m): return float(m["end"]) - float(m["t"]) == float(cfg["cycle_s"])), "Each movement holds the bay for one cycle")
+	check(Traffic.movements(s, d, "ishikawa_maru", t0, t0 + DAY).is_empty(), "A site has no bay and no traffic")
+	# Leaving while a ship is in the bay: hold until it is through.
+	var m: Dictionary = locals[0]
+	var inside := float(m["t"]) + 5.0
+	var hold := Traffic.departure_hold(s, d, "kibo_ring", inside)
+	check(float(hold["hold_s"]) >= float(m["end"]) - inside - 0.01 and not (hold["ahead"] as Dictionary).is_empty(), "Leaving mid-cycle, hold %.0f s for the ship in the bay" % float(hold["hold_s"]))
+	check(float(hold["hold_s"]) <= float(cfg["max_hold_s"]), "Holds are capped")
+	# A free bay: find a moment with nobody due for the time we need.
+	var free_t := -1.0
+	var probe := t0
+	while probe < t0 + DAY and free_t < 0.0:
+		if Traffic.departure_hold(s, d, "kibo_ring", probe)["hold_s"] == 0.0:
+			free_t = probe
+		probe += 30.0
+	check(free_t >= 0.0, "A free bay lets you straight out")
+	# An open port gives way: a ship not yet committed waits for you; one committed doesn't.
+	var open_day: Array = Traffic.movements(s, d, "piazzi_station", t0, t0 + 3.0 * DAY).filter(func(x): return x.has("local"))
+	var om: Dictionary = open_day[0]
+	var early := float(om["t"]) - float(cfg["lead_s"]) - 20.0
+	var late := float(om["t"]) - float(cfg["lead_s"]) * 0.5
+	var before := Traffic.movements(s, d, "piazzi_station", early - float(cfg["cycle_s"]), early + 1.0)
+	if before.is_empty() or float(before[-1]["end"]) <= early:
+		check(Traffic.departure_hold(s, d, "piazzi_station", early)["hold_s"] == 0.0, "At an open port, a ship not yet committed gives way")
+	check(float(Traffic.departure_hold(s, d, "piazzi_station", late)["hold_s"]) > 0.0, "and you give way to one that is")
+	# The depart command holds you in the cradle, and the time ramp waits for it.
+	s.time_s = inside
+	sim.take_events()
+	check(sim.apply({"type": "depart", "to": "clarke_exchange"}) == "", "Depart Kibo Ring with a ship in the bay")
+	var held := sim.take_events().filter(func(e): return e["type"] == "traffic_hold")
+	check(float(s.location.get("hold_s", 0.0)) > 0.0 and held.size() == 1 and held[0]["data"]["control"] == "tower", "Held %.0f s, and told why" % float(s.location.get("hold_s", 0.0)))
+	var first_step := float(d.balance["time"]["departure_ramp"][0][0])
+	sim.advance_game_time(first_step + 1.0)
+	check(s.time_scale == 1.0, "Time stays at x1 while the hold runs on")
+	sim.advance_game_time(float(s.location["hold_s"]))
+	check(s.time_scale > 1.0, "then steps up as the ship backs out (x%d)" % int(s.time_scale))

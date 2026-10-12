@@ -307,6 +307,26 @@ func validate() -> Array[String]:
 			problems.append("station %s: %.2f g is more than 1 g" % [id, g])
 		if geom.has("gravity_g") and absf(g - float(geom["gravity_g"])) > 0.03 * maxf(float(geom["gravity_g"]), 0.01):
 			problems.append("station %s: spin gives %.3f g, not the gravity_g of %s" % [id, g, geom["gravity_g"]])
+	# Bay traffic (sim/traffic.gd): a known kind of control, and no more craft than slots.
+	var traffic: Dictionary = balance.get("traffic", {})
+	if not traffic.is_empty():
+		if float(traffic["cycle_s"]) > float(traffic["slot_s"]):
+			problems.append("balance traffic: cycle_s is longer than slot_s")
+		for id in places:
+			var tr: Dictionary = places[id].get("bay_traffic", {})
+			if not places[id].has("station"):
+				continue
+			if not String(tr.get("control", "tower")) in ["tower", "open"]:
+				problems.append("place %s: traffic control must be tower or open" % id)
+			var rate := float(tr.get("per_hour", traffic["per_hour"]))
+			if rate < 0.0 or rate * float(traffic["slot_s"]) / 3600.0 > 1.0:
+				problems.append("place %s: %s local movements an hour won't fit the bay's slots" % [id, rate])
+		var local: Dictionary = npcs.get("local_traffic", {})
+		if local.get("names", []).is_empty() or local.get("hulls", []).is_empty():
+			problems.append("npcs local_traffic: needs names and hulls")
+		for hull in local.get("hulls", []):
+			if not ships.has(hull):
+				problems.append("npcs local_traffic: unknown hull %s" % hull)
 	# The memory core: a real site to find it at, real ports to sell it at, and roads
 	# that some beat waits for.
 	var core: Dictionary = story.get("core", {})

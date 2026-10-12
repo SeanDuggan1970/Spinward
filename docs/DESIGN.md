@@ -1146,6 +1146,27 @@ Owner's brief: *the rotating stations look only big enough for one ship at a tim
   - On docking, a notice gives the local gravity: "0.38 g (Mars-like) on the ring; 0.03 g at your berth".
 - **Leaving:** the ship is lifted from its cradle to the axis while the doors open (`hall.lift_start_s` to the doors fully open), then backs out through the hall and the tunnel as before.
 
+## Traffic control at the bay (Oct 2026)
+
+Owner's brief: *we should see other ships if they're about. Docking and undocking should wait if other ships are ahead of us in the pattern, all run by the station's AI traffic control. Out-system ports can be more of a free-for-all, with pilots relying on a buddy system, like club airfields with no control tower.*
+
+- **One bay, one ship at a time.** Each movement through a port's bay (doors open, through, doors shut) holds it for `balance.traffic.cycle_s` (90 s). `sim/traffic.gd` gives every port's schedule from the time and state alone, with no random draws, so the flight scene, the departure view and the sim agree.
+  - **Long-haul ships** (`npcs.json`) come in over the cycle before they dock, and go out when they leave.
+  - **The port's own craft** (shuttles, couriers, tenders: `npcs.json` `local_traffic`) take `bay_traffic.per_hour` slots an hour, from 1 at Plume Watch and Landauer Deep to 8 at Kibo Ring and Kalpana One. A low-discrepancy sequence spreads them evenly; they never clump or share the bay.
+- **Towers and open ports** (`places.json` `bay_traffic.control`):
+  - **Tower:** the inner system: the Earth–Moon ports, Mars, Trojan Yards and the colonies. The controller sequences every ship. Arriving, it gives you your number ("number 2 for the bay, behind the Moth") and clears each ship in or out by name. At most `max_ahead` ships go before you.
+  - **Open:** the belt and beyond (Piazzi, Psyche, Valhalla, Huygens, Plume Watch, Hektor Reach, Landauer Deep). There is no controller. Pilots call their own moves on the common channel ("Piazzi Station traffic, Wren, inbound for the bay"). You give way to anyone already committed (`lead_s`), and once you're within `claim_m` of the doors with nobody committed, you call "going in" and the bay is yours. Ships coming in behind you call that they're holding behind you.
+- **Arriving (flight scene):**
+  - Ships ahead of you fly the axis and go through the doors first, while you hold `hold_m` (250 m) off the doors. The co-pilot's line says why, and the autopilot holds there too.
+  - Ships behind you wait `separation_m` back until you're in.
+  - Flying in uncleared gets a warning, and the clamps refuse capture until the bay is yours.
+  - Pattern ships are solid and show on the scanner. The view draws them (`view/flight/pattern.gd`); the sim only knows when they move.
+- **Leaving:**
+  - The depart command works out a hold from the same schedule (`Traffic.departure_hold`, stored as `location.hold_s`, at most `max_hold_s`). The ship waits in its cradle, the time ramp waits with it, and the departure view shows the ship you're waiting for going past.
+  - A notice gives the reason: the tower's "hold in your cradle, 85 s", or at an open port, who called it first.
+  - The trip's times and propellant don't change.
+- **The radio:** traffic control's and other pilots' calls go to the comms log, alongside the existing chatter.
+
 ## Performance (Oct 2026)
 
 Long skips (time compression, a yard's days in port, a long transit, the headless tests, the balance bot) spend nearly all their time planning NPC trips. The speed-ups are exact: the same inputs give bit-identical state and events, and no number in `data/` changed. What is cached or skipped, and what must not be broken:

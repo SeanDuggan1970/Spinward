@@ -7,6 +7,8 @@ const ShipRig := preload("res://view/flight/ship_rig.gd")
 const SaveIO := preload("res://sim/save_io.gd")
 const Navigation := preload("res://sim/navigation.gd")
 const V := preload("res://sim/v3.gd")
+const Traffic := preload("res://sim/traffic.gd")
+const Pattern := preload("res://view/flight/pattern.gd")
 
 var checks := 0
 var failures := 0
@@ -123,6 +125,7 @@ func _run() -> void:
 		break
 	check(checked_cooling, "The co-pilot still deploys stealth panels for main-engine cooling")
 	view.free()
+	_held_for_traffic()
 	print("%d checks, %d failures (departure view)" % [checks, failures])
 	quit(1 if failures else 0)
 
@@ -138,3 +141,43 @@ func capture(view, name: String) -> void:
 	await process_frame
 	await process_frame
 	root.get_texture().get_image().save_png(shots + "/" + name + ".png")
+
+
+## Leaving Kibo Ring with a local ship coming in: we wait in the cradle, it goes in
+## through the doors, then ours open and we back out.
+func _held_for_traffic() -> void:
+	var sim := Sim.new()
+	sim.new_game(42)
+	var t0: float = sim.state.time_s + 3600.0
+	var pick := {}
+	for m in Traffic.movements(sim.state, sim.data, "kibo_ring", t0, t0 + 86400.0):
+		if m.has("local") and m["kind"] == "in":
+			pick = m
+			break
+	check(not pick.is_empty(), "A local ship comes in to Kibo Ring")
+	sim.state.time_s = float(pick["t"]) + 10.0
+	sim.state.location = {"status": "docked", "place": "kibo_ring"}
+	check(sim.apply({"type": "depart", "to": "halo_depot"}) == "", "Depart Kibo Ring with a ship in the bay")
+	var hold := float(sim.state.location.get("hold_s", 0.0))
+	check(hold >= float(pick["end"]) - sim.state.time_s - 0.01, "Held %.0f s for it" % hold)
+	var view := FollowView.new(sim)
+	root.add_child(view)
+	view.set_process(false)
+	var exit = view._departure
+	var depart := float(sim.state.location["depart_t"])
+	check(is_equal_approx(exit.hold_s, hold) and exit.opening_s >= hold + float(sim.data.balance["bays"]["door_s"]), "The doors wait for the hold")
+	check(is_equal_approx(exit.lift(hold), exit.lift(0.0)), "Still in the cradle when the hold ends")
+	var saw := false
+	var phase := ""
+	var e := 0.0
+	while e < hold:
+		sim.state.time_s = depart + e
+		view._update_world(1.0 / 60.0)
+		if view._pattern != null and view._pattern.ships.has(Pattern.key(pick)):
+			saw = true
+		if e > 1.0 and phase == "":
+			phase = String(view.readout.get("phase", ""))
+		e += 1.0
+	check(saw, "The ship we hold for goes past, into the bay")
+	check(phase == "HOLDING FOR TRAFFIC", "The panel says why we wait (%s)" % phase)
+	view.free()

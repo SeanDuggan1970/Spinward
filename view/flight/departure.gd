@@ -21,6 +21,9 @@ var motion: Dictionary = {}
 var lift_r := 0.0
 var lift_from_s := 0.0
 var lift_to_s := 0.0
+## Held in the cradle for traffic before anything moves (location.hold_s, set by the
+## sim from sim/traffic.gd).
+var hold_s := 0.0
 
 
 func setup(model: Dictionary, data, location: Dictionary) -> void:
@@ -31,6 +34,10 @@ func setup(model: Dictionary, data, location: Dictionary) -> void:
 	spin_rate = float(geom["spin_rpm"]) * TAU / 60.0
 	start_gap = -float(model["nose_z"]) + 0.5
 	motion = data.balance["undock"].duplicate()
+	hold_s = float(location.get("hold_s", 0.0))
+	motion["doors_at_s"] = float(motion["doors_at_s"]) + hold_s
+	motion["move_at_s"] = float(motion["move_at_s"]) + hold_s
+	opening_s = hold_s
 	# Clear the whole hull's turning envelope, including its deployed panels.
 	var envelope := maxf(absf(float(model["nose_z"])), absf(float(model["nose_z"]) + float(model["length"]))) + float(model["radius"])
 	var front := 0.0
@@ -51,7 +58,7 @@ func setup(model: Dictionary, data, location: Dictionary) -> void:
 				start_gap = length * 0.5 - 0.2
 				front += length
 				lift_r = Spin.cradle_radius(data, ShipRig.stowed_radius(model))
-				lift_from_s = float(hall["lift_start_s"])
+				lift_from_s = float(hall["lift_start_s"]) + hold_s
 				lift_to_s = opening_s - 1.0
 	motion["move_at_s"] = opening_s
 	clear_gap = front + envelope + float(motion["clear_m"])

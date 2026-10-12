@@ -1,5 +1,5 @@
 {
-	"_note": "Flows are tonnes per game day. market.target is the stock where price equals base price. Recipes run per day while inputs last. Station geometry drives the docking scene. Orbits flagged 'equatorial' are relative to Earth's equator. 'features' add view-only megastructure set pieces (skyhook, power_arrays, elevator, bernal_frame, telescope_array, captured_rock). station.type is 'wheel' (default) or 'cylinder'. Places that a project builds ('opens_with': island_one, kalpana_two, concord_pair, selene_ring, tsiolkovsky_wheel, hektor_reach) stay shut (departures, boards, map, traffic, tips) until the project is done (Perks.place_open); their markets still warm up from day one. A habitat built beside an existing port sits a few km off it (lagrange offset_km, or a slightly different mean anomaly in the same orbit). station.type 'bernal' is a Bernal sphere (Island One: hub_radius_m is the sphere's radius) and 'pair' an O'Neill pair of counter-rotating cylinders (Concord; optional mirror_open_deg, twin_offset_m), both in view/flight/habitats.gd. An elevator may have a 'counterweight' leg (place, km and hours beyond the anchor, fare, fare_per_t, via): a place marked 'counterweight' and foot_of the anchor, reached only by climbing out past the anchor; a surface location with radius_m sits that far from the body's centre, turning with it. A place with the 'bar' service has a 'bar' (name, patrons, round_cr): you can buy the room a round (sim/systems/badge_system.gd). An elevator's 'power' is how its climbers run: 'beam' (a photocell dish under each climber, lit from the foot) or 'solar' (wings). 'sensors' scales how far a port sees ships (balance.detection.port_sensors by default).",
+	"_note": "Flows are tonnes per game day. market.target is the stock where price equals base price. Recipes run per day while inputs last. Station geometry drives the docking scene. Orbits flagged 'equatorial' are relative to Earth's equator. 'features' add view-only megastructure set pieces (skyhook, power_arrays, elevator, bernal_frame, telescope_array, captured_rock). station.type is 'wheel' (default) or 'cylinder'. Places that a project builds ('opens_with': island_one, kalpana_two, concord_pair, selene_ring, tsiolkovsky_wheel, hektor_reach) stay shut (departures, boards, map, traffic, tips) until the project is done (Perks.place_open); their markets still warm up from day one. A habitat built beside an existing port sits a few km off it (lagrange offset_km, or a slightly different mean anomaly in the same orbit). station.type 'bernal' is a Bernal sphere (Island One: hub_radius_m is the sphere's radius) and 'pair' an O'Neill pair of counter-rotating cylinders (Concord; optional mirror_open_deg, twin_offset_m), both in view/flight/habitats.gd. An elevator may have a 'counterweight' leg (place, km and hours beyond the anchor, fare, fare_per_t, via): a place marked 'counterweight' and foot_of the anchor, reached only by climbing out past the anchor; a surface location with radius_m sits that far from the body's centre, turning with it. A place with the 'bar' service has a 'bar' (name, patrons, round_cr): you can buy the room a round (sim/systems/badge_system.gd). An elevator's 'power' is how its climbers run: 'beam' (a photocell dish under each climber, lit from the foot) or 'solar' (wings). 'sensors' scales how far a port sees ships (balance.detection.port_sensors by default). 'bay_traffic' is the port's bay traffic (sim/traffic.gd, balance.traffic): control 'tower' (a controller sequences every ship through the bay) or 'open' (no tower: pilots call their moves on a common channel and give way to whoever is committed), and per_hour, the port's own local craft through the bay each hour.",
 	"kibo_ring": {
 		"name": "Kibo Ring",
 		"operator": "Terran Compact",
@@ -27,6 +27,10 @@
 			"spin_rpm": 0.946,
 			"gravity_g": 0.38,
 			"colour": "offwhite"
+		},
+		"bay_traffic": {
+			"control": "tower",
+			"per_hour": 8
 		},
 		"services": [
 			"market",
@@ -107,6 +111,10 @@
 			"gravity_g": 0.3,
 			"colour": "grey"
 		},
+		"bay_traffic": {
+			"control": "tower",
+			"per_hour": 6
+		},
 		"services": [
 			"market",
 			"refuel"
@@ -157,6 +165,10 @@
 			"spin_rpm": 0.859,
 			"gravity_g": 0.165,
 			"colour": "orange"
+		},
+		"bay_traffic": {
+			"control": "tower",
+			"per_hour": 5
 		},
 		"services": [
 			"market",
@@ -240,6 +252,10 @@
 			"gravity_g": 0.165,
 			"colour": "grey"
 		},
+		"bay_traffic": {
+			"control": "tower",
+			"per_hour": 5
+		},
 		"services": [
 			"market",
 			"refuel"
@@ -299,6 +315,10 @@
 			"spin_rpm": 0.811,
 			"gravity_g": 0.25,
 			"colour": "rust"
+		},
+		"bay_traffic": {
+			"control": "tower",
+			"per_hour": 6
 		},
 		"services": [
 			"market",
@@ -415,6 +435,10 @@
 			"gravity_g": 0.5,
 			"colour": "offwhite"
 		},
+		"bay_traffic": {
+			"control": "tower",
+			"per_hour": 6
+		},
 		"services": [
 			"market"
 		],
@@ -481,6 +505,10 @@
 			"port_radius_m": 9,
 			"colour": "offwhite"
 		},
+		"bay_traffic": {
+			"control": "tower",
+			"per_hour": 8
+		},
 		"services": [
 			"market",
 			"refuel"
@@ -535,6 +563,10 @@
 			"gravity_g": 0.165,
 			"colour": "grey"
 		},
+		"bay_traffic": {
+			"control": "tower",
+			"per_hour": 2
+		},
 		"features": [
 			"telescope_array"
 		],
@@ -584,6 +616,10 @@
 			"spin_rpm": 0.922,
 			"gravity_g": 0.38,
 			"colour": "rust"
+		},
+		"bay_traffic": {
+			"control": "tower",
+			"per_hour": 6
 		},
 		"services": [
 			"market",
@@ -684,6 +720,10 @@
 			"spin_rpm": 0.725,
 			"gravity_g": 0.2,
 			"colour": "grey"
+		},
+		"bay_traffic": {
+			"control": "open",
+			"per_hour": 3
 		},
 		"services": [
 			"market",
@@ -804,6 +844,10 @@
 			"gravity_g": 0.12,
 			"colour": "steel"
 		},
+		"bay_traffic": {
+			"control": "open",
+			"per_hour": 2
+		},
 		"services": [
 			"market"
 		],
@@ -868,6 +912,10 @@
 			"spin_rpm": 0.841,
 			"gravity_g": 0.38,
 			"colour": "offwhite"
+		},
+		"bay_traffic": {
+			"control": "open",
+			"per_hour": 2
 		},
 		"services": [
 			"market",
@@ -941,6 +989,10 @@
 			"gravity_g": 0.25,
 			"colour": "orange"
 		},
+		"bay_traffic": {
+			"control": "open",
+			"per_hour": 2
+		},
 		"services": [
 			"market",
 			"refuel"
@@ -993,6 +1045,10 @@
 			"gravity_g": 0.12,
 			"colour": "offwhite"
 		},
+		"bay_traffic": {
+			"control": "open",
+			"per_hour": 1
+		},
 		"services": [
 			"market"
 		],
@@ -1040,6 +1096,10 @@
 			"spin_rpm": 0.748,
 			"gravity_g": 0.2,
 			"colour": "grey"
+		},
+		"bay_traffic": {
+			"control": "open",
+			"per_hour": 2
 		},
 		"services": [
 			"market",
@@ -1129,6 +1189,10 @@
 			"spin_rpm": 0.669,
 			"gravity_g": 0.08,
 			"colour": "dark"
+		},
+		"bay_traffic": {
+			"control": "open",
+			"per_hour": 1
 		},
 		"services": [
 			"market",
@@ -1331,6 +1395,10 @@
 			"colour": "offwhite",
 			"port_radius_m": 10
 		},
+		"bay_traffic": {
+			"control": "tower",
+			"per_hour": 5
+		},
 		"services": [
 			"market",
 			"refuel"
@@ -1389,6 +1457,10 @@
 			"gravity_g": 0.95,
 			"port_radius_m": 12,
 			"colour": "offwhite"
+		},
+		"bay_traffic": {
+			"control": "tower",
+			"per_hour": 6
 		},
 		"services": [
 			"market"
@@ -1451,6 +1523,10 @@
 			"port_radius_m": 9,
 			"colour": "offwhite"
 		},
+		"bay_traffic": {
+			"control": "tower",
+			"per_hour": 6
+		},
 		"services": [
 			"market"
 		],
@@ -1507,6 +1583,10 @@
 			"gravity_g": 0.95,
 			"port_radius_m": 20,
 			"colour": "offwhite"
+		},
+		"bay_traffic": {
+			"control": "tower",
+			"per_hour": 6
 		},
 		"services": [
 			"market"
@@ -1568,6 +1648,10 @@
 			"gravity_g": 0.166,
 			"port_radius_m": 14,
 			"colour": "grey"
+		},
+		"bay_traffic": {
+			"control": "tower",
+			"per_hour": 5
 		},
 		"services": [
 			"market"

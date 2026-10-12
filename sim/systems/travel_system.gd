@@ -10,6 +10,7 @@ const ShipStats := preload("res://sim/ship_stats.gd")
 const Favours := preload("res://sim/favours.gd")
 const Fitness := preload("res://sim/fitness.gd")
 const Contracts := preload("res://sim/contracts.gd")
+const Traffic := preload("res://sim/traffic.gd")
 
 const PERI_WARN_S := 2.0 * 3600.0
 const PERI_CLOSE_S := 600.0
@@ -70,7 +71,9 @@ func _time_ramps(s) -> void:
 	var time: Dictionary = sim().data.balance["time"]
 	var ramp: Array = time.get("departure_ramp", [])
 	var stage := int(loc.get("ramp_stage", ramp.size()))
-	while stage < ramp.size() and s.time_s - float(loc["depart_t"]) >= float(ramp[stage][0]):
+	# Held in the cradle for traffic, the ramp waits too.
+	var since: float = s.time_s - float(loc["depart_t"]) - float(loc.get("hold_s", 0.0))
+	while stage < ramp.size() and since >= float(ramp[stage][0]):
 		if absf(s.time_scale - float(loc.get("ramp_scale", s.time_scale))) > 0.5:
 			stage = ramp.size()
 			break
@@ -200,7 +203,19 @@ func _depart(command: Dictionary) -> String:
 	Navigation.add_approach(s.location, sim().data, sim().ephemeris)
 	s.time_scale = 1.0
 	sim().emit("departed", {"from": here, "to": to, "arrive_t": route["arrive_t"], "fuel_t": burn, "fuel_trimmed_t": float(route["fuel_t"]) - burn})
+	_traffic_hold(here)
 	return ""
+
+
+## Traffic in the bay: the ship holds in its cradle until the bay is free
+## (Traffic.departure_hold). The hold delays the undock and the time ramp, not the trip.
+func _traffic_hold(here: String) -> void:
+	var s = sim().state
+	var hold := Traffic.departure_hold(s, sim().data, here, s.time_s)
+	if float(hold["hold_s"]) <= 0.0:
+		return
+	s.location["hold_s"] = float(hold["hold_s"])
+	sim().emit("traffic_hold", {"place": here, "hold_s": float(hold["hold_s"]), "control": hold["control"], "ahead": hold["ahead"]})
 
 
 ## {manual: true} after the player flies the approach; otherwise the co-pilot (or a
@@ -303,6 +318,7 @@ func _depart_route(here: String, to: String, route_id: String, plan_t: float) ->
 	Navigation.add_approach(s.location, data, eph)
 	s.time_scale = 1.0
 	sim().emit("departed", {"from": here, "to": to, "arrive_t": arrive, "fuel_t": burn, "fuel_trimmed_t": float(opt["fuel_t"]) - burn, "route": opt["label"]})
+	_traffic_hold(here)
 	return ""
 
 

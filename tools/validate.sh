@@ -25,6 +25,7 @@ run_godot 'Godot import' --headless --path "$project_root" --editor --import --q
 run_godot 'Sim tests' --headless --path "$project_root" --script res://tests/run_tests.gd
 run_godot 'Site departures' --headless --path "$project_root" --script res://tests/site_departures.gd
 run_godot 'Departure view' --headless --path "$project_root" --script res://tests/departure_view.gd
+run_godot 'Traffic view' --headless --path "$project_root" --script res://tests/traffic_view.gd
 run_godot 'Contract pickup view' --headless --path "$project_root" --script res://tests/contract_pickup_view.gd
 run_godot 'Scene smoke check' --headless --path "$project_root" -- --smoke
 run_godot 'Docking trial' --headless --path "$project_root" -- --dock-trial

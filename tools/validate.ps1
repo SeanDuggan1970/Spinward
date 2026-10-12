@@ -18,6 +18,7 @@ try {
     Invoke-Godot 'Sim tests' @('--headless', '--path', $projectRoot, '--script', 'res://tests/run_tests.gd')
     Invoke-Godot 'Site departures' @('--headless', '--path', $projectRoot, '--script', 'res://tests/site_departures.gd')
     Invoke-Godot 'Departure view' @('--headless', '--path', $projectRoot, '--script', 'res://tests/departure_view.gd')
+    Invoke-Godot 'Traffic view' @('--headless', '--path', $projectRoot, '--script', 'res://tests/traffic_view.gd')
     Invoke-Godot 'Contract pickup view' @('--headless', '--path', $projectRoot, '--script', 'res://tests/contract_pickup_view.gd')
     Invoke-Godot 'Scene smoke check' @('--headless', '--path', $projectRoot, '--', '--smoke')
     Invoke-Godot 'Docking trial' @('--headless', '--path', $projectRoot, '--', '--dock-trial')
