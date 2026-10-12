@@ -307,4 +307,4 @@ Full write-up: [2026-10-07-economy-together.md](2026-10-07-economy-together.md).
   - Deadlines (quick time × slack 1.08 to 3.0) were often impossible even with an empty hold.
 - After: the estimate matched the fastest affordable plotted route on all 300 trips. It takes 0.25 s on average and 0.76 s at worst per trip, remembered for the hour.
 - Deadlines get longer where gravity makes trips slower, and pay rises with them (pay is per day of the reference trip). Expect cislunar courier jobs to pay noticeably more per job but about the same per day flown.
-- Balance bot re-run (5 seeds, 180 days, upgrade=1): identical, seed for seed (mean 105,630 cr). The bot trades and never takes courier contracts, so it doesn't see the change. Worth a hand-played check of courier income.
+- Balance bot re-run (5 seeds, 180 days, upgrade=1): identical, seed for seed (mean 105,630 cr). The bot only takes a job bound where its trade is already going, and in these runs it saw none (no jobs_seen in its ECON rows, before or after), so it doesn't see the change. Worth a hand-played check of courier income.
