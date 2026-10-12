@@ -6,6 +6,7 @@ const UI := preload("res://view/ui/ui_kit.gd")
 const Market := preload("res://sim/market.gd")
 const RoutePlanner := preload("res://sim/route_planner.gd")
 const Navigation := preload("res://sim/navigation.gd")
+const TripEstimate := preload("res://sim/trip_estimate.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
 const ShipyardSystem := preload("res://sim/systems/shipyard_system.gd")
 const EconomySystem := preload("res://sim/systems/economy_system.gd")
@@ -329,6 +330,7 @@ func _departures_tab(place_id: String) -> Control:
 		if to == (spots[0] if not spots.is_empty() else ""):
 			parts[1].add_child(UI.label("POINTS OF INTEREST  ·  no port, no fuel: you go, you work, you come back", UI.HAZARD, 13))
 		var plan: Dictionary = _quick(place_id, to)
+		var estimating: bool = plan.get("estimating", false)
 		var p := UI.panel("")
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 16)
@@ -337,10 +339,14 @@ func _departures_tab(place_id: String) -> Control:
 		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(info)
 		info.add_child(UI.label(d.locations[to]["name"], UI.AMBER, 17))
-		if plan.has("distance_m"):
-			info.add_child(UI.label("%s   ·   quick estimate %s, %.2f t" % [UI.km(plan["distance_m"]), UI.duration(plan["duration_s"]), plan["fuel_t"]]))
+		if estimating:
+			info.add_child(UI.label("%s   ·   co-pilot estimating" % UI.km(plan["distance_m"]) if plan.has("distance_m") else "Co-pilot estimating", UI.DIM))
+		elif plan.has("distance_m"):
+			info.add_child(UI.label("%s   ·   co-pilot's estimate %s, %.2f t" % [UI.km(plan["distance_m"]), UI.duration(plan["duration_s"]), plan["fuel_t"]]))
 		var notes := []
-		if not plan["ok"]:
+		if estimating:
+			pass
+		elif not plan["ok"]:
 			notes.append([plan["reason"], UI.WARN])
 		elif plan["strand_risk"]:
 			notes.append(["No fuel sold there, and you would not have enough to come back this way", UI.WARN])
@@ -716,16 +722,22 @@ func _offer_card(place_id: String, offer: Dictionary) -> Control:
 	p[1].add_child(UI.label("%s  ·  %s" % [_cargo_words(offer), route], UI.TEXT, 14))
 	# How the co-pilot rates our chances at the ship's current mass.
 	var first: String = offer["pickup"] if offer["pickup"] != "" else offer["to"]
-	var plan := Navigation.plan(s.ship, d, sim.ephemeris, place_id, first, s.time_s)
+	var plan := _estimate(place_id, first, s.time_s)
 	var est := "co-pilot: no route from here with this ship"
 	var colour := UI.WARN
-	if plan.get("ok", false):
+	if plan.get("estimating", false):
+		est = "co-pilot estimating"
+		colour = UI.DIM
+	elif plan.get("ok", false):
 		var need := float(plan["duration_s"])
 		if offer["pickup"] != "":
-			var onward := Navigation.plan(s.ship, d, sim.ephemeris, offer["pickup"], offer["to"], s.time_s + need)
-			need += float(onward.get("duration_s", INF))
-		est = "co-pilot reckons %s at your mass" % UI.duration(need)
-		colour = UI.GOOD if need < due * 0.85 else (UI.AMBER if need < due else UI.WARN)
+			var onward := _estimate(offer["pickup"], offer["to"], s.time_s + need)
+			need += float(onward.get("duration_s", INF)) if not onward.get("estimating", false) else 0.0
+			if onward.get("estimating", false):
+				est = "co-pilot estimating"
+		if est != "co-pilot estimating":
+			est = "co-pilot reckons %s at your mass" % UI.duration(need)
+			colour = UI.GOOD if need < due * 0.85 else (UI.AMBER if need < due else UI.WARN)
 	p[1].add_child(UI.label("Allow %s  ·  %s  ·  pays %s  ·  %s" % [UI.duration(due), est, UI.money(float(offer["reward"])), offer["client"]], colour, 13))
 	if offer.has("in_kind"):
 		var kind_line := UI.label("Also: " + Favours.describe(d, offer["in_kind"]), UI.GOOD, 13)
@@ -846,19 +858,29 @@ func _plan_t(to: String) -> float:
 
 
 var _last_plan_t: Dictionary = {}
-## Quick plans for the departures board, per destination and hour (interplanetary
-## estimates take tens of milliseconds each, and the board redraws often).
-var _quick_cache: Dictionary = {}
+## Trips the co-pilot still has to estimate: [from, to, t]. Each flies the routes
+## (sim/trip_estimate.gd: tens to hundreds of milliseconds), so they are worked out one
+## a frame and the screen fills in as they come.
+var _to_estimate: Array = []
 
 
+## The co-pilot's estimate for the departures board (sim/trip_estimate.gd).
 func _quick(place_id: String, to: String) -> Dictionary:
+	return _estimate(place_id, to, sim.state.time_s)
+
+
+## The co-pilot's estimate of a trip in this ship, or, until it is worked out, the
+## quick gravity-free sum marked "estimating".
+func _estimate(from: String, to: String, t: float) -> Dictionary:
 	var s = sim.state
-	var key := "%s>%s|%d|%.3f|%.3f" % [place_id, to, int(s.time_s / 3600.0), ShipStats.total_mass_t(s.ship, sim.data), float(s.ship["fuel_t"])]
-	if not _quick_cache.has(key):
-		if _quick_cache.size() > 64:
-			_quick_cache.clear()
-		_quick_cache[key] = Navigation.plan(s.ship, sim.data, sim.ephemeris, place_id, to, s.time_s)
-	return _quick_cache[key]
+	var plan := TripEstimate.cached(s.ship, sim.data, from, to, t)
+	if not plan.is_empty():
+		return plan
+	if not _to_estimate.any(func(e): return e[0] == from and e[1] == to and int(floor(e[2] / 3600.0)) == int(floor(t / 3600.0))):
+		_to_estimate.append([from, to, t])
+	var quick := Navigation.plan(s.ship, sim.data, sim.ephemeris, from, to, t)
+	quick["estimating"] = quick.has("duration_s")
+	return quick
 
 
 func _plot(place_id: String, to: String) -> void:
@@ -879,6 +901,11 @@ func _plot(place_id: String, to: String) -> void:
 
 
 func _process(_dt: float) -> void:
+	if not _to_estimate.is_empty():
+		var e: Array = _to_estimate.pop_front()
+		TripEstimate.trip(sim.state.ship, sim.data, sim.ephemeris, e[0], e[1], e[2])
+		if _to_estimate.is_empty() or _to_estimate.size() % 4 == 0:
+			refresh()
 	for hold in _scroll_holds:
 		hold[2] -= 1
 		if hold[2] <= 0 and is_instance_valid(hold[0]) and (hold[0] as ScrollBar).changed.is_connected(hold[1]):

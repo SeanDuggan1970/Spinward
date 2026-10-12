@@ -18,6 +18,7 @@
 extends RefCounted
 
 const Navigation := preload("res://sim/navigation.gd")
+const TripEstimate := preload("res://sim/trip_estimate.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
 const Favours := preload("res://sim/favours.gd")
 
@@ -136,11 +137,12 @@ static func make_offer(data, eph, state, rng: RandomNumberGenerator, place: Stri
 		if onward.is_empty():
 			return {}
 		to = onward[rng.randi() % onward.size()]
-	# Deadline from the reference ship's express time for each leg, with slack.
+	# Deadline from the reference ship's fastest flyable route for each leg (the
+	# co-pilot's honest estimate, gravity included), with slack.
 	var legs: Array = [[place, pickup], [pickup, to]] if pickup != "" else [[place, to]]
 	var days := 0.0
 	for leg in legs:
-		var plan: Dictionary = Navigation.plan(ref, data, eph, leg[0], leg[1], t)
+		var plan: Dictionary = TripEstimate.trip(ref, data, eph, leg[0], leg[1], t)
 		if not plan.get("ok", false):
 			return {}
 		days += float(plan["duration_s"]) / DAY
