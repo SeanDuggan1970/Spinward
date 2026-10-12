@@ -63,7 +63,7 @@ It's said once and never repeated. The core's cargo tooltip carries the same hin
   - **The Reach:** "Oh, *old*. Lovely. We'll take it apart tonight."
   - **The Sufficiency:** "Thank you. We'll keep it somewhere cold and think about it."
 - **What the player sees:** nothing more. The player who sells it has, without knowing, handed one circle the oddity.
-- **If you keep it:** it sits in your cabin forever, and the story never starts.
+- **If you keep it:** it sits in your cabin, and for a while nothing happens. Then you sleep, and *your co-pilot* gets bored (see the fourth road).
 
 ### The three ways it unfolds
 The beats keep the same spine: the minds try, it goes poorly, and they need a person. The pace, the tone, and who's in your corner all change.
@@ -89,7 +89,32 @@ The beats keep the same spine: the minds try, it goes poorly, and they need a pe
 - **The meeting:** you carry *their* message, the first time a mind asks a person to speak for it.
 - **In Act III:** "who speaks for the system?" has a new answer to weigh. The minds want a voice through you, not over you.
 
+**Kept, and slept on: the Lanes' road (the fourth)**
+
+*Your co-pilot.* The AI that has flown with you all game is **from the Lanes**: the loose, chatty, distributed society of minds that run the shipping lanes. That includes drone freighters, traffic control, nav beacons, tugs and co-pilots. It is not a ship system. It's a person who rides with you, and **it moves with you from ship to ship** (it fits the fleet: you change hulls, not companions). Early on you can give it a name.
+
+*The trigger:* you keep the memory core instead of selling it, and you sleep more than a year with it aboard. Your co-pilot has a year with nobody to talk to. It gets bored. It reads the core.
+
+*What it finds:* it notices the three stars wink out, and doesn't know what to make of it. So it does what lane minds always do: **it asks the Lanes**. While you sleep, the question goes out along every beacon and freighter, the way gossip does, and thousands of small minds weigh in.
+
+*The waking:* your digest has one unusual entry, in your co-pilot's voice:
+
+> "Don't be cross. I was bored. I read the old core, and something in it is odd. I asked around. 4,112 of us have opinions. Can we talk?"
+
+*What the Lanes do:* they can't build a probe; they have no yards and no money. What they have is *reach*:
+- **The array:** they quietly ask freighters with telescopes, the sails and the beacons to look up at the right moments. Without anyone in charge, the lanes become an interferometer the size of the inner system, and see the object better than anyone ever has.
+- **The pattern:** the stars blink in step with *traffic*. The object seems to turn its attention toward ships with **people** aboard. Drones get nothing.
+- **The conclusion:** it's watching the crewed ships. It's waiting for someone.
+
+*What happens next:*
+- **Who asks:** your own co-pilot, at your own cockpit table: "I think it wants to meet *you*. Well, one of you. I'd like it to be you."
+- **The ship:** no loan. You go in your own ship, with your own pod, which is why it's the road that rewards a pilot who has built something.
+- **On the voyage:** your co-pilot talks you through the wake-ups. It's the most intimate road.
+
+*In Act III:* the other circles hear about it from the lanes' gossip and are a little put out that the plain freighter-minds got there first. The Lanes' answer to "who speaks for the system?" is the best idea anyone has: *everyone, a little bit, the way we do.*
+
 ### Choosing without knowing
+- **Four roads:** sell at Trojan Yards, Hektor Reach or Landauer Deep, or keep it and sleep on it.
 - The player doesn't know they're choosing. A curious player can learn each circle's temper first, from the news, bar talk and how each port feels.
 - It replays well: the second time through, a player who sells somewhere else gets a different story.
 - **Later, each circle learns the others weren't asked.** That's a little jealousy, never hostility.
@@ -172,6 +197,7 @@ The Compact trains its own interpreter and sends them out under-prepared, with n
 |---|---|
 | Hibernation | the bookworm through all of it: probe years, the voyage, the return |
 | Sites and salvage | Hermes-7, the memory core: the trigger |
+| The co-pilot | a lane mind who moves with you between ships; the fourth road's go-between |
 | Spaceline news | Act 0's hints and Act I's world events; the digest on waking |
 | Megaprojects | *Long Patience* (Act I) and the Choir (Act III) |
 | Fleet and craft jobs | arranging your affairs before a sleep; faction jobs need the right ship |
@@ -191,7 +217,7 @@ The Compact trains its own interpreter and sends them out under-prepared, with n
 - New: hibernation (pod module, sleep command, digest screen, coarse sleep stepping).
 
 ## Open questions for Sean
-0. **The circles:** are three right (the Long View, the Reach, the Sufficiency), or should a fourth (say, the drone-freighter minds on the lanes) have a road too? And should the co-pilot's hint name all three ports, or leave the player to find them?
+0. **The circles:** four roads now (the Long View, the Reach, the Sufficiency, and the Lanes through your own co-pilot). Should the co-pilot's hint name the three ports, or leave the player to find them? And should naming the co-pilot happen at the start of the game, or the first time it speaks up?
 1. How long should *Long Patience* take: 3 years (a hibernation-sized gap), or shorter so a non-sleeper doesn't wait forever? With the sale as the trigger, a pilot who sells early waits through more of it; a sleeper can tunnel through.
 2. Should the Compact show any interest in the core (a news line, a polite inquiry later), or stay entirely blind until Act III?
 3. Should the Lacuna's preference stay unexplained (only the minds' theory), or should Act III confirm it?
