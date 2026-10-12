@@ -4911,7 +4911,7 @@ func test_trip_estimate() -> void:
 	var doable := 0
 	for i in 12:
 		var o := Contracts.make_offer(d, sim.ephemeris, s, rng, "trojan_yards", "express" if i % 3 == 0 else "package", "board")
-		if o.is_empty() or o["pickup"] != "" or o.get("craft", "") != "":
+		if o.is_empty() or o["pickup"] != "" or o.has("craft"):
 			continue
 		made += 1
 		var need := TravelSystemScript.plan_for(ref, d, sim.ephemeris, "trojan_yards", o["to"], s.time_s).filter(func(x): return x["affordable"])
