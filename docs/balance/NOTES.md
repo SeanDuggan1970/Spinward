@@ -283,3 +283,9 @@ Full write-up: [2026-10-07-economy-together.md](2026-10-07-economy-together.md).
 - The Hermes-7 salvage no longer pays the Compact's 18,000 cr and 6 standing. It pays scrap (0.2 to 0.6 t of electronics) and the memory core. Each buyer pays 10,000 to 15,000 cr and a little standing for it, once.
 - Ines Okafor's first favour no longer comes from delivery counts and standing; it waits for the Long View's road. A pilot who never salvages Hermes-7 sees no story jobs at all, apart from the Sufficiency's small delegate arc.
 - Balance bot re-run (5 seeds, 180 days, upgrade=1): identical, seed for seed, mean 105,630 cr, median first upgrade day 10.7. The bot never took story favours, so the change costs it nothing.
+
+
+## Bigger stations and spin gravity (2026-10-12)
+
+- `places.json` wheel stations are larger and spun slower, for Moon- to Mars-like gravity on the ring (`gravity_g`, never above 1 g). `balance.bays` gains the docking hall (`hall`).
+- These are geometry and view-only numbers. Balance bot re-run (5 seeds, 180 days, upgrade=1): identical, seed for seed, mean 105,630 cr, median first upgrade day 10.7.
