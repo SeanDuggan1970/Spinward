@@ -276,3 +276,23 @@ Full write-up: [2026-10-07-economy-together.md](2026-10-07-economy-together.md).
 - The bot never sleeps, so its world steps hourly as before. The re-run (5 seeds, 180 days, upgrade=1) is identical, seed for seed: a mean of 105,630 cr and a median first upgrade on day 10.7. The changes to stepping and NPC planning only apply while the player is asleep.
 - Sleeping coarsens the world (daily steps; NPC routes on 30-day estimates). Prices drift a little differently over a long sleep than they would awake; that's accepted, and noted in DESIGN.md.
 - The pod costs about a heavy-freighter berth's rent for a year and a half. It's meant for long-haul pilots, not something every early trader needs.
+
+
+## The memory core and the four roads (2026-10-12)
+
+- The Hermes-7 salvage no longer pays the Compact's 18,000 cr and 6 standing. It pays scrap (0.2 to 0.6 t of electronics) and the memory core. Each buyer pays 10,000 to 15,000 cr and a little standing for it, once.
+- Ines Okafor's first favour no longer comes from delivery counts and standing; it waits for the Long View's road. A pilot who never salvages Hermes-7 sees no story jobs at all, apart from the Sufficiency's small delegate arc.
+- Balance bot re-run (5 seeds, 180 days, upgrade=1): identical, seed for seed, mean 105,630 cr, median first upgrade day 10.7. The bot never took story favours, so the change costs it nothing.
+
+
+## Bigger stations and spin gravity (2026-10-12)
+
+- `places.json` wheel stations are larger and spun slower, for Moon- to Mars-like gravity on the ring (`gravity_g`, never above 1 g). `balance.bays` gains the docking hall (`hall`).
+- These are geometry and view-only numbers. Balance bot re-run (5 seeds, 180 days, upgrade=1): identical, seed for seed, mean 105,630 cr, median first upgrade day 10.7.
+
+
+## Traffic control at the bay (2026-10-12)
+
+- New data: `balance.traffic`, each station's `bay_traffic` in places.json (tower or open, 1 to 8 local movements an hour) and `npcs.json` `local_traffic`.
+- Balance bot re-run (5 seeds, 180 days, upgrade=1): identical, seed for seed, mean 105,630 cr, median first upgrade day 10.7. A hold in the cradle delays the undock and the time ramp by up to `max_hold_s` (240 s), never the trip's arrival.
+- Dock trial with the world running: tower ports add 0 to about 230 s of holding when ships are ahead (Kibo Ring 107 s, the Concord pair 232 s on that run), open ports about 13 s for claiming the bay at 280 m. The tug (T) is still there for a pilot who'd rather not wait.

@@ -47,7 +47,7 @@
 		"kind": "derelict",
 		"visibility": "rumour",
 		"once": true,
-		"description": "A deep-space relay that went silent in 2049 and has drifted ever since on a long, lazy orbit four times the Moon's distance out. The Compact would like its recorder back, and pays well for it.",
+		"description": "A deep-space relay that went silent in 2049 and has drifted ever since on a long, lazy orbit four times the Moon's distance out. The inquiry blamed a cosmic ray. Nobody ever went and got the recorder.",
 		"location": {
 			"type": "orbit",
 			"parent": "earth",
@@ -62,21 +62,14 @@
 		},
 		"activities": {
 			"salvage": {
-				"name": "Recover the recorder",
+				"name": "Recover the memory core",
 				"needs": [],
 				"days": 1.0,
 				"risk": 0.05,
 				"yields": {
-					"electronics": [
-						0.5,
-						1.5
-					]
+					"electronics": [0.2, 0.6]
 				},
-				"credits": 18000,
-				"rep": {
-					"Terran Compact Science": 6
-				},
-				"text": "The recorder comes out whole. Its last log is a long, odd dump of star-tracker data, which the Compact asks you not to share."
+				"text": "She isn't wrecked. No impact, no debris: the wings are folded, the battery cleanly isolated, the instruments capped, a textbook safe-mode shutdown done perfectly, like someone put her to bed. Only the high-gain antenna is wrong: it should point home, and it points at an empty patch of sky. You bring the memory core in by hand. It's scorched along one edge, and partly corrupted."
 			}
 		}
 	},

@@ -502,12 +502,21 @@ Sean's direction (2026-10-04). It goes beyond trade into opportunities, refits a
 6. **Powers in the background** (first arc done; `data/story.json`, `sim/systems/story_system.gd`). Inspired by Iain M. Banks' Culture: benevolent minds who intervene quietly, Contact and Special Circumstances, the informal Interesting Times Gang, Outside Context Problems. The names are this game's own.
    - **The Long View** is an informal circle of Commons minds, some of them the drone freighters you pass every day (*Patient Arithmetic*, *Reasonable Doubt*). They keep a Contact-like rule: the unknown should be met by a person.
    - **Ines Okafor**, who "represents nobody in particular", is their human go-between.
-   - **The arc, in beats:**
-     1. After three on-time deliveries and a Known standing anywhere, she approaches you with a favour: a sealed case for Farside Array.
-     2. The astronomer puts the dead probe Hermes-7 on your chart. Its recorder shows three stars occulted by something perfectly black at about 1,000 AU.
-     3. You carry a Commons mind in a box to Trojan Yards.
-     4. Patient Arithmetic lends you a drive no yard sells (6 kN, Isp 1,000,000 s) and a long-sleep berth (2,000 days), and shows you **the Lacuna**: a 2.5-year voyage at about 12 milli-g.
-     5. You go and say hello, and it says hello back, in your own words, with the light-time taken off. The outcome is left open and hopeful.
+   - **The arc** (rebuilt Oct 2026; the full design is in `docs/STORY_ARC.md`):
+     1. **The trigger:** nothing happens until the pilot salvages the rumoured dead probe **Hermes-7** and recovers its **memory core**. The salvage text hints the probe was put to bed, not wrecked. The co-pilot remarks that the Minds might value it, that it's partly corrupted, and that it could dig in "if I ever get enough downtime".
+     2. **The four roads:** selling the core at **Trojan Yards** (the Long View), **Hektor Reach** (the Reach) or **Landauer Deep** (the Sufficiency) chooses that circle's road. Keeping it through a year of hibernation lets your co-pilot read it and ask the **Lanes**.
+     3. **World beats:** each road's early beats move the news, wherever you are, even asleep:
+        - **The Long View:** *Long Patience* is announced, launched, and turned away three years on.
+        - **The Reach:** a swarm, and the object goes dark.
+        - **The Sufficiency:** a month of thinking, then an unreadable paper.
+        - **The Lanes:** the lanes look up, then find the pattern.
+     4. **The ask:** the road's people come for you and lend what you need:
+        - **The Long View:** Ines Okafor's favour, the two recordings at Farside, a mind in a box, then Patient Arithmetic's loan.
+        - **The Reach:** Fast Enough, asking you to fix their mistake.
+        - **The Sufficiency:** Quiet Margin's invitation.
+        - **The Lanes:** your own co-pilot, once you have a pod of your own; the Long View sends a drive it owed the lanes.
+     5. **The meeting:** at **the Lacuna** it says hello back, and each road hears it its own way.
+   - **The co-pilot** is named the first time it speaks up (on the first departure, or when the core comes aboard). Story lines from it are signed with that name (`{copilot}` in `story.json`).
    - **How beats work:** each waits for its conditions and port, writes to your correspondence (Contracts tab), and acts: a favour job on the local board, a site revealed, modules lent, standing, credits. A favour that fails or is never taken is offered again.
    - **Deep space** (beyond 30 AU): the Sun's pull is negligible, so trips use a straight-line accelerate-coast-decelerate plan sized to the propellant aboard. Guided flight can't converge when braking takes most of the voyage, and Lambert's solver can't reach those hyperbolic speeds.
 7. **Lander** (done; `view/lander_scene.gd`). Any site job that needs the lander offers a choice:
@@ -1118,6 +1127,45 @@ Owner's brief: *hibernation lets the player tunnel through deep time like a book
   - **Result:** 900 days asleep take about 45 s of simulation (190 s awake).
   - **Saves:** the estimates are a pure function of hull, route and period, so a game saved asleep wakes exactly as one that never was.
 - **Departures from reality, on purpose:** the pod has no medical side to it (no recovery time, no ageing effects), and the world's coarse steps while you sleep are a little less detailed than when you're awake.
+
+## Stations and their gravity (Oct 2026)
+
+Owner's brief: *the rotating stations look only big enough for one ship at a time. Ships should come in on the axis and be drawn down to a berth off it for access, maintenance and cargo. The ring should give no more than 1 g, ideally a stately Mars or lunar g to reduce structural strain. Tell the player the local gravity when they dock, and model it when walking comes (`docs/FIRST_PERSON.md`).*
+
+- **Bigger, slower wheels:** rings of 150 to 520 m (Kibo Ring is 380 m), each spun for a chosen gravity on its ring (`places.json` `gravity_g`). Most are Moon- to Mars-like:
+  - **Terran Compact ports:** Mars-like or a little more. Kernel L5 is 0.5 g.
+  - **Luna and the far ports:** lunar.
+  - **Landauer Deep:** 0.08 g; the minds don't need it.
+  - **The O'Neill colonies and the Stanford torus:** 0.95 g, where people raise children.
+
+  Spin rates are now 0.6 to 1.0 rpm on the wheels. The rule is in `sim/spin.gd`. Validation refuses more than 1 g, and a spin that doesn't give the stated gravity.
+- **The docking hall:** the bay's tunnel (`balance.bays.depth_m`, now 30 m) opens into a hall 90 m across and 110 m long (`bays.hall`) inside the docking module. It has eight cradles round its wall, each with saddles, clamp arms, a gantry, a walkway and its number, and lamp bars between them. A wheel's hub grows to the module's width.
+- **Docking:**
+  - You fly in along the axis to the port on the hall's back wall, as before; the port is where the docking face was, so approaches and trip times are unchanged.
+  - Captured, the clamps draw the ship over 10 s (`hall.draw_s`) down off the axis to cradle 1, keel to the wall. Other ships lie in the other cradles, lit only by the hall (no sunlight through the walls), instead of moored outside.
+  - On docking, a notice gives the local gravity: "0.38 g (Mars-like) on the ring; 0.03 g at your berth".
+- **Leaving:** the ship is lifted from its cradle to the axis while the doors open (`hall.lift_start_s` to the doors fully open), then backs out through the hall and the tunnel as before.
+
+## Traffic control at the bay (Oct 2026)
+
+Owner's brief: *we should see other ships if they're about. Docking and undocking should wait if other ships are ahead of us in the pattern, all run by the station's AI traffic control. Out-system ports can be more of a free-for-all, with pilots relying on a buddy system, like club airfields with no control tower.*
+
+- **One bay, one ship at a time.** Each movement through a port's bay (doors open, through, doors shut) holds it for `balance.traffic.cycle_s` (90 s). `sim/traffic.gd` gives every port's schedule from the time and state alone, with no random draws, so the flight scene, the departure view and the sim agree.
+  - **Long-haul ships** (`npcs.json`) come in over the cycle before they dock, and go out when they leave.
+  - **The port's own craft** (shuttles, couriers, tenders: `npcs.json` `local_traffic`) take `bay_traffic.per_hour` slots an hour, from 1 at Plume Watch and Landauer Deep to 8 at Kibo Ring and Kalpana One. A low-discrepancy sequence spreads them evenly; they never clump or share the bay.
+- **Towers and open ports** (`places.json` `bay_traffic.control`):
+  - **Tower:** the inner system: the Earth–Moon ports, Mars, Trojan Yards and the colonies. The controller sequences every ship. Arriving, it gives you your number ("number 2 for the bay, behind the Moth") and clears each ship in or out by name. At most `max_ahead` ships go before you.
+  - **Open:** the belt and beyond (Piazzi, Psyche, Valhalla, Huygens, Plume Watch, Hektor Reach, Landauer Deep). There is no controller. Pilots call their own moves on the common channel ("Piazzi Station traffic, Wren, inbound for the bay"). You give way to anyone already committed (`lead_s`), and once you're within `claim_m` of the doors with nobody committed, you call "going in" and the bay is yours. Ships coming in behind you call that they're holding behind you.
+- **Arriving (flight scene):**
+  - Ships ahead of you fly the axis and go through the doors first, while you hold `hold_m` (250 m) off the doors. The co-pilot's line says why, and the autopilot holds there too.
+  - Ships behind you wait `separation_m` back until you're in.
+  - Flying in uncleared gets a warning, and the clamps refuse capture until the bay is yours.
+  - Pattern ships are solid and show on the scanner. The view draws them (`view/flight/pattern.gd`); the sim only knows when they move.
+- **Leaving:**
+  - The depart command works out a hold from the same schedule (`Traffic.departure_hold`, stored as `location.hold_s`, at most `max_hold_s`). The ship waits in its cradle, the time ramp waits with it, and the departure view shows the ship you're waiting for going past.
+  - A notice gives the reason: the tower's "hold in your cradle, 85 s", or at an open port, who called it first.
+  - The trip's times and propellant don't change.
+- **The radio:** traffic control's and other pilots' calls go to the comms log, alongside the existing chatter.
 
 ## Performance (Oct 2026)
 

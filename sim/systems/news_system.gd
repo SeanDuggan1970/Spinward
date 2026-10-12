@@ -77,8 +77,11 @@ func _hour_of(id: String) -> float:
 ## Is this story's moment here (its beat done, its project far enough along)?
 func _ready(story: Dictionary) -> bool:
 	var s = sim().state
-	if story.has("after_beat") and not story["after_beat"] in s.story.get("done", []):
-		return false
+	if story.has("after_beat"):
+		# One beat, or a list of which any will do (each road has its own meeting).
+		var beats: Array = story["after_beat"] if story["after_beat"] is Array else [story["after_beat"]]
+		if not beats.any(func(b): return b in s.story.get("done", [])):
+			return false
 	if story.has("after_project") and not s.projects.get(story["after_project"], {}).get("done", false):
 		return false
 	if story.has("after_stage"):

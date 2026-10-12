@@ -854,6 +854,47 @@
 			]
 		}
 	},
+	"local_traffic": {
+		"_note": "A port's own small craft through its docking bay (sim/traffic.gd, view/flight/pattern.gd): tenders, shuttles and ferries on station business. View-only: a movement's name and hull are picked from these by hashing the port and slot. Hulls must fit through a bay with their panels stowed.",
+		"hulls": [
+			"shuttle",
+			"courier",
+			"mule",
+			"array_tender"
+		],
+		"names": [
+			"Moth",
+			"Kittiwake",
+			"Little Dipper",
+			"Tern",
+			"Puffin",
+			"Bramble",
+			"Saffron",
+			"Dandelion",
+			"Sparrowhawk",
+			"Clementine",
+			"Wren",
+			"Otter",
+			"Pocket Change",
+			"Second Breakfast",
+			"Nightjar",
+			"Cormorant",
+			"Lantern",
+			"Thimble",
+			"Marigold",
+			"Errand",
+			"Boomerang",
+			"Halfpenny",
+			"Skylark",
+			"Teacup",
+			"Firefly",
+			"Wagtail",
+			"Dormouse",
+			"Shortcut",
+			"Kingfisher",
+			"Pip"
+		]
+	},
 	"chatter": {
 		"_note": "Comms lines. {ship} {operator} {from} {to} {cargo}. Picked per event by the view; text only, no effect on the sim.",
 		"route_depart": [

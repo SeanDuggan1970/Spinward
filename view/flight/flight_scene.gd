@@ -24,6 +24,12 @@ const ProjectSystem := preload("res://sim/systems/project_system.gd")
 const DamageSystem := preload("res://sim/systems/damage_system.gd")
 const ShipAudio := preload("res://view/audio/ship_audio.gd")
 const FlightDeck := preload("res://view/flight/flight_deck.gd")
+const Spin := preload("res://sim/spin.gd")
+const Traffic := preload("res://sim/traffic.gd")
+const Pattern := preload("res://view/flight/pattern.gd")
+
+## A line on the radio for the comms log (traffic control, other pilots, your calls).
+signal radio(text: String)
 
 const ASSIST_MODES := ["full", "assisted", "manual"]
 const SKY_DISTANCE := 60000.0
@@ -87,12 +93,26 @@ var message_colour := Color.WHITE
 var message_until := 0.0
 var clock := 0.0
 var docked := false
+## Captured at the port and being drawn down to the cradle: {t, from, to} (transforms in
+## the station's rotating frame). The dock command goes when the ship is down.
+var _capture: Dictionary = {}
 var _drive_plume: Node3D
 ## The player ship's panels and dish (ship_rig.gd).
 var _rig: Dictionary = {}
 ## NPC id -> {node, mode: "berth"|"inbound"|"outbound"}
 var _traffic: Dictionary = {}
 var _traffic_check := 0.0
+## The port's traffic pattern (view/flight/pattern.gd), when it has a bay.
+var _pattern = null
+var _pattern_sync := -INF
+## Traffic control (sim/traffic.gd): control ("tower" | "open"), cleared (the bay is
+## ours), clear_t (tower: when it clears us), ahead (movements going first), called
+## (movement keys already heard on the radio), warned_until.
+var tc: Dictionary = {}
+## Our own doors' opening (0 to 1); pattern ships may open them further.
+var _door_own := 0.0
+## Everything said on the radio this approach (tests read it).
+var radio_log: Array = []
 ## NPC id -> berth index, stable while the ship stays moored.
 var _berths: Dictionary = {}
 ## Cosmetic station work craft: [{node, radius, z, period, phase, tilt}]
@@ -190,11 +210,14 @@ func _ready() -> void:
 	_spawn_hazards()
 	_spawn_work_craft()
 	_place_satellites()
+	_start_traffic_control()
 	_sync_traffic()
 	hud = load("res://view/flight/flight_hud.gd").new(self)
 	hud.theme = UI.make_theme()
 	add_child(hud)
-	flash("On the corridor to %s, closing at %.0f m/s. Match the spin and bring her in." % [sim.data.places[place_id]["name"], -velocity.z], UI.AMBER, 6.0)
+	var hello := "On the corridor to %s, closing at %.0f m/s. Match the spin and bring her in." % [sim.data.places[place_id]["name"], -velocity.z]
+	# What traffic control (or the pattern) has to say comes under it.
+	flash(hello + ("\n" + String(tc["greeting"]) if tc.has("greeting") else ""), UI.AMBER, 8.0 if tc.has("greeting") else 6.0)
 
 
 func _build_environment() -> void:
@@ -324,11 +347,16 @@ func _physics_process(dt: float) -> void:
 	clock += dt
 	spin_angle = fposmod(spin_angle + spin_rate * dt, TAU)
 	station["rotor"].rotation.z = spin_angle
+	if not _capture.is_empty():
+		_draw_down(dt)
+		_update_camera(dt)
+		return
 	_traffic_check -= dt
 	if _traffic_check <= 0.0:
 		_traffic_check = 1.0
 		_sync_traffic()
 	_move_traffic(dt)
+	_run_pattern(dt)
 	_move_work_craft()
 	SetPieces.animate(_set_pieces, clock)
 	# Docking: the pilot owns the roll, so the panels do what one hinge can; the dish
@@ -470,7 +498,22 @@ func probe_radius() -> float:
 ## doors, doors open, or the ship already inside.
 func bay_ready() -> bool:
 	var bay: Dictionary = station.get("bay", {})
-	return bay.is_empty() or not bay["fits"] or Bay.is_open(bay) or bay_doors in ["closing", "shut_behind"]
+	if bay.is_empty():
+		return true
+	if not cleared():
+		return false
+	return not bay["fits"] or Bay.is_open(bay) or bay_doors in ["closing", "shut_behind"]
+
+
+## Has traffic control (or, at an open port, the pattern) given us the bay?
+func cleared() -> bool:
+	return tc.is_empty() or bool(tc["cleared"])
+
+
+## Where to hold short of the bay's doors (metres off the mouth): out at the traffic
+## hold while others are ahead, close in while our own doors open.
+func hold_short_m() -> float:
+	return BAY_HOLD_M if cleared() else float(sim.data.balance["traffic"]["hold_m"])
 
 
 ## Traffic control clears the ship in clear_s into the scene and the doors open over
@@ -482,10 +525,9 @@ func _update_bay(dt: float) -> void:
 	var cfg: Dictionary = sim.data.balance["bays"]
 	var stern_z := ship_node.position.z + ship_length * 0.5
 	var inside := stern_z < float(bay["z_mouth"]) - 1.0 and Vector2(ship_node.position.x, ship_node.position.y).length() < float(bay["r"])
-	var want := float(bay["open"])
-	if bay_doors == "shut" and clock >= float(cfg["clear_s"]) and not inside:
+	var want := _door_own
+	if bay_doors == "shut" and cleared() and clock >= float(cfg["clear_s"]) and not inside:
 		bay_doors = "opening"
-		flash("Traffic control: cleared in. Bay doors opening.", UI.GOOD, 4.0)
 	elif bay_doors == "open" and inside:
 		bay_doors = "closing"
 		flash("All aboard the bay: doors closing behind you.", UI.DIM, 3.0)
@@ -497,7 +539,8 @@ func _update_bay(dt: float) -> void:
 		want = maxf(0.0, want - dt / float(cfg["door_s"]))
 		if want <= 0.0:
 			bay_doors = "shut_behind"
-	Bay.set_open(bay, want)
+	_door_own = want
+	Bay.set_open(bay, maxf(want, _pattern.door_open(sim.state.time_s) if _pattern != null else 0.0))
 
 
 func _collide() -> void:
@@ -570,8 +613,16 @@ func _bounce(normal: Vector3, depth: float, harmless: bool = false) -> void:
 func _check_docking() -> void:
 	if readout.get("range", INF) > float(tune_dock["capture_distance_m"]):
 		return
+	if not cleared():
+		refusals += 1
+		flash("Capture refused: the bay isn't yours yet. Traffic ahead.", UI.WARN, 3.0)
+		_bounce(Vector3(0, 0, 1), 0.5, true)
+		return
 	if readout["ok_speed"] and readout["ok_align"] and readout["ok_roll"]:
-		if sim.apply({"type": "dock", "manual": true}) == "":
+		var bay: Dictionary = station.get("bay", {})
+		if not bay.get("cradles", []).is_empty() and bay["fits"]:
+			_start_capture(bay)
+		elif sim.apply({"type": "dock", "manual": true}) == "":
 			docked = true
 		return
 	var reasons := []
@@ -584,6 +635,34 @@ func _check_docking() -> void:
 	refusals += 1
 	flash("Capture refused: " + ", ".join(reasons), UI.WARN, 3.0)
 	_bounce(Vector3(0, 0, 1), 0.5, true)
+
+
+## Captured: clamps take her at the port, and she is drawn down off the axis to the
+## pilot's cradle (cradle 0), keel to the wall, over balance.bays.hall.draw_s.
+func _start_capture(bay: Dictionary) -> void:
+	var rotor: Node3D = station["rotor"]
+	var a := float(bay["cradles"][0])
+	var out := Vector3(cos(a), sin(a), 0.0)
+	var up := -out
+	var back := Vector3(0, 0, 1)
+	var to := Transform3D(Basis(up.cross(back), up, back), out * Spin.cradle_radius(sim.data, stowed_radius) + Vector3(0, 0, float(bay["z_mid"])))
+	_capture = {"t": 0.0, "from": rotor.global_transform.affine_inverse() * ship_node.global_transform, "to": to}
+	velocity = Vector3.ZERO
+	ang_vel = Vector3.ZERO
+	var geom: Dictionary = sim.data.places[place_id]["station"]
+	flash("Captured. Drawing you down to cradle 1: %s at the berth; the ring rides at %s." % [Spin.describe(Spin.g_at(geom, Spin.cradle_radius(sim.data, stowed_radius))), Spin.describe(Spin.living_g(geom))], UI.GOOD, float(sim.data.balance["bays"]["hall"]["draw_s"]))
+
+
+## Down the hall to the cradle, turning with the station; then she's docked.
+func _draw_down(dt: float) -> void:
+	var draw_s := float(sim.data.balance["bays"]["hall"]["draw_s"])
+	_capture["t"] = float(_capture["t"]) + dt
+	var f := clampf(float(_capture["t"]) / draw_s, 0.0, 1.0)
+	f = f * f * (3.0 - 2.0 * f)
+	var local: Transform3D = (_capture["from"] as Transform3D).interpolate_with(_capture["to"], f)
+	ship_node.global_transform = (station["rotor"] as Node3D).global_transform * local
+	if float(_capture["t"]) >= draw_s and sim.apply({"type": "dock", "manual": true}) == "":
+		docked = true
 
 
 func scanner_range() -> float:
@@ -599,6 +678,10 @@ func contacts() -> Array:
 			out.append({"pos": entry["ship"].global_position, "colour": SystemMap.fleet_colour(sim, entry["npc"]), "kind": "ship", "r": float(entry.get("radius", 15.0))})
 	for w in _work_craft:
 		out.append({"pos": w["node"].global_position, "colour": UI.HAZARD, "kind": "pod"})
+	if _pattern != null:
+		for k in _pattern.ships:
+			var e: Dictionary = _pattern.ships[k]
+			out.append({"pos": e["ship"].global_position, "colour": UI.AMBER, "kind": "ship", "r": float(e["radius"])})
 	for rock in _rocks:
 		out.append({"pos": rock["node"].global_position, "colour": UI.DIM, "kind": "rock", "r": float(rock["r"]), "vel": rock["vel"]})
 	return out
@@ -632,6 +715,177 @@ func _update_camera(dt: float) -> void:
 	camera.look_at(t * Vector3(0, 2.0, -30.0), t.basis.y)
 
 
+# --- Traffic control: the bay's pattern (sim/traffic.gd) ------------------------------
+
+## Who goes through the bay before us. A tower works it out now and gives us our number;
+## at an open port nobody is in charge, and we take the bay when we get to it with nobody
+## else committed. Ships behind us in the pattern wait their turn.
+func _start_traffic_control() -> void:
+	var bay: Dictionary = station.get("bay", {})
+	if bay.is_empty() or not Traffic.has_bay(sim.data, place_id):
+		return
+	_pattern = Pattern.new(sim, place_id, station, self)
+	var cfg: Dictionary = sim.data.balance["traffic"]
+	var t: float = sim.state.time_s
+	var tower := Traffic.control(sim.data, place_id) == "tower"
+	tc = {"control": "tower" if tower else "open", "cleared": false, "clear_t": INF, "ahead": [], "called": {}, "classified": {}, "warned_until": 0.0}
+	var pilot_d := _pilot_d()
+	# When the tower expects us at the hold.
+	var est := t + maxf(pilot_d - float(cfg["hold_m"]), 0.0) / float(cfg["player_speed_mps"])
+	var clear_t := t + float(sim.data.balance["bays"]["clear_s"])
+	for m in _pattern.sync(t):
+		var k := Pattern.key(m)
+		tc["classified"][k] = true
+		if float(m["end"]) <= t:
+			continue
+		var ahead: bool
+		if m["kind"] == "in":
+			# Ahead of us on the axis (or already going in): it goes first.
+			ahead = float(m["t"]) <= t or _pattern_d(m, t) < pilot_d - float(cfg["separation_m"]) * 0.5
+		else:
+			# Leaving: a tower sends out whoever is due before we reach the hold; at an
+			# open port, whoever goes before we take the bay (decided as we go).
+			ahead = float(m["t"]) < est if tower else true
+		# A tower fits us in after at most max_ahead ships; the rest wait behind us (a
+		# ship already between us and the doors still goes first).
+		if ahead and (not tower or m["kind"] == "in" or tc["ahead"].size() < int(cfg["max_ahead"]) or float(m["t"]) <= t):
+			tc["ahead"].append(m)
+			clear_t = maxf(clear_t, float(m["end"]))
+		else:
+			_pattern.held[k] = true
+	var here: String = sim.data.places[place_id]["name"]
+	var me := _call_sign()
+	if tower:
+		tc["clear_t"] = clear_t
+		if tc["ahead"].is_empty():
+			_radio("%s Control: %s, cleared in. Doors opening on your approach." % [here, me])
+		else:
+			var line := "%s Control: %s, number %d for the bay, behind %s. Hold %d m off the doors." % [here, me, tc["ahead"].size() + 1, Pattern.describe(sim, place_id, tc["ahead"][-1]), int(cfg["hold_m"])]
+			_radio(line)
+			tc["greeting"] = "Traffic control: number %d for the bay. Hold %d m off the doors." % [tc["ahead"].size() + 1, int(cfg["hold_m"])]
+	else:
+		_radio("%s traffic, %s, on the axis %d m out, inbound for the bay." % [here, me, int(round(pilot_d))])
+		tc["greeting"] = "No tower at %s: pilots call their own moves. Watch the pattern and give way to anyone committed." % here
+
+
+## Each frame: the pattern's ships, the radio, and whether the bay is ours yet.
+func _run_pattern(dt: float) -> void:
+	if _pattern == null:
+		return
+	var t: float = sim.state.time_s
+	if absf(t - _pattern_sync) >= 1.0:
+		_pattern_sync = t
+		for m in _pattern.sync(t):
+			_classify(m, t)
+	var pilot_d := _pilot_d()
+	_pattern.update(t, dt, spin_angle, body_dirs["sun"], pilot_d)
+	_traffic_calls(t)
+	if tc["cleared"]:
+		return
+	var cfg: Dictionary = sim.data.balance["traffic"]
+	var lead := float(cfg["lead_s"])
+	var go: bool = t >= float(tc["clear_t"]) if tc["control"] == "tower" else (pilot_d <= float(cfg["claim_m"]) and _pattern.busy(t, lead).is_empty())
+	if go:
+		tc["cleared"] = true
+		# The bay is ours: nobody else starts through it until we're in.
+		for k in _pattern.known:
+			if float(_pattern.known[k]["t"]) > t:
+				_pattern.held[k] = true
+		var here: String = sim.data.places[place_id]["name"]
+		if tc["control"] == "tower":
+			if not tc["ahead"].is_empty():
+				_radio("%s Control: %s, your turn. Cleared in." % [here, _call_sign()])
+			flash("Traffic control: cleared in. Bay doors opening.", UI.GOOD, 4.0)
+		else:
+			_radio("%s traffic, %s, going in." % [here, _call_sign()])
+			flash("Nobody else committed: the bay is ours. Doors opening.", UI.GOOD, 4.0)
+	elif pilot_d < float(cfg["hold_m"]) - 40.0 and clock > float(tc["warned_until"]):
+		tc["warned_until"] = clock + 8.0
+		flash(("Traffic control: %s, you are not cleared. Hold %d m off the doors." % [_call_sign(), int(cfg["hold_m"])]) if tc["control"] == "tower" else traffic_advice(), UI.WARN, 4.0)
+
+
+## A movement first seen after we arrived: behind us in the queue if we have the bay,
+## or (tower) were sequenced first, or (open) it's coming in behind us on the axis.
+func _classify(m: Dictionary, t: float) -> void:
+	var k := Pattern.key(m)
+	if tc["classified"].has(k):
+		return
+	tc["classified"][k] = true
+	var behind: bool = tc["cleared"] or tc["control"] == "tower"
+	if not behind and m["kind"] == "in":
+		behind = _pattern_d(m, t) > _pilot_d() - float(sim.data.balance["traffic"]["separation_m"]) * 0.5
+	if behind and float(m["t"]) > t:
+		_pattern.held[k] = true
+
+
+## The radio: a tower clears each ship through; at an open port pilots call their own.
+func _traffic_calls(t: float) -> void:
+	var here: String = sim.data.places[place_id]["name"]
+	var tower: bool = tc["control"] == "tower"
+	var lead := 0.0 if tower else float(sim.data.balance["traffic"]["lead_s"])
+	for k in _pattern.known:
+		if tc["called"].has(k):
+			continue
+		var m: Dictionary = _pattern.known[k]
+		var w := Pattern.who(sim, place_id, m)
+		if w.is_empty():
+			tc["called"][k] = true
+			continue
+		if _pattern.held.has(k):
+			# Behind us, once it's in sight: the tower tells it to follow us in; at an
+			# open port its pilot says it's holding.
+			if m["kind"] == "in" and _pattern.ships.has(k):
+				tc["called"][k] = true
+				_radio(("%s Control: %s, follow %s in." if tower else "%s traffic, %s, holding behind %s.") % [here, w["name"], _call_sign()])
+			continue
+		if t < float(m["t"]) - lead or t >= float(m["end"]):
+			continue
+		tc["called"][k] = true
+		if tower:
+			_radio("%s Control: %s, cleared %s." % [here, w["name"], "in" if m["kind"] == "in" else "out"])
+		else:
+			_radio("%s traffic, %s, %s." % [here, w["name"], "inbound for the bay" if m["kind"] == "in" else "coming out of the bay"])
+
+
+## The co-pilot's advice while the bay isn't ours.
+func traffic_advice() -> String:
+	if tc.is_empty():
+		return ""
+	var t: float = sim.state.time_s
+	var cfg: Dictionary = sim.data.balance["traffic"]
+	if tc["control"] == "tower":
+		var left := 0
+		for m in tc["ahead"]:
+			if float(m["end"]) > t:
+				left += 1
+		return "Hold %d m off the doors: traffic control has %d ship%s ahead of us." % [int(cfg["hold_m"]), left, "" if left == 1 else "s"]
+	var busy: Dictionary = _pattern.busy(t, float(cfg["lead_s"]))
+	if not busy.is_empty():
+		return "Hold short: %s has the bay." % Pattern.describe(sim, place_id, busy)
+	return "Nobody's committed. Close to %d m off the doors and the bay is ours." % int(cfg["claim_m"])
+
+
+## Our nose's distance off the bay's doors, along the axis.
+func _pilot_d() -> float:
+	return _nose().z - float(station["bay"]["z_mouth"])
+
+
+## Where a pattern ship closing on the gate is at t (metres off the doors).
+func _pattern_d(m: Dictionary, t: float) -> float:
+	var cfg: Dictionary = sim.data.balance["traffic"]
+	return float(cfg["gate_m"]) + float(cfg["in_speed_mps"]) * maxf(float(m["t"]) - t, 0.0)
+
+
+func _call_sign() -> String:
+	var name: String = sim.state.ship.get("name", "")
+	return name if name != "" else "inbound ship"
+
+
+func _radio(text: String) -> void:
+	radio_log.append(text)
+	radio.emit(text)
+
+
 ## Other ships here: moored at berths on the hub, or flying the lanes in and out.
 func _sync_traffic() -> void:
 	var t: float = sim.state.time_s
@@ -650,7 +904,7 @@ func _sync_traffic() -> void:
 	for id in docked_here:
 		if not _berths.has(id):
 			var used: Array = _berths.values()
-			for i in BERTH_ANGLES.size():
+			for i in _berth_slots():
 				if not i in used:
 					_berths[id] = i
 					break
@@ -659,6 +913,9 @@ func _sync_traffic() -> void:
 			continue
 		var loc: Dictionary = npc["location"]
 		var mode := ""
+		# Flying the bay's pattern (or done with it), not the lanes.
+		if not _berths.has(npc["id"]) and _pattern != null and _pattern.known.has(npc["id"]):
+			continue
 		if _berths.has(npc["id"]):
 			mode = "berth"
 		elif loc["status"] == "transit" and loc["to"] == place_id and float(loc["arrive_t"]) - t < LANE_WINDOW:
@@ -681,7 +938,23 @@ func _sync_traffic() -> void:
 		var operator: String = sim.data.npcs["fleets"][npc["fleet"]]["operator"]
 		var model := Models.ship(npc["ship"], sim.data, Livery.for_ship(sim.data, operator, npc["name"]))
 		var node: Node3D = model["node"]
-		if w["mode"] == "berth":
+		var cradles: Array = station.get("bay", {}).get("cradles", [])
+		if w["mode"] == "berth" and not cradles.is_empty():
+			# In a cradle in the docking hall (cradle 0 is the pilot's), keel to the wall,
+			# nose to the hall's back wall, turning with the station. Lit only by the hall.
+			var holder := Node3D.new()
+			holder.rotation.z = float(cradles[int(w["berth"]) + 1])
+			node.position = Vector3(Spin.cradle_radius(sim.data, ShipRig.stowed_radius(model)), 0, float(station["bay"]["z_mid"]))
+			node.rotation = Vector3(0, 0, PI * 0.5)
+			var cold := node.find_child("DrivePlume", true, false)
+			if cold:
+				cold.visible = false
+			for g in node.find_children("*", "GeometryInstance3D", true, false):
+				(g as GeometryInstance3D).layers = Bay.INTERIOR_LAYER
+			holder.add_child(node)
+			station["rotor"].add_child(holder)
+			_traffic[id] = {"node": holder, "ship": node, "mode": "berth", "npc": w["npc"], "rig": model["rig"], "radius": float(model["radius"])}
+		elif w["mode"] == "berth":
 			# Moored alongside the hub's forward half on a short arm, spinning with the station.
 			var a: float = BERTH_ANGLES[w["berth"]]
 			var r: float = station["hub_radius"] + model["radius"] + 6.0
@@ -707,6 +980,12 @@ func _sync_traffic() -> void:
 			_traffic[id] = {"node": node, "ship": node, "mode": w["mode"], "npc": w["npc"], "rig": model["rig"], "dest_dir": dest_dir, "radius": float(model["radius"])}
 		changed = true
 	_move_traffic(0.0)
+
+
+## Berths for other ships: the hall's cradles after the pilot's, or arms round the hub.
+func _berth_slots() -> int:
+	var cradles: Array = station.get("bay", {}).get("cradles", [])
+	return cradles.size() - 1 if not cradles.is_empty() else BERTH_ANGLES.size()
 
 
 ## Lane traffic flies in and out; everyone keeps panels on the Sun and dish on target.
@@ -818,6 +1097,8 @@ func guidance() -> Dictionary:
 	var text := ""
 	if computer:
 		text = "Docking computer has control."
+	elif not cleared() and nose.z - float(station["bay"]["z_mouth"]) < hold_short_m() + 40.0:
+		text = traffic_advice()
 	elif not bay_ready() and nose.z - float(station["bay"]["z_mouth"]) < BAY_HOLD_M + 20.0:
 		text = "Hold short of the bay: the doors are opening."
 	elif readout["align"] > float(tune_dock["max_angle_deg"]):
@@ -905,6 +1186,13 @@ func _bodies_nearby(p: Vector3, reach: float) -> Array:
 		if is_instance_valid(entry["ship"]):
 			var c: Vector3 = entry["ship"].global_position
 			var r := float(entry.get("radius", 15.0))
+			if c.distance_to(p) < r + reach:
+				out.append({"pos": c, "r": r, "vel": Vector3.ZERO, "mass_t": 0.0, "what": "ship"})
+	if _pattern != null:
+		for k in _pattern.ships:
+			var e: Dictionary = _pattern.ships[k]
+			var c: Vector3 = e["ship"].global_position
+			var r := float(e["radius"])
 			if c.distance_to(p) < r + reach:
 				out.append({"pos": c, "r": r, "vel": Vector3.ZERO, "mass_t": 0.0, "what": "ship"})
 	for w in _work_craft:

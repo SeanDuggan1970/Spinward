@@ -23,6 +23,7 @@ const Favours := preload("res://sim/favours.gd")
 const SiteSystemScript := preload("res://sim/systems/site_system.gd")
 const EconomySystemScript := preload("res://sim/systems/economy_system.gd")
 const NpcSystem := preload("res://sim/systems/npc_system.gd")
+const Traffic := preload("res://sim/traffic.gd")
 const Bindings := preload("res://view/bindings.gd")
 const DamageSystem := preload("res://sim/systems/damage_system.gd")
 const Power := preload("res://sim/power.gd")
@@ -83,6 +84,7 @@ func _initialize() -> void:
 	test_project_pitches()
 	test_sites()
 	test_story_arc()
+	test_story_roads()
 	test_outer_traffic()
 	test_spaceline()
 	test_minds_and_sails()
@@ -137,6 +139,7 @@ func _initialize() -> void:
 	test_craft_contracts()
 	test_build_info()
 	test_hibernation()
+	test_traffic_control()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -1203,25 +1206,48 @@ func test_story_arc() -> void:
 	var s := sim.state
 	var d := sim.data
 	check(d.validate().is_empty(), "Data valid with the story (%s)" % ", ".join(d.validate()))
+	# Nothing happens without the core: a long game of plain trading.
+	s.stats["contracts_delivered"] = 30
+	s.reputation["Terran Compact"] = 20.0
+	_dock_at(sim, "clarke_exchange")
+	sim.advance_game_time(400.0 * DAY)
+	_dock_at(sim, "trojan_yards")
+	check(s.story["fired"].keys().all(func(id): return id in ["quiet_margin", "the_delegate", "the_seat"]), "A year of trading, a fine reputation, and no story calls: it waits for the core")
+	# Salvage Hermes-7: the memory core comes aboard, and the co-pilot says its piece.
+	s.sites["known"].append("hermes_probe")
+	s.location = {"status": "on_site", "place": "hermes_probe"}
+	var credits := s.credits
+	check(sim.apply({"type": "site_work", "activity": "salvage"}) == "", "Salvage Hermes-7")
+	sim.advance_game_time(1.5 * DAY)
+	check(s.story["core"].get("status", "") == "aboard", "The memory core is aboard")
+	check(s.credits - credits < 1000.0, "The salvage pays only scrap (%.0f cr)" % (s.credits - credits))
+	var hint: Array = s.story["messages"].filter(func(m): return String(m["text"]).contains("Minds") and String(m["text"]).contains("downtime"))
+	check(hint.size() == 1 and hint[0]["from"] == "Co-pilot", "The co-pilot, not yet named, says the Minds might want it and it could dig in with some downtime")
+	# No human port buys it.
 	_dock_at(sim, "kibo_ring")
-	check(_favour_on_board(sim, "kibo_ring").is_empty(), "Nobody approaches an unknown pilot")
-	# A reliable courier is approached.
-	s.stats["contracts_delivered"] = 3
-	s.reputation["Terran Compact"] = 7.0
+	check(sim.apply({"type": "sell_core"}) != "" and s.story["core"]["status"] == "aboard", "Kibo Ring has no use for it")
+	# The Long View's road: sell it at Trojan Yards.
+	_dock_at(sim, "trojan_yards")
+	credits = s.credits
+	check(sim.apply({"type": "sell_core"}) == "", "Sell it to the minds at Trojan Yards")
+	check(s.story["core"]["road"] == "long_view" and s.credits > credits, "The Long View's road begins, and they pay")
+	check(sim.apply({"type": "sell_core"}) != "", "It can only be sold once")
+	# The world clock runs: the probe is announced, launched, and turned away, years later.
+	sim.advance_game_time(50.0 * DAY)
+	check("lv_probe_announced" in s.story["done"] and "lv_probe_announced" in s.news["posted"], "The Spaceline reports a deep probe 'to look at something odd'")
+	check(not s.story["fired"].has("first_favour"), "Nobody approaches you yet")
+	s.story["core"]["road_t"] -= 1200.0 * DAY
+	s.location = {"status": "transit", "from": "trojan_yards", "to": "kibo_ring", "depart_t": s.time_s, "arrive_t": s.time_s + 30.0 * DAY}
+	sim.advance_game_time(3600.0)
+	check("lv_turned_away" in s.story["done"], "World beats move in transit: the probe is turned away")
 	_dock_at(sim, "clarke_exchange")
 	var fav := _favour_on_board(sim, "clarke_exchange")
-	check(not fav.is_empty() and fav["to"] == "farside_array" and fav["client"] == "The Long View", "Ines Okafor's first favour: a case for Farside Array")
+	check(not fav.is_empty() and fav["to"] == "farside_array" and fav["client"] == "The Long View", "Then Ines Okafor comes for you: a case for Farside Array")
 	check(sim.apply({"type": "accept_contract", "id": fav["id"]}) == "", "Take the favour")
-	_dock_at(sim, "farside_array")
-	check("first_favour" in s.story["done"] and SiteSystemScript.knows(s, "hermes_probe"), "Delivered; the astronomer puts Hermes-7 on your chart")
-	# Recover the recorder, then hear what it saw.
-	s.location = {"status": "on_site", "place": "hermes_probe"}
-	sim.apply({"type": "site_work", "activity": "salvage"})
-	sim.advance_game_time(1.5 * DAY)
 	_dock_at(sim, "farside_array")
 	_dock_at(sim, "farside_array")
 	var fav2 := _favour_on_board(sim, "farside_array")
-	check("the_recorder" in s.story["done"] and not fav2.is_empty() and fav2["to"] == "trojan_yards", "The occultation, and a mind in a box for Trojan Yards")
+	check("first_favour" in s.story["done"] and not fav2.is_empty() and fav2["to"] == "trojan_yards", "The two recordings, and a mind in a box for Trojan Yards")
 	sim.apply({"type": "accept_contract", "id": fav2["id"]})
 	_dock_at(sim, "trojan_yards")
 	_dock_at(sim, "trojan_yards")
@@ -1230,11 +1256,77 @@ func test_story_arc() -> void:
 	var q: Dictionary = Interplanetary.quick(s.ship, d, sim.ephemeris, "trojan_yards", "the_lacuna", s.time_s)
 	check(q["ok"], "The Lacuna is reachable with the lent drive (%.1f years, %.1f t) %s" % [float(q.get("duration_s", 0.0)) / (365.25 * DAY), float(q.get("fuel_t", 0.0)), q["reason"]])
 	# Say hello.
-	var credits := s.credits
+	credits = s.credits
 	s.location = {"status": "on_site", "place": "the_lacuna"}
 	check(sim.apply({"type": "site_work", "activity": "greet"}) == "", "Go and say hello")
 	sim.advance_game_time(3.0 * DAY)
 	check("the_meeting" in s.story["done"] and s.credits >= credits + 500000.0, "It says hello back. The system is a little larger.")
+	check("hello_back" in s.news["posted"], "and the Spaceline says so")
+
+
+## The other three roads: the Reach, the Sufficiency, and the Lanes (keep it and sleep on it).
+func test_story_roads() -> void:
+	var d := fresh().data
+	var found := func(sim: Sim) -> void:
+		sim.state.sites["known"].append("hermes_probe")
+		sim.state.sites["worked"]["hermes_probe"] = ["salvage"]
+		sim.advance_game_time(3600.0)
+	# The Reach: quick, and it goes badly; a mind in a hurry asks for help.
+	var reach := fresh()
+	var r := reach.state
+	found.call(reach)
+	_dock_at(reach, "hektor_reach")
+	check(reach.apply({"type": "sell_core"}) == "" and r.story["core"]["road"] == "reach", "Sold at Hektor Reach: the Reach's road")
+	reach.advance_game_time(25.0 * DAY)
+	check("rc_swarm" in r.news["posted"], "Forty probes at once")
+	r.story["core"]["road_t"] -= 400.0 * DAY
+	_dock_at(reach, "kibo_ring")
+	_dock_at(reach, "kibo_ring")
+	check("rc_dark" in r.story["done"] and "rc_approach" in r.story["done"], "The swarm loses it, and Fast Enough comes for you at the next port")
+	check(r.ship["modules"]["drive.0"] == "longview_drive" and SiteSystemScript.knows(r, "the_lacuna"), "with a drive and the way there")
+	check(not r.story["fired"].has("first_favour"), "The Long View's road does not run")
+	r.location = {"status": "on_site", "place": "the_lacuna"}
+	reach.apply({"type": "site_work", "activity": "greet"})
+	reach.advance_game_time(3.0 * DAY)
+	check("rc_meeting" in r.story["done"] and "hello_back" in r.news["posted"], "It comes back for the Reach too")
+	# The Sufficiency: no probe; years of thinking; an invitation home.
+	var suff := fresh()
+	var f := suff.state
+	found.call(suff)
+	f.time_s += 61.0 * DAY
+	_dock_at(suff, "landauer_deep")
+	check(suff.apply({"type": "sell_core"}) == "" and f.story["core"]["road"] == "sufficiency", "Sold at Landauer Deep: the Sufficiency's road")
+	f.story["core"]["road_t"] -= 800.0 * DAY
+	_dock_at(suff, "kibo_ring")
+	check("sf_paper" in f.story["done"] and not f.story["fired"].has("sf_invite"), "The paper comes out; the invitation waits for Landauer Deep")
+	_dock_at(suff, "landauer_deep")
+	_dock_at(suff, "landauer_deep")
+	check("sf_invite" in f.story["done"] and f.ship["modules"]["cargo.0"] == "sleep_berth", "Quiet Margin asks you to speak for them, and lends a berth")
+	# The Lanes: keep it, sleep a year with it, and the co-pilot reads it.
+	var lanes := fresh()
+	var l := lanes.state
+	found.call(lanes)
+	check(lanes.apply({"type": "name_copilot", "name": "Tansy"}) == "" and l.story["copilot"] == "Tansy", "Name the co-pilot")
+	l.ship["modules"]["cargo.1"] = "hibernation_pod"
+	lanes.apply({"type": "sleep", "days": 200})
+	lanes.advance_game_time(201.0 * DAY)
+	check(l.story["core"]["status"] == "aboard", "Two hundred days asleep is not enough downtime")
+	lanes.apply({"type": "sleep", "days": 200})
+	lanes.advance_game_time(201.0 * DAY)
+	check(l.story["core"]["status"] == "read" and l.story["core"]["road"] == "lanes", "A year asleep in all: the co-pilot read the core, and the Lanes' road begins")
+	var cross: Array = l.story["messages"].filter(func(m): return String(m["text"]).begins_with("'Don't be cross."))
+	check(cross.size() == 1 and cross[0]["from"] == "Tansy", "'Don't be cross. I was bored.' Signed by name.")
+	check(lanes.apply({"type": "sell_core"}) != "", "A read core is not for sale")
+	l.story["core"]["road_t"] -= 200.0 * DAY
+	l.ship["modules"]["cargo.1"] = "cargo_pod_s"
+	_dock_at(lanes, "kibo_ring")
+	check("ln_pattern" in l.story["done"] and not l.story["fired"].has("ln_ask"), "The lanes find the pattern; the ask waits for a pod of your own")
+	l.ship["modules"]["cargo.1"] = "hibernation_pod"
+	_dock_at(lanes, "kibo_ring")
+	_dock_at(lanes, "kibo_ring")
+	check("ln_ask" in l.story["done"] and l.ship["modules"]["drive.0"] == "longview_drive" and l.ship["modules"]["cargo.1"] == "hibernation_pod", "Your own ship, your own pod, and a drive the Long View owed the lanes")
+	# Roads never cross: one core, one road.
+	check(not l.story["fired"].has("first_favour") and not l.story["fired"].has("rc_approach"), "Only the Lanes' road runs")
 
 
 func test_outer_traffic() -> void:
@@ -1487,7 +1579,8 @@ func test_news_in_depth() -> void:
 	var g := gated.state
 	g.started_t -= 400.0 * DAY
 	gated.advance_game_time(3600.0)
-	check(g.news["posted"].size() >= d.news["stories"].size() - 3, "Four hundred days on, every story that is not waiting on a beat is out")
+	var waiting: int = d.news["stories"].filter(func(st): return st.has("after_beat")).size()
+	check(g.news["posted"].size() >= d.news["stories"].size() - waiting, "Four hundred days on, every story that is not waiting on a beat is out")
 	for id in ["farside_silence", "hello_back", "first_delegate"]:
 		check(not id in g.news["posted"], "%s still waits for its beat" % id)
 	g.story["done"].append("the_occultation")
@@ -1938,17 +2031,16 @@ func test_story_arcs_in_depth() -> void:
 	var d := sim.data
 	check(s.story["done"].is_empty() and s.story["fired"].is_empty() and s.story["messages"].is_empty(), "A new game is at the start of every arc")
 	# Beats only move when docked or on site: not in transit, not on the ribbon.
-	s.stats["contracts_delivered"] = 3
-	s.reputation["Terran Compact"] = 7.0
+	_on_long_view_road(s)
 	s.location = {"status": "transit", "from": "kibo_ring", "to": "clarke_exchange", "depart_t": s.time_s, "arrive_t": s.time_s + 3.0 * DAY}
 	sim.advance_game_time(3600.0)
-	check(s.story["fired"].is_empty(), "A ready beat does not fire in transit")
+	check(not s.story["fired"].has("first_favour"), "A ready beat does not fire in transit")
 	var in_transit := SaveIO.from_text(SaveIO.to_text(s))
 	check(in_transit.to_dict() == s.to_dict(), "A save in transit with a beat pending is lossless")
 	var loaded := Sim.new()
 	loaded.load_state(in_transit)
 	loaded.advance_game_time(3.0 * DAY)
-	check(loaded.state.location["status"] == "approach" and loaded.state.story["fired"].is_empty(), "On arrival, still in approach: the beat waits for the dock")
+	check(loaded.state.location["status"] == "approach" and not loaded.state.story["fired"].has("first_favour"), "On arrival, still in approach: the beat waits for the dock")
 	loaded.apply({"type": "dock"})
 	loaded.advance_game_time(60.0)
 	check(loaded.state.story["fired"].has("first_favour"), "Docked, the first beat fires")
@@ -1958,13 +2050,12 @@ func test_story_arcs_in_depth() -> void:
 	loaded.advance_game_time(3600.0)
 	loaded.advance_game_time(3600.0)
 	check(loaded.state.contracts["board"]["clarke_exchange"].filter(func(o): return o.get("favour", "") == "first_favour").size() == 1 and loaded.state.story["messages"].size() == 1, "Further ticks do not offer it again")
-	check(not "first_favour" in loaded.state.story["done"] and not loaded.state.story["fired"].has("the_recorder"), "The next beat waits for this one to be done")
+	check(not "first_favour" in loaded.state.story["done"] and not loaded.state.story["fired"].has("the_occultation"), "The next beat waits for this one to be done")
 
 	# The favour vanishing (it expires, nobody takes it) is offered again, once.
 	var re := fresh()
 	var r := re.state
-	r.stats["contracts_delivered"] = 3
-	r.reputation["Terran Compact"] = 7.0
+	_on_long_view_road(r)
 	_dock_at(re, "clarke_exchange")
 	var first_id := int(r.story["fired"]["first_favour"]["offer"])
 	r.contracts["board"]["clarke_exchange"] = r.contracts["board"]["clarke_exchange"].filter(func(o): return int(o["id"]) != first_id)
@@ -1986,19 +2077,10 @@ func test_story_arcs_in_depth() -> void:
 	cont.advance_game_time(60.0)
 	cont.advance_game_time(60.0)
 	check("first_favour" in cont.state.story["done"], "Delivered after a reload: the beat completes")
-	check(SiteSystemScript.knows(cont.state, "hermes_probe") or cont.state.story["fired"].has("the_recorder"), "and the next beat moves on (Hermes-7 revealed)")
 	check(cont.state.story["done"].filter(func(b): return b == "first_favour").size() == 1, "Never marked done twice")
-	# A beat for a port waits for that port.
-	check(not cont.state.story["fired"].has("the_occultation"), "The occultation waits for the recorder to be worked")
-	cont.state.location = {"status": "docked", "place": "kibo_ring"}
-	cont.state.sites["worked"] = {"hermes_probe": ["salvage"]}
-	cont.advance_game_time(3600.0)
-	check("the_recorder" in cont.state.story["done"], "Working the site finishes the recorder beat wherever you are")
-	cont.advance_game_time(3600.0)
-	check(not cont.state.story["fired"].has("the_occultation"), "but the occultation is told at the Array, not at Kibo")
-	cont.state.location = {"status": "docked", "place": "farside_array"}
-	cont.advance_game_time(3600.0)
-	check(cont.state.story["fired"].has("the_occultation"), "and at the Array it is")
+	check(cont.state.story["fired"].has("the_occultation"), "and at the Array the next beat is told")
+	# A beat for a port waits for that port: the loan is made at Trojan Yards.
+	check(not cont.state.story["fired"].has("the_loan"), "The loan waits for its own port and its favour")
 
 	# Arcs run side by side: the Sufficiency does not wait on the Long View.
 	var arcs := fresh()
@@ -2022,7 +2104,7 @@ func test_story_arcs_in_depth() -> void:
 	check("the_delegate" in a.story["done"] and "the_seat" in a.story["done"], "Delivered: the seat beat follows and finishes")
 	var sufficiency_letters: Array = a.story["messages"].filter(func(m): return String(m["from"]).contains("Sufficiency") or String(m["from"]).contains("Steady Hand"))
 	check(a.credits >= credits + 4000.0 and sufficiency_letters.size() == 3, "Steady Hand's thank-you pays 4,000 and the arc's log has three letters (%d)" % sufficiency_letters.size())
-	check(a.story["fired"].has("first_favour"), "Two on-time deliveries and a Known standing with the Sufficiency also bring the Long View's first favour (arcs cross-feed)")
+	check(not a.story["fired"].has("first_favour"), "Deliveries and standing alone never start the Long View's road: that takes the core")
 	# And once the arc is over it stays over.
 	var n_messages: int = a.story["messages"].size()
 	for _k in 3:
@@ -2038,7 +2120,8 @@ func test_story_arcs_in_depth() -> void:
 	# The grant in 'the_loan' fills the tanks even when the ship was empty.
 	var loan := fresh()
 	loan.state.ship["fuel_t"] = 0.0
-	loan.state.story["done"] = ["first_favour", "the_recorder", "the_occultation"]
+	_on_long_view_road(loan.state)
+	loan.state.story["done"].append_array(["first_favour", "the_occultation"])
 	loan.state.location = {"status": "docked", "place": "trojan_yards"}
 	loan.advance_game_time(3600.0)
 	check(loan.state.ship["modules"]["drive.0"] == "longview_drive" and float(loan.state.ship["fuel_t"]) == ShipStats.fuel_capacity_t(loan.state.ship, d) and float(loan.state.ship["fuel_t"]) > 0.0, "The Long View's loan fits the drive and tops up the tanks")
@@ -2056,8 +2139,7 @@ func test_story_arcs_in_depth() -> void:
 func test_story_favour_after_abandon() -> void:
 	var sim := fresh()
 	var s := sim.state
-	s.stats["contracts_delivered"] = 3
-	s.reputation["Terran Compact"] = 7.0
+	_on_long_view_road(s)
 	_dock_at(sim, "clarke_exchange")
 	var first: Dictionary = _first_favour_offer(s)
 	check(sim.apply({"type": "accept_contract", "id": first["id"]}) == "", "Take the Long View's first favour")
@@ -2071,8 +2153,7 @@ func test_story_favour_after_abandon() -> void:
 	# The same goes for a favour that was allowed to fail.
 	var failed := fresh()
 	var f := failed.state
-	f.stats["contracts_delivered"] = 3
-	f.reputation["Terran Compact"] = 7.0
+	_on_long_view_road(f)
 	_dock_at(failed, "clarke_exchange")
 	var offer: Dictionary = _first_favour_offer(f)
 	failed.apply({"type": "accept_contract", "id": offer["id"]})
@@ -2082,6 +2163,16 @@ func test_story_favour_after_abandon() -> void:
 	failed.advance_game_time(2.0 * 3600.0)
 	var retry: Dictionary = _first_favour_offer(f)
 	check(not retry.is_empty() and ContractSystemScript.visible_to(f, failed.data, retry), "and is offered again at the next dock, in a form the pilot can accept")
+
+
+## A pilot who sold the core to the Long View years ago, the probe turned away: the
+## road is at Ines Okafor's door.
+func _on_long_view_road(state) -> void:
+	state.story["core"] = {"status": "sold", "found_t": state.time_s, "road": "long_view", "road_t": state.time_s - 1200.0 * 86400.0, "slept_s": 0.0}
+	for id in ["lv_probe_announced", "lv_probe_launched", "lv_turned_away"]:
+		if not id in state.story["done"]:
+			state.story["done"].append(id)
+			state.story["fired"][id] = {"t": state.time_s}
 
 
 func _first_favour_offer(s) -> Dictionary:
@@ -2490,6 +2581,9 @@ func test_time_ramps() -> void:
 	s.time_scale = 100.0
 	check(sim.apply({"type": "depart", "to": "halo_depot"}) == "", "Depart for the ramp test")
 	check(s.time_scale == 1.0, "Departure starts at x1 (%.0f)" % s.time_scale)
+	# Any hold in the cradle for traffic comes first; the ramp counts from its end.
+	for _i in int(ceil(float(s.location.get("hold_s", 0.0)) / 0.05)):
+		sim.tick(0.05)
 	for _i in 1000:
 		sim.tick(0.05)
 	check(s.time_scale == 1.0, "Fifty seconds out, still at x1 to watch the ship back out of the bay (%.0f)" % s.time_scale)
@@ -4717,3 +4811,63 @@ func test_hibernation() -> void:
 	s.sleep["total_s"] = 3651.0 * DAY
 	sim.advance_game_time(3600.0)
 	check(s.badges["earned"].has("bookworm"), "Ten years slept earns the Bookworm badge")
+
+
+func test_traffic_control() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var cfg: Dictionary = d.balance["traffic"]
+	check(Traffic.control(d, "kibo_ring") == "tower" and Traffic.control(d, "landauer_deep") == "open", "Kibo Ring has a tower; Landauer Deep is a free-for-all")
+	# A day at Kibo Ring: the local craft keep to their rate, one at a time, clear of the
+	# long-haul ships, and the schedule is the same however often it is asked.
+	var t0: float = s.time_s
+	var day: Array = Traffic.movements(s, d, "kibo_ring", t0, t0 + DAY)
+	check(day == Traffic.movements(s, d, "kibo_ring", t0, t0 + DAY), "The schedule is deterministic")
+	var locals := day.filter(func(m): return m.has("local"))
+	var expect := Traffic.per_hour(d, "kibo_ring") * 24.0
+	check(absf(float(locals.size()) - expect) <= maxf(3.0, expect * 0.1), "Local craft through the bay: %d in a day (about %.0f)" % [locals.size(), expect])
+	var overlap := false
+	for i in day.size():
+		for j in range(i + 1, day.size()):
+			var a: Dictionary = day[i]
+			var b: Dictionary = day[j]
+			if (a.has("local") or b.has("local")) and float(a["t"]) < float(b["end"]) and float(b["t"]) < float(a["end"]):
+				overlap = true
+	check(not overlap, "Local craft never share the bay")
+	check(day.all(func(m): return float(m["end"]) - float(m["t"]) == float(cfg["cycle_s"])), "Each movement holds the bay for one cycle")
+	check(Traffic.movements(s, d, "ishikawa_maru", t0, t0 + DAY).is_empty(), "A site has no bay and no traffic")
+	# Leaving while a ship is in the bay: hold until it is through.
+	var m: Dictionary = locals[0]
+	var inside := float(m["t"]) + 5.0
+	var hold := Traffic.departure_hold(s, d, "kibo_ring", inside)
+	check(float(hold["hold_s"]) >= float(m["end"]) - inside - 0.01 and not (hold["ahead"] as Dictionary).is_empty(), "Leaving mid-cycle, hold %.0f s for the ship in the bay" % float(hold["hold_s"]))
+	check(float(hold["hold_s"]) <= float(cfg["max_hold_s"]), "Holds are capped")
+	# A free bay: find a moment with nobody due for the time we need.
+	var free_t := -1.0
+	var probe := t0
+	while probe < t0 + DAY and free_t < 0.0:
+		if Traffic.departure_hold(s, d, "kibo_ring", probe)["hold_s"] == 0.0:
+			free_t = probe
+		probe += 30.0
+	check(free_t >= 0.0, "A free bay lets you straight out")
+	# An open port gives way: a ship not yet committed waits for you; one committed doesn't.
+	var open_day: Array = Traffic.movements(s, d, "piazzi_station", t0, t0 + 3.0 * DAY).filter(func(x): return x.has("local"))
+	var om: Dictionary = open_day[0]
+	var early := float(om["t"]) - float(cfg["lead_s"]) - 20.0
+	var late := float(om["t"]) - float(cfg["lead_s"]) * 0.5
+	var before := Traffic.movements(s, d, "piazzi_station", early - float(cfg["cycle_s"]), early + 1.0)
+	if before.is_empty() or float(before[-1]["end"]) <= early:
+		check(Traffic.departure_hold(s, d, "piazzi_station", early)["hold_s"] == 0.0, "At an open port, a ship not yet committed gives way")
+	check(float(Traffic.departure_hold(s, d, "piazzi_station", late)["hold_s"]) > 0.0, "and you give way to one that is")
+	# The depart command holds you in the cradle, and the time ramp waits for it.
+	s.time_s = inside
+	sim.take_events()
+	check(sim.apply({"type": "depart", "to": "clarke_exchange"}) == "", "Depart Kibo Ring with a ship in the bay")
+	var held := sim.take_events().filter(func(e): return e["type"] == "traffic_hold")
+	check(float(s.location.get("hold_s", 0.0)) > 0.0 and held.size() == 1 and held[0]["data"]["control"] == "tower", "Held %.0f s, and told why" % float(s.location.get("hold_s", 0.0)))
+	var first_step := float(d.balance["time"]["departure_ramp"][0][0])
+	sim.advance_game_time(first_step + 1.0)
+	check(s.time_scale == 1.0, "Time stays at x1 while the hold runs on")
+	sim.advance_game_time(float(s.location["hold_s"]))
+	check(s.time_scale > 1.0, "then steps up as the ship backs out (x%d)" % int(s.time_scale))

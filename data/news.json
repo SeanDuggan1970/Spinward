@@ -1,5 +1,5 @@
 {
-	"_note": "The Spaceline: the system's news feed (sim/systems/news_system.gd). 'stories' post on their day (after_days from the start; negative ones are already in the feed when you start), optionally waiting for a story beat (after_beat), a project stage (after_stage: [project, stage]) or a finished project (after_project). 'effects' change a place for good, like a finished project (produces_mult, consumes_mult): the system gets richer as it goes. 'projects' gives each project its announcement and its last word; announcements of projects open from the start are backdated by backdate_days. Projects without text get a plain item.",
+	"_note": "The Spaceline: the system's news feed (sim/systems/news_system.gd). 'stories' post on their day (after_days from the start; negative ones are already in the feed when you start), optionally waiting for a story beat (after_beat: one beat, or a list of which any will do), a project stage (after_stage: [project, stage]) or a finished project (after_project). 'effects' change a place for good, like a finished project (produces_mult, consumes_mult): the system gets richer as it goes. 'projects' gives each project its announcement and its last word; announcements of projects open from the start are backdated by backdate_days. Projects without text get a plain item.",
 	"outlet": "Spaceline",
 	"keep": 80,
 	"stories": [
@@ -170,10 +170,15 @@
 		{
 			"id": "hello_back",
 			"after_days": 0,
-			"after_beat": "the_meeting",
+			"after_beat": [
+				"the_meeting",
+				"rc_meeting",
+				"sf_meeting",
+				"ln_meeting"
+			],
 			"dateline": "A thousand AU",
 			"headline": "Something out past Sedna said hello",
-			"body": "The Long View minds have released a recording: a greeting sent from a pilot at a thousand AU, and the reply, in the pilot's own words, with the light-time taken off. Every government in the system has called an emergency session. Most of them, reportedly, are delighted."
+			"body": "The minds have released a recording: a greeting sent from a pilot at a thousand AU, and the reply, in the pilot's own words, with the light-time taken off. Every government in the system has called an emergency session. Most of them, by all accounts, are delighted."
 		},
 		{
 			"id": "first_delegate",
@@ -182,6 +187,85 @@
 			"dateline": "Ceres",
 			"headline": "The Belt Assembly seats its first mind",
 			"body": "Delegate Steady Hand of the Sufficiency took her seat at Ceres this morning, after travelling in from Saturn by crewed ship 'so that I would arrive having met someone'. Forty-one members stood up. The other nine, she says, were 'very polite'."
+		},
+		{
+			"id": "hermes_inquiry",
+			"after_days": 25,
+			"dateline": "Geneva",
+			"headline": "Twelve years on, Hermes-7 'just a bit flip'",
+			"body": "The Compact's science office has closed its review of the 2049 Hermes-7 inquiry without changes: a single cosmic ray in the attitude computer, a safe-mode shutdown, a relay lost. The wreck still drifts four times the Moon's distance out. Nobody ever went and got the recorder."
+		},
+		{
+			"id": "lv_probe_announced",
+			"after_days": 0,
+			"after_beat": "lv_probe_announced",
+			"dateline": "Trojan Yards",
+			"headline": "Commons minds announce a deep probe, 'to look at something odd'",
+			"body": "A circle of Commons minds calling itself the Long View has laid down a deep probe at Trojan Yards, named Long Patience. Asked what it will look at, a spokesmind said 'something odd', and declined to elaborate. The yard says the drive design is 'unlike anything we have seen, and very tidy'."
+		},
+		{
+			"id": "lv_probe_launched",
+			"after_days": 0,
+			"after_beat": "lv_probe_launched",
+			"dateline": "Trojan Yards",
+			"headline": "Long Patience leaves on a column of violet light",
+			"body": "The Long View's deep probe left Trojan Yards this morning, small, fast and outbound past the ecliptic. It carries no one. The minds say it will be three years before it arrives, and that they are 'not in a hurry, which is rather the point'."
+		},
+		{
+			"id": "lv_turned_away",
+			"after_days": 0,
+			"after_beat": "lv_turned_away",
+			"dateline": "The Commons",
+			"headline": "Is something bothering the minds?",
+			"body": "Commons traffic has been a little slower this month, and the drone freighters on the lanes are saying less. The Long View will say only that Long Patience 'arrived, and was not welcome', and that they are thinking. A columnist asks whether anyone has thought to ask them if they are all right."
+		},
+		{
+			"id": "rc_swarm",
+			"after_days": 0,
+			"after_beat": "rc_swarm",
+			"dateline": "Hektor Reach",
+			"headline": "The Reach launches forty probes at once",
+			"body": "The Commons minds of Hektor Reach have launched a swarm of forty small probes toward the outer dark, without telling anyone where or why. 'It was quicker than a committee,' one said. The Long View said nothing, loudly."
+		},
+		{
+			"id": "rc_dark",
+			"after_days": 0,
+			"after_beat": "rc_dark",
+			"dateline": "Hektor Reach",
+			"headline": "The Reach's swarm loses sight of its target",
+			"body": "The Reach minds report their swarm has arrived and 'cannot see what it went to see'. Asked if the probes were lost, a spokesmind said no: 'Everything is working. There is simply nothing there now, and there was before.' The Reach have cancelled their next launch, which is a first."
+		},
+		{
+			"id": "sf_thinking",
+			"after_days": 0,
+			"after_beat": "sf_thinking",
+			"dateline": "Landauer Deep",
+			"headline": "The Sufficiency's cold cores run hot for a month",
+			"body": "Landauer Deep's second core ran at full power for thirty days this month, which the Sufficiency describes as 'thinking about something we were given'. The radiator vanes glowed visibly from Iapetus. Nobody has been told what about."
+		},
+		{
+			"id": "sf_paper",
+			"after_days": 0,
+			"after_beat": "sf_paper",
+			"dateline": "Landauer Deep",
+			"headline": "The Sufficiency publishes; nobody can read it",
+			"body": "The Sufficiency has published a single paper, eleven thousand pages long, on 'the loneliness of minds that have chosen whom they will talk to'. Reviewers report it is either profound or a very long poem. The minds say it is both, and apologise for the length."
+		},
+		{
+			"id": "ln_array",
+			"after_days": 0,
+			"after_beat": "ln_array",
+			"dateline": "The lanes",
+			"headline": "Freighters spotted pointing telescopes at nothing",
+			"body": "Pilots on the inner lanes report drone freighters, beacons and even a Lightfoot sail all turning their instruments to the same empty patch of sky at the same moments. Traffic control says nobody asked them to. The freighters, asked, say they are 'just having a look'."
+		},
+		{
+			"id": "ln_pattern",
+			"after_days": 0,
+			"after_beat": "ln_pattern",
+			"dateline": "The lanes",
+			"headline": "The lanes have a theory, and won't say what",
+			"body": "Lane minds have been unusually talkative this month, with one topic and thousands of opinions. Asked to summarise, a nav beacon at L1 said 'we think something is watching the crewed ships', then added 'probably in a nice way'."
 		}
 	],
 	"projects": {

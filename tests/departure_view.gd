@@ -7,6 +7,8 @@ const ShipRig := preload("res://view/flight/ship_rig.gd")
 const SaveIO := preload("res://sim/save_io.gd")
 const Navigation := preload("res://sim/navigation.gd")
 const V := preload("res://sim/v3.gd")
+const Traffic := preload("res://sim/traffic.gd")
+const Pattern := preload("res://view/flight/pattern.gd")
 
 var checks := 0
 var failures := 0
@@ -40,11 +42,15 @@ func _run() -> void:
 		var exit = view._departure
 		var st: Dictionary = view._stations[place]["model"]
 		check(exit.fits_bay and exit.clear_after_s > exit.opening_s, place + " waits for its bay doors and hull clearance")
+		check(exit.lift(0.0) > 10.0 and is_zero_approx(exit.lift(exit.opening_s)), place + " starts in a cradle off the axis and is lifted to it while the doors open")
 		for elapsed in [1.0, exit.opening_s + 1.0, exit.clear_after_s - 0.1]:
 			sim.state.time_s = t0 + elapsed
 			view._update_world(1.0 / 60.0)
 			var local_ship: Transform3D = (st["node"] as Node3D).global_transform.affine_inverse() * view._ship.global_transform
-			check(Vector2(local_ship.origin.x, local_ship.origin.y).length() < 0.001, place + " stays on the centre line")
+			# In its cradle at first, off the axis; lifted to the centre line before it moves.
+			check(absf(Vector2(local_ship.origin.x, local_ship.origin.y).length() - exit.lift(elapsed)) < 0.01, place + " is where the lift puts it (%.2f m off the axis, %.2f expected)" % [Vector2(local_ship.origin.x, local_ship.origin.y).length(), exit.lift(elapsed)])
+			if elapsed >= exit.opening_s:
+				check(Vector2(local_ship.origin.x, local_ship.origin.y).length() < 0.001, place + " is on the centre line before it backs out")
 			check(view._ship.global_basis.x.dot((st["rotor"] as Node3D).global_basis.x) > 0.99999 and view._ship.global_basis.y.dot((st["rotor"] as Node3D).global_basis.y) > 0.99999, place + " matches the station spin, including negative RPM")
 			check(is_equal_approx(float(view._rig["fold"]), 1.0) and not view._lit, place + " keeps panels in and the main drive off inside the exit corridor")
 			if elapsed < exit.opening_s:
@@ -119,6 +125,7 @@ func _run() -> void:
 		break
 	check(checked_cooling, "The co-pilot still deploys stealth panels for main-engine cooling")
 	view.free()
+	_held_for_traffic()
 	print("%d checks, %d failures (departure view)" % [checks, failures])
 	quit(1 if failures else 0)
 
@@ -134,3 +141,43 @@ func capture(view, name: String) -> void:
 	await process_frame
 	await process_frame
 	root.get_texture().get_image().save_png(shots + "/" + name + ".png")
+
+
+## Leaving Kibo Ring with a local ship coming in: we wait in the cradle, it goes in
+## through the doors, then ours open and we back out.
+func _held_for_traffic() -> void:
+	var sim := Sim.new()
+	sim.new_game(42)
+	var t0: float = sim.state.time_s + 3600.0
+	var pick := {}
+	for m in Traffic.movements(sim.state, sim.data, "kibo_ring", t0, t0 + 86400.0):
+		if m.has("local") and m["kind"] == "in":
+			pick = m
+			break
+	check(not pick.is_empty(), "A local ship comes in to Kibo Ring")
+	sim.state.time_s = float(pick["t"]) + 10.0
+	sim.state.location = {"status": "docked", "place": "kibo_ring"}
+	check(sim.apply({"type": "depart", "to": "halo_depot"}) == "", "Depart Kibo Ring with a ship in the bay")
+	var hold := float(sim.state.location.get("hold_s", 0.0))
+	check(hold >= float(pick["end"]) - sim.state.time_s - 0.01, "Held %.0f s for it" % hold)
+	var view := FollowView.new(sim)
+	root.add_child(view)
+	view.set_process(false)
+	var exit = view._departure
+	var depart := float(sim.state.location["depart_t"])
+	check(is_equal_approx(exit.hold_s, hold) and exit.opening_s >= hold + float(sim.data.balance["bays"]["door_s"]), "The doors wait for the hold")
+	check(is_equal_approx(exit.lift(hold), exit.lift(0.0)), "Still in the cradle when the hold ends")
+	var saw := false
+	var phase := ""
+	var e := 0.0
+	while e < hold:
+		sim.state.time_s = depart + e
+		view._update_world(1.0 / 60.0)
+		if view._pattern != null and view._pattern.ships.has(Pattern.key(pick)):
+			saw = true
+		if e > 1.0 and phase == "":
+			phase = String(view.readout.get("phase", ""))
+		e += 1.0
+	check(saw, "The ship we hold for goes past, into the bay")
+	check(phase == "HOLDING FOR TRAFFIC", "The panel says why we wait (%s)" % phase)
+	view.free()

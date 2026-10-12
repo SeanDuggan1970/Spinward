@@ -1,5 +1,5 @@
 {
-	"_note": "Flows are tonnes per game day. market.target is the stock where price equals base price. Recipes run per day while inputs last. Station geometry drives the docking scene. Orbits flagged 'equatorial' are relative to Earth's equator. 'features' add view-only megastructure set pieces (skyhook, power_arrays, elevator, bernal_frame, telescope_array, captured_rock). station.type is 'wheel' (default) or 'cylinder'. Places that a project builds ('opens_with': island_one, kalpana_two, concord_pair, selene_ring, tsiolkovsky_wheel, hektor_reach) stay shut (departures, boards, map, traffic, tips) until the project is done (Perks.place_open); their markets still warm up from day one. A habitat built beside an existing port sits a few km off it (lagrange offset_km, or a slightly different mean anomaly in the same orbit). station.type 'bernal' is a Bernal sphere (Island One: hub_radius_m is the sphere's radius) and 'pair' an O'Neill pair of counter-rotating cylinders (Concord; optional mirror_open_deg, twin_offset_m), both in view/flight/habitats.gd. An elevator may have a 'counterweight' leg (place, km and hours beyond the anchor, fare, fare_per_t, via): a place marked 'counterweight' and foot_of the anchor, reached only by climbing out past the anchor; a surface location with radius_m sits that far from the body's centre, turning with it. A place with the 'bar' service has a 'bar' (name, patrons, round_cr): you can buy the room a round (sim/systems/badge_system.gd). An elevator's 'power' is how its climbers run: 'beam' (a photocell dish under each climber, lit from the foot) or 'solar' (wings). 'sensors' scales how far a port sees ships (balance.detection.port_sensors by default).",
+	"_note": "Flows are tonnes per game day. market.target is the stock where price equals base price. Recipes run per day while inputs last. Station geometry drives the docking scene. Orbits flagged 'equatorial' are relative to Earth's equator. 'features' add view-only megastructure set pieces (skyhook, power_arrays, elevator, bernal_frame, telescope_array, captured_rock). station.type is 'wheel' (default) or 'cylinder'. Places that a project builds ('opens_with': island_one, kalpana_two, concord_pair, selene_ring, tsiolkovsky_wheel, hektor_reach) stay shut (departures, boards, map, traffic, tips) until the project is done (Perks.place_open); their markets still warm up from day one. A habitat built beside an existing port sits a few km off it (lagrange offset_km, or a slightly different mean anomaly in the same orbit). station.type 'bernal' is a Bernal sphere (Island One: hub_radius_m is the sphere's radius) and 'pair' an O'Neill pair of counter-rotating cylinders (Concord; optional mirror_open_deg, twin_offset_m), both in view/flight/habitats.gd. An elevator may have a 'counterweight' leg (place, km and hours beyond the anchor, fare, fare_per_t, via): a place marked 'counterweight' and foot_of the anchor, reached only by climbing out past the anchor; a surface location with radius_m sits that far from the body's centre, turning with it. A place with the 'bar' service has a 'bar' (name, patrons, round_cr): you can buy the room a round (sim/systems/badge_system.gd). An elevator's 'power' is how its climbers run: 'beam' (a photocell dish under each climber, lit from the foot) or 'solar' (wings). 'sensors' scales how far a port sees ships (balance.detection.port_sensors by default). 'bay_traffic' is the port's bay traffic (sim/traffic.gd, balance.traffic): control 'tower' (a controller sequences every ship through the bay) or 'open' (no tower: pilots call their moves on a common channel and give way to whoever is committed), and per_hour, the port's own local craft through the bay each hour.",
 	"kibo_ring": {
 		"name": "Kibo Ring",
 		"operator": "Terran Compact",
@@ -19,13 +19,18 @@
 		},
 		"station": {
 			"door": "iris",
-			"hub_radius_m": 14,
-			"hub_length_m": 90,
-			"ring_radius_m": 110,
-			"ring_tube_m": 11,
+			"hub_radius_m": 30,
+			"hub_length_m": 170,
+			"ring_radius_m": 380,
+			"ring_tube_m": 24,
 			"spokes": 4,
-			"spin_rpm": 2.6,
+			"spin_rpm": 0.946,
+			"gravity_g": 0.38,
 			"colour": "offwhite"
+		},
+		"bay_traffic": {
+			"control": "tower",
+			"per_hour": 8
 		},
 		"services": [
 			"market",
@@ -97,13 +102,18 @@
 		},
 		"station": {
 			"door": "iris",
-			"hub_radius_m": 10,
-			"hub_length_m": 60,
-			"ring_radius_m": 70,
-			"ring_tube_m": 8,
+			"hub_radius_m": 26,
+			"hub_length_m": 140,
+			"ring_radius_m": 260,
+			"ring_tube_m": 18,
 			"spokes": 3,
-			"spin_rpm": 3.2,
+			"spin_rpm": 1.016,
+			"gravity_g": 0.3,
 			"colour": "grey"
+		},
+		"bay_traffic": {
+			"control": "tower",
+			"per_hour": 6
 		},
 		"services": [
 			"market",
@@ -147,13 +157,18 @@
 			"point": "L1"
 		},
 		"station": {
-			"hub_radius_m": 9,
-			"hub_length_m": 70,
-			"ring_radius_m": 55,
-			"ring_tube_m": 7,
+			"hub_radius_m": 24,
+			"hub_length_m": 120,
+			"ring_radius_m": 200,
+			"ring_tube_m": 15,
 			"spokes": 2,
-			"spin_rpm": 3.0,
+			"spin_rpm": 0.859,
+			"gravity_g": 0.165,
 			"colour": "orange"
+		},
+		"bay_traffic": {
+			"control": "tower",
+			"per_hour": 5
 		},
 		"services": [
 			"market",
@@ -228,13 +243,18 @@
 			}
 		},
 		"station": {
-			"hub_radius_m": 11,
-			"hub_length_m": 75,
-			"ring_radius_m": 80,
-			"ring_tube_m": 9,
+			"hub_radius_m": 26,
+			"hub_length_m": 140,
+			"ring_radius_m": 280,
+			"ring_tube_m": 18,
 			"spokes": 4,
-			"spin_rpm": 2.2,
+			"spin_rpm": 0.726,
+			"gravity_g": 0.165,
 			"colour": "grey"
+		},
+		"bay_traffic": {
+			"control": "tower",
+			"per_hour": 5
 		},
 		"services": [
 			"market",
@@ -287,13 +307,18 @@
 		},
 		"station": {
 			"door": "clamshell",
-			"hub_radius_m": 16,
-			"hub_length_m": 120,
-			"ring_radius_m": 95,
-			"ring_tube_m": 10,
+			"hub_radius_m": 34,
+			"hub_length_m": 190,
+			"ring_radius_m": 340,
+			"ring_tube_m": 22,
 			"spokes": 6,
-			"spin_rpm": 1.6,
+			"spin_rpm": 0.811,
+			"gravity_g": 0.25,
 			"colour": "rust"
+		},
+		"bay_traffic": {
+			"control": "tower",
+			"per_hour": 6
 		},
 		"services": [
 			"market",
@@ -401,13 +426,18 @@
 		},
 		"station": {
 			"door": "clamshell",
-			"hub_radius_m": 20,
-			"hub_length_m": 140,
-			"ring_radius_m": 160,
-			"ring_tube_m": 14,
+			"hub_radius_m": 38,
+			"hub_length_m": 220,
+			"ring_radius_m": 520,
+			"ring_tube_m": 30,
 			"spokes": 6,
-			"spin_rpm": 1.1,
+			"spin_rpm": 0.927,
+			"gravity_g": 0.5,
 			"colour": "offwhite"
+		},
+		"bay_traffic": {
+			"control": "tower",
+			"per_hour": 6
 		},
 		"services": [
 			"market"
@@ -470,9 +500,14 @@
 			"ring_radius_m": 0,
 			"ring_tube_m": 0,
 			"spokes": 0,
-			"spin_rpm": 1.89,
+			"spin_rpm": 1.843,
+			"gravity_g": 0.95,
 			"port_radius_m": 9,
 			"colour": "offwhite"
+		},
+		"bay_traffic": {
+			"control": "tower",
+			"per_hour": 8
 		},
 		"services": [
 			"market",
@@ -519,13 +554,18 @@
 			"point": "L2"
 		},
 		"station": {
-			"hub_radius_m": 8,
-			"hub_length_m": 55,
-			"ring_radius_m": 45,
-			"ring_tube_m": 6,
+			"hub_radius_m": 22,
+			"hub_length_m": 110,
+			"ring_radius_m": 180,
+			"ring_tube_m": 13,
 			"spokes": 3,
-			"spin_rpm": 3.4,
+			"spin_rpm": 0.905,
+			"gravity_g": 0.165,
 			"colour": "grey"
+		},
+		"bay_traffic": {
+			"control": "tower",
+			"per_hour": 2
 		},
 		"features": [
 			"telescope_array"
@@ -568,13 +608,18 @@
 		},
 		"station": {
 			"door": "clamshell",
-			"hub_radius_m": 16,
-			"hub_length_m": 110,
-			"ring_radius_m": 120,
-			"ring_tube_m": 12,
+			"hub_radius_m": 34,
+			"hub_length_m": 190,
+			"ring_radius_m": 400,
+			"ring_tube_m": 25,
 			"spokes": 4,
-			"spin_rpm": 2.4,
+			"spin_rpm": 0.922,
+			"gravity_g": 0.38,
 			"colour": "rust"
+		},
+		"bay_traffic": {
+			"control": "tower",
+			"per_hour": 6
 		},
 		"services": [
 			"market",
@@ -667,13 +712,18 @@
 		},
 		"station": {
 			"door": "clamshell",
-			"hub_radius_m": 14,
-			"hub_length_m": 90,
-			"ring_radius_m": 100,
-			"ring_tube_m": 10,
+			"hub_radius_m": 30,
+			"hub_length_m": 170,
+			"ring_radius_m": 340,
+			"ring_tube_m": 22,
 			"spokes": 6,
-			"spin_rpm": 2.8,
+			"spin_rpm": 0.725,
+			"gravity_g": 0.2,
 			"colour": "grey"
+		},
+		"bay_traffic": {
+			"control": "open",
+			"per_hour": 3
 		},
 		"services": [
 			"market",
@@ -785,13 +835,18 @@
 		},
 		"station": {
 			"door": "clamshell",
-			"hub_radius_m": 9,
-			"hub_length_m": 60,
-			"ring_radius_m": 50,
-			"ring_tube_m": 6,
+			"hub_radius_m": 22,
+			"hub_length_m": 110,
+			"ring_radius_m": 180,
+			"ring_tube_m": 13,
 			"spokes": 3,
-			"spin_rpm": 3.6,
+			"spin_rpm": 0.772,
+			"gravity_g": 0.12,
 			"colour": "steel"
+		},
+		"bay_traffic": {
+			"control": "open",
+			"per_hour": 2
 		},
 		"services": [
 			"market"
@@ -849,13 +904,18 @@
 			}
 		},
 		"station": {
-			"hub_radius_m": 18,
-			"hub_length_m": 120,
-			"ring_radius_m": 140,
-			"ring_tube_m": 12,
+			"hub_radius_m": 36,
+			"hub_length_m": 210,
+			"ring_radius_m": 480,
+			"ring_tube_m": 28,
 			"spokes": 6,
-			"spin_rpm": 2.0,
+			"spin_rpm": 0.841,
+			"gravity_g": 0.38,
 			"colour": "offwhite"
+		},
+		"bay_traffic": {
+			"control": "open",
+			"per_hour": 2
 		},
 		"services": [
 			"market",
@@ -920,13 +980,18 @@
 			}
 		},
 		"station": {
-			"hub_radius_m": 16,
-			"hub_length_m": 100,
-			"ring_radius_m": 110,
-			"ring_tube_m": 11,
+			"hub_radius_m": 32,
+			"hub_length_m": 180,
+			"ring_radius_m": 380,
+			"ring_tube_m": 24,
 			"spokes": 4,
-			"spin_rpm": 2.5,
+			"spin_rpm": 0.767,
+			"gravity_g": 0.25,
 			"colour": "orange"
+		},
+		"bay_traffic": {
+			"control": "open",
+			"per_hour": 2
 		},
 		"services": [
 			"market",
@@ -971,13 +1036,18 @@
 			}
 		},
 		"station": {
-			"hub_radius_m": 8,
-			"hub_length_m": 50,
-			"ring_radius_m": 40,
-			"ring_tube_m": 5,
+			"hub_radius_m": 20,
+			"hub_length_m": 100,
+			"ring_radius_m": 150,
+			"ring_tube_m": 11,
 			"spokes": 3,
-			"spin_rpm": 3.8,
+			"spin_rpm": 0.846,
+			"gravity_g": 0.12,
 			"colour": "offwhite"
+		},
+		"bay_traffic": {
+			"control": "open",
+			"per_hour": 1
 		},
 		"services": [
 			"market"
@@ -1018,13 +1088,18 @@
 		},
 		"station": {
 			"door": "clamshell",
-			"hub_radius_m": 14,
-			"hub_length_m": 90,
-			"ring_radius_m": 95,
-			"ring_tube_m": 9,
+			"hub_radius_m": 30,
+			"hub_length_m": 170,
+			"ring_radius_m": 320,
+			"ring_tube_m": 20,
 			"spokes": 4,
-			"spin_rpm": 2.6,
+			"spin_rpm": 0.748,
+			"gravity_g": 0.2,
 			"colour": "grey"
+		},
+		"bay_traffic": {
+			"control": "open",
+			"per_hour": 2
 		},
 		"services": [
 			"market",
@@ -1106,13 +1181,18 @@
 		},
 		"station": {
 			"door": "clamshell",
-			"hub_radius_m": 20,
-			"hub_length_m": 150,
-			"ring_radius_m": 45,
-			"ring_tube_m": 5,
+			"hub_radius_m": 30,
+			"hub_length_m": 200,
+			"ring_radius_m": 160,
+			"ring_tube_m": 10,
 			"spokes": 2,
-			"spin_rpm": 4.2,
+			"spin_rpm": 0.669,
+			"gravity_g": 0.08,
 			"colour": "dark"
+		},
+		"bay_traffic": {
+			"control": "open",
+			"per_hour": 1
 		},
 		"services": [
 			"market",
@@ -1310,9 +1390,14 @@
 			"ring_radius_m": 900,
 			"ring_tube_m": 65,
 			"spokes": 6,
-			"spin_rpm": 1.0,
+			"spin_rpm": 0.972,
+			"gravity_g": 0.95,
 			"colour": "offwhite",
 			"port_radius_m": 10
+		},
+		"bay_traffic": {
+			"control": "tower",
+			"per_hour": 5
 		},
 		"services": [
 			"market",
@@ -1368,9 +1453,14 @@
 			"ring_radius_m": 0,
 			"ring_tube_m": 0,
 			"spokes": 0,
-			"spin_rpm": 1.9,
+			"spin_rpm": 1.843,
+			"gravity_g": 0.95,
 			"port_radius_m": 12,
 			"colour": "offwhite"
+		},
+		"bay_traffic": {
+			"control": "tower",
+			"per_hour": 6
 		},
 		"services": [
 			"market"
@@ -1428,9 +1518,14 @@
 			"ring_radius_m": 0,
 			"ring_tube_m": 0,
 			"spokes": 0,
-			"spin_rpm": -1.89,
+			"spin_rpm": -1.843,
+			"gravity_g": 0.95,
 			"port_radius_m": 9,
 			"colour": "offwhite"
+		},
+		"bay_traffic": {
+			"control": "tower",
+			"per_hour": 6
 		},
 		"services": [
 			"market"
@@ -1484,9 +1579,14 @@
 			"ring_radius_m": 0,
 			"ring_tube_m": 0,
 			"spokes": 0,
-			"spin_rpm": 1.5,
+			"spin_rpm": 1.457,
+			"gravity_g": 0.95,
 			"port_radius_m": 20,
 			"colour": "offwhite"
+		},
+		"bay_traffic": {
+			"control": "tower",
+			"per_hour": 6
 		},
 		"services": [
 			"market"
@@ -1545,8 +1645,13 @@
 			"ring_tube_m": 25,
 			"spokes": 6,
 			"spin_rpm": 0.61,
+			"gravity_g": 0.166,
 			"port_radius_m": 14,
 			"colour": "grey"
+		},
+		"bay_traffic": {
+			"control": "tower",
+			"per_hour": 5
 		},
 		"services": [
 			"market"

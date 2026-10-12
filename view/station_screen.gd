@@ -30,6 +30,7 @@ const DetectionSystem := preload("res://sim/systems/detection_system.gd")
 const Badges := preload("res://sim/badges.gd")
 const Fleet := preload("res://sim/fleet.gd")
 const SleepSystem := preload("res://sim/systems/sleep_system.gd")
+const StorySystem := preload("res://sim/systems/story_system.gd")
 const DAY := 86400.0
 
 var sim
@@ -525,6 +526,15 @@ func _contracts_tab(place_id: String) -> Control:
 	var pickup_panel := _pickup_panel(place_id)
 	if pickup_panel != null:
 		parts[1].add_child(pickup_panel)
+	# Minds who would like to see the old core.
+	var buyer := StorySystem.core_buyer(s, d)
+	if not buyer.is_empty():
+		var cp := UI.panel("Hermes-7's memory core")
+		var t := UI.label("A mind drone is waiting at the dock, polite and curious. Word travels: they know what you're carrying, and they'd like to see it.", UI.TEXT, 13)
+		t.autowrap_mode = TextServer.AUTOWRAP_WORD
+		cp[1].add_child(t)
+		cp[1].add_child(UI.button("Show them the core  (they offer %s)" % UI.money(float(buyer["price"])), send.bind({"type": "sell_core"})))
+		parts[1].add_child(cp[0])
 	var client := Contracts.client_of(d, place_id)
 	var rep := Contracts.rep_of(s, client)
 	parts[1].add_child(UI.label("Standing with %s: %s (%d).  Deliver on time to be known; known pilots get the better jobs, and people come to find them." % [client, Contracts.tier(d, rep), int(round(rep))], UI.DIM, 13))
@@ -1134,6 +1144,11 @@ func _ship_panel(place_id: String) -> Control:
 	if repair > 0.5 and s.location.get("status") == "docked" and not d.locations[place_id].has("foot_of"):
 		var at_yard: bool = "shipyard" in d.places[place_id].get("services", [])
 		v.add_child(UI.button(("Repair  (%s)" if at_yard else "Patch up  (%s)") % UI.money(repair), send.bind({"type": "repair"}), repair <= s.credits))
+	if s.story.get("core", {}).get("status", "") == "aboard":
+		var core := UI.label("Aboard   Hermes-7's memory core: might be valuable to the Minds; partly corrupted", UI.AMBER, 12)
+		core.autowrap_mode = TextServer.AUTOWRAP_WORD
+		core.custom_minimum_size = Vector2(260, 0)
+		v.add_child(core)
 	# A hibernation pod aboard: sleep the months away here.
 	if SleepSystem.pod_of(s.ship, d) != "":
 		var slept := float(s.sleep.get("total_s", 0.0)) / 86400.0

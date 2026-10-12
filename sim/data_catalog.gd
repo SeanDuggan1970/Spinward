@@ -2,6 +2,8 @@
 ## Keys starting with "_" are comments and are dropped on load.
 extends RefCounted
 
+const Spin := preload("res://sim/spin.gd")
+
 const DATA_ROOT := "res://data"
 
 var balance: Dictionary = {}
@@ -294,6 +296,51 @@ func validate() -> Array[String]:
 				if not modules.has(action["grant"][slot]):
 					problems.append("story %s: lends unknown module %s" % [beat["id"], action["grant"][slot]])
 		seen_beats.append(beat.get("id", ""))
+	# Spin gravity: never more than 1 g where people live, and each station's spin gives
+	# the gravity it says it does (sim/spin.gd).
+	for id in places:
+		var geom: Dictionary = places[id].get("station", {})
+		if geom.is_empty():
+			continue
+		var g := Spin.living_g(geom)
+		if g > 1.0:
+			problems.append("station %s: %.2f g is more than 1 g" % [id, g])
+		if geom.has("gravity_g") and absf(g - float(geom["gravity_g"])) > 0.03 * maxf(float(geom["gravity_g"]), 0.01):
+			problems.append("station %s: spin gives %.3f g, not the gravity_g of %s" % [id, g, geom["gravity_g"]])
+	# Bay traffic (sim/traffic.gd): a known kind of control, and no more craft than slots.
+	var traffic: Dictionary = balance.get("traffic", {})
+	if not traffic.is_empty():
+		if float(traffic["cycle_s"]) > float(traffic["slot_s"]):
+			problems.append("balance traffic: cycle_s is longer than slot_s")
+		for id in places:
+			var tr: Dictionary = places[id].get("bay_traffic", {})
+			if not places[id].has("station"):
+				continue
+			if not String(tr.get("control", "tower")) in ["tower", "open"]:
+				problems.append("place %s: traffic control must be tower or open" % id)
+			var rate := float(tr.get("per_hour", traffic["per_hour"]))
+			if rate < 0.0 or rate * float(traffic["slot_s"]) / 3600.0 > 1.0:
+				problems.append("place %s: %s local movements an hour won't fit the bay's slots" % [id, rate])
+		var local: Dictionary = npcs.get("local_traffic", {})
+		if local.get("names", []).is_empty() or local.get("hulls", []).is_empty():
+			problems.append("npcs local_traffic: needs names and hulls")
+		for hull in local.get("hulls", []):
+			if not ships.has(hull):
+				problems.append("npcs local_traffic: unknown hull %s" % hull)
+	# The memory core: a real site to find it at, real ports to sell it at, and roads
+	# that some beat waits for.
+	var core: Dictionary = story.get("core", {})
+	if not core.is_empty():
+		if not sites.has(core.get("site", "")):
+			problems.append("story core: unknown site %s" % core.get("site", ""))
+		var roads := ["lanes"]
+		for port in core.get("buyers", {}):
+			if not places.has(port):
+				problems.append("story core: unknown buyer port %s" % port)
+			roads.append(core["buyers"][port].get("road", ""))
+		for road in roads:
+			if not story.get("beats", []).any(func(b): return b.get("when", {}).get("road", "") == road):
+				problems.append("story core: no beat waits for the %s road" % road)
 	# News: stories name real places, beats and projects.
 	var beat_ids: Array = story.get("beats", []).map(func(b): return b.get("id", ""))
 	var story_ids := {}
@@ -302,8 +349,11 @@ func validate() -> Array[String]:
 		if sid == "" or story_ids.has(sid):
 			problems.append("news: story ids must be unique and present (%s)" % sid)
 		story_ids[sid] = true
-		if item.has("after_beat") and not item["after_beat"] in beat_ids:
-			problems.append("news %s: waits for unknown beat %s" % [sid, item["after_beat"]])
+		if item.has("after_beat"):
+			var wanted: Array = item["after_beat"] if item["after_beat"] is Array else [item["after_beat"]]
+			for b in wanted:
+				if not b in beat_ids:
+					problems.append("news %s: waits for unknown beat %s" % [sid, b])
 		if item.has("after_project") and not projects.has(item["after_project"]):
 			problems.append("news %s: waits for unknown project %s" % [sid, item["after_project"]])
 		if item.has("after_stage") and not projects.has(item["after_stage"][0]):
