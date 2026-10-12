@@ -365,7 +365,7 @@ func _draw_moon_orbit(t: float) -> void:
 func _update_npcs(t: float, cam_dist: float) -> void:
 	var seen := {}
 	for npc in sim.state.npcs:
-		if npc["location"]["status"] != "transit" or npc["location"].get("frame", "earth") != frame:
+		if npc["location"]["status"] != "transit" or npc["location"].get("sketch", false) or npc["location"].get("frame", "earth") != frame:
 			continue
 		var id: String = npc["id"]
 		seen[id] = true

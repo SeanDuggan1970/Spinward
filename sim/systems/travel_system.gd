@@ -64,7 +64,8 @@ func _port_waits(loc: Dictionary) -> void:
 ## nears (time.approach_caps), so the last seconds play out at x1.
 func _time_ramps(s) -> void:
 	var loc: Dictionary = s.location
-	if loc.get("status") != "transit":
+	# Asleep, the sleep system holds the clock; it wakes the pilot before the approach.
+	if loc.get("status") != "transit" or bool(s.sleep.get("active", false)):
 		return
 	var time: Dictionary = sim().data.balance["time"]
 	var ramp: Array = time.get("departure_ramp", [])

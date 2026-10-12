@@ -23,6 +23,9 @@ const ShipAudio := preload("res://view/audio/ship_audio.gd")
 const Livery := preload("res://view/flight/livery.gd")
 const Kit := preload("res://view/flight/kit.gd")
 const Bindings := preload("res://view/bindings.gd")
+const SleepOverlay := preload("res://view/sleep_overlay.gd")
+const WakeDigest := preload("res://view/wake_digest.gd")
+const SleepSystem := preload("res://sim/systems/sleep_system.gd")
 const COMMS_KEEP := 40
 
 const QUICKSAVE := "user://quicksave.json"
@@ -44,6 +47,10 @@ var _bar: Control
 var _title: Node3D
 ## Rolling comms log (view-only), shared with the station's Traffic tab.
 var comms: Array = []
+## Hibernation: the dark screen while asleep, and what came in meanwhile for the digest.
+var _sleep_overlay: Control
+var _sleep_credits := 0.0
+var _asleep_notices: Array = []
 
 
 func _ready() -> void:
@@ -175,6 +182,10 @@ func _process(delta: float) -> void:
 	sim.tick(delta)
 	_handle_events()
 	_sync_mode()
+	if sim.asleep() and not is_instance_valid(_sleep_overlay):
+		_sleep_overlay = SleepOverlay.new(sim)
+		_on_top(_sleep_overlay)
+		_hold_screens(true)
 	var s = sim.state
 	if _ambience and _ambience.playing:
 		var duck := ShipAudio.duck_for(s.time_scale)
@@ -262,6 +273,12 @@ func _handle_events() -> void:
 				refresh = true
 			"rejected":
 				notice(d["reason"].capitalize(), UI.WARN)
+			"slept":
+				_sleep_credits = sim.state.credits
+				_asleep_notices.clear()
+			"woke":
+				_wake_up(d)
+				refresh = true
 			"traded":
 				var good: String = sim.data.goods[d["good"]]["name"]
 				if d["credits"] < 0.0:
@@ -463,6 +480,8 @@ func _handle_events() -> void:
 				refresh = true
 			"departed":
 				notice("Departed for %s%s" % [sim.data.locations[d["to"]]["name"], (" via %s" % d["route"]) if d.has("route") else ""] + ("  (your navigator trimmed %.2f t)" % float(d["fuel_trimmed_t"]) if float(d.get("fuel_trimmed_t", 0.0)) > 0.005 else ""), UI.AMBER)
+				if SleepSystem.plan(sim.state, sim.data)["why"] == "":
+					notice("The pod's ready if you want to sleep through it: %s." % Bindings.hint_of("transit_sleep"), UI.DIM)
 			"descent_begins":
 				var lines: Array = sim.data.npcs["chatter"]["copilot_descent"]
 				var minutes := int(float(d["corridor_in_s"]) / 60.0)
@@ -505,8 +524,45 @@ func _handle_events() -> void:
 				else:
 					notice("Docked at %s%s" % [sim.data.places[d["place"]]["name"], "  (hand-flown, no fee)" if d["manual"] else ""], UI.GOOD)
 				play_sfx("dock_clunk", -2.0)
-	if refresh and is_instance_valid(_screen) and _screen is StationScreen:
+	# Asleep, the port screen waits under the dark: it is rebuilt once on waking.
+	if refresh and not sim.asleep() and is_instance_valid(_screen) and _screen is StationScreen:
 		_screen.refresh()
+
+
+## Out of the pod: the dark lifts and the digest says what changed.
+func _wake_up(woke: Dictionary) -> void:
+	if is_instance_valid(_sleep_overlay):
+		_sleep_overlay.queue_free()
+	_sleep_overlay = null
+	_hold_screens(false)
+	var digest := WakeDigest.new(sim, woke, _sleep_credits, _asleep_notices.duplicate())
+	_asleep_notices.clear()
+	# The world waits while you read.
+	var was_paused: bool = sim.state.paused
+	sim.apply({"type": "set_paused", "paused": true})
+	digest.closed.connect(func():
+		if not was_paused:
+			sim.apply({"type": "set_paused", "paused": false}))
+	_on_top(digest)
+	_fade_in(1.2)
+
+
+## Over everything, cockpit HUDs included; the layer goes when the control does.
+func _on_top(c: Control) -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = 60
+	add_child(layer)
+	layer.add_child(c)
+	c.tree_exited.connect(layer.queue_free)
+
+
+## Asleep, the screen under the dark neither draws nor runs: the machine's time goes on
+## the years going by.
+func _hold_screens(hold: bool) -> void:
+	for n in [_screen, _backdrop]:
+		if is_instance_valid(n):
+			n.process_mode = Node.PROCESS_MODE_DISABLED if hold else Node.PROCESS_MODE_INHERIT
+			n.visible = not hold
 
 
 ## Hand the controls over for a descent, then back to the site screen with the result.
@@ -536,6 +592,12 @@ func _clock(t: float) -> String:
 
 
 func notice(text: String, colour: Color = UI.TEXT) -> void:
+	# Asleep, nobody reads the board: it waits for the digest.
+	if sim.asleep():
+		_asleep_notices.append([text, colour])
+		if _asleep_notices.size() > 200:
+			_asleep_notices.pop_front()
+		return
 	var l := UI.label(text, colour, 14)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -689,6 +751,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		sim.apply({"type": "set_time_scale", "scale": scales[clampi(i, 0, scales.size() - 1)]})
 	elif _mode == "transit" and event.is_action_pressed("transit_dark"):
 		sim.apply({"type": "dark_running"})
+	elif _mode == "transit" and event.is_action_pressed("transit_sleep"):
+		sim.apply({"type": "wake"} if sim.asleep() else {"type": "sleep"})
 	elif _mode == "transit" and event.is_action_pressed("transit_stow"):
 		sim.apply({"type": "stow_panels"})
 	elif _mode == "transit" and event.is_action_pressed("transit_release"):

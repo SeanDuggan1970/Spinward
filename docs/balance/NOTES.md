@@ -268,3 +268,11 @@ Full write-up: [2026-10-07-economy-together.md](2026-10-07-economy-together.md).
 - After the fix (seeds 1 to 5): a mean of 105,630 cr (134k, 80k, 139k, 24k, 151k), median first upgrade on day 10.7. Seed 4 is the low one.
 - To check whether that is noise, seeds 6 to 15 were run on this branch and on main: this branch averaged 108,522, main 81,545. Over all 15 seeds this branch averaged 107,558 and main 94,541. The bot's end credits range from 21,000 to 151,000 with seed alone, so the change is within the spread. The bot never buys a second ship or takes craft work.
 - Owning a second ship: a laid-up Mule costs 1,500 cr a month (18,000 a year), about two courier jobs. A heavy freighter's berth is 4,500 a month. A bulk freight job pays roughly 9,000 + 2,600 per day of the trip, so a heavy freighter needs about one job a month to cover a berth for the Mule left behind.
+
+
+## Hibernation (2026-10-11)
+
+- New data: `balance.sleep`, the `hibernation_pod` module (85,000 cr, sold at Trojan Yards, Ares Ring, Hektor Reach and Landauer Deep), and the Bookworm badge.
+- The bot never sleeps, so its world steps hourly as before. The re-run (5 seeds, 180 days, upgrade=1) is identical, seed for seed: a mean of 105,630 cr and a median first upgrade on day 10.7. The changes to stepping and NPC planning only apply while the player is asleep.
+- Sleeping coarsens the world (daily steps; NPC routes on 30-day estimates). Prices drift a little differently over a long sleep than they would awake; that's accepted, and noted in DESIGN.md.
+- The pod costs about a heavy-freighter berth's rent for a year and a half. It's meant for long-haul pilots, not something every early trader needs.

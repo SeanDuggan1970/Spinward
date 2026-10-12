@@ -13,6 +13,7 @@ const CalendarSystem := preload("res://sim/systems/calendar_system.gd")
 const EconomySystem := preload("res://sim/systems/economy_system.gd")
 const ShipyardSystem := preload("res://sim/systems/shipyard_system.gd")
 const FleetSystem := preload("res://sim/systems/fleet_system.gd")
+const SleepSystem := preload("res://sim/systems/sleep_system.gd")
 const TravelSystem := preload("res://sim/systems/travel_system.gd")
 const NpcSystem := preload("res://sim/systems/npc_system.gd")
 const ProjectSystem := preload("res://sim/systems/project_system.gd")
@@ -51,7 +52,7 @@ func _init(catalog: DataCatalog = null) -> void:
 	ephemeris = Ephemeris.new(data.bodies, data.locations)
 	state = GameState.new()
 	# Order matters within a tick: the clock moves first, then everything catches up to it.
-	systems = [CalendarSystem.new(), EconomySystem.new(), ShipyardSystem.new(), FleetSystem.new(), WearSystem.new(), FitnessSystem.new(), InsuranceSystem.new(), TravelSystem.new(), NpcSystem.new(), ProjectSystem.new(), TipSystem.new(), ContractSystem.new(), FavourSystem.new(), SiteSystem.new(), StorySystem.new(), ElevatorSystem.new(), DamageSystem.new(), PowerSystem.new(), BadgeSystem.new(), PodSystem.new(), DetectionSystem.new(), NewsSystem.new()]
+	systems = [CalendarSystem.new(), SleepSystem.new(), EconomySystem.new(), ShipyardSystem.new(), FleetSystem.new(), WearSystem.new(), FitnessSystem.new(), InsuranceSystem.new(), TravelSystem.new(), NpcSystem.new(), ProjectSystem.new(), TipSystem.new(), ContractSystem.new(), FavourSystem.new(), SiteSystem.new(), StorySystem.new(), ElevatorSystem.new(), DamageSystem.new(), PowerSystem.new(), BadgeSystem.new(), PodSystem.new(), DetectionSystem.new(), NewsSystem.new()]
 	for system in systems:
 		system.setup(self)
 
@@ -108,16 +109,29 @@ func apply(command: Dictionary) -> String:
 ## the player's arrival, so the clock does not race on after reaching port.
 func tick(real_dt: float) -> void:
 	var real_left := real_dt
-	var step := float(data.balance["economy"]["step_hours"]) * 3600.0
+	# Asleep, a frame runs at most a few of the world's day-long steps, so the screen
+	# keeps moving while the years go by as fast as the machine can manage.
+	var sleep_steps := int(data.balance["sleep"].get("max_steps_per_frame", 3))
 	while real_left > 1e-9 and not state.paused:
+		var step := step_s()
+		if asleep():
+			if sleep_steps <= 0:
+				break
+			sleep_steps -= 1
 		var scale := state.time_scale
 		var game := minf(real_left * scale, step)
 		if state.location.get("status") == "transit":
 			var to_arrival := float(state.location["arrive_t"]) - state.time_s
 			if to_arrival > 1e-6:
 				game = minf(game, to_arrival)
+		var was_asleep := asleep()
+		if was_asleep:
+			game = minf(game, maxf(float(state.sleep["until_t"]) - state.time_s, 1.0))
 		advance_game_time(game)
 		real_left -= game / scale
+		# Waking ends the frame: the pilot sees the world as it is when they open their eyes.
+		if was_asleep and not asleep():
+			break
 
 
 ## Advance game time by exactly `game_seconds` (bots and tests use this directly).
@@ -128,13 +142,26 @@ func advance_game_time(game_seconds: float) -> void:
 	# each chunk in turn. Otherwise one system would run days ahead of the others
 	# (markets settling before projects or NPCs act), and the outcome would depend
 	# on tick size: a bot jumping days at a time must see the same world as play at x1.
-	var chunk := float(data.balance["economy"]["step_hours"]) * 3600.0
 	var remaining := game_seconds
 	while remaining > 0.0:
-		var dt := minf(remaining, chunk)
+		var dt := minf(remaining, step_s())
+		# A sleeper wakes on time: no chunk runs past the end of the sleep.
+		if asleep():
+			dt = minf(dt, maxf(float(state.sleep["until_t"]) - state.time_s, 1.0))
 		remaining -= dt
 		for system in systems:
 			system.tick(dt)
+
+
+## The world's step: an hour (economy.step_hours) awake, a day (sleep.step_hours)
+## while the player sleeps in a hibernation pod.
+func step_s() -> float:
+	var key := "sleep" if asleep() else "economy"
+	return float(data.balance[key]["step_hours"]) * 3600.0
+
+
+func asleep() -> bool:
+	return bool(state.sleep.get("active", false))
 
 
 ## at_time: when it happened, if not now (systems that process scheduled events in a long tick).

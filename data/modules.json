@@ -1,5 +1,5 @@
 {
-	"_note": "Ships are a spine plus bolt-on modules. mass_t is dry mass. Drives: thrust_n and isp_s set acceleration and propellant use; heat_mw must be rejected by radiators or thrust is throttled. 'mounts' lists the slot kinds a module fits (default: its own kind), so long-haul refits can trade cargo bays for tanks, life support, berths, a lander or a rig. life_support_days and berths add up across modules; crewless ships need none. 'look' feeds the kit-bash renderer (view/flight/ship_builder.gd): command shape 'cockpit' or 'drone'; cargo shape 'cage' (open frame of half-length containers), 'container' (standard 2.4 x 2.6 x 6 m boxes, containers = [across, high, long]), 'bulk' (hopper), 'cradle' (open flatbed for outsize loads); 'hab' (passenger can or long-duration hab, mounted behind the crew); 'lander', 'sensor' and 'mining' ride in the cargo section; tanks of any slot cluster ahead of the drives; spine truss_m is the keel's width; drive coils is the number of field coils on the nozzle. Power (sim/power.gd, balance.json 'power'), in kW and kWh: solar_kw is the output of a module's solar wings at 1 AU (falls with the square of the distance from the Sun); battery_kwh the storage; reactor_kw the electrical output of a fusion drive's reactor while it is lit; life_kw, avionics_kw, comms_kw, sensor_kw and mining_kw what a module draws (sensors and the rig draw a standby fraction until they work). Damage cuts what a module supplies, not what it draws.",
+	"_note": "Ships are a spine plus bolt-on modules. mass_t is dry mass. Drives: thrust_n and isp_s set acceleration and propellant use; heat_mw must be rejected by radiators or thrust is throttled. 'mounts' lists the slot kinds a module fits (default: its own kind), so long-haul refits can trade cargo bays for tanks, life support, berths, a lander or a rig. life_support_days and berths add up across modules; crewless ships need none. 'sleep': true makes a module a hibernation pod: the crew can sleep through voyages and long waits (sim/systems/sleep_system.gd). 'look' feeds the kit-bash renderer (view/flight/ship_builder.gd): command shape 'cockpit' or 'drone'; cargo shape 'cage' (open frame of half-length containers), 'container' (standard 2.4 x 2.6 x 6 m boxes, containers = [across, high, long]), 'bulk' (hopper), 'cradle' (open flatbed for outsize loads); 'hab' (passenger can or long-duration hab, mounted behind the crew); 'lander', 'sensor' and 'mining' ride in the cargo section; tanks of any slot cluster ahead of the drives; spine truss_m is the keel's width; drive coils is the number of field coils on the nozzle. Power (sim/power.gd, balance.json 'power'), in kW and kWh: solar_kw is the output of a module's solar wings at 1 AU (falls with the square of the distance from the Sun); battery_kwh the storage; reactor_kw the electrical output of a fusion drive's reactor while it is lit; life_kw, avionics_kw, comms_kw, sensor_kw and mining_kw what a module draws (sensors and the rig draw a standby fraction until they work). Damage cuts what a module supplies, not what it draws.",
 	"mule_spine": {
 		"name": "Mule truss spine",
 		"kind": "spine",
@@ -487,6 +487,7 @@
 		"mass_t": 4.0,
 		"price": 0,
 		"unsold": true,
+		"sleep": true,
 		"life_support_days": 2000,
 		"look": {
 			"shape": "hab",
@@ -498,6 +499,18 @@
 			"colour": "offwhite"
 		},
 		"life_kw": 1.5
+	},
+	"hibernation_pod": {
+		"name": "Hibernation pod",
+		"kind": "hab",
+		"mounts": ["cargo"],
+		"mass_t": 3.0,
+		"price": 85000,
+		"sleep": true,
+		"life_support_days": 600,
+		"description": "Sleep through the long hauls: the ship's mind keeps watch and wakes you two days out. You come back older than your calendar, and the system has moved on.",
+		"look": {"shape": "hab", "size_m": [4.0, 4.0, 5.0], "colour": "offwhite"},
+		"life_kw": 1.2
 	},
 	"solar_sail": {
 		"name": "Lightfoot sail",

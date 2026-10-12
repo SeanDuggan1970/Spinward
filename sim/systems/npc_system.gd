@@ -20,6 +20,8 @@ const MAX_EVENTS_PER_TICK := 5000
 var _rng := RandomNumberGenerator.new()
 ## The fleet of the NPC departing now (for _sail_plan).
 var _sailing: Dictionary = {}
+## Route estimates while the player sleeps (_day_plan): {hull|from|to|period: estimate}.
+var _memo := {}
 
 
 func start_game() -> void:
@@ -87,6 +89,8 @@ func tick(_game_dt: float) -> void:
 	_rng.state = s.rng_state
 	if s.npcs.size() < _fleet_size():
 		_add_missing_ships(s.time_s)
+	if not sim().asleep():
+		_plan_sketches()
 	for npc in s.npcs:
 		var awaits: String = npc.get("awaits", "")
 		if awaits != "" and s.projects.get(awaits, {}).get("done", false):
@@ -192,9 +196,11 @@ func _depart(npc: Dictionary, t: float) -> void:
 			plan = _climb_plan(here, choice["to"], t)
 		elif _sailing.get("sail", false):
 			plan = _sail_plan(here, choice["to"], t)
+		elif sim().asleep():
+			plan = _trial_plan(npc, here, choice["to"], t)
 		else:
 			plan = Navigation.plan(loaded, sim().data, sim().ephemeris, here, choice["to"], t)
-		if not plan["ok"] and plan.get("reason", "").begins_with("not enough propellant"):
+		if not plan["ok"] and plan.get("reason", "").begins_with("not enough propellant") and not plan.has("t0"):
 			# Fleet tankers and company accounts keep their own ships fuelled; never strand an NPC.
 			npc["ship"]["fuel_t"] = ShipStats.fuel_capacity_t(npc["ship"], sim().data)
 			loaded["fuel_t"] = npc["ship"]["fuel_t"]
@@ -207,6 +213,15 @@ func _depart(npc: Dictionary, t: float) -> void:
 		s.markets[here][good] -= float(choice["buy"][good])
 		npc["ship"]["cargo"][good] = float(choice["buy"][good])
 	npc["ship"]["fuel_t"] = maxf(0.0, float(npc["ship"]["fuel_t"]) - float(plan["fuel_t"]))
+	if plan.has("t0"):
+		# The player is asleep: a sketch of the trip, how long it takes from the estimate.
+		# The path itself is planned when they wake (_plan_sketches), and nobody looks before.
+		npc["location"] = {"status": "transit", "from": here, "to": choice["to"], "frame": plan["frame"],
+			"depart_t": t, "arrive_t": t + float(plan["duration_s"]), "sketch": true}
+		npc["next_t"] = npc["location"]["arrive_t"]
+		npc.erase("flyby")
+		sim().emit("npc_departed", {"npc": npc["id"], "from": here, "to": choice["to"], "cargo": npc["ship"]["cargo"].duplicate(), "arrive_t": npc["next_t"]}, t)
+		return
 	npc["location"] = {
 		"status": "transit", "from": here, "to": choice["to"], "frame": plan["frame"],
 		"depart_t": t, "arrive_t": plan["arrive_t"], "burn_s": plan["burn_s"],
@@ -316,6 +331,71 @@ func _choose_leg(npc: Dictionary, here: String) -> Dictionary:
 	return {"to": leg["to"], "buy": buy}
 
 
+## A trader weighing a route plans it. While the player sleeps the world runs fast, so
+## it weighs, and flies, on an estimate instead: the hull's stock ship, fully fuelled,
+## planned at the start of a period (balance.sleep.estimate_days) and kept for it. It
+## is a pure function of the hull, the route and the period, so saves and replays stay
+## exact. Trips flown on it are sketches until the player wakes (_plan_sketches).
+func _trial_plan(npc: Dictionary, here: String, to: String, t: float) -> Dictionary:
+	if not sim().asleep():
+		return Navigation.plan(npc["ship"], sim().data, sim().ephemeris, here, to, t)
+	# Weighing only needs how long a trip takes, which changes slowly: a longer estimate.
+	return _day_plan(npc, here, to, t, float(sim().data.balance["sleep"]["estimate_days"]))
+
+
+
+func _day_plan(npc: Dictionary, here: String, to: String, t: float, days: float) -> Dictionary:
+	var data = sim().data
+	var span := days * DAY
+	var period := floorf(t / span)
+	var key := "%s|%s|%s|%d" % [_fleet(npc)["hull"], here, to, int(period)]
+	if _memo.size() > 4000:
+		_memo.clear()
+	if not _memo.has(key):
+		var fleet := _fleet(npc)
+		var ship := {"hull": fleet["hull"], "modules": data.ships[fleet["hull"]]["modules"].duplicate(), "cargo": {}, "fuel_t": 0.0}
+		ship["fuel_t"] = ShipStats.fuel_capacity_t(ship, data)
+		var plan := Navigation.plan(ship, data, sim().ephemeris, here, to, period * span)
+		_memo[key] = {"ok": plan.get("ok", false), "strand_risk": plan.get("strand_risk", false), "duration_s": plan.get("duration_s", 1.0),
+			"fuel_t": plan.get("fuel_t", 0.0), "frame": plan.get("frame", "sun"), "t0": period * span, "reason": plan.get("reason", "")}
+	return _memo[key]
+
+
+## Awake again: plan in full the trips NPCs set out on while the player slept, from when
+## they left, so every ship in flight has a real path to be drawn on.
+func _plan_sketches() -> void:
+	var s = sim().state
+	for npc in s.npcs:
+		var loc: Dictionary = npc["location"]
+		if loc.get("status") != "transit" or not loc.get("sketch", false):
+			continue
+		var ship: Dictionary = npc["ship"].duplicate(true)
+		ship["fuel_t"] = ShipStats.fuel_capacity_t(ship, sim().data)
+		var t := float(loc["depart_t"])
+		var plan := Navigation.plan(ship, sim().data, sim().ephemeris, loc["from"], loc["to"], t)
+		if not plan.get("ok", false) or float(plan["arrive_t"]) <= s.time_s:
+			# Nearly there anyway: call it arrived now.
+			loc.erase("sketch")
+			npc["next_t"] = s.time_s
+			loc["arrive_t"] = s.time_s
+			continue
+		npc["location"] = {
+			"status": "transit", "from": loc["from"], "to": loc["to"], "frame": plan["frame"],
+			"depart_t": t, "arrive_t": plan["arrive_t"], "burn_s": plan["burn_s"],
+			"from_pos": plan["from_pos"], "to_pos": plan["to_pos"], "distance_m": plan["distance_m"],
+			"from_vel": plan["from_vel"], "to_vel": plan["to_vel"],
+			"from_rot": plan.get("from_rot"), "to_rot": plan.get("to_rot"), "rot_axis": plan.get("rot_axis"), "rot_angle": plan.get("rot_angle", 0.0),
+			"samples": plan.get("samples"), "around": plan.get("around"), "around_r": plan.get("around_r", 0.0), "avoid": plan.get("avoid"),
+		}
+		if plan.get("samples") == null:
+			var span := float(plan["arrive_t"]) - t
+			var start := t + (span - float(plan["burn_s"])) * 0.5
+			var tracks := Navigation.port_tracks(sim().ephemeris, loc["from"], loc["to"], plan["frame"], t, start, start + float(plan["burn_s"]), float(plan["arrive_t"]))
+			npc["location"]["pre_track"] = tracks[0]
+			npc["location"]["post_track"] = tracks[1]
+		npc["next_t"] = plan["arrive_t"]
+
+
 ## Traders look at every route and good, then pick one of the few best (people and
 ## minds are not perfectly greedy, which keeps them from all piling onto one route).
 func _choose_trade(npc: Dictionary, here: String, t: float) -> Dictionary:
@@ -347,7 +427,7 @@ func _choose_trade(npc: Dictionary, here: String, t: float) -> Dictionary:
 			paying.append([good, tonnes, margin])
 		if paying.is_empty():
 			continue
-		var plan := Navigation.plan(npc["ship"], data, sim().ephemeris, here, to, t)
+		var plan := _trial_plan(npc, here, to, t)
 		if not plan.get("ok", false) or plan["strand_risk"]:
 			continue
 		for p in paying:

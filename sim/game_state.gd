@@ -55,6 +55,9 @@ var detection: Dictionary = {}
 ## Ships the player owns but is not flying, laid up in yard berths:
 ## [{ship, place, since_t, due_t, owed_cr, unpaid}]. See sim/systems/fleet_system.gd.
 var fleet: Array = []
+## Hibernation: {active, kind ("voyage" | "port"), start_t, until_t, total_s,
+## count}. See sim/systems/sleep_system.gd. Empty: never slept.
+var sleep: Dictionary = {}
 ## Standing with each operator: {operator: score}. Tiers in data/contracts.json.
 var reputation: Dictionary = {}
 ## The quiet arc: {done: [beat], fired: {beat: {t, offer}}, messages: [{t, from, text}]}.
@@ -111,6 +114,7 @@ func to_dict() -> Dictionary:
 		"badges": badges.duplicate(true),
 		"detection": detection.duplicate(true),
 		"fleet": fleet.duplicate(true),
+		"sleep": sleep.duplicate(true),
 		"reputation": reputation.duplicate(true),
 		"perks": perks.duplicate(true),
 		"sites": sites.duplicate(true),
@@ -148,6 +152,7 @@ func load_dict(d: Dictionary) -> void:
 	badges = d.get("badges", {}).duplicate(true)
 	detection = d.get("detection", {}).duplicate(true)
 	fleet = d.get("fleet", []).duplicate(true)
+	sleep = d.get("sleep", {}).duplicate(true)
 	reputation = d.get("reputation", {}).duplicate(true)
 	perks = d.get("perks", {}).duplicate(true)
 	sites = d.get("sites", {}).duplicate(true)

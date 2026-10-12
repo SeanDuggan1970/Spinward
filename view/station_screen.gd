@@ -29,6 +29,7 @@ const PodSystem := preload("res://sim/systems/pod_system.gd")
 const DetectionSystem := preload("res://sim/systems/detection_system.gd")
 const Badges := preload("res://sim/badges.gd")
 const Fleet := preload("res://sim/fleet.gd")
+const SleepSystem := preload("res://sim/systems/sleep_system.gd")
 const DAY := 86400.0
 
 var sim
@@ -1133,6 +1134,20 @@ func _ship_panel(place_id: String) -> Control:
 	if repair > 0.5 and s.location.get("status") == "docked" and not d.locations[place_id].has("foot_of"):
 		var at_yard: bool = "shipyard" in d.places[place_id].get("services", [])
 		v.add_child(UI.button(("Repair  (%s)" if at_yard else "Patch up  (%s)") % UI.money(repair), send.bind({"type": "repair"}), repair <= s.credits))
+	# A hibernation pod aboard: sleep the months away here.
+	if SleepSystem.pod_of(s.ship, d) != "":
+		var slept := float(s.sleep.get("total_s", 0.0)) / 86400.0
+		v.add_child(UI.label("Pod     sleep here a while%s" % ("  (asleep %d days all told)" % int(slept) if slept >= 1.0 else ""), UI.DIM, 13))
+		var row := HBoxContainer.new()
+		for days in d.balance["sleep"]["port_days"]:
+			var n := float(days)
+			var label := "%d d" % int(n) if n < 30 else ("%d mo" % int(round(n / 30.44)) if n < 365 else "%d y" % int(round(n / 365.0)))
+			row.add_child(UI.button(label, send.bind({"type": "sleep", "days": n})))
+		v.add_child(row)
+		var warn := UI.label("The world goes on while you sleep: jobs run late, rent and premiums come due.", UI.DIM, 11)
+		warn.autowrap_mode = TextServer.AUTOWRAP_WORD
+		warn.custom_minimum_size = Vector2(260, 0)
+		v.add_child(warn)
 	var services: Array = d.locations[place_id].get("services", [])
 	if "refuel" in services:
 		var need := minf(fuel_cap - float(s.ship["fuel_t"]), Market.stock(s, place_id, "propellant"))

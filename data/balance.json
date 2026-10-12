@@ -175,5 +175,28 @@
 		"damage_warning": 0.7,
 		"power_caution_frac": 0.5,
 		"power_caution_hours": 24.0
+	},
+	"sleep": {
+		"_note": "Hibernation (sim/systems/sleep_system.gd). A ship with a sleep pod (a module with 'sleep': true) can sleep through a voyage, waking wake_before_arrival_h before arrival (at x wake_scale, which the approach caps slow), or sleep at port for a number of days. While asleep the world steps step_hours at a time instead of economy.step_hours, NPC traders weigh and fly routes on estimates kept for estimate_days (their paths are planned when the player wakes), and time runs at time_scale, at most max_steps_per_frame steps a frame so the screen stays live. A voyage shorter than min_voyage_days from now is not worth the pod. port_days are the choices the station screen offers. milestones are the onboard mind's log lines as the ship crosses these distances from the Sun (AU), outward or inward.",
+		"step_hours": 24,
+		"time_scale": 10000000,
+		"wake_before_arrival_h": 12,
+		"wake_scale": 10000,
+		"min_voyage_days": 1,
+		"port_days": [7, 30, 182, 365],
+		"max_port_days": 3650,
+		"estimate_days": 30,
+		"max_steps_per_frame": 3,
+		"milestones": [
+			{"au": 1.5, "text": "Past Mars's orbit. The Sun is a little smaller in the window."},
+			{"au": 3.0, "text": "Through the Belt. I counted the rocks so you wouldn't have to: none close."},
+			{"au": 5.2, "text": "Jupiter's distance. Its lights at Valhalla are the warmest thing out here."},
+			{"au": 9.5, "text": "Saturn's distance. Sunlight is a hundredth of what you grew up with."},
+			{"au": 19.2, "text": "Uranus's distance. I've turned the cabin heat up a degree. You won't notice."},
+			{"au": 30.0, "text": "Neptune's distance. Everything the Sun owns is behind us now, more or less."},
+			{"au": 50.0, "text": "The Kuiper belt thins out. Fifty AU: light from home is seven hours old."},
+			{"au": 120.0, "text": "The heliopause. The solar wind stops here. The Sun is the brightest star, and only a star."},
+			{"au": 500.0, "text": "Five hundred AU. If you were awake you'd be bored; I'm not. It's very quiet and very beautiful."}
+		]
 	}
 }
