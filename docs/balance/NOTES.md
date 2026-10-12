@@ -289,3 +289,10 @@ Full write-up: [2026-10-07-economy-together.md](2026-10-07-economy-together.md).
 
 - `places.json` wheel stations are larger and spun slower, for Moon- to Mars-like gravity on the ring (`gravity_g`, never above 1 g). `balance.bays` gains the docking hall (`hall`).
 - These are geometry and view-only numbers. Balance bot re-run (5 seeds, 180 days, upgrade=1): identical, seed for seed, mean 105,630 cr, median first upgrade day 10.7.
+
+
+## Traffic control at the bay (2026-10-12)
+
+- New data: `balance.traffic`, each station's `bay_traffic` in places.json (tower or open, 1 to 8 local movements an hour) and `npcs.json` `local_traffic`.
+- Balance bot re-run (5 seeds, 180 days, upgrade=1): identical, seed for seed, mean 105,630 cr, median first upgrade day 10.7. A hold in the cradle delays the undock and the time ramp by up to `max_hold_s` (240 s), never the trip's arrival.
+- Dock trial with the world running: tower ports add 0 to about 230 s of holding when ships are ahead (Kibo Ring 107 s, the Concord pair 232 s on that run), open ports about 13 s for claiming the bay at 280 m. The tug (T) is still there for a pilot who'd rather not wait.
