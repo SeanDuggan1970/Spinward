@@ -1,6 +1,10 @@
 # The story arc: a fuller sketch (draft for Sean to react to)
 
-Status: **proposal, nothing built.** Revised after Sean's notes (2026-10-11):
+Status: **partly built (Oct 2026).** Built so far:
+- the memory core and the co-pilot's naming
+- the four roads, through each road's meeting at the Lacuna (`data/story.json`, `data/news.json`, `sim/systems/story_system.gd`)
+
+Still a proposal: hibernation wake-up vignettes on the long voyage, Act III, and walking scenes. Revised after Sean's notes (2026-10-11):
 - Hibernation is a core mechanic, not a fix: the player tunnels through deep time like a bookworm, detached from small human affairs, and gets to witness a grander stage.
 - The arc is more hidden. The occultation is only an odd hint at first.
 - The minds try first, with an uncrewed probe, and it goes poorly: whatever is out there will not deal with minds alone. That is what gives people their value and their role.

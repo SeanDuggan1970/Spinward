@@ -51,6 +51,7 @@ var comms: Array = []
 var _sleep_overlay: Control
 var _sleep_credits := 0.0
 var _asleep_notices: Array = []
+var _naming: Control
 
 
 func _ready() -> void:
@@ -479,6 +480,7 @@ func _handle_events() -> void:
 				notice("Fitted %s" % sim.data.modules[d["module"]]["name"], UI.GOOD)
 				refresh = true
 			"departed":
+				_ask_copilot_name()
 				notice("Departed for %s%s" % [sim.data.locations[d["to"]]["name"], (" via %s" % d["route"]) if d.has("route") else ""] + ("  (your navigator trimmed %.2f t)" % float(d["fuel_trimmed_t"]) if float(d.get("fuel_trimmed_t", 0.0)) > 0.005 else ""), UI.AMBER)
 				if SleepSystem.plan(sim.state, sim.data)["why"] == "":
 					notice("The pod's ready if you want to sleep through it: %s." % Bindings.hint_of("transit_sleep"), UI.DIM)
@@ -493,6 +495,14 @@ func _handle_events() -> void:
 				var line := Comms.copilot(sim, "copilot_near" if e["type"] == "periapsis_near" else "copilot_pass", float(d["alt"]), float(d.get("in_s", 0.0)))
 				notice(line, UI.AMBER)
 				comms.append("%s  %s" % [_clock(e["time_s"]), line])
+			"core_found":
+				notice("Hermes-7's memory core is aboard.", UI.AMBER)
+				_ask_copilot_name()
+			"core_sold":
+				notice(String(d["text"]), UI.GOOD)
+				refresh = true
+			"copilot_named":
+				notice("'%s it is.'" % d["name"], UI.GOOD)
 			"story":
 				notice("A message from %s. See Contracts." % d["from"], UI.AMBER)
 				comms.append("%s  PRIVATE  from %s" % [_clock(e["time_s"]), d["from"]])
@@ -545,6 +555,21 @@ func _wake_up(woke: Dictionary) -> void:
 			sim.apply({"type": "set_paused", "paused": false}))
 	_on_top(digest)
 	_fade_in(1.2)
+
+
+## The first time the co-pilot speaks up in a game, it asks for a name. The game holds
+## while you think of one.
+func _ask_copilot_name() -> void:
+	# Scripted runs (smoke, tours, trials) never stop to ask.
+	if String(sim.state.story.get("copilot", "")) != "" or sim.asleep() or is_instance_valid(_naming) or not OS.get_cmdline_user_args().is_empty():
+		return
+	_naming = load("res://view/copilot_name.gd").new(sim)
+	var was_paused: bool = sim.state.paused
+	sim.apply({"type": "set_paused", "paused": true})
+	_naming.closed.connect(func():
+		if not was_paused:
+			sim.apply({"type": "set_paused", "paused": false}))
+	_on_top(_naming)
 
 
 ## Over everything, cockpit HUDs included; the layer goes when the control does.

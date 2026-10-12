@@ -294,6 +294,20 @@ func validate() -> Array[String]:
 				if not modules.has(action["grant"][slot]):
 					problems.append("story %s: lends unknown module %s" % [beat["id"], action["grant"][slot]])
 		seen_beats.append(beat.get("id", ""))
+	# The memory core: a real site to find it at, real ports to sell it at, and roads
+	# that some beat waits for.
+	var core: Dictionary = story.get("core", {})
+	if not core.is_empty():
+		if not sites.has(core.get("site", "")):
+			problems.append("story core: unknown site %s" % core.get("site", ""))
+		var roads := ["lanes"]
+		for port in core.get("buyers", {}):
+			if not places.has(port):
+				problems.append("story core: unknown buyer port %s" % port)
+			roads.append(core["buyers"][port].get("road", ""))
+		for road in roads:
+			if not story.get("beats", []).any(func(b): return b.get("when", {}).get("road", "") == road):
+				problems.append("story core: no beat waits for the %s road" % road)
 	# News: stories name real places, beats and projects.
 	var beat_ids: Array = story.get("beats", []).map(func(b): return b.get("id", ""))
 	var story_ids := {}
@@ -302,8 +316,11 @@ func validate() -> Array[String]:
 		if sid == "" or story_ids.has(sid):
 			problems.append("news: story ids must be unique and present (%s)" % sid)
 		story_ids[sid] = true
-		if item.has("after_beat") and not item["after_beat"] in beat_ids:
-			problems.append("news %s: waits for unknown beat %s" % [sid, item["after_beat"]])
+		if item.has("after_beat"):
+			var wanted: Array = item["after_beat"] if item["after_beat"] is Array else [item["after_beat"]]
+			for b in wanted:
+				if not b in beat_ids:
+					problems.append("news %s: waits for unknown beat %s" % [sid, b])
 		if item.has("after_project") and not projects.has(item["after_project"]):
 			problems.append("news %s: waits for unknown project %s" % [sid, item["after_project"]])
 		if item.has("after_stage") and not projects.has(item["after_stage"][0]):

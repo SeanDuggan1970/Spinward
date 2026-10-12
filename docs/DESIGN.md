@@ -502,12 +502,21 @@ Sean's direction (2026-10-04). It goes beyond trade into opportunities, refits a
 6. **Powers in the background** (first arc done; `data/story.json`, `sim/systems/story_system.gd`). Inspired by Iain M. Banks' Culture: benevolent minds who intervene quietly, Contact and Special Circumstances, the informal Interesting Times Gang, Outside Context Problems. The names are this game's own.
    - **The Long View** is an informal circle of Commons minds, some of them the drone freighters you pass every day (*Patient Arithmetic*, *Reasonable Doubt*). They keep a Contact-like rule: the unknown should be met by a person.
    - **Ines Okafor**, who "represents nobody in particular", is their human go-between.
-   - **The arc, in beats:**
-     1. After three on-time deliveries and a Known standing anywhere, she approaches you with a favour: a sealed case for Farside Array.
-     2. The astronomer puts the dead probe Hermes-7 on your chart. Its recorder shows three stars occulted by something perfectly black at about 1,000 AU.
-     3. You carry a Commons mind in a box to Trojan Yards.
-     4. Patient Arithmetic lends you a drive no yard sells (6 kN, Isp 1,000,000 s) and a long-sleep berth (2,000 days), and shows you **the Lacuna**: a 2.5-year voyage at about 12 milli-g.
-     5. You go and say hello, and it says hello back, in your own words, with the light-time taken off. The outcome is left open and hopeful.
+   - **The arc** (rebuilt Oct 2026; the full design is in `docs/STORY_ARC.md`):
+     1. **The trigger:** nothing happens until the pilot salvages the rumoured dead probe **Hermes-7** and recovers its **memory core**. The salvage text hints the probe was put to bed, not wrecked. The co-pilot remarks that the Minds might value it, that it's partly corrupted, and that it could dig in "if I ever get enough downtime".
+     2. **The four roads:** selling the core at **Trojan Yards** (the Long View), **Hektor Reach** (the Reach) or **Landauer Deep** (the Sufficiency) chooses that circle's road. Keeping it through a year of hibernation lets your co-pilot read it and ask the **Lanes**.
+     3. **World beats:** each road's early beats move the news, wherever you are, even asleep:
+        - **The Long View:** *Long Patience* is announced, launched, and turned away three years on.
+        - **The Reach:** a swarm, and the object goes dark.
+        - **The Sufficiency:** a month of thinking, then an unreadable paper.
+        - **The Lanes:** the lanes look up, then find the pattern.
+     4. **The ask:** the road's people come for you and lend what you need:
+        - **The Long View:** Ines Okafor's favour, the two recordings at Farside, a mind in a box, then Patient Arithmetic's loan.
+        - **The Reach:** Fast Enough, asking you to fix their mistake.
+        - **The Sufficiency:** Quiet Margin's invitation.
+        - **The Lanes:** your own co-pilot, once you have a pod of your own; the Long View sends a drive it owed the lanes.
+     5. **The meeting:** at **the Lacuna** it says hello back, and each road hears it its own way.
+   - **The co-pilot** is named the first time it speaks up (on the first departure, or when the core comes aboard). Story lines from it are signed with that name (`{copilot}` in `story.json`).
    - **How beats work:** each waits for its conditions and port, writes to your correspondence (Contracts tab), and acts: a favour job on the local board, a site revealed, modules lent, standing, credits. A favour that fails or is never taken is offered again.
    - **Deep space** (beyond 30 AU): the Sun's pull is negligible, so trips use a straight-line accelerate-coast-decelerate plan sized to the propellant aboard. Guided flight can't converge when braking takes most of the voyage, and Lambert's solver can't reach those hyperbolic speeds.
 7. **Lander** (done; `view/lander_scene.gd`). Any site job that needs the lander offers a choice:
