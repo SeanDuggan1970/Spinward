@@ -38,8 +38,33 @@ A new pilot has the whole economy to learn: markets, contracts, the fleet, the y
 - **The site:** Hermes-7 already exists as a rumoured derelict about four times the Moon's distance out. It stays a rumour: a broker's tip, a bar story, an explorer's job. It is not shown on the chart and the co-pilot never points at it.
 - **Ambient hints, easy to miss:** a Spaceline line about the probe dying in '49 "with its star-tracker running", and a rumour that "nobody ever went and got the recorder".
 
+### How Hermes-7 died (three layers, each for a closer look)
+None of it is hostile. Each layer rewards a player who looks harder than the last person did.
+
+1. **The official story: an accident.**
+   - The 2049 inquiry blamed a cosmic-ray bit flip in the attitude computer.
+   - A one-line Spaceline mention is all most players see. It's plausible and boring, so nobody looks again.
+2. **What the salvager notices: it was tidied.** The salvage text says the probe isn't wrecked:
+   - no impact damage and no debris
+   - wings folded, battery cleanly isolated, instruments capped
+   - a textbook safe-mode shutdown, done perfectly. "Like someone put it to bed."
+   - **The odd detail:** its high-gain antenna doesn't point at Earth, as a safed probe's should. It points at an empty patch of sky, which turns out to be exactly where the Lacuna is. Only a careful reader catches it, and it pays off much later.
+3. **What the repaired core shows: it was asked to stop looking.**
+   - The core's "corruption" is its last few seconds. Once repaired (by the Minds, or by your co-pilot on the Lanes' road), the sequence is: the star tracker records the three stars winking out, then a **shutdown command arrives**.
+   - The command is perfectly formed, in Hermes-7's own 2040s protocol, with valid checksums.
+   - It has **no sender**, and its timing shows **zero light-delay**, as if sent from right beside the probe.
+   - That echoes the meeting much later, where your hello comes back in your own voice with the light-time already taken off. Whatever it is speaks everyone's language and isn't bothered by distance.
+
+**Why it matters to the arc:**
+- **Not hostile:** it didn't destroy Hermes-7. It switched it off gently and left it intact and recoverable, almost as if it wanted it found.
+- **The pattern:** a machine looked, and was politely told to stop. Later the Minds' probe is turned away too. Two cases make the pattern: it won't deal with machines, only with someone alive.
+- **Compact tension:** did anyone at the 2049 inquiry see the command and file it as a glitch? That gives the Terran Compact a quiet reason to be nervous in Act III: they may have known, a little, all along.
+- **Each road shows it differently:** the Minds read the command in the core themselves. On the Lanes' road your co-pilot finds it, and is quietly shaken:
+
+> "Something switched it off. Politely. In its own language. I've never been spoken to like that. I'm not sure I'd want to be."
+
 ### Salvaging it
-The salvage job (lander or EVA, later with walking) recovers its **memory core**. It is a unique cargo item, a few kilograms, carried by hand in the cabin. The salvage itself pays only scrap.
+The salvage job (lander or EVA, later with walking) recovers its **memory core**. It is a unique cargo item, a few kilograms, carried by hand in the cabin. The salvage itself pays only scrap. The salvage text carries layer 2: the tidy shutdown and the antenna pointing at nothing.
 
 ### The co-pilot's nudge
 When the core comes aboard, your own ship's co-pilot (the AI that has flown with you all game) offers one quiet line in the comms log, in its usual voice:
@@ -125,8 +150,8 @@ The beats keep the same spine: the minds try, it goes poorly, and they need a pe
 - **Later, each circle learns the others weren't asked.** That's a little jealousy, never hostility.
 
 ### Why the minds care (told only later)
-- In the core's last frames, three stars wink out one after another, the way stars do when something passes in front of them, about 1,000 AU out.
-- Human astronomers had the same data in '49 and filed it as a glitch. The minds look harder.
+- In the core's last frames, three stars wink out one after another, the way stars do when something passes in front of them, about 1,000 AU out. Seconds later comes the shutdown command with no sender (layer 3 above).
+- The 2049 inquiry had the same data and filed both the blink and the command as glitches. The minds look harder.
 
 ## Act I: The Probe (world events, from the sale onward; the Long View's road)
 
@@ -139,7 +164,7 @@ From the sale, the world's clock starts. These are things that happen in the sys
 
 ## Act II: The Approach (the existing beats, retold)
 
-The minds draw their conclusion. Hermes-7 was a machine and saw only a shadow. *Long Patience* was a mind and was turned away. Whatever it is, it answers someone who is alive, who could die, and who would be changed by meeting it. The Long View's old rule, that the unknown is met by a person, was a courtesy. Now it is a fact.
+The minds draw their conclusion. Hermes-7 was a machine: it saw a shadow and was politely switched off. *Long Patience* was a mind and was turned away. Whatever it is, it answers someone who is alive, who could die, and who would be changed by meeting it. The Long View's old rule, that the unknown is met by a person, was a courtesy. Now it is a fact.
 
 1. **Ines Okafor** buys you a drink. She comes only after the probe's failure is in the news, and only to the pilot who sold the core: the minds remember who brought it. With walking, this is a real scene at a bar table. She's careful: "Some very patient friends have a problem they cannot solve without you, and they are not used to that."
 2. **Farside:** the minds share the core with the human astronomers at last. Adeyemi plays you both recordings: Hermes-7's three blinking stars, and *Long Patience*'s months of silence and the object sliding away from it. "It can tell the difference between us and them. We don't know how."
@@ -213,7 +238,7 @@ The Compact trains its own interpreter and sends them out under-prepared, with n
 | Your base (later) | a quiet place to sleep the years in between voyages |
 
 ## What changes in existing content
-- `data/sites.json` `hermes_probe`: salvage yields the memory core instead of the Compact's 18,000 cr; it stays a rumour-only site.
+- `data/sites.json` `hermes_probe`: salvage yields the memory core instead of the Compact's 18,000 cr; it stays a rumour-only site. The salvage text gets layer 2 (the tidy shutdown, the antenna pointing at nothing), and a Spaceline item gets layer 1 (the inquiry's verdict).
 - New unique item: the memory core (hand-carried). Only the mind ports buy it: Trojan Yards, Hektor Reach and Landauer Deep. The sale is a story beat that starts the world clock.
 - `data/story.json` `first_favour`: waits for the sale and the probe's failure, not for delivery counts; `the_recorder` goes (the core replaces it).
 - `the_occultation`: now replays two recordings, and the minds' honesty about the probe.
