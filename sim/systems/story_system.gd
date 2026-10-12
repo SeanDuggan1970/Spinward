@@ -17,6 +17,7 @@ extends "res://sim/systems/system.gd"
 
 const Contracts := preload("res://sim/contracts.gd")
 const Navigation := preload("res://sim/navigation.gd")
+const TripEstimate := preload("res://sim/trip_estimate.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
 const SleepSystem := preload("res://sim/systems/sleep_system.gd")
 
@@ -220,7 +221,7 @@ func _favour(spec: Dictionary, beat: Dictionary) -> Dictionary:
 	var data = sim().data
 	var here: String = s.location["place"]
 	var ref := Contracts.reference_ship(data, "local")
-	var plan: Dictionary = Navigation.plan(ref, data, sim().ephemeris, here, spec["to"], s.time_s)
+	var plan: Dictionary = TripEstimate.trip(ref, data, sim().ephemeris, here, spec["to"], s.time_s)
 	var days := float(plan.get("duration_s", 3.0 * DAY)) / DAY if plan.get("ok", false) else 6.0
 	s.contracts["seq"] = int(s.contracts["seq"]) + 1
 	var offer := {

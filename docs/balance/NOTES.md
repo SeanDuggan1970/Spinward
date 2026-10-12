@@ -296,3 +296,15 @@ Full write-up: [2026-10-07-economy-together.md](2026-10-07-economy-together.md).
 - New data: `balance.traffic`, each station's `bay_traffic` in places.json (tower or open, 1 to 8 local movements an hour) and `npcs.json` `local_traffic`.
 - Balance bot re-run (5 seeds, 180 days, upgrade=1): identical, seed for seed, mean 105,630 cr, median first upgrade day 10.7. A hold in the cradle delays the undock and the time ramp by up to `max_hold_s` (240 s), never the trip's arrival.
 - Dock trial with the world running: tower ports add 0 to about 230 s of holding when ships are ahead (Kibo Ring 107 s, the Concord pair 232 s on that run), open ports about 13 s for claiming the bay at 280 m. The tug (T) is still there for a pilot who'd rather not wait.
+
+
+## The co-pilot's estimate (2026-10-12)
+
+- Boards and contract deadlines now use `sim/trip_estimate.gd`, which flies the routes the planner would offer, instead of the quick gravity-free sum.
+- Measured first (Mule, full tanks, 5 ports × every destination × 3 dates, 300 trips):
+  - The quick sum was never pessimistic. Near Earth and the Moon the fastest flyable route took 1.3 to 2.8 times as long as it said (for example, Trojan Yards to the Farside Array: 2.9 days quick, 6.4 days flown).
+  - Earth-Mars, 11 of the 300 trips said "doable" when no flyable route was affordable.
+  - Deadlines (quick time × slack 1.08 to 3.0) were often impossible even with an empty hold.
+- After: the estimate matched the fastest affordable plotted route on all 300 trips. It takes 0.25 s on average and 0.76 s at worst per trip, remembered for the hour.
+- Deadlines get longer where gravity makes trips slower, and pay rises with them (pay is per day of the reference trip). Expect cislunar courier jobs to pay noticeably more per job but about the same per day flown.
+- Balance bot re-run (5 seeds, 180 days, upgrade=1): identical, seed for seed (mean 105,630 cr). The bot only takes a job bound where its trade is already going, and in these runs it saw none (no jobs_seen in its ECON rows, before or after), so it doesn't see the change. Worth a hand-played check of courier income.

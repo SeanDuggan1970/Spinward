@@ -231,7 +231,8 @@ A character, not just a feature. It is the in-world reason the flight is playabl
   - **Gravity wells:** the climb-out/arrival stays inside the overhead hours, using hand-off orbits in the Moon's plane (50,000 km around Earth, 25,000 km around the Moon).
   - **Honest finding:** with fusion drives, flybys rarely beat a well-timed direct burn in cislunar space; they cost more, apart from roughly break-even to Farside. They're there for the thrill, and the co-pilot says so.
   - **Flyby time:** compression drops for the run-in (×100) and the pass (×10), then restores, and the co-pilot comments by altitude.
-  - **NPCs:** NPCs and the departures board keep the quick estimate. NPC captains file flybys by temperament (illustrative only: their paths are not gravity-flown) and chatter about them.
+  - **NPCs:** NPCs keep the quick estimate. NPC captains file flybys by temperament (illustrative only: their paths are not gravity-flown) and chatter about them.
+  - **The co-pilot's estimate** (`sim/trip_estimate.gd`, Oct 2026): the departures board, the contract board's "co-pilot reckons" line and contract and favour deadlines all use it. The quick gravity-free sum was often far off: near Earth and the Moon the routes a Mule can really fly took up to 2.8 times as long, and some Earth-Mars trips it promised needed more propellant than the tanks hold. Now the estimate flies the planner's direct routes (shortest first, stopping at the first the ship can take: the express, else the economy) and reports the fastest one the ship can afford. Over 300 trips from five ports on three dates it matched what "Plot routes" offers every time. It's remembered for the hour (same inputs, same answer). The boards fill in a destination a frame, and a new contract board takes a second or two to draw up.
 - **Interplanetary voyages** (`sim/interplanetary.gd`, `sim/helio_flight.gd`). Any trip whose common frame is the Sun.
   - **Climb-out:** a low-thrust spiral out of the departure well. It costs about the orbit's speed (Edelbaum): about 7.7 km/s from low Earth orbit, about 1 km/s from the Earth-Moon Lagrange stations, which are the cheap way out. It takes delta-v/a of thrust time: days for a Mule.
   - **Transfer:** Sun-centred. Trip times are scanned with Lambert's problem, using a finite-burn correction (impulsive delta-v / (1 - burn fraction), at most half the trip under thrust). The trip is flown by guidance under the Sun's gravity: Lambert steering, then terminal ZEM/ZEV. The planner tries candidates until one arrives within 200,000 km and 500 m/s; the capture spiral takes the rest.
@@ -241,7 +242,7 @@ A character, not just a feature. It is the in-world reason the flight is playabl
   - **Options:**
     - **Express:** fastest that the tanks and larder allow.
     - **Economy:** least propellant within 2.5x the Express time.
-  - **Quick estimates:** boards and NPCs get the best candidate, with a free-fall conic path.
+  - **Quick estimates:** NPCs get the best candidate, with a free-fall conic path. Boards and deadlines use the co-pilot's estimate, which flies the candidates (`sim/trip_estimate.gd`).
   - **Time compression:** goes to x1,000,000.
   - **NPC traders** stay in their own planet's neighbourhood unless a fleet is flagged `interplanetary`.
   - **What a Mule can reach** (from Halo Depot):

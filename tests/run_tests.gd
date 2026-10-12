@@ -24,6 +24,8 @@ const SiteSystemScript := preload("res://sim/systems/site_system.gd")
 const EconomySystemScript := preload("res://sim/systems/economy_system.gd")
 const NpcSystem := preload("res://sim/systems/npc_system.gd")
 const Traffic := preload("res://sim/traffic.gd")
+const TripEstimate := preload("res://sim/trip_estimate.gd")
+const TravelSystemScript := preload("res://sim/systems/travel_system.gd")
 const Bindings := preload("res://view/bindings.gd")
 const DamageSystem := preload("res://sim/systems/damage_system.gd")
 const Power := preload("res://sim/power.gd")
@@ -140,6 +142,7 @@ func _initialize() -> void:
 	test_build_info()
 	test_hibernation()
 	test_traffic_control()
+	test_trip_estimate()
 	print("%d checks, %d failures" % [checks, failures])
 	quit(1 if failures > 0 else 0)
 
@@ -4871,3 +4874,50 @@ func test_traffic_control() -> void:
 	check(s.time_scale == 1.0, "Time stays at x1 while the hold runs on")
 	sim.advance_game_time(float(s.location["hold_s"]))
 	check(s.time_scale > 1.0, "then steps up as the ship backs out (x%d)" % int(s.time_scale))
+
+
+## The co-pilot's estimate is what plotting routes would offer, gravity and all, not the
+## gravity-free sum: a job that looks doable with an empty hold is doable.
+func test_trip_estimate() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var t: float = floor(s.time_s / 3600.0) * 3600.0
+	# Trojan Yards to the Farside Array: the quick sum says under 3 days; the flown
+	# routes take more than twice that.
+	var quick := Navigation.plan(s.ship, d, sim.ephemeris, "trojan_yards", "farside_array", t)
+	var est := TripEstimate.trip(s.ship, d, sim.ephemeris, "trojan_yards", "farside_array", t)
+	var opts: Array = TravelSystemScript.plan_for(s.ship, d, sim.ephemeris, "trojan_yards", "farside_array", t)
+	var fastest := INF
+	for o in opts:
+		if o["affordable"]:
+			fastest = minf(fastest, float(o["duration_s"]))
+	check(est.get("ok", false) and absf(float(est["duration_s"]) - fastest) < 60.0, "Estimate matches the fastest plotted route (%.1f d vs %.1f d)" % [float(est.get("duration_s", 0.0)) / DAY, fastest / DAY])
+	check(float(est["duration_s"]) > float(quick["duration_s"]) * 1.5, "and is honest where the quick sum is not (quick %.1f d)" % (float(quick["duration_s"]) / DAY))
+	# Mars to Earth with a Mule's tanks: the estimate says what plotting will.
+	var t2 := t + 60.0 * DAY
+	var far := TripEstimate.trip(s.ship, d, sim.ephemeris, "ares_ring", "kibo_ring", t2)
+	var far_opts: Array = TravelSystemScript.plan_for(s.ship, d, sim.ephemeris, "ares_ring", "kibo_ring", t2)
+	check(far.get("ok", false) == far_opts.any(func(o): return o["affordable"]), "Across the system, doable only if a plotted route is affordable (%s)" % far.get("reason", "ok"))
+	# Remembered for the hour, and the same whenever asked within it.
+	check(not TripEstimate.cached(s.ship, d, "trojan_yards", "farside_array", t + 1200.0).is_empty(), "Remembered for the hour")
+	var later := TripEstimate.trip(s.ship, d, sim.ephemeris, "trojan_yards", "farside_array", t + 1200.0)
+	check(is_equal_approx(float(later["duration_s"]), float(est["duration_s"])) and is_equal_approx(float(later["arrive_t"]), float(est["arrive_t"]) + 1200.0), "Asked later in the hour, only the arrival moves on")
+	# Deadlines: an empty Mule (the local reference ship) can make every job in time.
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	var ref := Contracts.reference_ship(d, "local")
+	var made := 0
+	var doable := 0
+	for i in 12:
+		var o := Contracts.make_offer(d, sim.ephemeris, s, rng, "trojan_yards", "express" if i % 3 == 0 else "package", "board")
+		if o.is_empty() or o["pickup"] != "" or o.has("craft"):
+			continue
+		made += 1
+		var need := TravelSystemScript.plan_for(ref, d, sim.ephemeris, "trojan_yards", o["to"], s.time_s).filter(func(x): return x["affordable"])
+		var best := INF
+		for x in need:
+			best = minf(best, float(x["duration_s"]))
+		if best <= float(o["window_s"]):
+			doable += 1
+	check(made > 0 and doable == made, "An empty Mule can make all %d jobs off the Trojan Yards board (%d)" % [made, doable])
