@@ -1,5 +1,5 @@
 {
-	"_note": "Ships are a spine plus bolt-on modules. mass_t is dry mass. Drives: thrust_n and isp_s set acceleration and propellant use; heat_mw must be rejected by radiators or thrust is throttled. 'mounts' lists the slot kinds a module fits (default: its own kind), so long-haul refits can trade cargo bays for tanks, life support, berths, a lander or a rig. life_support_days and berths add up across modules; crewless ships need none. 'sleep': true makes a module a hibernation pod: the crew can sleep through voyages and long waits (sim/systems/sleep_system.gd). 'look' feeds the kit-bash renderer (view/flight/ship_builder.gd): command shape 'cockpit' or 'drone'; cargo shape 'cage' (open frame of half-length containers), 'container' (standard 2.4 x 2.6 x 6 m boxes, containers = [across, high, long]), 'bulk' (hopper), 'cradle' (open flatbed for outsize loads); 'hab' (passenger can or long-duration hab, mounted behind the crew); 'lander', 'sensor' and 'mining' ride in the cargo section; tanks of any slot cluster ahead of the drives; spine truss_m is the keel's width; drive coils is the number of field coils on the nozzle. Power (sim/power.gd, balance.json 'power'), in kW and kWh: solar_kw is the output of a module's solar wings at 1 AU (falls with the square of the distance from the Sun); battery_kwh the storage; reactor_kw the electrical output of a fusion drive's reactor while it is lit; life_kw, avionics_kw, comms_kw, sensor_kw and mining_kw what a module draws (sensors and the rig draw a standby fraction until they work). Damage cuts what a module supplies, not what it draws.",
+	"_note": "Ships are a spine plus bolt-on modules. mass_t is dry mass. Drives: thrust_n and isp_s set acceleration and propellant use; heat_mw must be rejected by radiators or thrust is throttled. 'mounts' lists the slot kinds a module fits (default: its own kind), so long-haul refits can trade cargo bays for tanks, life support, berths, a lander or a rig. life_support_days and berths add up across modules; crewless ships need none. 'sleep': true makes a module a hibernation pod: the crew can sleep through voyages and long waits (sim/systems/sleep_system.gd). 'look' feeds the kit-bash renderer (view/flight/ship_builder.gd): command shape 'cockpit' or 'drone'; a cockpit's 'rooms' are the crew's cans behind the flight deck, nose to tail (view/flight/crew_stack.gd: lounge and galley, quarters with a cabin each, the node with airlock, escape pods and lockers, the service bay with batteries, computer and life support), each radius_m by length_m; cargo shape 'cage' (open frame of half-length containers), 'container' (standard 2.4 x 2.6 x 6 m boxes, containers = [across, high, long]), 'bulk' (hopper), 'cradle' (open flatbed for outsize loads); 'hab' (passenger can or long-duration hab, mounted behind the crew); 'lander', 'sensor' and 'mining' ride in the cargo section; tanks of any slot cluster ahead of the drives; spine truss_m is the keel's width; drive coils is the number of field coils on the nozzle. Power (sim/power.gd, balance.json 'power'), in kW and kWh: solar_kw is the output of a module's solar wings at 1 AU (falls with the square of the distance from the Sun); battery_kwh the storage; reactor_kw the electrical output of a fusion drive's reactor while it is lit; life_kw, avionics_kw, comms_kw, sensor_kw and mining_kw what a module draws (sensors and the rig draw a standby fraction until they work). Damage cuts what a module supplies, not what it draws.",
 	"mule_spine": {
 		"name": "Mule truss spine",
 		"kind": "spine",
@@ -44,11 +44,17 @@
 		"look": {
 			"shape": "cockpit",
 			"size_m": [
-				4.5,
-				3.6,
-				5.0
+				5.6,
+				4.4,
+				6.0
 			],
-			"colour": "offwhite"
+			"colour": "offwhite",
+			"rooms": [
+				{"room": "lounge", "radius_m": 2.6, "length_m": 5.0},
+				{"room": "quarters", "radius_m": 2.4, "length_m": 5.0, "cabins": 4},
+				{"room": "node", "radius_m": 2.0, "length_m": 3.4, "escape_pods": 2},
+				{"room": "service", "radius_m": 2.1, "length_m": 3.4}
+			]
 		},
 		"life_support_days": 120,
 		"solar_kw": 24,

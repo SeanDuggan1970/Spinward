@@ -1,5 +1,7 @@
 ## Ship models in three standard sections along a keel truss, nose at -Z:
-##   crew      cockpit and hab up front, dished and aerialled for deep space
+##   crew      flight deck up front, then the rooms the crew live in (lounge and
+##             galley, quarters, the node with airlock, escape pods and lockers, the
+##             service bay: view/flight/crew_stack.gd), dished and aerialled
 ##   cargo     standard containers (or bulk hoppers, or an outsize cradle) in the
 ##             middle, so the payload sits between the crew and any drive trouble
 ##   drive     propellant tanks, a shadow shield, then one or more drives crusted
@@ -21,6 +23,7 @@ extends RefCounted
 const Kit := preload("res://view/flight/kit.gd")
 const Livery := preload("res://view/flight/livery.gd")
 const HullKit := preload("res://view/flight/hull_kit.gd")
+const CrewStack := preload("res://view/flight/crew_stack.gd")
 
 ## The standard container: across, high, long (metres). Cages carry half-length ones.
 const BOX := Vector3(2.4, 2.6, 6.0)
@@ -342,44 +345,31 @@ static func _crew(m: Dictionary, ctx: Dictionary) -> Dictionary:
 		deck.add_child(HullKit.handrail(Vector3(side * w * 0.4, h * 0.5, -deck_len * 0.42), Vector3(side * w * 0.4, h * 0.5, deck_len * 0.1), Vector3.UP))
 	_name_stencils(deck, ctx["livery"], Vector3(w, h, deck_len))
 	n.add_child(deck)
-	# Crew hab: a pressure can with a domed aft head (its fore head is buried in the
-	# deck), where they sleep, eat and argue. Two rows of portholes, some shuttered;
-	# the EVA hatch to starboard; handrails along its back and belly.
+	# Behind the flight deck, the rooms the crew live in (modules.json look "rooms",
+	# view/flight/crew_stack.gd): lounge and galley, sleeping quarters, the node with
+	# the airlock, escape pods and stowage, and the service bay with the batteries,
+	# the computer and the life support plant.
+	var rooms_z := nose_len + deck_len
+	var stack := CrewStack.build(m["look"].get("rooms", []), ctx)
+	var anchors: Dictionary = stack["anchors"]
+	stack["node"].position.z = rooms_z
+	n.add_child(stack["node"])
+	var hab_len: float = stack["length"]
 	var hab_r := minf(w, h) * 0.48
-	var hab_len := size.z * 0.9
-	var hab_z := nose_len + deck_len + hab_len * 0.5
-	var can := HullKit.vessel(hab_r, hab_len + hab_r * 0.5, mats["hull"], mats, 24)
-	can["node"].position.z = hab_z - hab_r * 0.25
-	n.add_child(can["node"])
-	n.add_child(Kit.torus(hab_r + 0.02, 0.12, mats["steel"], Vector3(0, 0, hab_z - hab_len * 0.3), 24))
-	n.add_child(Kit.torus(hab_r + 0.02, 0.12, mats["steel"], Vector3(0, 0, hab_z + hab_len * 0.2), 24))
-	for row in [-0.12, 0.08]:
-		for deg in [40.0, 140.0, 220.0, 320.0]:
-			var a := deg_to_rad(deg)
-			var d := Vector3(cos(a), sin(a), 0.0)
-			var port := HullKit.porthole(0.2, mats, frame, rng.randf() < 0.25)
-			port.basis = Basis.looking_at(-d, Vector3.BACK)
-			port.position = d * hab_r + Vector3(0, 0, hab_z + hab_len * row)
-			n.add_child(port)
-	var hatch := HullKit.hatch(0.85, 1.1, mats)
-	hatch.basis = Basis(Vector3.BACK, -PI * 0.5)
-	hatch.position = Vector3(hab_r + 0.04, 0, hab_z + hab_len * 0.27)
-	n.add_child(hatch)
-	for deg in [65.0, 115.0, 250.0, 290.0]:
-		var d := Vector3(cos(deg_to_rad(deg)), sin(deg_to_rad(deg)), 0.0)
-		n.add_child(HullKit.handrail(d * hab_r + Vector3(0, 0, hab_z - hab_len * 0.42), d * hab_r + Vector3(0, 0, hab_z + hab_len * 0.4), d))
-	# Deep-space kit on the hab's back: the high-gain dish (much bigger on a ship built
-	# to go far: a weak signal needs a big ear), nav radar, aerials, star trackers.
-	var top := Vector3(0, hab_r, hab_z)
+	# Deep-space kit on the quarters' back: the high-gain dish (much bigger on a ship
+	# built to go far: a weak signal needs a big ear), nav radar, aerials, star trackers.
+	var top: Vector3 = anchors.get("dish", Vector3(0, hab_r, hab_len * 0.5)) + Vector3(0, 0, rooms_z)
 	var deep := bool(ctx.get("deep", false))
 	var dish_r := rng.randf_range(3.0, 3.6) if deep else rng.randf_range(1.1, 1.6)
-	n.add_child(steerable_dish(top + Vector3(0, 0, hab_len * rng.randf_range(0.0, 0.25)), dish_r, ctx))
-	# Housekeeping solar wings, for when the reactor is cold: one each side, in the
-	# same plane as the radiators aft.
+	n.add_child(steerable_dish(top, dish_r, ctx))
+	# Housekeeping solar wings at the lounge, for when the reactor is cold: one each
+	# side, in the same plane as the radiators aft.
 	var cells := solar_cells(ctx)
 	var wing := rng.randf_range(3.0, 4.5)
+	# (The anchor's x is the radius of the can the wings stand off.)
+	var wing_at: Vector3 = anchors.get("wings", Vector3(hab_r, 0, hab_len * 0.3)) + Vector3(0, 0, rooms_z)
 	for side in [1.0, -1.0]:
-		n.add_child(boom_panel(Vector3(side * hab_r, 0, hab_z - hab_len * 0.15), side, 0.8, wing, minf(hab_len * 0.55, 2.4), "solar", cells, ctx))
+		n.add_child(boom_panel(Vector3(side * wing_at.x, 0, wing_at.z), side, 0.8, wing, 2.4, "solar", cells, ctx))
 	n.add_child(dish(Vector3(w * 0.5, h * 0.3, deck_z), Vector3(1.0, 0.4, -0.2), 0.75 if deep else 0.45, ctx))
 	for k in rng.randi_range(2, 4):
 		var at := Vector3(rng.randf_range(-w, w) * 0.4, h * 0.5, nose_len + rng.randf_range(0.2, deck_len))
@@ -390,7 +380,7 @@ static func _crew(m: Dictionary, ctx: Dictionary) -> Dictionary:
 		n.add_child(Kit.box(Vector3(0.22, 0.22, 0.3), Kit.mat("black"), Vector3(side * w * 0.35, -h * 0.5 - 0.35, deck_z - 0.35)))
 	for c in [Vector2(1, 1), Vector2(-1, 1), Vector2(1, -1), Vector2(-1, -1)]:
 		n.add_child(rcs(Vector3(c.x * w * 0.5, c.y * h * 0.5, deck_z - deck_len * 0.3), Vector3(c.x, c.y, 0), ctx))
-	return {"node": n, "length": nose_len + deck_len + hab_len, "radius": maxf(maxf(w, h) * 0.6 + 0.5, hab_r + dish_r * 2.1 + 0.7), "hull_r": maxf(w, h) * 0.6 + 0.5}
+	return {"node": n, "length": nose_len + deck_len + hab_len, "radius": maxf(maxf(maxf(w, h) * 0.6 + 0.5, float(stack["radius"])), top.y + dish_r * 2.1 + 0.7), "hull_r": maxf(w, h) * 0.6 + 0.5}
 
 
 ## An uncrewed bus: an octagonal avionics drum, sensor turret, dishes; no windows.
@@ -717,20 +707,6 @@ static func _propulsion(tanks: Array, drives: Array, radiators: Array, ctx: Dict
 			var a := TAU * float(k) / float(count) + (0.0 if count == 2 else PI * 0.25 if count == 4 else PI * 0.5)
 			offsets.append(Vector3(cos(a), sin(a), 0) * spread)
 	var shield_r := spread + drive_r * 1.15
-	# Radiators fold out from the tank section on booms, edge-on to the crew.
-	var rads_z := z * 0.5
-	# All in the ship's X-Z plane, one pair after another along the hull, never
-	# stacked, so each can turn edge-on to the Sun without shading the next.
-	var rad_mat := Livery.paint(ctx["livery"], Kit.COLOURS["dark"], {"finish": 1, "mismatch": 0.0, "panel_m": 0.35, "roughness": 0.6, "metallic": 0.3})
-	var pair_z := rads_z
-	for k in radiators.size():
-		var s := _size(radiators[k][1])
-		var side := 1.0 if k % 2 == 0 else -1.0
-		var reach := maxf(1.2, shield_r - truss_w * 0.5)
-		n.add_child(boom_panel(Vector3(side * (truss_w * 0.5 + 0.1), 0, pair_z), side, reach, s.y, s.z, "radiator", rad_mat, ctx))
-		radius = maxf(radius, truss_w * 0.5 + reach + s.y + 0.3)
-		if side < 0.0:
-			pair_z += s.z + 0.6
 	# Shadow shield: a thick plate between the reactor(s) and everything forward.
 	var shield_z := z + 0.3
 	n.add_child(Kit.cylinder(shield_r, 0.6, mats["steel"], Vector3(0, 0, shield_z), 16))
@@ -751,6 +727,37 @@ static func _propulsion(tanks: Array, drives: Array, radiators: Array, ctx: Dict
 		radius = maxf(radius, off.length() + ds.x * 0.6)
 		if dm["look"].get("shape", "") == "sail":
 			radius = maxf(radius, float(dm["look"].get("span_m", 300.0)) * 0.72)
+	# Radiators hang off the drive section, where the heat is made: a yoke from the
+	# thrust frame just aft of the shadow shield, a coolant run from each reactor to the
+	# boom roots, the panels well clear of the nozzles. All in the ship's X-Z plane,
+	# pair after pair aft along the drives, never stacked, so each can turn edge-on to
+	# the Sun without shading the next.
+	var rad_mat := Livery.paint(ctx["livery"], Kit.COLOURS["dark"], {"finish": 1, "mismatch": 0.0, "panel_m": 0.35, "roughness": 0.6, "metallic": 0.3})
+	var clear_r := shield_r
+	for k in count:
+		var ds := _size(drives[k][1])
+		clear_r = maxf(clear_r, (offsets[k] as Vector3).length() + ds.x * 0.66 + 0.6)
+	var root_x := spread + drive_r * 0.55
+	var pair_z := z
+	for k in radiators.size():
+		var s := _size(radiators[k][1])
+		var side := 1.0 if k % 2 == 0 else -1.0
+		if side > 0.0:
+			pair_z += s.z * 0.5 + (0.3 if k == 0 else 0.6)
+		var root := Vector3(side * root_x, 0, pair_z)
+		var reach := maxf(1.2, clear_r - root_x)
+		n.add_child(boom_panel(root, side, reach, s.y, s.z, "radiator", rad_mat, ctx))
+		# The yoke back to the thrust frame, and the hot loop out from the reactor.
+		n.add_child(rod(Vector3(0, 0, pair_z), root, 0.16, mats["steel"]))
+		var src: Vector3 = offsets[0] if count > 0 else Vector3.ZERO
+		for kk in count:
+			if signf((offsets[kk] as Vector3).x) == side:
+				src = offsets[kk]
+		n.add_child(rod(src + Vector3(side * drive_r * 0.5, 0.35, z + 0.6), root + Vector3(0, 0.35, 0), 0.09, Kit.mat("orange")))
+		n.add_child(rod(src + Vector3(side * drive_r * 0.5, -0.35, z + 0.6), root + Vector3(0, -0.35, 0), 0.09, Kit.mat("orange")))
+		radius = maxf(radius, root_x + reach + s.y + 0.3)
+		if side < 0.0:
+			pair_z += s.z * 0.5
 	# All the drives' plumes switch together: jets, hot walls and one stern light.
 	var plumes := Node3D.new()
 	plumes.name = "DrivePlume"

@@ -201,6 +201,7 @@ static func _schematic(g, ship: Dictionary, data, r: Rect2, wrecked: bool) -> vo
 	var gap := 4.0
 	var w := (r.size.x - gap * (n - 1)) / n
 	var tank_x := []
+	var drive_x := []
 	for i in n:
 		var slot: String = body[i]
 		var kind := slot.split(".")[0]
@@ -213,6 +214,7 @@ static func _schematic(g, ship: Dictionary, data, r: Rect2, wrecked: bool) -> vo
 			g.poly(PackedVector2Array([Vector2(x, cy - hh * 0.4), Vector2(x + w * 0.35, cy - hh), Vector2(x + w, cy - hh), Vector2(x + w, cy + hh), Vector2(x + w * 0.35, cy + hh), Vector2(x, cy + hh * 0.4)]), Color(col, 0.18))
 			g.polyline(PackedVector2Array([Vector2(x, cy - hh * 0.4), Vector2(x + w * 0.35, cy - hh), Vector2(x + w, cy - hh), Vector2(x + w, cy + hh), Vector2(x + w * 0.35, cy + hh), Vector2(x, cy + hh * 0.4), Vector2(x, cy - hh * 0.4)]), col, 1.0)
 		elif kind == "drive":
+			drive_x.append(box.get_center().x)
 			g.poly(PackedVector2Array([Vector2(x, cy - hh), Vector2(x + w * 0.6, cy - hh), Vector2(x + w, cy - hh * 1.3), Vector2(x + w, cy + hh * 1.3), Vector2(x + w * 0.6, cy + hh), Vector2(x, cy + hh)]), Color(col, 0.18))
 			g.polyline(PackedVector2Array([Vector2(x, cy - hh), Vector2(x + w * 0.6, cy - hh), Vector2(x + w, cy - hh * 1.3), Vector2(x + w, cy + hh * 1.3), Vector2(x + w * 0.6, cy + hh), Vector2(x, cy + hh), Vector2(x, cy - hh)]), col, 1.0)
 		elif kind == "tank":
@@ -225,8 +227,9 @@ static func _schematic(g, ship: Dictionary, data, r: Rect2, wrecked: bool) -> vo
 		if d >= 0.999:
 			g.line(box.position, box.end, AV.RED, 1.5)
 			g.line(Vector2(box.position.x, box.end.y), Vector2(box.end.x, box.position.y), AV.RED, 1.5)
-	# Radiator fins on booms, either side of the tanks (or mid-ship).
-	var fx: float = tank_x[0] if not tank_x.is_empty() else r.get_center().x
+	# Radiator fins on booms off the drives, where the heat is (else by the tanks, or
+	# mid-ship).
+	var fx: float = drive_x[0] if not drive_x.is_empty() else (tank_x[0] if not tank_x.is_empty() else r.get_center().x)
 	for i in fins.size():
 		var d := 1.0 if wrecked else DamageSystem.damage_of(ship, fins[i])
 		var col := damage_colour(d)
