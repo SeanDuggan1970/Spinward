@@ -132,6 +132,7 @@ func _initialize() -> void:
 	test_lander_pods()
 	test_detection_and_stealth()
 	test_panel_fold()
+	test_radiator_layouts()
 	test_docking_bays()
 	test_satellite_missions()
 	test_secret_work()
@@ -4461,6 +4462,52 @@ func test_panel_fold() -> void:
 	var loc := {"depart_t": 1000.0}
 	check(ShipRig.transit_fold(loc, 1010.0) == 1.0 and ShipRig.transit_fold(loc, 1000.0 + ShipRig.DEPLOY_AFTER_S + 1.0 / ShipRig.FOLD_RATE) == 0.0, "Panels unfold once clear of the port")
 	model["node"].free()
+
+
+func test_radiator_layouts() -> void:
+	var d = DataCatalog.load_default()
+	var Models = load("res://view/flight/models.gd")
+	var Builder = load("res://view/flight/ship_builder.gd")
+	var sun := Vector3(0, 1, 0.4).normalized()
+	for hull in ["heavy_freighter", "deep_freighter"]:
+		var look: Dictionary = d.ships[hull]["look"]
+		for layout in ["inline", "cross"]:
+			look["radiators"] = layout
+			var model: Dictionary = Models.ship({"hull": hull, "modules": d.ships[hull]["modules"].duplicate()}, d)
+			var root: Node3D = model["node"]
+			var rig: Dictionary = model["rig"]
+			ShipRig.set_fold(rig, 0.0, true)
+			ShipRig.aim(rig, Basis.IDENTITY, sun, Vector3.FORWARD, -1.0)
+			# Where the bells start: each plume sits at its drive's origin.
+			var dm: Dictionary = d.modules[d.ships[hull]["modules"]["drive.0"]]
+			var plume: Node3D = root.find_child("DrivePlume", true, false)
+			var bell_z: float = _to_root(plume.get_child(0), root).origin.z + float(Builder._nozzle(dm, Builder._size(dm))["z_t"])
+			var aft := -INF
+			var turned := 0
+			var edge_on := true
+			for a in rig["arrays"]:
+				if a["kind"] != "radiator":
+					continue
+				var xf := _to_root(a["node"], root)
+				var width: float = Builder._size(d.modules[d.ships[hull]["modules"]["radiator.0"]]).z
+				aft = maxf(aft, xf.origin.z + width * 0.5)
+				edge_on = edge_on and absf((xf.basis * Vector3.UP).normalized().dot(sun)) < 1e-3
+				if not is_zero_approx(float(a.get("roll", 0.0))):
+					turned += 1
+			check(aft < bell_z, "%s (%s): every radiator ends ahead of the bells (%.1f < %.1f)" % [hull, layout, aft, bell_z])
+			check(edge_on, "%s (%s): every radiator turns edge-on to the Sun" % [hull, layout])
+			check(turned == (2 if layout == "cross" else 0), "%s (%s): the cross turns its second pair onto Y" % [hull, layout])
+			root.free()
+		look.erase("radiators")
+
+
+## A node's transform in the frame of `root`, one of its ancestors.
+func _to_root(node: Node3D, root: Node3D) -> Transform3D:
+	var xf := Transform3D.IDENTITY
+	while node != root:
+		xf = node.transform * xf
+		node = node.get_parent()
+	return xf
 
 
 func test_docking_bays() -> void:

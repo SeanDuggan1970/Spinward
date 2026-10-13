@@ -1,13 +1,16 @@
 ## Drives a ship model's moving parts (the rig from ship_builder.gd).
 ##
-## Every panel turns about its boom, the ship's X axis. A panel can only face a
-## direction in the ship's Y-Z plane, so in transit the ship rolls about its line of
-## travel (roll_to_sun) to put the Sun in that plane; then solar wings face it
-## square on and radiators turn edge-on to it, so they shed heat instead of
-## soaking up sunlight. While docking the pilot owns the roll, and the panels do the
-## best a single hinge can.
+## Every panel turns about its boom, the ship's X axis (or, for the turned pair of a
+## cross of radiators, X rolled by the entry's "roll" about the keel). A panel on an
+## X boom can only face a direction in the ship's Y-Z plane, so in transit the ship
+## rolls about its line of travel (roll_to_sun) to put the Sun in that plane; then
+## solar wings face it square on and radiators turn edge-on to it, so they shed heat
+## instead of soaking up sunlight. A radiator on a Y boom is edge-on to that plane
+## already, so it holds square to the ship's X axis. While docking the pilot owns
+## the roll, and the panels do the best a single hinge can.
 ##
-## For docking the panels stow: each turns flat (in the ship's X-Z plane), then folds
+## For docking the panels stow: each turns flat (in the plane of its boom and the
+## keel: X-Z, or Y-Z for a turned pair), then folds
 ## up accordion-fashion at its boom's end, and the dish parks. rig["fold_to"] (0 out,
 ## 1 stowed) is where the view wants them; rig["fold"] follows it at FOLD_RATE.
 ##
@@ -91,7 +94,13 @@ static func aim(rig: Dictionary, ship_basis: Basis, sun: Vector3, target: Vector
 		var node: Node3D = a["node"]
 		if not is_instance_valid(node):
 			continue
-		var want: float = face if a["kind"] == "solar" else face + PI * 0.5
+		var aim_face := face
+		var roll := float(a.get("roll", 0.0))
+		if roll != 0.0:
+			# The boom's own frame: the Sun as seen with the boom laid along X.
+			var r := Basis(Vector3.BACK, -roll) * s
+			aim_face = atan2(r.z, r.y)
+		var want: float = aim_face if a["kind"] == "solar" else aim_face + PI * 0.5
 		if fold > 0.0:
 			# Ease from the tracking angle to flat as the stow begins.
 			node.rotation.x = wrapf(lerp_angle(want, 0.0, flat), -PI, PI)
