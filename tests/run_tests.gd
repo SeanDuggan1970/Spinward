@@ -4478,21 +4478,17 @@ func test_radiator_layouts() -> void:
 			var rig: Dictionary = model["rig"]
 			ShipRig.set_fold(rig, 0.0, true)
 			ShipRig.aim(rig, Basis.IDENTITY, sun, Vector3.FORWARD, -1.0)
-			# Where the bells start: the plume sits at the drive's origin.
+			# Where the bells start: each plume sits at its drive's origin.
 			var dm: Dictionary = d.modules[d.ships[hull]["modules"]["drive.0"]]
 			var plume: Node3D = root.find_child("DrivePlume", true, false)
-			var bell_z: float = plume.get_child(0).position.z + float(Builder._nozzle(dm, Builder._size(dm))["z_t"])
+			var bell_z: float = _to_root(plume.get_child(0), root).origin.z + float(Builder._nozzle(dm, Builder._size(dm))["z_t"])
 			var aft := -INF
 			var turned := 0
 			var edge_on := true
 			for a in rig["arrays"]:
 				if a["kind"] != "radiator":
 					continue
-				var xf := Transform3D.IDENTITY
-				var node: Node = a["node"]
-				while node != root:
-					xf = (node as Node3D).transform * xf
-					node = node.get_parent()
+				var xf := _to_root(a["node"], root)
 				var width: float = Builder._size(d.modules[d.ships[hull]["modules"]["radiator.0"]]).z
 				aft = maxf(aft, xf.origin.z + width * 0.5)
 				edge_on = edge_on and absf((xf.basis * Vector3.UP).normalized().dot(sun)) < 1e-3
@@ -4503,6 +4499,15 @@ func test_radiator_layouts() -> void:
 			check(turned == (2 if layout == "cross" else 0), "%s (%s): the cross turns its second pair onto Y" % [hull, layout])
 			root.free()
 		look.erase("radiators")
+
+
+## A node's transform in the frame of `root`, one of its ancestors.
+func _to_root(node: Node3D, root: Node3D) -> Transform3D:
+	var xf := Transform3D.IDENTITY
+	while node != root:
+		xf = node.transform * xf
+		node = node.get_parent()
+	return xf
 
 
 func test_docking_bays() -> void:

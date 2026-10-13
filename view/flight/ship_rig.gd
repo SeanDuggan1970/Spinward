@@ -6,8 +6,8 @@
 ## rolls about its line of travel (roll_to_sun) to put the Sun in that plane; then
 ## solar wings face it square on and radiators turn edge-on to it, so they shed heat
 ## instead of soaking up sunlight. A radiator on a Y boom is edge-on to that plane
-## already, so it holds square to the ship's X axis. While docking the pilot owns the roll, and the panels do the
-## best a single hinge can.
+## already, so it holds square to the ship's X axis. While docking the pilot owns
+## the roll, and the panels do the best a single hinge can.
 ##
 ## For docking the panels stow: each turns flat (in the plane of its boom and the
 ## keel: X-Z, or Y-Z for a turned pair), then folds
