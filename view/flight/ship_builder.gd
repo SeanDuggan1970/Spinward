@@ -85,10 +85,14 @@ static func build(ship_state: Dictionary, data, livery: Dictionary) -> Dictionar
 	parts.add_child(Kit.truss(keel_to - keel_from, truss_w, ctx["mats"]["steel"], Vector3(0, 0, (keel_from + keel_to) * 0.5)))
 	# Navigation lights, in fixtures on the hull (Kit.nav_light): red to port, green to
 	# starboard, pulsing together, and a white anti-collision strobe on the keel aft.
-	var crew_w := float(sections[0].get("hull_r", sections[0]["radius"])) if sections.size() > 1 else 2.0
-	var crew_z := float(sections[0]["length"]) * 0.55 if sections.size() > 1 else 2.0
-	parts.add_child(Kit.nav_light(Color("ff3a2a"), Vector3(-crew_w, 0, crew_z), Vector3.LEFT, 0.2, "flash", 1.6, 0.0))
-	parts.add_child(Kit.nav_light(Color("3aff5a"), Vector3(crew_w, 0, crew_z), Vector3.RIGHT, 0.2, "flash", 1.6, 0.0))
+	# Each forward section says where its skin is ("nav": x the hull's half-width there,
+	# z along the section), so the fixtures sit on the plating, not out in space.
+	var nav := Vector3(2.0, 0, 2.0)
+	if sections.size() > 1:
+		var s0: Dictionary = sections[0]
+		nav = s0.get("nav", Vector3(float(s0["radius"]) * 0.8, 0, float(s0["length"]) * 0.3))
+	parts.add_child(Kit.nav_light(Color("ff3a2a"), Vector3(-nav.x, nav.y, nav.z), Vector3.LEFT, 0.2, "flash", 1.6, 0.0))
+	parts.add_child(Kit.nav_light(Color("3aff5a"), nav, Vector3.RIGHT, 0.2, "flash", 1.6, 0.0))
 	parts.add_child(Kit.nav_light(Color("f4f8ff"), Vector3(0, truss_w * 0.55, length * 0.7), Vector3.UP, 0.16, "strobe", 1.4, 0.4))
 	var root := Node3D.new()
 	parts.position.z = -length * 0.5
@@ -380,7 +384,15 @@ static func _crew(m: Dictionary, ctx: Dictionary) -> Dictionary:
 		n.add_child(Kit.box(Vector3(0.22, 0.22, 0.3), Kit.mat("black"), Vector3(side * w * 0.35, -h * 0.5 - 0.35, deck_z - 0.35)))
 	for c in [Vector2(1, 1), Vector2(-1, 1), Vector2(1, -1), Vector2(-1, -1)]:
 		n.add_child(rcs(Vector3(c.x * w * 0.5, c.y * h * 0.5, deck_z - deck_len * 0.3), Vector3(c.x, c.y, 0), ctx))
-	return {"node": n, "length": nose_len + deck_len + hab_len, "radius": maxf(maxf(maxf(w, h) * 0.6 + 0.5, float(stack["radius"])), top.y + dish_r * 2.1 + 0.7), "hull_r": maxf(w, h) * 0.6 + 0.5}
+	return {"node": n, "length": nose_len + deck_len + hab_len, "radius": maxf(maxf(maxf(w, h) * 0.6 + 0.5, float(stack["radius"])), top.y + dish_r * 2.1 + 0.7), "nav": _crew_nav(anchors, rooms_z, w, deck_z)}
+
+
+## Where the port and starboard lights go on a crew section: on the rooms' skin
+## when there are rooms, else on the flight deck's flank.
+static func _crew_nav(anchors: Dictionary, rooms_z: float, w: float, deck_z: float) -> Vector3:
+	if anchors.has("nav"):
+		return (anchors["nav"] as Vector3) + Vector3(0, 0, rooms_z)
+	return Vector3(w * 0.5, 0, deck_z)
 
 
 ## An uncrewed bus: an octagonal avionics drum, sensor turret, dishes; no windows.
@@ -413,7 +425,7 @@ static func _drone_bus(m: Dictionary, ctx: Dictionary) -> Dictionary:
 	stencil.position.z = 1.2 + l * 0.5
 	_name_stencils(stencil, ctx["livery"], Vector3(r * 1.7, r, l))
 	n.add_child(stencil)
-	return {"node": n, "length": 1.2 + l, "radius": r + 1.0}
+	return {"node": n, "length": 1.2 + l, "radius": r + 1.0, "nav": Vector3(r, 0, 1.2 + l * 0.15)}
 
 
 ## A passenger can, next to the crew: a pressure vessel with domed heads, rows of
