@@ -214,7 +214,8 @@ func update(t: float, dt: float, spin_angle: float, sun: Vector3, pilot_d := INF
 					var a := float(absi(hash(k)) % 360) * PI / 180.0
 					pos += Vector3(cos(a), sin(a), 0.0) * aside
 				spin_matched = d < gate * 1.5
-				fold = 1.0 if d < gate * 4.0 else 0.0
+				# Stowed by stow_by_s before it starts matching spin, folding as it closes.
+				fold = ShipRig.stow_before((d - gate * 1.5) / in_speed, float(cfg["stow_by_s"]))
 			elif not e["fits"]:
 				# Too big for the bay: in to a collar on the shut doors.
 				var f := _ease((t - run_from) / maxf(run_to - run_from, 1.0))
@@ -238,7 +239,7 @@ func update(t: float, dt: float, spin_angle: float, sun: Vector3, pilot_d := INF
 				var a := float(absi(hash(k)) % 360) * PI / 180.0
 				var off := Vector3(cos(a), sin(a), 0.0) * lane_r * _ease(tau / 40.0)
 				pos = off + Vector3(0, 0, out_z + 2.0 * tau + 0.08 * tau * tau)
-				fold = 1.0 if tau < 15.0 else 0.0
+				fold = ShipRig.unfold_after(tau, float(cfg["unfold_after_s"]))
 				spin_matched = tau < 6.0
 		node.position = pos
 		node.basis = Basis(Vector3.BACK, spin_angle) if spin_matched else ShipRig.roll_to_sun(Vector3.FORWARD, sun)
@@ -248,7 +249,7 @@ func update(t: float, dt: float, spin_angle: float, sun: Vector3, pilot_d := INF
 			e["layer"] = layer
 			for g in node.find_children("*", "GeometryInstance3D", true, false):
 				(g as GeometryInstance3D).layers = layer
-		ShipRig.set_fold(e["rig"], fold)
+		ShipRig.set_fold(e["rig"], fold, true)
 		ShipRig.aim(e["rig"], node.basis, sun, -node.position if m["kind"] == "in" else Vector3.BACK * 1.0e6, dt)
 
 

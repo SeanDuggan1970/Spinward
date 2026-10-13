@@ -4461,6 +4461,12 @@ func test_panel_fold() -> void:
 	# In transit the panels stay stowed just after leaving port.
 	var loc := {"depart_t": 1000.0}
 	check(ShipRig.transit_fold(loc, 1010.0) == 1.0 and ShipRig.transit_fold(loc, 1000.0 + ShipRig.DEPLOY_AFTER_S + 1.0 / ShipRig.FOLD_RATE) == 0.0, "Panels unfold once clear of the port")
+	# Other ships fold on game time: stowed by_s before they get in, part-way through
+	# the stroke a little earlier, and spread well out.
+	var stroke := 1.0 / ShipRig.FOLD_RATE
+	check(ShipRig.stow_before(20.0, 20.0) == 1.0 and ShipRig.stow_before(5.0, 20.0) == 1.0 and ShipRig.stow_before(20.0 + stroke, 20.0) == 0.0, "Arriving ships are stowed before they get in")
+	check(is_equal_approx(ShipRig.stow_before(20.0 + stroke * 0.5, 20.0), 0.5), "Arriving ships fold over the rig's stroke")
+	check(ShipRig.unfold_after(5.0, 10.0) == 1.0 and is_equal_approx(ShipRig.unfold_after(10.0 + stroke * 0.5, 10.0), 0.5) and ShipRig.unfold_after(10.0 + stroke, 10.0) == 0.0, "Leaving ships unfold once clear")
 	model["node"].free()
 
 
