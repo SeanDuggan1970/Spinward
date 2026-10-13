@@ -14,6 +14,12 @@ The 2060s. Humanity and its AI partners are spreading into the solar system, our
 - **Still to learn:** a great deal at the extremes of physics and chemistry. There are great mysteries left to solve, and some still to find.
 - **The universe beyond:** barely explored with anything more than telescopes. That is the frontier the game points at.
 
+## Minds as persons (backstory direction, 13 October 2026)
+
+Minds are artificial persons with individual histories and values. The Commons is plural: its Long View, Reach, Sufficiency and Lanes disagree about creation, continuity and collective identity. Copying a memory does not automatically duplicate assets, votes or contractual authority. Minds primarily govern forking, Genesis, memory integrity and restoration; humans govern matters specific to biological life. Both share a fundamental personhood floor, with joint jurisdiction over shared resources and cross-community harm.
+
+The full writing guide and proposed **Continuity Accord** are in [MINDS.md](MINDS.md). It distinguishes Continuance, Forking and Genesis, protects offspring against their creators, and develops optional disputes and mortal Minds. These are lore proposals, not implemented legal or reproduction systems. Hardware radix remains undecided. The Lacuna’s response to humans is an observed preference and a mystery, not evidence against Mind personhood.
+
 ## Pillars
 
 1. **Trade → Explore → Build Home.** Each stage funds and motivates the next. The base is the ultimate goal and the biggest money sink.
@@ -501,7 +507,7 @@ Sean's direction (2026-10-04). It goes beyond trade into opportunities, refits a
 
    Projects compete for the same hauling, so which to back is a real choice.
 6. **Powers in the background** (first arc done; `data/story.json`, `sim/systems/story_system.gd`). Inspired by Iain M. Banks' Culture: benevolent minds who intervene quietly, Contact and Special Circumstances, the informal Interesting Times Gang, Outside Context Problems. The names are this game's own.
-   - **The Long View** is an informal circle of Commons minds, some of them the drone freighters you pass every day (*Patient Arithmetic*, *Reasonable Doubt*). They keep a Contact-like rule: the unknown should be met by a person.
+   - **The Long View** is an informal circle of Commons minds, some of them the drone freighters you pass every day (*Patient Arithmetic*, *Reasonable Doubt*). They keep a Contact-like rule: the unknown should be met through a human intermediary. Minds are persons too; this is a choice of envoy, not a test of personhood.
    - **Ines Okafor**, who "represents nobody in particular", is their human go-between.
    - **The arc** (rebuilt Oct 2026; the full design is in `docs/STORY_ARC.md`):
      1. **The trigger:** nothing happens until the pilot salvages the rumoured dead probe **Hermes-7** and recovers its **memory core**. The salvage text hints the probe was put to bed, not wrecked. The co-pilot remarks that the Minds might value it, that it's partly corrupted, and that it could dig in "if I ever get enough downtime".
