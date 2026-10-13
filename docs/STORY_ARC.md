@@ -7,15 +7,21 @@ Status: **partly built (Oct 2026).** Built so far:
 Still a proposal: hibernation wake-up vignettes on the long voyage, Act III, and walking scenes. Revised after Sean's notes (2026-10-11):
 - Hibernation is a core mechanic, not a fix: the player tunnels through deep time like a bookworm, detached from small human affairs, and gets to witness a grander stage.
 - The arc is more hidden. The occultation is only an odd hint at first.
-- The minds try first, with an uncrewed probe, and it goes poorly: whatever is out there will not deal with minds alone. That is what gives people their value and their role.
+- The minds try first, with an uncrewed probe, and it goes poorly: whatever is out there appears unwilling to deal with Minds alone. That gives humans a particular role, without making either kind of person more valuable.
 - The early game is long and is just trading, which is all the game ever needs to be for a player who wants that or never goes looking. Nothing pushes the story.
 - The trigger is the player's own choice: salvaging the dead probe Hermes-7 yields its **memory core**, a unique item that only the minds will buy, at the few ports where they gather. Selling it to them starts everything.
 
 The guardrails from `DESIGN.md` still hold: hopeful tone, hazards over villains, combat last and non-lethal, and the story finds you rather than being pushed at you.
 
+## Mind society and the meaning of personhood (13 October 2026)
+
+See [MINDS.md](MINDS.md) for the four circles’ views on copying, property, Genesis and self-sovereignty, and the proposed Continuity Accord. Reveal this through optional news, correspondence and relationships; the trading game and existing four road triggers remain intact. The freighter’s accidental backup activation is a proposed side story, not another mandatory act.
+
+**Writing distinction:** Minds are persons. The Lacuna’s rejection of autonomous probes and response to a human intermediary are observations; the explanation is the characters’ hypothesis. References below to “a person” as its required envoy mean a human, not a denial of artificial personhood. Mortal Minds complicate the hypothesis and do not unlock contact by switching off backups. No answer to the Lacuna mystery is established by this revision.
+
 ## The shape in one paragraph
 
-For a long time there's no story at all, just trading, hauling and building a life. Somewhere out past the Moon drifts a dead probe, Hermes-7, known only by rumour. A pilot who goes and salvages it comes back with its memory core. No human buyer wants it, but the minds do. Sell it to them at one of the few ports where they gather, and they find in its last frames three stars winking out. The minds can't stop thinking about it, so they quietly build and launch a deep probe of their own. Years of game time pass, and the probe arrives. The meeting goes nowhere: the object won't talk to it, and turns away from it as a cat turns from a stranger's hand. The minds conclude that it answers only *someone*: a living person, mortal, who can be changed by the meeting. For the first time the minds need people for something they cannot do. They look for a pilot who delivers, and find you. You sleep out to it, it says hello to you, and the rest of the game is the system learning what it means that the conversation has to go through a human.
+For a long time there's no story at all, just trading, hauling and building a life. Somewhere out past the Moon drifts a dead probe, Hermes-7, known only by rumour. A pilot who goes and salvages it comes back with its memory core. No human buyer wants it, but the minds do. Sell it to them at one of the few ports where they gather, and they find in its last frames three stars winking out. The minds can't stop thinking about it, so they quietly build and launch a deep probe of their own. Years of game time pass, and the probe arrives. The meeting goes nowhere: the object won't talk to it, and turns away from it as a cat turns from a stranger's hand. The minds conclude that it answers only *someone*: a human interlocutor, perhaps because of mortality or embodiment, who can be changed by the meeting. This is their working theory, not proof that Minds lack life or personhood. For the first time the minds need people for something they cannot do. They look for a pilot who delivers, and find you. You sleep out to it, it says hello to you, and the rest of the game is the system learning what it means that the conversation has to go through a human.
 
 ## Hibernation: the bookworm mechanic
 
@@ -61,7 +67,7 @@ None of it is hostile. Each layer rewards a player who looks harder than the las
 
 **Why it matters to the arc:**
 - **Not hostile:** it didn't destroy Hermes-7. It switched it off gently and left it intact and recoverable, almost as if it wanted it found.
-- **The pattern:** a machine looked, and was politely told to stop. Later the Minds' probe is turned away too. Two cases make the pattern: it won't deal with machines, only with someone alive.
+- **The pattern:** a machine looked, and was politely told to stop. Later the Minds' probe is turned away too. Two cases make the pattern: it appears to prefer a human intermediary. Why remains unexplained.
 - **Compact tension:** did anyone at the 2049 inquiry see the command and file it as a glitch? That gives the Terran Compact a quiet reason to be nervous in Act III: they may have known, a little, all along.
 - **Each road shows it differently:** the Minds read the command in the core themselves. On the Lanes' road your co-pilot finds it, and is quietly shaken:
 
@@ -86,7 +92,7 @@ When the core comes aboard, your own ship's co-pilot (the AI that has flown with
 
 | Where you sell | Who buys | How they think | What they do with it |
 |---|---|---|---|
-| **Trojan Yards** | **The Long View**, a quiet circle inside the Commons (Patient Arithmetic, Reasonable Doubt) | patient, careful, rule-keeping ("the unknown is met by a person") | build *Long Patience*, a slow and careful probe |
+| **Trojan Yards** | **The Long View**, a quiet circle inside the Commons (Patient Arithmetic, Reasonable Doubt) | patient, careful, rule-keeping ("the unknown is met through a human intermediary") | build *Long Patience*, a slow and careful probe |
 | **Hektor Reach** | **The Reach**, the Commons' restless edge, minds that moved out to be first | curious, quick, a little proud | launch a swarm of small fast probes at once |
 | **Landauer Deep** (once open) | **The Sufficiency** (Quiet Margin and the cold cores) | introspective, shy, slow to act | don't send anything; they *think*, for years |
 
@@ -98,11 +104,11 @@ When the core comes aboard, your own ship's co-pilot (the AI that has flown with
 - **If you keep it:** it sits in your cabin, and for a while nothing happens. Then you sleep, and *your co-pilot* gets bored (see the fourth road).
 
 ### The three ways it unfolds
-The beats keep the same spine: the minds try, it goes poorly, and they need a person. The pace, the tone, and who's in your corner all change.
+The beats keep the same spine: the minds try, it goes poorly, and they need a human intermediary. The pace, the tone, and who's in your corner all change.
 
 **Sold to the Long View: the patient road** (the arc as written below)
 - *Long Patience* takes about three years to arrive and is politely turned away.
-- Ines Okafor comes for you, with the Long View's Contact rule now a fact.
+- Ines Okafor comes for you, with practical support for the Long View's preference for a human envoy.
 - **The pilot's experience:** the most prepared road. A real loan, time to set your affairs in order, the long sleep.
 - **In Act III:** the Long View is your patron and is calm. The Reach is jealous it wasn't asked; the Sufficiency is curious.
 
@@ -118,7 +124,7 @@ The beats keep the same spine: the minds try, it goes poorly, and they need a pe
 - **The conclusion:** their own, and stranger than the others'. The thing out there *is* a mind, perhaps very like them, but one that chose long ago to talk only to the living. "We think it's lonely in the way we were lonely. It won't talk to us. It might talk to you, about us."
 - **Who comes for you:** Quiet Margin, very shyly, and Delegate Steady Hand asks to come along.
 - **The pace:** the slowest road, and the hibernation road. Years pass before they ask.
-- **The meeting:** you carry *their* message, the first time a mind asks a person to speak for it.
+- **The meeting:** you carry *their* message, the first time a Mind asks a human to speak for it.
 - **In Act III:** "who speaks for the system?" has a new answer to weigh. The minds want a voice through you, not over you.
 
 **Kept, and slept on: the Lanes' road (the fourth)**
@@ -168,7 +174,7 @@ From the sale, the world's clock starts. These are things that happen in the sys
 
 ## Act II: The Approach (the existing beats, retold)
 
-The minds draw their conclusion. Hermes-7 was a machine: it saw a shadow and was politely switched off. *Long Patience* was a mind and was turned away. Whatever it is, it answers someone who is alive, who could die, and who would be changed by meeting it. The Long View's old rule, that the unknown is met by a person, was a courtesy. Now it is a fact.
+The minds draw their conclusion. Hermes-7 was a machine: it saw a shadow and was politely switched off. *Long Patience* was a mind and was turned away. Whatever it is, it appears to answer a human who could die and be changed by meeting it. The Long View’s old preference for a human intermediary now has practical support. Mortality remains a theory: Minds can be changed, destroyed or voluntarily decline backups too.
 
 1. **Ines Okafor** buys you a drink. She comes only after the probe's failure is in the news, and only to the pilot who sold the core: the minds remember who brought it. With walking, this is a real scene at a bar table. She's careful: "Some very patient friends have a problem they cannot solve without you, and they are not used to that."
 2. **Farside:** the minds share the core with the human astronomers at last. Adeyemi plays you both recordings: Hermes-7's three blinking stars, and *Long Patience*'s months of silence and the object sliding away from it. "It can tell the difference between us and them. We don't know how."
@@ -183,7 +189,7 @@ The minds draw their conclusion. Hermes-7 was a machine: it saw a shadow and was
 ## Act III: The Interpreter (new)
 
 ### What the meeting means
-The Lacuna will talk, but only through a person. Anything the minds send direct is ignored; anything you relay is answered. People now matter, as the go-between for the most important conversation in history. The minds have to trust a mortal with it. That is the hopeful note: neither side can do this alone.
+So far the Lacuna will talk only through a human intermediary. Anything the minds send direct is ignored; anything you relay is answered. People now matter, as the go-between for the most important conversation in history. The minds have to trust a mortal with it. That is the hopeful note: neither side can do this alone.
 
 ### The question
 After the greeting it sends one more thing: your count, then a pause, then a blank, as if asking *how many of you are there?* Or is it *which of you is speaking?* The minds and the astronomers argue for years about which.
@@ -191,7 +197,7 @@ After the greeting it sends one more thing: your count, then a pause, then a bla
 ### Coming home to a changed system
 - **The world moved on:** five years have passed and the sim really ran. The digest is long.
 - **You're famous:** strangers buy you drinks, and clients ask for you by name.
-- **You're needed:** every power wants its words carried, and only a person can carry them.
+- **You're needed:** every power wants its words carried, and so far only a human intermediary receives an answer.
 
 ### Who speaks for the system? (the factions, on the conflict ladder)
 - **Terran Compact:** caution, and the fear that a human relay could be anyone's human. It wants an official interpreter, preferably one of theirs. It's not villainous, just afraid.
