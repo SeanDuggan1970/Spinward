@@ -181,6 +181,34 @@ static func stowed_radius(model: Dictionary) -> float:
 	return r
 
 
+## A sphere round the ship's origin that holds the hull with its panels out, however
+## they aim: each joint adds its offset and the reach of what hangs off it, so any
+## turn of a radiator or array stays inside.
+static func deployed_reach(model: Dictionary) -> float:
+	var rig: Dictionary = model["rig"]
+	var was := [rig.get("fold", 0.0), rig.get("fold_to", 0.0)]
+	set_fold(rig, 0.0, true)
+	var root: Node3D = model["node"]
+	var r := _reach(root, root.find_child("DrivePlume", true, false))
+	set_fold(rig, float(was[0]), true)
+	rig["fold_to"] = was[1]
+	return r
+
+
+static func _reach(n: Node, plume: Node) -> float:
+	var r := 0.0
+	if n is MeshInstance3D and (n as MeshInstance3D).mesh != null:
+		var box: AABB = (n as MeshInstance3D).mesh.get_aabb()
+		for i in 8:
+			r = maxf(r, box.get_endpoint(i).length())
+	for c in n.get_children():
+		if c == plume or not c is Node3D:
+			continue
+		var s: Vector3 = (c as Node3D).scale.abs()
+		r = maxf(r, (c as Node3D).position.length() + _reach(c, plume) * maxf(s.x, maxf(s.y, s.z)))
+	return r
+
+
 ## In transit, deploy over game seconds after station clearance. Sites have no
 ## automatic docking fold; ship.stowed always takes priority over this schedule.
 static func transit_fold(location: Dictionary, t: float, ship: Dictionary = {}, from_station: bool = true, clear_after_s: float = DEPLOY_AFTER_S) -> float:
