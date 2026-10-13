@@ -24,6 +24,8 @@ var lift_to_s := 0.0
 ## Held in the cradle for traffic before anything moves (location.hold_s, set by the
 ## sim from sim/traffic.gd).
 var hold_s := 0.0
+## How long the bay doors take to open (bays.door_s), when we leave through them.
+var door_s := 0.0
 
 
 func setup(model: Dictionary, data, location: Dictionary) -> void:
@@ -47,6 +49,7 @@ func setup(model: Dictionary, data, location: Dictionary) -> void:
 		var bay_r := maxf(float(bays["radius_m"]), port_r * float(bays["port_margin"]))
 		fits_bay = ShipRig.stowed_radius(model) + float(bays["clearance_m"]) <= bay_r
 		if fits_bay:
+			door_s = float(bays["door_s"])
 			opening_s = maxf(float(motion["move_at_s"]), float(motion["doors_at_s"]) + float(bays["door_s"]))
 			# Models.station puts the collar 0.2 m forward of the back wall.
 			front = float(bays["depth_m"]) - 0.2 + Bay.IRIS_FLANGE_M
@@ -81,6 +84,35 @@ func axis_basis(facing: Basis, t: float) -> Basis:
 	return facing * Basis(Vector3.BACK, fposmod(t * spin_rate, TAU))
 
 
+## Game seconds the panels and dish take to snap out once clear (balance.undock.deploy_s).
+func deploy_s() -> float:
+	return float(motion.get("deploy_s", 1.0 / ShipRig.FOLD_RATE))
+
+
+## When (game seconds after departure) the ship is out, deployed and has stopped
+## bouncing: alive and ready for the voyage.
+func alive_s() -> float:
+	if not station:
+		return 0.0
+	var spring := ShipRig.deploy_straight_s(deploy_s()) + 3.0 * float(motion["spring_damp_s"])
+	return clear_after_s + maxf(maxf(deploy_s(), spring), float(motion["roll_stop_s"]) + float(motion["settle_s"]))
+
+
+## The co-pilot's moments on the way out, [game seconds after departure, key]
+## (data/npcs.json chatter.copilot_undock), in order.
+func cues() -> Array:
+	if not station:
+		return []
+	var out := [[float(motion["wake_s"]), "wake"]]
+	if fits_bay:
+		# Half open: the stars show through.
+		out.append([float(motion["doors_at_s"]) + door_s * 0.5, "doors"])
+	out.append([float(motion["move_at_s"]), "backing"])
+	out.append([clear_after_s, "clear"])
+	out.append([alive_s(), "free"])
+	return out
+
+
 func in_corridor(elapsed: float) -> bool:
 	return station and elapsed < clear_after_s
 
@@ -89,7 +121,9 @@ func aim(rig: Dictionary, basis: Basis, sun: Vector3, target: Vector3, location:
 	var game_dt := maxf(0.0, t - float(rig.get("transit_t", t)))
 	var manual := bool(ship.get("stowed", false))
 	var was_manual := bool(rig.get("transit_manual", false))
-	var fold := ShipRig.transit_fold(location, t, ship, station, clear_after_s)
+	var fold := ShipRig.transit_fold(location, t, ship, station, clear_after_s, deploy_s())
+	var since := t - float(location.get("depart_t", t)) - clear_after_s - ShipRig.deploy_straight_s(deploy_s())
+	rig["spring"] = ShipRig.deploy_spring(motion, since) if station and not manual else 0.0
 	if not rig.has("transit_t") or (not manual and not was_manual and not rig.get("manual_unfolding", false)):
 		# Automatic deployment has an absolute game-time schedule, including reloads.
 		ShipRig.set_fold(rig, fold, true)

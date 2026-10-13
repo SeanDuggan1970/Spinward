@@ -10,6 +10,8 @@
 ## For docking the panels stow: each turns flat (in the ship's X-Z plane), then folds
 ## up accordion-fashion at its boom's end, and the dish parks. rig["fold_to"] (0 out,
 ## 1 stowed) is where the view wants them; rig["fold"] follows it at FOLD_RATE.
+## rig["spring"] (a share of the fold, usually 0) flexes the deployed panels and the
+## dish's mast past straight, for the bounce as they snap out leaving port.
 ##
 ## The high-gain dish turns on azimuth (about the mast, +Y) and elevation, toward
 ## the comms target, typically the point-ahead direction from sim/light_time.gd.
@@ -83,6 +85,7 @@ static func aim(rig: Dictionary, ship_basis: Basis, sun: Vector3, target: Vector
 	# Panel normal (0, cos a, sin a) after turning a about X; face the Sun's Y-Z part.
 	var face := atan2(s.z, s.y)
 	var fold := _fold_step(rig, dt)
+	var spring := float(rig.get("spring", 0.0)) if fold <= FLATTEN else 0.0
 	# Stowing, the panels first turn flat, then fold; deploying, the reverse.
 	var flat := clampf(fold / FLATTEN, 0.0, 1.0)
 	var bend := clampf((fold - FLATTEN) / (1.0 - FLATTEN), 0.0, 1.0)
@@ -97,7 +100,7 @@ static func aim(rig: Dictionary, ship_basis: Basis, sun: Vector3, target: Vector
 			node.rotation.x = wrapf(lerp_angle(want, 0.0, flat), -PI, PI)
 		else:
 			node.rotation.x = _slew(node.rotation.x, want, ARRAY_RATE, dt)
-		_bend(a, bend)
+		_bend(a, bend - spring)
 	var dish: Dictionary = rig.get("dish", {})
 	if dish.is_empty() or not is_instance_valid(dish["az"]):
 		return
@@ -111,7 +114,7 @@ static func aim(rig: Dictionary, ship_basis: Basis, sun: Vector3, target: Vector
 		if fold_node != null and is_instance_valid(fold_node):
 			az = lerp_angle(az, PI, flat)
 			el = lerpf(el, 0.0, flat)
-			(fold_node as Node3D).rotation.x = bend * PI * 0.5
+			(fold_node as Node3D).rotation.x = (bend - spring) * PI * 0.5
 			if dt < 0.0 or flat >= 1.0:
 				az_node_set(dish, az, -el)
 				return
@@ -119,7 +122,7 @@ static func aim(rig: Dictionary, ship_basis: Basis, sun: Vector3, target: Vector
 			az = 0.0 if fold >= 1.0 else az * (1.0 - fold)
 			el = 0.0 if fold >= 1.0 else el * (1.0 - fold)
 	elif dish.get("fold") != null and is_instance_valid(dish["fold"]):
-		(dish["fold"] as Node3D).rotation.x = 0.0
+		(dish["fold"] as Node3D).rotation.x = -spring * PI * 0.5
 	var az_node: Node3D = dish["az"]
 	var el_node: Node3D = dish["el"]
 	az_node.rotation.y = _slew(az_node.rotation.y, az, DISH_RATE, dt)
@@ -172,14 +175,30 @@ static func stowed_radius(model: Dictionary) -> float:
 	return r
 
 
-## In transit, deploy over game seconds after station clearance. Sites have no
-## automatic docking fold; ship.stowed always takes priority over this schedule.
-static func transit_fold(location: Dictionary, t: float, ship: Dictionary = {}, from_station: bool = true, clear_after_s: float = DEPLOY_AFTER_S) -> float:
+## In transit, deploy over deploy_s game seconds after station clearance, eagerly:
+## gathering speed until the panels and mast snap straight (deploy_straight_s), then
+## the panels whip round to the Sun. Sites have no automatic docking fold;
+## ship.stowed always takes priority over this schedule.
+static func transit_fold(location: Dictionary, t: float, ship: Dictionary = {}, from_station: bool = true, clear_after_s: float = DEPLOY_AFTER_S, deploy_s: float = 1.0 / FOLD_RATE) -> float:
 	if ship.get("stowed", false):
 		return 1.0
 	if not from_station:
 		return 0.0
-	return clampf(1.0 - maxf(0.0, t - float(location.get("depart_t", -INF)) - clear_after_s) * FOLD_RATE, 0.0, 1.0)
+	var x := clampf((t - float(location.get("depart_t", -INF)) - clear_after_s) / maxf(deploy_s, 0.01), 0.0, 1.0)
+	return 1.0 - x * x
+
+
+## Game seconds into a transit_fold deployment when the panels and mast are straight.
+static func deploy_straight_s(deploy_s: float) -> float:
+	return deploy_s * sqrt(1.0 - FLATTEN)
+
+
+## The bounce as panels and dish snap out (cfg: balance.undock), as a share of the
+## fold: since_s game seconds after they snap straight, a damped swing past it.
+static func deploy_spring(cfg: Dictionary, since_s: float) -> float:
+	if since_s < 0.0:
+		return 0.0
+	return float(cfg["spring_share"]) * exp(-since_s / float(cfg["spring_damp_s"])) * sin(TAU * float(cfg["spring_hz"]) * since_s)
 
 
 static func _fold_step(rig: Dictionary, dt: float) -> float:

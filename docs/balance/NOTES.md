@@ -308,3 +308,10 @@ Full write-up: [2026-10-07-economy-together.md](2026-10-07-economy-together.md).
 - After: the estimate matched the fastest affordable plotted route on all 300 trips. It takes 0.25 s on average and 0.76 s at worst per trip, remembered for the hour.
 - Deadlines get longer where gravity makes trips slower, and pay rises with them (pay is per day of the reference trip). Expect cislunar courier jobs to pay noticeably more per job but about the same per day flown.
 - Balance bot re-run (5 seeds, 180 days, upgrade=1): identical, seed for seed (mean 105,630 cr). The bot only takes a job bound where its trade is already going, and in these runs it saw none (no jobs_seen in its ECON rows, before or after), so it doesn't see the change. Worth a hand-played check of courier income.
+
+
+## A more cinematic station departure (2026-10-13)
+
+- Changed data: `balance.undock` gains `wake_s`, `deploy_s` and the deploy bounce (`spring_share`, `spring_hz`, `spring_damp_s`); `time.departure_ramp` moves from [[60, 10], [120, 100], [420, 1000]] to [[120, 10], [180, 100], [480, 1000]]; `npcs.json` gains `chatter.copilot_undock`.
+- Why the ramp moved: since the docking hall went in, a ship takes about 72 game seconds to clear the tunnel (64 to 72 s across the hulls), so ×10 started while it was still inside and the 25 s unfold played in 2.5 real seconds. The slowest hull is out and deployed by about 80 s and then turns for its burn; ×10 waits until 120 s.
+- These are view and clock numbers. Balance bot re-run (5 seeds, 180 days, upgrade=1): identical, seed for seed, mean 105,630 cr, median first upgrade day 10.7.

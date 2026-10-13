@@ -883,9 +883,14 @@ Sean's direction (2026-10-10): the ship should leave through the bay doors, seen
 - **The timeline** (`view/flight/undock.gd`, `view/flight/departure.gd`, `balance.undock`, game seconds since departure):
   - At 1 s the doors start to open (12 s).
   - Once the doors are fully open (13 s with the current settings), the ship eases astern on its thrusters, gathering way at 0.2 m/s² to 2.5 m/s. This uses the later of `move_at_s` and the end of the door animation.
-  - Once the whole hull's turning envelope, including deployed panels, is 8 m past the mouth, the panels and dish unfold over 25 game seconds and the roll jets brake its spin over 5 s. Clearance depends on the current ship's dimensions.
+  - Once the whole hull's turning envelope, including deployed panels, is 8 m past the mouth, the panels and dish snap out over 7 game seconds (`deploy_s`, it was 25 s) and the roll jets brake its spin over 5 s. Clearance depends on the current ship's dimensions.
   - After 3 s more it turns for its burn.
-  - `time.departure_ramp` holds ×1 for the first 60 s for this (it was 20 s).
+  - `time.departure_ramp` holds ×1 for the first 120 s for this (it was 60 s, which jumped to ×10 while a ship was still in the hall's tunnel, about 72 s to clear, so the unfolding flashed past). `tests/departure_view.gd` checks every hull from every station is out, deployed and starting its turn at least 10 s before the first step.
+
+Sean's direction (2026-10-13): leaving a station needs more cinema. The panels and dish should open aggressively, the ship's AI should show some personality, keen to fly free, and the ship coming alive should be seen before ×10. The player can always speed it up.
+
+- **Eager deployment** (`ShipRig.transit_fold`, `ShipRig.deploy_spring`): the panels and dish mast gather speed as they open (not a steady fold), snap straight, then bounce past straight and settle (`spring_share` of the fold at `spring_hz`, dying over `spring_damp_s`), while the panels whip round to the Sun. Docking and the stealth fold keep the slow, steady `FOLD_RATE`.
+- **The co-pilot talks it out** (`view/flight/departure_calls.gd`, lines in `data/npcs.json` `chatter.copilot_undock`): waking the ship at 2 s, the doors, backing out, clear of the bay, and free once everything is out. Lines go to the notices and the comms log, in every transit view. A moment the clock has sped more than 30 s past goes unsaid.
 - **Lockstep:** in the bay the ship is held on the berth's axis, turning with the station's spin, so the tunnel and doors stand still around it. Once clear its roll brakes smoothly to a stop. Then its attitude blends into normal flight (rolled to the Sun) as it turns.
 - **The camera** (follow view's "undock" set-up, one unbroken shot until the ship turns):
   - It rides in the ship's frame, so it turns with ship and station.
@@ -1011,7 +1016,7 @@ Sean (2026-10-07): a ship passing in front of a gas giant has no depth cues, "th
 
 **Leaving and arriving like a film.**
 - **Time** (`travel_system._time_ramps`, data in `balance.time`):
-  - Departure drops to x1 while the ship backs off the port, then steps up (`departure_ramp`: 20 s at x1, then x10 and x100 for a few seconds each, x1000 about 30 s out), unless the pilot picks a scale of their own. After backing out nose-first, the ship turns to point along its first burn and holds there until the drive lights.
+  - Departure drops to x1 while the ship backs off the port, then steps up (`departure_ramp`: 120 s at x1 while the ship backs out and comes alive, then x10 at 2 game minutes, x100 at 3 and x1000 at 8), unless the pilot picks a scale of their own. After backing out nose-first, the ship turns to point along its first burn and holds there until the drive lights.
   - Coming in, time is capped ever lower as the port nears (`approach_caps`), so the last ten seconds play at x1.
 - **The ship view** (`follow_view.gd`) shows the ports at each end for the first and last 20 minutes of the trip.
   - Leaving: the port sits off the nose, docking face toward us, and falls away as we back out nose-first, turn and go.

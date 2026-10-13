@@ -2587,12 +2587,13 @@ func test_time_ramps() -> void:
 	# Any hold in the cradle for traffic comes first; the ramp counts from its end.
 	for _i in int(ceil(float(s.location.get("hold_s", 0.0)) / 0.05)):
 		sim.tick(0.05)
-	for _i in 1000:
+	var first_step := float(sim.data.balance["time"]["departure_ramp"][0][0])
+	for _i in int((first_step - 10.0) / 0.05):
 		sim.tick(0.05)
-	check(s.time_scale == 1.0, "Fifty seconds out, still at x1 to watch the ship back out of the bay (%.0f)" % s.time_scale)
+	check(s.time_scale == 1.0, "%.0f seconds out, still at x1 to watch the ship back out and come alive (%.0f)" % [first_step - 10.0, s.time_scale])
 	for _i in 500:
 		sim.tick(0.05)
-	check(s.time_scale == 1000.0, "Seventy-five seconds out, time has stepped up to x1000 (%.0f)" % s.time_scale)
+	check(s.time_scale == 1000.0, "25 seconds later, time has stepped up to x1000 (%.0f)" % s.time_scale)
 	s.time_scale = 100000.0
 	var last_scale := -1.0
 	var seen_slow := false
