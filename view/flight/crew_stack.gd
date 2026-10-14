@@ -83,7 +83,8 @@ static func _lounge(r: float, l: float, ctx: Dictionary) -> Dictionary:
 	for a in [deg_to_rad(80.0), deg_to_rad(100.0)]:
 		var d := Vector3(cos(a), sin(a), 0.0)
 		n.add_child(HullKit.handrail(d * r + Vector3(0, 0, l * 0.08), d * r + Vector3(0, 0, l * 0.92), d))
-	return {"node": n, "radius": r + 0.3, "anchors": {"wings": Vector3(r, 0, l * 0.5)}}
+	# The navigation lights sit on the lounge's beam, ahead of the solar wings.
+	return {"node": n, "radius": r + 0.3, "anchors": {"wings": Vector3(r, 0, l * 0.5), "nav": Vector3(r, 0, l * 0.24)}}
 
 
 static func _quarters(r: float, l: float, cabins: int, ctx: Dictionary) -> Dictionary:

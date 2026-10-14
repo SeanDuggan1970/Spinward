@@ -1,13 +1,16 @@
 ## Drives a ship model's moving parts (the rig from ship_builder.gd).
 ##
-## Every panel turns about its boom, the ship's X axis. A panel can only face a
-## direction in the ship's Y-Z plane, so in transit the ship rolls about its line of
-## travel (roll_to_sun) to put the Sun in that plane; then solar wings face it
-## square on and radiators turn edge-on to it, so they shed heat instead of
-## soaking up sunlight. While docking the pilot owns the roll, and the panels do the
-## best a single hinge can.
+## Every panel turns about its boom, the ship's X axis (or, for the turned pair of a
+## cross of radiators, X rolled by the entry's "roll" about the keel). A panel on an
+## X boom can only face a direction in the ship's Y-Z plane, so in transit the ship
+## rolls about its line of travel (roll_to_sun) to put the Sun in that plane; then
+## solar wings face it square on and radiators turn edge-on to it, so they shed heat
+## instead of soaking up sunlight. A radiator on a Y boom is edge-on to that plane
+## already, so it holds square to the ship's X axis. While docking the pilot owns
+## the roll, and the panels do the best a single hinge can.
 ##
-## For docking the panels stow: each turns flat (in the ship's X-Z plane), then folds
+## For docking the panels stow: each turns flat (in the plane of its boom and the
+## keel: X-Z, or Y-Z for a turned pair), then folds
 ## up accordion-fashion at its boom's end, and the dish parks. rig["fold_to"] (0 out,
 ## 1 stowed) is where the view wants them; rig["fold"] follows it at FOLD_RATE.
 ## rig["spring"] (a share of the fold, usually 0) flexes the deployed panels and the
@@ -94,7 +97,13 @@ static func aim(rig: Dictionary, ship_basis: Basis, sun: Vector3, target: Vector
 		var node: Node3D = a["node"]
 		if not is_instance_valid(node):
 			continue
-		var want: float = face if a["kind"] == "solar" else face + PI * 0.5
+		var aim_face := face
+		var roll := float(a.get("roll", 0.0))
+		if roll != 0.0:
+			# The boom's own frame: the Sun as seen with the boom laid along X.
+			var r := Basis(Vector3.BACK, -roll) * s
+			aim_face = atan2(r.z, r.y)
+		var want: float = aim_face if a["kind"] == "solar" else aim_face + PI * 0.5
 		if fold > 0.0:
 			# Ease from the tracking angle to flat as the stow begins.
 			node.rotation.x = wrapf(lerp_angle(want, 0.0, flat), -PI, PI)
@@ -175,6 +184,34 @@ static func stowed_radius(model: Dictionary) -> float:
 	return r
 
 
+## A sphere round the ship's origin that holds the hull with its panels out, however
+## they aim: each joint adds its offset and the reach of what hangs off it, so any
+## turn of a radiator or array stays inside.
+static func deployed_reach(model: Dictionary) -> float:
+	var rig: Dictionary = model["rig"]
+	var was := [rig.get("fold", 0.0), rig.get("fold_to", 0.0)]
+	set_fold(rig, 0.0, true)
+	var root: Node3D = model["node"]
+	var r := _reach(root, root.find_child("DrivePlume", true, false))
+	set_fold(rig, float(was[0]), true)
+	rig["fold_to"] = was[1]
+	return r
+
+
+static func _reach(n: Node, plume: Node) -> float:
+	var r := 0.0
+	if n is MeshInstance3D and (n as MeshInstance3D).mesh != null:
+		var box: AABB = (n as MeshInstance3D).mesh.get_aabb()
+		for i in 8:
+			r = maxf(r, box.get_endpoint(i).length())
+	for c in n.get_children():
+		if c == plume or not c is Node3D:
+			continue
+		var s: Vector3 = (c as Node3D).scale.abs()
+		r = maxf(r, (c as Node3D).position.length() + _reach(c, plume) * maxf(s.x, maxf(s.y, s.z)))
+	return r
+
+
 ## In transit, deploy over deploy_s game seconds after station clearance, eagerly:
 ## gathering speed until the panels and mast snap straight (deploy_straight_s), then
 ## the panels whip round to the Sun. Sites have no automatic docking fold;
@@ -199,6 +236,18 @@ static func deploy_spring(cfg: Dictionary, since_s: float) -> float:
 	if since_s < 0.0:
 		return 0.0
 	return float(cfg["spring_share"]) * exp(-since_s / float(cfg["spring_damp_s"])) * sin(TAU * float(cfg["spring_hz"]) * since_s)
+
+
+## Leaving: stowed until after_s game seconds in, then unfolding at FOLD_RATE.
+## Driven by game time, so the stroke keeps pace with the ship at any time scale.
+static func unfold_after(since_s: float, after_s: float) -> float:
+	return clampf(1.0 - maxf(0.0, since_s - after_s) * FOLD_RATE, 0.0, 1.0)
+
+
+## Arriving: folding at FOLD_RATE so the panels are stowed by_s game seconds before
+## the ship gets in (to_go_s from now).
+static func stow_before(to_go_s: float, by_s: float) -> float:
+	return clampf(1.0 - (to_go_s - by_s) * FOLD_RATE, 0.0, 1.0)
 
 
 static func _fold_step(rig: Dictionary, dt: float) -> float:

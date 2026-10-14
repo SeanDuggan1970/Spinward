@@ -36,7 +36,6 @@ const SKY_DISTANCE := 60000.0
 ## NPC traffic is shown on the lanes for this long either side of docking (game seconds).
 const LANE_WINDOW := 3.0 * 3600.0
 ## Lane traffic stows its panels over this share of the lane nearest the station.
-const TRAFFIC_STOW := 0.3
 const LANE_LENGTH := 15000.0
 ## Waiting on a bay's doors, ships hold this far off the mouth.
 const BAY_HOLD_M := 40.0
@@ -1022,8 +1021,12 @@ func _move_traffic(dt: float) -> void:
 			node.basis = ShipRig.roll_to_sun(Vector3.BACK, sun)
 		node.position = offset + Vector3(0, 0, z0 + span * f)
 		target = -node.position if entry["mode"] == "inbound" else entry.get("dest_dir", Vector3.BACK)
-		# Close in to the station, panels stowed: folding coming in, unfolding going out.
-		ShipRig.set_fold(entry["rig"], 1.0 if f < TRAFFIC_STOW else 0.0)
+		# Close in to the station, panels stowed: folding coming in, unfolding going out,
+		# on game time so the stroke keeps pace with the ship at any time scale.
+		var cfg: Dictionary = sim.data.balance["traffic"]
+		var fold := ShipRig.stow_before(float(loc["arrive_t"]) - t, float(cfg["stow_by_s"])) if entry["mode"] == "inbound" \
+			else ShipRig.unfold_after(t - float(loc["depart_t"]), float(cfg["unfold_after_s"]))
+		ShipRig.set_fold(entry["rig"], fold, true)
 		ShipRig.aim(entry["rig"], node.basis, sun, target, dt)
 
 

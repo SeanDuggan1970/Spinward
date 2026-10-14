@@ -16,8 +16,10 @@
 ## show it while the drive burns and hide it otherwise; set_throttle dims it.
 ##
 ## Moving parts are returned as a rig for view/flight/ship_rig.gd: every panel (solar
-## and radiator) hangs on a boom along the ship's X axis, all in one plane, and turns
-## about that boom; the high-gain dish sits on an azimuth/elevation mount.
+## and radiator) hangs on a boom across the keel and turns about that boom. Booms lie
+## along the ship's X axis, except a cross of radiators, whose second pair is rolled
+## a quarter onto Y (the rig entry's "roll"); the high-gain dish sits on an
+## azimuth/elevation mount.
 extends RefCounted
 
 const Kit := preload("res://view/flight/kit.gd")
@@ -85,10 +87,14 @@ static func build(ship_state: Dictionary, data, livery: Dictionary) -> Dictionar
 	parts.add_child(Kit.truss(keel_to - keel_from, truss_w, ctx["mats"]["steel"], Vector3(0, 0, (keel_from + keel_to) * 0.5)))
 	# Navigation lights, in fixtures on the hull (Kit.nav_light): red to port, green to
 	# starboard, pulsing together, and a white anti-collision strobe on the keel aft.
-	var crew_w := float(sections[0].get("hull_r", sections[0]["radius"])) if sections.size() > 1 else 2.0
-	var crew_z := float(sections[0]["length"]) * 0.55 if sections.size() > 1 else 2.0
-	parts.add_child(Kit.nav_light(Color("ff3a2a"), Vector3(-crew_w, 0, crew_z), Vector3.LEFT, 0.2, "flash", 1.6, 0.0))
-	parts.add_child(Kit.nav_light(Color("3aff5a"), Vector3(crew_w, 0, crew_z), Vector3.RIGHT, 0.2, "flash", 1.6, 0.0))
+	# Each forward section says where its skin is ("nav": x the hull's half-width there,
+	# z along the section), so the fixtures sit on the plating, not out in space.
+	var nav := Vector3(2.0, 0, 2.0)
+	if sections.size() > 1:
+		var s0: Dictionary = sections[0]
+		nav = s0.get("nav", Vector3(float(s0["radius"]) * 0.8, 0, float(s0["length"]) * 0.3))
+	parts.add_child(Kit.nav_light(Color("ff3a2a"), Vector3(-nav.x, nav.y, nav.z), Vector3.LEFT, 0.2, "flash", 1.6, 0.0))
+	parts.add_child(Kit.nav_light(Color("3aff5a"), nav, Vector3.RIGHT, 0.2, "flash", 1.6, 0.0))
 	parts.add_child(Kit.nav_light(Color("f4f8ff"), Vector3(0, truss_w * 0.55, length * 0.7), Vector3.UP, 0.16, "strobe", 1.4, 0.4))
 	var root := Node3D.new()
 	parts.position.z = -length * 0.5
@@ -380,7 +386,15 @@ static func _crew(m: Dictionary, ctx: Dictionary) -> Dictionary:
 		n.add_child(Kit.box(Vector3(0.22, 0.22, 0.3), Kit.mat("black"), Vector3(side * w * 0.35, -h * 0.5 - 0.35, deck_z - 0.35)))
 	for c in [Vector2(1, 1), Vector2(-1, 1), Vector2(1, -1), Vector2(-1, -1)]:
 		n.add_child(rcs(Vector3(c.x * w * 0.5, c.y * h * 0.5, deck_z - deck_len * 0.3), Vector3(c.x, c.y, 0), ctx))
-	return {"node": n, "length": nose_len + deck_len + hab_len, "radius": maxf(maxf(maxf(w, h) * 0.6 + 0.5, float(stack["radius"])), top.y + dish_r * 2.1 + 0.7), "hull_r": maxf(w, h) * 0.6 + 0.5}
+	return {"node": n, "length": nose_len + deck_len + hab_len, "radius": maxf(maxf(maxf(w, h) * 0.6 + 0.5, float(stack["radius"])), top.y + dish_r * 2.1 + 0.7), "nav": _crew_nav(anchors, rooms_z, w, deck_z)}
+
+
+## Where the port and starboard lights go on a crew section: on the rooms' skin
+## when there are rooms, else on the flight deck's flank.
+static func _crew_nav(anchors: Dictionary, rooms_z: float, w: float, deck_z: float) -> Vector3:
+	if anchors.has("nav"):
+		return (anchors["nav"] as Vector3) + Vector3(0, 0, rooms_z)
+	return Vector3(w * 0.5, 0, deck_z)
 
 
 ## An uncrewed bus: an octagonal avionics drum, sensor turret, dishes; no windows.
@@ -413,7 +427,7 @@ static func _drone_bus(m: Dictionary, ctx: Dictionary) -> Dictionary:
 	stencil.position.z = 1.2 + l * 0.5
 	_name_stencils(stencil, ctx["livery"], Vector3(r * 1.7, r, l))
 	n.add_child(stencil)
-	return {"node": n, "length": 1.2 + l, "radius": r + 1.0}
+	return {"node": n, "length": 1.2 + l, "radius": r + 1.0, "nav": Vector3(r, 0, 1.2 + l * 0.15)}
 
 
 ## A passenger can, next to the crew: a pressure vessel with domed heads, rows of
@@ -712,6 +726,19 @@ static func _propulsion(tanks: Array, drives: Array, radiators: Array, ctx: Dict
 	n.add_child(Kit.cylinder(shield_r, 0.6, mats["steel"], Vector3(0, 0, shield_z), 16))
 	n.add_child(Kit.hazard_band(shield_r + 0.02, 0.5, Vector3(0, 0, shield_z), 20))
 	z += 0.8
+	# Radiators sit alongside the reactors, ahead of the bells; when they take more
+	# keel than the reactors do, the drives move aft on a longer thrust frame.
+	var stations := _radiator_stations(radiators, z, _cross_radiators(radiators.size(), ctx))
+	var rad_end: float = stations.pop_back()
+	var bell_z := INF
+	for d in drives:
+		if not d[1]["look"].get("shape", "") in ["sail", "climber"]:
+			bell_z = minf(bell_z, float(_nozzle(d[1], _size(d[1]))["z_t"]))
+	var frame_z := z
+	if bell_z < INF and not stations.is_empty():
+		z = maxf(z, rad_end + 0.3 - bell_z)
+	if z > frame_z + 0.01:
+		n.add_child(strut(Vector3(0, 0, frame_z - 0.2), Vector3(0, 0, z + 0.2), truss_w * 0.6, mats["steel"]))
 	# Thrust frame: the keel splits to carry each drive.
 	var drive_len := 0.0
 	for k in count:
@@ -722,42 +749,48 @@ static func _propulsion(tanks: Array, drives: Array, radiators: Array, ctx: Dict
 		unit.position = off + Vector3(0, 0, z)
 		n.add_child(unit)
 		if off.length() > 0.01:
-			n.add_child(strut(Vector3(0, 0, z - 0.2), off + Vector3(0, 0, z + ds.z * 0.3), 0.35, mats["steel"]))
+			n.add_child(strut(Vector3(0, 0, frame_z - 0.2), off + Vector3(0, 0, z + ds.z * 0.3), 0.35, mats["steel"]))
 		drive_len = maxf(drive_len, ds.z * 1.5 + 1.0)
 		radius = maxf(radius, off.length() + ds.x * 0.6)
 		if dm["look"].get("shape", "") == "sail":
 			radius = maxf(radius, float(dm["look"].get("span_m", 300.0)) * 0.72)
 	# Radiators hang off the drive section, where the heat is made: a yoke from the
-	# thrust frame just aft of the shadow shield, a coolant run from each reactor to the
-	# boom roots, the panels well clear of the nozzles. All in the ship's X-Z plane,
-	# pair after pair aft along the drives, never stacked, so each can turn edge-on to
-	# the Sun without shading the next.
+	# thrust frame, a coolant run from the nearest reactor to each boom root, the
+	# panels outboard of the nozzles. Pairs go on booms across the keel, either all
+	# in the ship's X-Z plane one after another aft (the dragonfly), or every second
+	# pair turned a quarter on the keel to stand in the Y-Z plane (the cross). Every
+	# panel turns about its own boom to stay edge-on to the Sun (ShipRig.aim).
 	var rad_mat := Livery.paint(ctx["livery"], Kit.COLOURS["dark"], {"finish": 1, "mismatch": 0.0, "panel_m": 0.35, "roughness": 0.6, "metallic": 0.3})
 	var clear_r := shield_r
 	for k in count:
 		var ds := _size(drives[k][1])
 		clear_r = maxf(clear_r, (offsets[k] as Vector3).length() + ds.x * 0.66 + 0.6)
-	var root_x := spread + drive_r * 0.55
-	var pair_z := z
-	for k in radiators.size():
-		var s := _size(radiators[k][1])
-		var side := 1.0 if k % 2 == 0 else -1.0
-		if side > 0.0:
-			pair_z += s.z * 0.5 + (0.3 if k == 0 else 0.6)
-		var root := Vector3(side * root_x, 0, pair_z)
-		var reach := maxf(1.2, clear_r - root_x)
-		n.add_child(boom_panel(root, side, reach, s.y, s.z, "radiator", rad_mat, ctx))
+	var root_r := spread + drive_r * 0.55
+	for st in stations:
+		var s: Vector3 = st["size"]
+		var side: float = st["side"]
+		var roll: float = st["roll"]
+		var turn := Basis(Vector3.BACK, roll)
+		var out := turn * Vector3(side, 0, 0)
+		var across := turn * Vector3(0, 0.35, 0)
+		var sz: float = st["z"]
+		var root := out * root_r + Vector3(0, 0, sz)
+		var reach := maxf(1.2, clear_r - root_r)
+		var arm := Node3D.new()
+		arm.basis = turn
+		arm.add_child(boom_panel(Vector3(side * root_r, 0, sz), side, reach, s.y, s.z, "radiator", rad_mat, ctx))
+		var entry: Dictionary = (ctx["rig"]["arrays"] as Array).back()
+		entry["roll"] = roll
+		n.add_child(arm)
 		# The yoke back to the thrust frame, and the hot loop out from the reactor.
-		n.add_child(rod(Vector3(0, 0, pair_z), root, 0.16, mats["steel"]))
+		n.add_child(rod(Vector3(0, 0, sz), root, 0.16, mats["steel"]))
 		var src: Vector3 = offsets[0] if count > 0 else Vector3.ZERO
 		for kk in count:
-			if signf((offsets[kk] as Vector3).x) == side:
+			if (offsets[kk] as Vector3).dot(out) > src.dot(out) + 0.01:
 				src = offsets[kk]
-		n.add_child(rod(src + Vector3(side * drive_r * 0.5, 0.35, z + 0.6), root + Vector3(0, 0.35, 0), 0.09, Kit.mat("orange")))
-		n.add_child(rod(src + Vector3(side * drive_r * 0.5, -0.35, z + 0.6), root + Vector3(0, -0.35, 0), 0.09, Kit.mat("orange")))
-		radius = maxf(radius, root_x + reach + s.y + 0.3)
-		if side < 0.0:
-			pair_z += s.z * 0.5
+		for f in [-1.0, 1.0]:
+			n.add_child(rod(src + out * drive_r * 0.5 + across * f + Vector3(0, 0, z + 0.6), root + across * f, 0.09, Kit.mat("orange")))
+		radius = maxf(radius, root_r + reach + s.y + 0.3)
 	# All the drives' plumes switch together: jets, hot walls and one stern light.
 	var plumes := Node3D.new()
 	plumes.name = "DrivePlume"
@@ -787,6 +820,38 @@ static func _propulsion(tanks: Array, drives: Array, radiators: Array, ctx: Dict
 	n.add_child(plumes)
 	radius = maxf(radius, shield_r)
 	return {"node": n, "length": z + drive_len, "radius": radius, "shield": shield_z}
+
+
+## Where each radiator goes: {z, roll, side, size} per panel, a pair to a station
+## stepping aft from `z`, then the aft edge of the last panel. In the cross, every
+## second pair shares the station before it, turned a quarter (roll) onto Y.
+static func _radiator_stations(radiators: Array, z: float, cross: bool) -> Array:
+	var out := []
+	var at := z
+	var half := 0.0
+	for k in radiators.size():
+		var s := _size(radiators[k][1])
+		var turned := cross and (k >> 1) % 2 == 1
+		if k % 2 == 0 and not turned:
+			at += half + s.z * 0.5 + (0.3 if k == 0 else 0.6)
+			half = 0.0
+		half = maxf(half, s.z * 0.5)
+		out.append({"z": at, "roll": PI * 0.5 if turned else 0.0, "side": 1.0 if k % 2 == 0 else -1.0, "size": s})
+	out.append(at + half)
+	return out
+
+
+## The cross or the dragonfly: the hull's look can name one ("radiators"), else
+## the ship's name picks, so sister ships differ. Only matters past one pair.
+static func _cross_radiators(n: int, ctx: Dictionary) -> bool:
+	if n <= 2:
+		return false
+	match String(ctx["look"].get("radiators", "")):
+		"cross":
+			return true
+		"inline":
+			return false
+	return hash(String(ctx["livery"].get("name", "")) + "|radiators") % 2 == 0
 
 
 ## One drive: reactor drum, the magnetic nozzle (_nozzle_hardware), and the

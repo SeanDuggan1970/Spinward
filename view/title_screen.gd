@@ -360,20 +360,46 @@ func _build_belt() -> void:
 	var ceres := _body("ceres", 12000.0, Vector3(25000.0, -9000.0, -90000.0))
 	# The Concord Pair, finished, turning in the distance.
 	_anims = SetPieces._oneill_pair(_stage, {"sun": _sun_dir, "ceres": ceres.position.normalized()}, 1.0, 0.0, Vector3(-120000.0, 6000.0, -250000.0))
+	# The ship's line through the field, and where the camera rides along with it.
+	var path := func(t: float) -> Vector3:
+		return Vector3(sin(t * 0.35) * 40.0, sin(t * 0.22) * 14.0, -40.0 - t * 85.0)
+	var cam_off := Vector3(_hero_len * 0.9, _hero_len * 0.4, _hero_len * 2.0)
+	# The hero with its panels out, whichever way they turn, and a little air.
+	var clear := ShipRig.deployed_reach(_hero_model) + 10.0
 	var rocks := []
 	for k in 7:
-		var rock := SetPieces.rock(_rng.randf_range(12.0, 70.0), Vector3(_rng.randf_range(1.0, 1.6), _rng.randf_range(0.7, 1.1), 1.0), 900 + k)
+		var radius := _rng.randf_range(12.0, 70.0)
+		var stretch := Vector3(_rng.randf_range(1.0, 1.6), _rng.randf_range(0.7, 1.1), 1.0)
+		var rock := SetPieces.rock(radius, stretch, 900 + k)
 		rock.position = Vector3(_rng.randf_range(-300.0, 300.0), _rng.randf_range(-90.0, 90.0), -150.0 - 220.0 * k)
+		# Rocks only tumble, so a sphere round the furthest the noise can reach bounds
+		# them at any angle. Shoulder each one off the line until the ship (panels
+		# and all) and the chase camera both pass it clear: weave, never pierce.
+		var reach := radius * maxf(stretch.x, maxf(stretch.y, stretch.z)) * 1.32
+		for i in 12:
+			var worst := 0.0
+			var push := Vector3.ZERO
+			for n in int(SHOT_S * 20.0) + 1:
+				var p: Vector3 = path.call(n / 20.0)
+				for probe in [[p, clear], [p + cam_off, 8.0]]:
+					var away: Vector3 = rock.position - probe[0]
+					var short: float = reach + probe[1] - away.length()
+					if short > worst:
+						worst = short
+						var side := Vector3(away.x, away.y, 0.0)
+						push = (side if side.length() > 1e-3 else Vector3.RIGHT).normalized()
+			if worst <= 0.0:
+				break
+			rock.position += push * (worst + 1.0)
 		_stage.add_child(rock)
 		rocks.append([rock, Vector3(_rng.randf_range(-0.2, 0.2), _rng.randf_range(-0.2, 0.2), _rng.randf_range(-0.2, 0.2))])
 	_update = func(dt: float) -> void:
 		for r in rocks:
 			r[0].rotation += r[1] * dt
-		var z := -40.0 - clock * 85.0
-		var pos := Vector3(sin(clock * 0.35) * 40.0, sin(clock * 0.22) * 14.0, z)
+		var pos: Vector3 = path.call(clock)
 		var dir := Vector3(cos(clock * 0.35) * 14.0, cos(clock * 0.22) * 3.1, -85.0)
 		_fly(pos, dir, true, dt)
-		camera.position = pos + Vector3(_hero_len * 0.9, _hero_len * 0.4, _hero_len * 2.0)
+		camera.position = pos + cam_off
 		camera.look_at(pos + Vector3(0, 0, -_hero_len), Vector3.UP)
 
 
