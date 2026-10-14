@@ -315,3 +315,9 @@ Full write-up: [2026-10-07-economy-together.md](2026-10-07-economy-together.md).
 - Changed data: `balance.undock` gains `wake_s`, `deploy_s` and the deploy bounce (`spring_share`, `spring_hz`, `spring_damp_s`); `time.departure_ramp` moves from [[60, 10], [120, 100], [420, 1000]] to [[120, 10], [180, 100], [480, 1000]]; `npcs.json` gains `chatter.copilot_undock`.
 - Why the ramp moved: since the docking hall went in, a ship takes about 72 game seconds to clear the tunnel (64 to 72 s across the hulls), so ×10 started while it was still inside and the 25 s unfold played in 2.5 real seconds. The slowest hull is out and deployed by about 80 s and then turns for its burn; ×10 waits until 120 s.
 - These are view and clock numbers. Balance bot re-run (5 seeds, 180 days, upgrade=1): identical, seed for seed, mean 105,630 cr, median first upgrade day 10.7.
+
+
+## Bay traffic waits for a slot (2026-10-14)
+
+- New data: `balance.traffic.turnaround_s` (30 s) and `queue_lookback_s` (3600 s). Bay movements now queue instead of overlapping, so a ship leaving port may hold a little longer when long-haul ships bunch up (still capped at `max_hold_s`).
+- Balance bot re-run (5 seeds, 180 days, upgrade=1): identical, seed for seed, mean 105,630 cr, median first upgrade day 10.7. The bay queue is view and hold timing only; NPC trips and the economy are unchanged.

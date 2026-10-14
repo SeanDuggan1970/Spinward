@@ -1184,6 +1184,12 @@ Owner's brief: *we should see other ships if they're about. Docking and undockin
   - A notice gives the reason: the tower's "hold in your cradle, 85 s", or at an open port, who called it first.
   - The trip's times and propellant don't change.
 - **The radio:** traffic control's and other pilots' calls go to the comms log, alongside the existing chatter.
+- **Waiting for a slot** (Sean, 2026-10-14: "they should wait for a slot, no moving through other ships"):
+  - Every movement queues for the bay (`Traffic.sequence`). Two long-haul ships due at once take it in turn, and the port's own craft wait behind them. A ship coming in also waits `turnaround_s` (30 s) after one has gone out, so the leaver is off the axis before the next closes on the doors. Queues are worked out from `queue_lookback_s` back, so every window agrees on a ship's turn.
+  - A long-haul ship still waiting for its turn when the sim has it docked keeps flying the pattern until its turn is done. The economy is unchanged.
+  - Ships held for the bay queue one behind another, `separation_m` apart, first due nearest the doors.
+  - A ship leaving slides sideways off the axis first (25 s), then heads away, clear of anyone waiting on the axis.
+  - `tests/traffic_view.gd` flies a busy spell (two ships due at once and one leaving) and checks no ship ever passes through another.
 
 ## Performance (Oct 2026)
 
