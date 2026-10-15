@@ -4,10 +4,14 @@
 ## wrong (less yield; a landing that goes wrong burns extra propellant). Yields go
 ## into the hold as room allows; survey data is sold by radio on completion.
 ## Which sites you know of: the well-known ones from the start, others by rumour.
+## At a comet (sim/comet.gd), landing and drilling wait for it to sleep, sampling
+## waits for it to wake, and work inside the coma ("in_coma") wears every module.
 extends "res://sim/systems/system.gd"
 
 const ShipStats := preload("res://sim/ship_stats.gd")
 const Power := preload("res://sim/power.gd")
+const Comet := preload("res://sim/comet.gd")
+const Condition := preload("res://sim/condition.gd")
 
 const DAY := 86400.0
 ## Propellant a lander burns when a landing goes wrong.
@@ -59,8 +63,9 @@ static func can(ship: Dictionary, data, ability: String) -> bool:
 	return false
 
 
-## Why an activity cannot be started here and now ("" if it can).
-static func blocked(state, data, site: String, activity: String) -> String:
+## Why an activity cannot be started here and now ("" if it can). With the ephemeris,
+## a comet's activity is checked too.
+static func blocked(state, data, site: String, activity: String, eph = null) -> String:
 	if state.location.get("status") != "on_site" or state.location.get("place") != site:
 		return "not on site"
 	if not state.sites.get("work", {}).is_empty():
@@ -73,6 +78,9 @@ static func blocked(state, data, site: String, activity: String) -> String:
 	for need in act.get("needs", []):
 		if not can(state.ship, data, need):
 			return "needs a %s" % {"survey": "survey pod", "lander": "lander", "mining": "mining rig"}.get(need, need)
+	if act.has("comet") and eph != null:
+		var body: String = data.sites[site]["location"]["parent"]
+		return Comet.blocked(data, body, act["comet"], Comet.activity(data, eph, body, state.time_s))
 	return ""
 
 
@@ -84,11 +92,13 @@ func _start_work(command: Dictionary) -> String:
 	var data = sim().data
 	var site: String = s.location.get("place", "")
 	var activity: String = command.get("activity", "")
-	var why := blocked(s, data, site, activity)
+	var why := blocked(s, data, site, activity, sim().ephemeris)
 	if why != "":
 		return why
 	var act: Dictionary = data.sites[site]["activities"][activity]
 	s.sites["work"] = {"site": site, "activity": activity, "start_t": s.time_s, "end_t": s.time_s + float(act["days"]) * DAY}
+	if act.has("comet"):
+		s.sites["work"]["comet_activity"] = Comet.activity(data, sim().ephemeris, data.sites[site]["location"]["parent"], s.time_s)
 	if bool(command.get("hand_flown", false)) and "lander" in act.get("needs", []):
 		s.sites["work"]["hand_flown"] = true
 		s.sites["work"]["landed"] = bool(command.get("landed", false))
@@ -104,7 +114,10 @@ func _finish(work: Dictionary) -> void:
 	var act: Dictionary = data.sites[site]["activities"][activity]
 	_rng.seed = hash(s.seed) ^ 0x517E
 	_rng.state = s.rng_state
-	var went_wrong := _rng.randf() < float(act.get("risk", 0.0))
+	# In the coma, dust makes everything chancier, and wears the ship.
+	var dust := float(work.get("comet_activity", 0.0)) if act.get("in_coma", false) else 0.0
+	var risk := float(act.get("risk", 0.0)) + dust * float(data.balance.get("comets", {}).get("risk_per_activity", 0.0))
+	var went_wrong := _rng.randf() < minf(risk, 0.9)
 	var share := 0.35 if went_wrong else 1.0
 	if work.get("hand_flown", false):
 		went_wrong = not bool(work.get("landed", false))
@@ -127,9 +140,13 @@ func _finish(work: Dictionary) -> void:
 		s.reputation[op] = float(s.reputation.get(op, 0.0)) + float(act["rep"][op]) * share
 	if went_wrong and "lander" in act.get("needs", []):
 		s.ship["fuel_t"] = maxf(0.0, float(s.ship["fuel_t"]) - BAD_LANDING_FUEL_T)
+	var dust_wear := Comet.dust_wear(data, dust, float(act["days"])) if dust > 0.0 else 0.0
+	if dust_wear > 0.0:
+		for slot in s.ship.get("modules", {}):
+			Condition.add_wear(s.ship, slot, dust_wear)
 	var worked: Array = s.sites["worked"].get(site, [])
 	worked.append(activity)
 	s.sites["worked"][site] = worked
 	s.sites["work"] = {}
 	s.stats["site_jobs"] = int(s.stats.get("site_jobs", 0)) + 1
-	sim().emit("site_work_done", {"site": site, "activity": activity, "went_wrong": went_wrong, "got": got, "lost_t": lost, "credits": credits})
+	sim().emit("site_work_done", {"site": site, "activity": activity, "went_wrong": went_wrong, "got": got, "lost_t": lost, "credits": credits, "dust_wear": dust_wear})

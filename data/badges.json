@@ -1,5 +1,5 @@
 {
-	"_note": "Badges (sim/systems/badge_system.gd): one-off marks for doing something few do, kept in state.badges. Each has a name, a line for the log, and what earns it: 'visit' (be docked at any of these places), 'visit_all' (have been to all of them), 'rounds' (have bought a bar this many rounds; 'at' limits it to these places), or 'slept_days' (have slept this many days in a hibernation pod, all told). Each adds 'renown', and may add 'rep' with operators. Renown gets you noticed: each point raises the chance a hitchhiker asks at a port and a client approaches you by name, by the fractions in 'renown', up to max_mult times the usual chance. Buying a round costs a bar's patrons times its round_cr, and adds round_rep with the bar's operator.",
+	"_note": "Badges (sim/systems/badge_system.gd): one-off marks for doing something few do, kept in state.badges. Each has a name, a line for the log, and what earns it: 'visit' (be docked at any of these places), 'visit_all' (have been to all of them), 'rounds' (have bought a bar this many rounds; 'at' limits it to these places), 'slept_days' (have slept this many days in a hibernation pod, all told), or 'worked' (have finished work at any of these sites). Each adds 'renown', and may add 'rep' with operators. Renown gets you noticed: each point raises the chance a hitchhiker asks at a port and a client approaches you by name, by the fractions in 'renown', up to max_mult times the usual chance. Buying a round costs a bar's patrons times its round_cr, and adds round_rep with the bar's operator.",
 	"renown": {
 		"hitchhiker_per_point": 0.06,
 		"approach_per_point": 0.05,
@@ -116,6 +116,25 @@
 			"text": "Has bought ten rounds. People save you a seat.",
 			"rounds": 10,
 			"renown": 2
+		},
+		"once_in_a_lifetime": {
+			"name": "Once in a Lifetime",
+			"text": "Matched orbits with Halley's Comet on its 2061 return, going the wrong way round the Sun, and did some work there.",
+			"worked": [
+				"halley_watch"
+			],
+			"renown": 3,
+			"rep": {
+				"Terran Compact Science": 2.0
+			}
+		},
+		"we_could": {
+			"name": "We Could, So We Did",
+			"text": "Visited the crater DART left on Dimorphos, where people first moved a world on purpose.",
+			"worked": [
+				"dart_crater"
+			],
+			"renown": 1
 		}
 	}
 }

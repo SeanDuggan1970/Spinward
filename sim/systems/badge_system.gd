@@ -23,6 +23,11 @@ func tick(_game_dt: float) -> void:
 		if not place in s.badges["visited"]:
 			s.badges["visited"].append(place)
 			_award()
+	# Work done on a site may have earned something.
+	var jobs := int(s.stats.get("site_jobs", 0))
+	if jobs > int(s.badges.get("jobs_seen", 0)):
+		s.badges["jobs_seen"] = jobs
+		_award()
 	# A long sleep may have earned something.
 	var slept := float(s.sleep.get("total_s", 0.0))
 	if slept > float(s.badges.get("slept_seen", 0.0)):

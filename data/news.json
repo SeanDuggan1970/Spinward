@@ -4,6 +4,13 @@
 	"keep": 80,
 	"stories": [
 		{
+			"id": "halley_waking",
+			"after_days": -12,
+			"dateline": "Farside Array",
+			"headline": "Halley's Comet wakes up",
+			"body": "Farside's survey telescopes have caught Halley's Comet throwing off its first jets of the century, out in the asteroid belt and falling fast. It rounds the Sun on 28 July. The Compact's science office says anyone with a survey pod and a very good drive should call them."
+		},
+		{
 			"id": "kibo_millionth",
 			"after_days": -6,
 			"dateline": "Earth orbit",
@@ -124,11 +131,25 @@
 			"body": "A Commons survey probe passing Triton has filmed its nitrogen geysers from fifty kilometres: dark columns eight kilometres tall, bent over by a thin wind into streaks a hundred and fifty kilometres long. Nobody is sure yet what drives them. Everybody wants to go."
 		},
 		{
+			"id": "halley_naked_eye",
+			"after_days": 98,
+			"dateline": "Earth",
+			"headline": "Halley visible to the naked eye",
+			"body": "Halley's Comet is out in the evening sky, tail and all, and this time it is a far better show than 1986 gave. Seventy-six years ago people drove into the desert to see a smudge. Tonight half of Lagos is on the rooftops."
+		},
+		{
 			"id": "mind_buys_ship",
 			"after_days": 130,
 			"dateline": "Earth orbit",
 			"headline": "A freighter buys itself",
 			"body": "Reasonable Doubt, a Commons drone freighter, has bought its own hull outright with fifteen years of wages. It says it will keep hauling 'because I like it, and because I know the route'. Insurers are trying to work out who to send the paperwork to."
+		},
+		{
+			"id": "halley_perihelion",
+			"after_days": 149,
+			"dateline": "Inner system",
+			"headline": "Halley rounds the Sun",
+			"body": "Halley's Comet passed closest to the Sun today, 88 million km out, shedding a few metres of its surface as it went. It now heads back to the dark. The ships matched with it report that, on the instruments, it smells of bitter almonds: hydrogen cyanide, just as Giotto found."
 		},
 		{
 			"id": "hygiea_foundry",
@@ -158,6 +179,20 @@
 			"dateline": "The outer dark",
 			"headline": "Sedna survey counts a trillion comets",
 			"body": "A Long View survey mind at Sedna has finished its first count of the inner Oort cloud: about a trillion bodies larger than a kilometre, most of them water ice. 'There is enough out here,' it writes, 'for everyone, for a very long time.'"
+		},
+		{
+			"id": "halley_farewell",
+			"after_days": 420,
+			"dateline": "Beyond Mars",
+			"headline": "Halley goes quiet",
+			"body": "Out past the asteroid belt, Halley's Comet has switched off its last jet and gone back to being a dark rock on a long road. It will be back in March 2134. Several people who saw it this time have promised to see it then."
+		},
+		{
+			"id": "dart_forty",
+			"after_days": 574,
+			"dateline": "Didymos",
+			"headline": "Forty years since DART",
+			"body": "Forty years ago today a spacecraft the size of a vending machine hit the moonlet Dimorphos at six kilometres a second and shortened its orbit by half an hour: the first time people moved a world. A small crowd of ships is holding station over the crater to mark it."
 		},
 		{
 			"id": "farside_silence",

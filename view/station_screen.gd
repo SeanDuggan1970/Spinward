@@ -26,6 +26,7 @@ const Fitness := preload("res://sim/fitness.gd")
 const Insurance := preload("res://sim/insurance.gd")
 const ShipBill := preload("res://sim/ship_bill.gd")
 const SiteSystem := preload("res://sim/systems/site_system.gd")
+const Comet := preload("res://sim/comet.gd")
 const PodSystem := preload("res://sim/systems/pod_system.gd")
 const DetectionSystem := preload("res://sim/systems/detection_system.gd")
 const Badges := preload("res://sim/badges.gd")
@@ -488,6 +489,15 @@ func _site_tab(site_id: String) -> Control:
 		p[1].add_child(bar)
 		p[1].add_child(UI.label("%s to go. Speed time up with ] ; the crew will call when it is done." % UI.duration(maxf(0.0, float(work["end_t"]) - s.time_s)), UI.AMBER, 13))
 		parts[1].add_child(p[0])
+	var body: String = site["location"].get("parent", "")
+	if Comet.is_comet(d, body):
+		var a := Comet.activity(d, sim.ephemeris, body, s.time_s)
+		var pos: Array = sim.ephemeris.position(body, s.time_s)
+		var r_au := sqrt(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]) / Comet.AU
+		var line := "%s is %s, %.2f AU from the Sun." % [d.bodies[body]["name"], Comet.state_of(d, a), r_au]
+		if a > 0.0:
+			line += " The dusty inner coma reaches about %d km." % int(round(Comet.coma_m(d, a) / 1000.0))
+		parts[1].add_child(UI.label(line, UI.AMBER if a > 0.0 else UI.DIM, 13))
 	for act_id in site.get("activities", {}):
 		var act: Dictionary = site["activities"][act_id]
 		var p := UI.panel(act["name"])
@@ -497,6 +507,8 @@ func _site_tab(site_id: String) -> Control:
 		var needs: Array = act.get("needs", [])
 		if not needs.is_empty():
 			bits.append("needs " + ", ".join(needs.map(func(n): return {"survey": "a survey pod", "lander": "a lander", "mining": "a mining rig"}.get(n, n))))
+		if act.get("in_coma", false):
+			bits.append("inside the coma: dust wears every module")
 		p[1].add_child(UI.label("  ·  ".join(bits), UI.DIM, 13))
 		var gains := []
 		for good in act.get("yields", {}):
@@ -506,9 +518,9 @@ func _site_tab(site_id: String) -> Control:
 			gains.append("about %s on completion" % UI.money(float(act["credits"])))
 		if not gains.is_empty():
 			p[1].add_child(UI.label("Expect: " + ", ".join(gains), UI.TEXT, 13))
-		var why := SiteSystem.blocked(s, d, site_id, act_id)
+		var why := SiteSystem.blocked(s, d, site_id, act_id, sim.ephemeris)
 		var row := HBoxContainer.new()
-		var hint := UI.label("" if why == "" else why.capitalize(), UI.WARN if why != "" and why != "already done" else UI.DIM, 12)
+		var hint := UI.label("" if why == "" else why.left(1).to_upper() + why.substr(1), UI.WARN if why != "" and why != "already done" else UI.DIM, 12)
 		hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(hint)
 		if "lander" in needs:
