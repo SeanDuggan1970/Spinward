@@ -4,8 +4,11 @@ Writes tests/horizons_reference.json: position and velocity (km, km/s; ecliptic
 J2000; relative to each body's parent) at 2061-03-01 and 2063-03-01 00:00 UT, from
 the JPL Horizons API. Then run bake_bodies.py and fit_bodies_horizons.py.
 Needs network access; takes a minute or two.
+
+`--only halley,bennu` fetches just those bodies and merges them into the existing
+file, leaving every other body's reference as it was.
 """
-import json, os, time, urllib.parse, urllib.request
+import json, os, sys, time, urllib.parse, urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATES = ["2061-03-01", "2063-03-01"]
@@ -20,6 +23,9 @@ TARGETS = {
     "ganymede": ("503", "500@599"), "callisto": ("504", "500@599"), "enceladus": ("602", "500@699"), "rhea": ("605", "500@699"),
     "titan": ("606", "500@699"), "iapetus": ("608", "500@699"), "miranda": ("705", "500@799"), "titania": ("703", "500@799"),
     "triton": ("801", "500@899"), "charon": ("901", "500@999"), "moon": ("301", "500@399"),
+    # Comets take the orbit solution for the apparition nearest the date (CAP), main nucleus only.
+    "halley": ("DES=1P;CAP;NOFRAG", "500@10"), "comet_67p": ("DES=67P;CAP;NOFRAG", "500@10"),
+    "bennu": ("101955;", "500@10"), "ryugu": ("162173;", "500@10"), "didymos": ("65803;", "500@10"),
 }
 
 
@@ -39,7 +45,11 @@ def vectors(cmd, centre, date):
     raise RuntimeError(f"Horizons failed for {cmd} at {date}")
 
 
-out = {name: {d: vectors(cmd, c, d) for d in DATES} for name, (cmd, c) in TARGETS.items()}
 path = os.path.join(ROOT, "tests", "horizons_reference.json")
+only = sys.argv[sys.argv.index("--only") + 1].split(",") if "--only" in sys.argv else list(TARGETS)
+out = json.load(open(path)) if "--only" in sys.argv else {}
+for name in only:
+    cmd, c = TARGETS[name]
+    out[name] = {d: vectors(cmd, c, d) for d in DATES}
 open(path, "w", encoding="utf-8", newline="\n").write(json.dumps(out, indent=1) + "\n")
 print("wrote", path)

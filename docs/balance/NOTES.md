@@ -308,3 +308,10 @@ Full write-up: [2026-10-07-economy-together.md](2026-10-07-economy-together.md).
 - After: the estimate matched the fastest affordable plotted route on all 300 trips. It takes 0.25 s on average and 0.76 s at worst per trip, remembered for the hour.
 - Deadlines get longer where gravity makes trips slower, and pay rises with them (pay is per day of the reference trip). Expect cislunar courier jobs to pay noticeably more per job but about the same per day flown.
 - Balance bot re-run (5 seeds, 180 days, upgrade=1): identical, seed for seed (mean 105,630 cr). The bot only takes a job bound where its trade is already going, and in these runs it saw none (no jobs_seen in its ECON rows, before or after), so it doesn't see the change. Worth a hand-played check of courier income.
+
+
+## Famous bodies and comets (2026-10-15)
+
+- New data: `balance.comets`, five bodies (Halley, 67P, Bennu, Ryugu, Didymos) with five sites, seven news stories and two badges. Orbits are provisional until the JPL bake.
+- Balance bot re-run (5 seeds, 180 days, upgrade=1): identical, seed for seed, mean 105,630 cr, median first upgrade day 10.7. The bot trades between ports and never works sites, so it doesn't see them.
+- Reachability with the stand-in orbits, from Halo Depot at day 0, 60 and 120: Bennu about 115 days in a Mule (at the edge of its larder), and Ryugu and Didymos need a Courier (about 115 days). Halley and 67P need a deep freighter (Halley 76 to 180 days). Recheck once the real orbits are baked; the near-Earth rocks' phases will move these a lot.

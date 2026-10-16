@@ -220,5 +220,15 @@
 			{"au": 120.0, "text": "The heliopause. The solar wind stops here. The Sun is the brightest star, and only a star."},
 			{"au": 500.0, "text": "Five hundred AU. If you were awake you'd be bored; I'm not. It's very quiet and very beautiful."}
 		]
+	},
+	"comets": {
+		"_note": "sim/comet.gd. A comet is dormant beyond onset_au; closer in, activity rises with sunlight, scaled so 1 is Halley at 1 AU (each comet's bodies.json activity.strength). Below quiet_below it counts as asleep (landing and drilling allowed); from active_from up it has a coma to sample. The dusty inner coma's radius is coma_km x sqrt(activity). Work flagged in_coma adds risk_per_activity x activity to its risk, and takes dust_wear_per_day x activity x days off every module's condition, at most dust_wear_max.",
+		"onset_au": 3.0,
+		"quiet_below": 0.05,
+		"active_from": 0.15,
+		"coma_km": 150.0,
+		"risk_per_activity": 0.08,
+		"dust_wear_per_day": 0.02,
+		"dust_wear_max": 0.15
 	}
 }

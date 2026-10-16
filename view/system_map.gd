@@ -10,6 +10,7 @@ extends Control
 const UI := preload("res://view/ui/ui_kit.gd")
 const Navigation := preload("res://sim/navigation.gd")
 const V := preload("res://sim/v3.gd")
+const Comet := preload("res://sim/comet.gd")
 
 const DAY := 86400.0
 const AU := 1.495978707e11
@@ -216,12 +217,20 @@ func _draw_solar(t: float, px: float, radius_m: float, to_screen: Callable) -> v
 		var kind: String = b.get("kind", "")
 		var period := float(b["elements"].get("period_days", 365.25)) * DAY
 		var orbit := PackedVector2Array()
-		for k in 97:
-			orbit.append(to_screen.call(eph.position(body, t + period * float(k) / 96.0)))
+		# Equal steps in time crowd an eccentric orbit's far end and skip its perihelion.
+		var steps := 96 if float(b["elements"].get("e", 0.0)) < 0.5 else 720
+		for k in steps + 1:
+			orbit.append(to_screen.call(eph.position(body, t + period * float(k) / float(steps))))
 		var major := kind == "planet" or kind == "dwarf"
 		draw_polyline(orbit, Color(0.3, 0.55, 1.0, 0.3 if major else 0.12), 1.0)
-		var at: Vector2 = to_screen.call(eph.position(body, t))
-		var col: Color = {"planet": Color("c9c4b6"), "dwarf": Color("a8a39b")}.get(kind, Color(UI.DIM, 0.8))
+		var pos: Array = eph.position(body, t)
+		var at: Vector2 = to_screen.call(pos)
+		var col: Color = {"planet": Color("c9c4b6"), "dwarf": Color("a8a39b"), "comet": Color("bfe6ff")}.get(kind, Color(UI.DIM, 0.8))
+		# An active comet's tail points away from the Sun, longer the more it outgasses.
+		var act := Comet.activity(sim.data, eph, body, t)
+		if act > 0.0:
+			var away := (at - sun_at).normalized()
+			draw_line(at, at + away * (10.0 + 24.0 * minf(act, 3.0)), Color(col, 0.55), 2.0)
 		draw_circle(at, 4.0 if kind == "planet" else 2.5, col)
 		# Names only where there is room: not crowded in on the Sun.
 		if (major or radius_m < 5.0e11) and at.distance_to(sun_at) > 28.0:
