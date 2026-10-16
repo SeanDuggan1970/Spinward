@@ -17,8 +17,8 @@
 			1000000
 		],
 		"arrival_scale": 1,
-		"_departure_note": "Leaving port: time drops to x1 while the ship backs off the port, then steps up. Each step is [game seconds since departure, scale]; a pilot who changes the scale meanwhile keeps theirs.",
-		"departure_ramp": [[60, 10], [120, 100], [420, 1000]],
+		"_departure_note": "Leaving port: time drops to x1 while the ship backs out, comes alive and turns for its burn, then steps up (the first step waits for every hull to be out and deployed: tests/departure_view.gd). Each step is [game seconds since departure, scale]; a pilot who changes the scale meanwhile keeps theirs.",
+		"departure_ramp": [[120, 10], [180, 100], [480, 1000]],
 		"_approach_note": "Coming in: time is capped as the port nears, so the last of the approach is seen at x1. Each cap is [game seconds before arrival, highest scale].",
 		"approach_caps": [[172800, 100000], [14400, 10000], [3600, 1000], [600, 100], [60, 10], [10, 1]]
 	},
@@ -76,7 +76,12 @@
 		"silent_outside": true
 	},
 	"undock": {
-		"_note": "Leaving a bay (view/flight/undock.gd), in game seconds after departure (time holds at x1 for it: time.departure_ramp). The doors start opening at doors_at_s (over bays.door_s); the ship eases backwards from move_at_s on its thrusters, accelerating at accel_mps2 to speed_mps. Docked, it turns with the station; once its nose is clear_m past the mouth its thrusters stop the roll over roll_stop_s, its panels and dish unfold, and after settle_s more it turns for its burn.",
+		"_note": "Leaving a bay (view/flight/undock.gd), in game seconds after departure (time holds at x1 for it: time.departure_ramp). The doors start opening at doors_at_s (over bays.door_s); the ship eases backwards from move_at_s on its thrusters, accelerating at accel_mps2 to speed_mps. Docked, it turns with the station; once its nose is clear_m past the mouth its thrusters stop the roll over roll_stop_s, its panels and dish snap out over deploy_s (gathering speed, then bouncing past straight by spring_share of the fold at spring_hz, dying away over spring_damp_s), and after settle_s more it turns for its burn. The co-pilot wakes the ship at wake_s and talks it out (data/npcs.json chatter.copilot_undock).",
+		"wake_s": 2.0,
+		"deploy_s": 7.0,
+		"spring_share": 0.07,
+		"spring_hz": 0.7,
+		"spring_damp_s": 0.9,
 		"doors_at_s": 1.0,
 		"move_at_s": 7.0,
 		"accel_mps2": 0.2,
@@ -98,7 +103,9 @@
 		"clear_s": 4.0
 	},
 	"traffic": {
-		"_note": "Who uses a port's docking bay, and when (sim/traffic.gd, view/flight/pattern.gd). One ship at a time: each movement holds the bay for cycle_s (doors open, through, doors shut). Long-haul NPCs move when they arrive and leave; the port's own craft (local_traffic in npcs.json) take at most one slot_s slot each, per_hour of them an hour (a place's bay_traffic.per_hour, else this). A tower port sequences everyone; at an open port you give way only to ships committed within lead_s. Leaving, you hold in your cradle until the bay is free for depart_need_s, at most max_hold_s (trip times are unchanged). Arriving, the tower guesses when you'll reach the bay at player_speed_mps and puts at most max_ahead ships before you; while others are ahead you hold hold_m off the doors, and at an open port you claim the bay when within claim_m of the doors with nobody committed. Pattern ships close on the axis at in_speed_mps to the gate (gate_m off the doors), are drawn from horizon_s before they move, peel away for peel_s after, and when held keep separation_m behind you, shuffling at up to max_shuffle_mps. Other ships fold their panels and dish (at the rig's fold rate, on game time) to be stowed stow_by_s before they start matching the station's spin or reach a berth, and unfold unfold_after_s after they clear the doors or leave a berth.",
+		"_note": "Who uses a port's docking bay, and when (sim/traffic.gd, view/flight/pattern.gd). One ship at a time: each movement holds the bay for cycle_s (doors open, through, doors shut), and waits its turn if the bay is busy; a ship coming in also waits turnaround_s after one has gone out, so the leaver is off the axis first (queues are worked out from queue_lookback_s back). Long-haul NPCs move when they arrive and leave; the port's own craft (local_traffic in npcs.json) take at most one slot_s slot each, per_hour of them an hour (a place's bay_traffic.per_hour, else this). A tower port sequences everyone; at an open port you give way only to ships committed within lead_s. Leaving, you hold in your cradle until the bay is free for depart_need_s, at most max_hold_s (trip times are unchanged). Arriving, the tower guesses when you'll reach the bay at player_speed_mps and puts at most max_ahead ships before you; while others are ahead you hold hold_m off the doors, and at an open port you claim the bay when within claim_m of the doors with nobody committed. Pattern ships close on the axis at in_speed_mps to the gate (gate_m off the doors), are drawn from horizon_s before they move, peel away for peel_s after, and when held keep separation_m behind you, shuffling at up to max_shuffle_mps. Other ships fold their panels and dish (at the rig's fold rate, on game time) to be stowed stow_by_s before they start matching the station's spin or reach a berth, and unfold unfold_after_s after they clear the doors or leave a berth.",
+		"turnaround_s": 30.0,
+		"queue_lookback_s": 3600.0,
 		"slot_s": 120.0,
 		"cycle_s": 90.0,
 		"per_hour": 4.0,

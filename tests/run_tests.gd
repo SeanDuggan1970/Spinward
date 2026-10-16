@@ -2622,12 +2622,13 @@ func test_time_ramps() -> void:
 	# Any hold in the cradle for traffic comes first; the ramp counts from its end.
 	for _i in int(ceil(float(s.location.get("hold_s", 0.0)) / 0.05)):
 		sim.tick(0.05)
-	for _i in 1000:
+	var first_step := float(sim.data.balance["time"]["departure_ramp"][0][0])
+	for _i in int((first_step - 10.0) / 0.05):
 		sim.tick(0.05)
-	check(s.time_scale == 1.0, "Fifty seconds out, still at x1 to watch the ship back out of the bay (%.0f)" % s.time_scale)
+	check(s.time_scale == 1.0, "%.0f seconds out, still at x1 to watch the ship back out and come alive (%.0f)" % [first_step - 10.0, s.time_scale])
 	for _i in 500:
 		sim.tick(0.05)
-	check(s.time_scale == 1000.0, "Seventy-five seconds out, time has stepped up to x1000 (%.0f)" % s.time_scale)
+	check(s.time_scale == 1000.0, "25 seconds later, time has stepped up to x1000 (%.0f)" % s.time_scale)
 	s.time_scale = 100000.0
 	var last_scale := -1.0
 	var seen_slow := false
@@ -4925,6 +4926,27 @@ func test_traffic_control() -> void:
 			if (a.has("local") or b.has("local")) and float(a["t"]) < float(b["end"]) and float(b["t"]) < float(a["end"]):
 				overlap = true
 	check(not overlap, "Local craft never share the bay")
+	# Two long-haul ships due at once, and one leaving just before: they queue for the
+	# bay, one after another, instead of flying through each other.
+	var busy_s = fresh().state
+	var pair: Array = busy_s.npcs.filter(func(n): return not d.npcs["fleets"][n["fleet"]].get("sail", false) and not d.npcs["fleets"][n["fleet"]].get("elevator", false)).slice(0, 3)
+	var due: float = t0 + 7200.0
+	for i in 2:
+		pair[i]["location"] = {"status": "transit", "from": "halo_depot", "to": "kibo_ring", "depart_t": t0, "arrive_t": due + float(cfg["cycle_s"])}
+	pair[2]["location"] = {"status": "transit", "from": "kibo_ring", "to": "halo_depot", "depart_t": due - 20.0, "arrive_t": due + DAY}
+	var queued: Array = Traffic.movements(busy_s, d, "kibo_ring", t0, t0 + DAY)
+	var clash := false
+	var gap_ok := true
+	for i in range(1, queued.size()):
+		clash = clash or float(queued[i]["t"]) < float(queued[i - 1]["end"])
+		if queued[i - 1]["kind"] == "out" and queued[i]["kind"] == "in":
+			gap_ok = gap_ok and float(queued[i]["t"]) >= float(queued[i - 1]["end"]) + float(cfg["turnaround_s"]) - 0.001
+	var mine := queued.filter(func(x): return x.has("npc") and pair.any(func(n): return n["id"] == x["npc"]))
+	check(mine.size() == 3 and not clash, "Ships due at once take the bay in turn (%d of 3 scheduled)" % mine.size())
+	check(gap_ok, "A ship coming in waits for the last one out to clear the axis")
+	var last_in: Dictionary = mine[-1]
+	var narrow: Array = Traffic.movements(busy_s, d, "kibo_ring", float(last_in["t"]) - 1.0, float(last_in["t"]) + 1.0).filter(func(x): return x.get("npc", "") == last_in["npc"])
+	check(narrow.size() == 1 and is_equal_approx(float(narrow[0]["t"]), float(last_in["t"])), "A queued ship's turn is the same whatever window is asked")
 	check(day.all(func(m): return float(m["end"]) - float(m["t"]) == float(cfg["cycle_s"])), "Each movement holds the bay for one cycle")
 	check(Traffic.movements(s, d, "ishikawa_maru", t0, t0 + DAY).is_empty(), "A site has no bay and no traffic")
 	# Leaving while a ship is in the bay: hold until it is through.

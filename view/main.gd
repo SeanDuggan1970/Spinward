@@ -751,6 +751,9 @@ func _sync_mode() -> void:
 			_layer.add_child(_screen)
 		"transit":
 			_screen = MapScreen.new(sim)
+			_screen.copilot.connect(func(text: String):
+				notice(text, UI.AMBER)
+				_radio_line(text))
 			_layer.add_child(_screen)
 			_fade_in(0.5)
 		"approach", "lifeboat":

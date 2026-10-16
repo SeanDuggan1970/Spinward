@@ -14,6 +14,8 @@ const Livery := preload("res://view/flight/livery.gd")
 const ShipRig := preload("res://view/flight/ship_rig.gd")
 const Kit := preload("res://view/flight/kit.gd")
 const Bay := preload("res://view/flight/bay.gd")
+## Seconds a ship leaving takes to slide sideways off the axis to the lanes.
+const PEEL_ASIDE_S := 25.0
 
 var sim
 var place: String
@@ -121,7 +123,9 @@ func _visible(m: Dictionary, t: float, is_held: bool) -> bool:
 	var ts := float(m["t"])
 	var te := float(m["end"])
 	if m["kind"] == "in":
-		if m.has("npc") and not _npc_inbound(m["npc"]):
+		# A long-haul ship queued for the bay may have reached the port in the sim
+		# already: it is still outside until its turn is done.
+		if m.has("npc") and not _npc_inbound(m["npc"]) and not (_npc_docked(m["npc"]) and t < te):
 			return false
 		return is_held or (t >= ts - float(cfg["horizon_s"]) and t < te)
 	# A long-haul ship leaving is in its cradle until the sim lets it go.
@@ -134,6 +138,13 @@ func _npc_inbound(id: String) -> bool:
 	for npc in sim.state.npcs:
 		if npc["id"] == id:
 			return npc["location"].get("status") == "transit" and npc["location"].get("to") == place
+	return false
+
+
+func _npc_docked(id: String) -> bool:
+	for npc in sim.state.npcs:
+		if npc["id"] == id:
+			return npc["location"].get("status") == "docked" and npc["location"].get("place") == place
 	return false
 
 
@@ -187,6 +198,10 @@ func update(t: float, dt: float, spin_angle: float, sun: Vector3, pilot_d := INF
 	var gate := float(cfg["gate_m"])
 	var in_speed := float(cfg["in_speed_mps"])
 	var lane_r: float = maxf(float(station["ring_radius"]) + float(station["ring_tube"]), float(station["hub_radius"])) + 60.0
+	var sep := float(cfg["separation_m"])
+	# Ships held outside queue one behind another, first due nearest the doors.
+	var queue: Array = ships.keys().filter(func(q): return held.has(q) and ships[q]["m"]["kind"] == "in")
+	queue.sort_custom(func(a, b): return float(ships[a]["m"]["t"]) < float(ships[b]["m"]["t"]))
 	for k in ships:
 		var e: Dictionary = ships[k]
 		var m: Dictionary = e["m"]
@@ -205,7 +220,8 @@ func update(t: float, dt: float, spin_angle: float, sun: Vector3, pilot_d := INF
 				# Closing on the gate; held, waiting a separation behind the pilot.
 				d = gate + in_speed * maxf(ts - t, 0.0)
 				if held.has(k):
-					d = maxf(gate, pilot_d + float(cfg["separation_m"])) if pilot_d < INF else maxf(d, gate)
+					var place_in_queue := queue.find(k)
+					d = maxf(gate, pilot_d + sep * (1 + place_in_queue)) if pilot_d < INF else maxf(d, gate + sep * place_in_queue)
 				if e["d"] < INF and dt > 0.0:
 					d = move_toward(float(e["d"]), d, float(cfg["max_shuffle_mps"]) * dt)
 				e["d"] = d
@@ -237,8 +253,10 @@ func update(t: float, dt: float, spin_angle: float, sun: Vector3, pilot_d := INF
 				# Clear of the doors: off the axis and away, panels out.
 				var tau := t - back_to
 				var a := float(absi(hash(k)) % 360) * PI / 180.0
-				var off := Vector3(cos(a), sin(a), 0.0) * lane_r * _ease(tau / 40.0)
-				pos = off + Vector3(0, 0, out_z + 2.0 * tau + 0.08 * tau * tau)
+				# Sideways off the axis first, then away, clear of anyone waiting on it.
+				var off := Vector3(cos(a), sin(a), 0.0) * lane_r * _ease(tau / PEEL_ASIDE_S)
+				var away := maxf(tau - PEEL_ASIDE_S * 0.5, 0.0)
+				pos = off + Vector3(0, 0, out_z + 0.5 * tau + 0.08 * away * away)
 				fold = ShipRig.unfold_after(tau, float(cfg["unfold_after_s"]))
 				spin_matched = tau < 6.0
 		node.position = pos

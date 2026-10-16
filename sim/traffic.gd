@@ -45,9 +45,40 @@ static func _phase(data, place: String) -> float:
 
 ## Bay movements at `place` starting in [t0, t1), sorted by start:
 ## {t, end, kind ("in" | "out"), and either npc (its id) or local (its slot index)}.
+## One at a time: each waits for the bay (sequence), so no two ever share it.
 static func movements(state, data, place: String, t0: float, t1: float) -> Array:
 	if not has_bay(data, place):
 		return []
+	# Queues form from earlier movements, so sequence from well before the window.
+	var lookback := float(data.balance["traffic"]["queue_lookback_s"])
+	var out := []
+	for m in sequence(data, _wanted(state, data, place, t0 - lookback, t1, t0)):
+		if float(m["t"]) >= t0 and float(m["t"]) < t1:
+			out.append(m)
+	return out
+
+
+## Movements in order, each waiting for the bay: it starts once the one before has
+## finished, and a ship coming in also waits turnaround_s after one has gone out, so
+## the leaver is off the axis before the next closes on the doors.
+static func sequence(data, wanted: Array) -> Array:
+	var cfg: Dictionary = data.balance["traffic"]
+	var turnaround := float(cfg["turnaround_s"])
+	var free := -INF
+	var last_kind := ""
+	for m in wanted:
+		var start := maxf(float(m["t"]), free + (turnaround if last_kind == "out" and m["kind"] == "in" else 0.0))
+		var length := float(m["end"]) - float(m["t"])
+		m["t"] = start
+		m["end"] = start + length
+		free = start + length
+		last_kind = m["kind"]
+	return wanted
+
+
+## When each ship would like the bay, starting in [t0, t1), sorted, before sequencing.
+## active_t0: docked long-haul ships count from when they are free to go at this time.
+static func _wanted(state, data, place: String, t0: float, t1: float, active_t0: float) -> Array:
 	var cfg: Dictionary = data.balance["traffic"]
 	var slot := float(cfg["slot_s"])
 	var cycle := float(cfg["cycle_s"])
@@ -67,7 +98,7 @@ static func movements(state, data, place: String, t0: float, t1: float) -> Array
 		elif loc.get("status") == "transit" and loc.get("from") == place:
 			start = float(loc["depart_t"])
 			kind = "out"
-		elif loc.get("status") == "docked" and loc.get("place") == place and float(npc.get("active_t", 0.0)) <= t0:
+		elif loc.get("status") == "docked" and loc.get("place") == place and float(npc.get("active_t", 0.0)) <= active_t0:
 			start = float(npc.get("next_t", INF))
 			kind = "out"
 		if start >= t0 and start < t1:
@@ -90,7 +121,7 @@ static func movements(state, data, place: String, t0: float, t1: float) -> Array
 				if not clash:
 					out.append({"t": start, "end": start + cycle, "kind": "in" if fposmod(kf * STEP_KIND + ph * 0.5, 1.0) < 0.5 else "out", "local": k})
 		k += 1
-	out.sort_custom(func(a, b): return float(a["t"]) < float(b["t"]))
+	out.sort_custom(func(a, b): return float(a["t"]) < float(b["t"]) or (float(a["t"]) == float(b["t"]) and str(a.get("npc", a.get("local"))) < str(b.get("npc", b.get("local")))))
 	return out
 
 

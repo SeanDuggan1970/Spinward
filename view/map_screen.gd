@@ -16,6 +16,10 @@ const FollowHud := preload("res://view/follow_hud.gd")
 const VIEWS := ["ship", "orbit", "cockpit", "map"]
 const TransitAudio := preload("res://view/audio/transit_audio.gd")
 const ShipAudio := preload("res://view/audio/ship_audio.gd")
+const DepartureCalls := preload("res://view/flight/departure_calls.gd")
+
+## The co-pilot says something (talking the ship out of port).
+signal copilot(text: String)
 
 var sim
 var view_name := "orbit"
@@ -62,6 +66,9 @@ func _ready() -> void:
 		legend[1].add_child(UI.label("o  " + op, SystemMap.FLEET_COLOURS[op], 12))
 	set_view(sim.data.balance["flight"].get("transit_view", "ship"))
 	add_child(TransitAudio.new(sim))
+	var calls := DepartureCalls.new(sim)
+	calls.said.connect(func(text: String): copilot.emit(text))
+	add_child(calls)
 
 
 func set_view(name: String) -> void:

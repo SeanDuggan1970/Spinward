@@ -8,6 +8,7 @@ const FlightScene := preload("res://view/flight/flight_scene.gd")
 const Autopilot := preload("res://view/flight/autopilot.gd")
 const Traffic := preload("res://sim/traffic.gd")
 const Pattern := preload("res://view/flight/pattern.gd")
+const Models := preload("res://view/flight/models.gd")
 
 var checks := 0
 var failures := 0
@@ -97,5 +98,68 @@ func _run() -> void:
 	check(not String(c["radio"]).contains("Control"), "Piazzi Station: no tower")
 	check(float(c["cleared_t"]) >= float(c["m"]["end"]) - 0.01, "Piazzi Station: we take the bay once the %s is through" % cname)
 	check(c["docked"] and c["flight"].hits == 0 and c["flight"].bumps == 0, "Piazzi Station: then we dock, touching nothing")
+	_queue_without_collisions()
 	print("%d checks, %d failures (traffic view)" % [checks, failures])
 	quit(1 if failures > 0 else 0)
+
+
+## A busy spell at Kibo Ring: two long-haul ships due at once, one leaving just before
+## and the local craft. Outside the bay, no drawn ship ever passes through another, and
+## ships held for the bay queue one behind another.
+func _queue_without_collisions() -> void:
+	var sim := Sim.new()
+	sim.new_game(42)
+	var d = sim.data
+	var cycle := float(d.balance["traffic"]["cycle_s"])
+	var t0: float = sim.state.time_s
+	var due := t0 + 1800.0
+	var npcs: Array = sim.state.npcs.filter(func(n): return not d.npcs["fleets"][n["fleet"]].get("sail", false) and not d.npcs["fleets"][n["fleet"]].get("elevator", false)).slice(0, 3)
+	for i in 2:
+		npcs[i]["location"] = {"status": "transit", "from": "halo_depot", "to": "kibo_ring", "depart_t": t0 - 86400.0, "arrive_t": due + cycle}
+	npcs[2]["location"] = {"status": "transit", "from": "kibo_ring", "to": "halo_depot", "depart_t": due - 20.0, "arrive_t": due + 86400.0}
+	var holder := Node3D.new()
+	root.add_child(holder)
+	var st := Models.station(d.places["kibo_ring"]["station"], "", {}, d.balance["bays"], 5.0)
+	holder.add_child(st["node"])
+	var pattern = Pattern.new(sim, "kibo_ring", st, st["node"])
+	var z_mouth := float(st["bay"]["z_mouth"])
+	var worst := INF
+	var pair := ""
+	var t := due - 600.0
+	while t < due + 900.0:
+		sim.state.time_s = t
+		pattern.sync(t)
+		pattern.update(t, 1.0, 0.0, Vector3.UP)
+		var keys: Array = pattern.ships.keys()
+		for i in keys.size():
+			for j in range(i + 1, keys.size()):
+				var a: Dictionary = pattern.ships[keys[i]]
+				var b: Dictionary = pattern.ships[keys[j]]
+				var na: Vector3 = (a["node"] as Node3D).position + Vector3(0, 0, float(a["nose_z"]))
+				var nb: Vector3 = (b["node"] as Node3D).position + Vector3(0, 0, float(b["nose_z"]))
+				if na.z < z_mouth or nb.z < z_mouth:
+					continue
+				var margin := na.distance_to(nb) - float(a["radius"]) - float(b["radius"])
+				if margin < worst:
+					worst = margin
+					pair = "%s and %s at %+.0f s" % [a["name"], b["name"], t - due]
+		t += 1.0
+	check(worst > 0.0, "Kibo Ring: queued traffic never flies through itself (closest %s, %.0f m clear)" % [pair, worst])
+	# Held for the bay (a ship using it), two inbound ships queue apart.
+	pattern.clear()
+	pattern.held.clear()
+	sim.state.time_s = due
+	for m in pattern.sync(due):
+		if m["kind"] == "in":
+			pattern.held[Pattern.key(m)] = true
+	pattern.sync(due)
+	for _i in 120:
+		pattern.update(due, 1.0, 0.0, Vector3.UP, 300.0)
+	var waiting: Array = pattern.ships.keys().filter(func(k): return pattern.held.has(k))
+	var spaced := waiting.size() >= 2
+	for i in waiting.size():
+		for j in range(i + 1, waiting.size()):
+			spaced = spaced and (pattern.ships[waiting[i]]["node"] as Node3D).position.distance_to((pattern.ships[waiting[j]]["node"] as Node3D).position) > float(d.balance["traffic"]["separation_m"]) * 0.9
+	check(spaced, "Kibo Ring: %d ships held behind us wait one behind another" % waiting.size())
+	pattern.clear()
+	holder.free()

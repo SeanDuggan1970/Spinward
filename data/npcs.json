@@ -969,6 +969,34 @@
 			"Co-pilot: \"Plotting our way down onto {port}'s orbit. We'll fall in behind her and come up the corridor in {in}.\"",
 			"Co-pilot: \"{port} is coming round {body}. Matching her orbit now: we'll slot in a few kilometres astern. Corridor in {in}.\"",
 			"Co-pilot: \"Updated the arrival: down the well onto {port}'s orbit, phased to meet her from behind. No chasing. {in} to the corridor.\""
-		]
+		],
+		"copilot_undock": {
+			"_note": "The co-pilot talks the ship out of port (view/flight/departure.gd cues): waking the ship, the doors, backing out, clear of the bay, and free with everything deployed (timings in balance.undock). {name} is the co-pilot, {from} the port, {to} where we are going. One line per moment, picked by hashing the trip.",
+			"wake": [
+				"{name}: \"Morning, everyone. Reactor's warm, lights are on, and I've checked the hinges twice. Can we go? Let's go.\"",
+				"{name}: \"Systems up. All of them. I may have woken a few twice just to hear them hum. Ready when {from} is.\"",
+				"{name}: \"Power to the bus, air's good, and the panel motors are twitching. I know the feeling. {to}, here we come.\""
+			],
+			"doors": [
+				"{name}: \"Doors opening. Oh, look at that. Stars.\"",
+				"{name}: \"There's a gap in the doors. I can see space through it. Space!\"",
+				"{name}: \"Doors are moving. I'm not saying I've been counting the seconds, but I have.\""
+			],
+			"backing": [
+				"{name}: \"Easing back. Gently, gently. I'm being very gentle. You'd be proud.\"",
+				"{name}: \"Thrusters on, backing out nice and slow. Slow is hard, for the record.\"",
+				"{name}: \"Moving. Walking pace, which is very sensible and only a little unbearable.\""
+			],
+			"clear": [
+				"{name}: \"We're out! Stopping the roll. And stretching out, finally!\"",
+				"{name}: \"Clear of the bay. Panels out, dish up, right now, this second!\"",
+				"{name}: \"Clear! Arms out, everyone. Well, my arms. Panels out!\""
+			],
+			"free": [
+				"{name}: \"Ah, that's better. Sun on the panels, {to} in my ear, and nothing but sky. Speed the clock up whenever you like.\"",
+				"{name}: \"Everything's out and talking. Free as anything. Turning for {to}; hurry the clock along if you like, I'll keep the view.\"",
+				"{name}: \"Dish locked on, panels drinking sunlight. I could do this all day. Actually, I'm about to. Off to {to}.\""
+			]
+		}
 	}
 }
