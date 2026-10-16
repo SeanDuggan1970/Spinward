@@ -321,3 +321,10 @@ Full write-up: [2026-10-07-economy-together.md](2026-10-07-economy-together.md).
 
 - New data: `balance.traffic.turnaround_s` (30 s) and `queue_lookback_s` (3600 s). Bay movements now queue instead of overlapping, so a ship leaving port may hold a little longer when long-haul ships bunch up (still capped at `max_hold_s`).
 - Balance bot re-run (5 seeds, 180 days, upgrade=1): identical, seed for seed, mean 105,630 cr, median first upgrade day 10.7. The bay queue is view and hold timing only; NPC trips and the economy are unchanged.
+
+
+## Famous bodies and comets (2026-10-15)
+
+- New data: `balance.comets`, five bodies (Halley, 67P, Bennu, Ryugu, Didymos) with five sites, seven news stories and two badges. Orbits are provisional until the JPL bake.
+- Balance bot re-run (5 seeds, 180 days, upgrade=1): identical, seed for seed, mean 105,630 cr, median first upgrade day 10.7. The bot trades between ports and never works sites, so it doesn't see them.
+- Reachability with the stand-in orbits, from Halo Depot at day 0, 60 and 120: Bennu about 115 days in a Mule (at the edge of its larder), and Ryugu and Didymos need a Courier (about 115 days). Halley and 67P need a deep freighter (Halley 76 to 180 days). Recheck once the real orbits are baked; the near-Earth rocks' phases will move these a lot.

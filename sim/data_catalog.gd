@@ -278,6 +278,12 @@ func validate() -> Array[String]:
 			for good in act.get("yields", {}):
 				if not goods.has(good):
 					problems.append("site %s: activity %s yields unknown good %s" % [id, act_id, good])
+			# Comet work: only at a comet, and only "quiet" or "active".
+			if act.has("comet") or act.get("in_coma", false):
+				if not bodies.get(where.get("parent", ""), {}).has("activity"):
+					problems.append("site %s: activity %s is comet work, but %s is not a comet" % [id, act_id, where.get("parent")])
+				if not String(act.get("comet", "")) in ["quiet", "active"]:
+					problems.append("site %s: activity %s: comet must be quiet or active" % [id, act_id])
 	# Story: beats name real ports, sites and modules, and only earlier beats.
 	var seen_beats := []
 	for beat in story.get("beats", []):

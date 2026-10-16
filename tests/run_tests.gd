@@ -30,6 +30,7 @@ const Bindings := preload("res://view/bindings.gd")
 const DamageSystem := preload("res://sim/systems/damage_system.gd")
 const Power := preload("res://sim/power.gd")
 const Condition := preload("res://sim/condition.gd")
+const Comet := preload("res://sim/comet.gd")
 const Fitness := preload("res://sim/fitness.gd")
 const Insurance := preload("res://sim/insurance.gd")
 const ShipBill := preload("res://sim/ship_bill.gd")
@@ -85,6 +86,7 @@ func _initialize() -> void:
 	test_contract_pickup_retry()
 	test_project_pitches()
 	test_sites()
+	test_comets()
 	test_story_arc()
 	test_story_roads()
 	test_outer_traffic()
@@ -921,6 +923,38 @@ func test_light_time() -> void:
 	var real := LightTime.pointing(sim.ephemeris, "shackleton_port", sim.ephemeris.position("kibo_ring", t), sim.ephemeris.velocity("kibo_ring", t), t)
 	check(float(real["tau_s"]) > 1.1 and float(real["tau_s"]) < 1.45, "Kibo to Shackleton light time %.3f s" % real["tau_s"])
 
+## Comets: asleep far out, awake near the Sun. Landing waits for sleep, sampling for
+## waking, and work inside the coma wears the ship. Halley rounds the Sun on
+## 2061-07-28 and is far out and dormant by 2063.
+func test_comets() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var eph := sim.ephemeris
+	check(Comet.activity_at(d, "halley", 4.0 * Comet.AU) == 0.0 and absf(Comet.activity_at(d, "halley", Comet.AU) - 1.0) < 1e-9, "A comet sleeps beyond 3 AU, and Halley at 1 AU is activity 1")
+	check(Comet.activity_at(d, "comet_67p", Comet.AU) < Comet.activity_at(d, "halley", Comet.AU) and Comet.activity(d, eph, "bennu", s.time_s) == 0.0, "67P is gentler than Halley, and an asteroid never outgasses")
+	var perihelion: float = Time.get_unix_time_from_datetime_string("2061-07-28T00:00:00") - GameState.J2000_UNIX
+	var later: float = Time.get_unix_time_from_datetime_string("2063-06-01T00:00:00") - GameState.J2000_UNIX
+	check(Comet.state_of(d, Comet.activity(d, eph, "halley", perihelion)) == "active" and Comet.state_of(d, Comet.activity(d, eph, "halley", later)) == "dormant", "Halley is active at perihelion and asleep by 2063")
+	# At perihelion: no landing, but sample, and dive through the coma.
+	s.time_s = perihelion
+	s.location = {"status": "on_site", "place": "halley_watch"}
+	s.ship["modules"]["avionics.0"] = "survey_pod"
+	s.ship["modules"]["cargo.1"] = "lander_bay"
+	check(SiteSystemScript.blocked(s, d, "halley_watch", "land", eph).contains("outgassing"), "No landing on an outgassing comet")
+	check(SiteSystemScript.blocked(s, d, "halley_watch", "watch", eph) == "", "Sample Halley's coma from standoff")
+	var cond0 := Condition.mean_condition(s.ship)
+	check(sim.apply({"type": "site_work", "activity": "dive"}) == "", "Dive into Halley's coma")
+	sim.advance_game_time(2.5 * DAY)
+	check(Condition.mean_condition(s.ship) < cond0 - 0.01, "The dust wears the ship (%.3f to %.3f)" % [cond0, Condition.mean_condition(s.ship)])
+	check(s.badges.get("earned", {}).has("once_in_a_lifetime"), "Working Halley earns Once in a Lifetime")
+	# Far out and asleep: nothing to sample, but you can land.
+	s.time_s = later
+	check(SiteSystemScript.blocked(s, d, "halley_watch", "watch", eph).contains("asleep"), "A sleeping comet has no coma to sample")
+	check(SiteSystemScript.blocked(s, d, "halley_watch", "land", eph) == "", "Land on Halley once it sleeps")
+	# Without the ephemeris (or away from comets) nothing changes.
+	check(SiteSystemScript.blocked(s, d, "halley_watch", "land") == "", "The comet check needs the ephemeris")
+
 
 ## The baked orbits against JPL Horizons (tests/horizons_reference.json): the
 ## planets, dwarf planets, asteroids and moons where Horizons puts them in 2061 and
@@ -1583,8 +1617,8 @@ func test_news_in_depth() -> void:
 	var g := gated.state
 	g.started_t -= 400.0 * DAY
 	gated.advance_game_time(3600.0)
-	var waiting: int = d.news["stories"].filter(func(st): return st.has("after_beat")).size()
-	check(g.news["posted"].size() >= d.news["stories"].size() - waiting, "Four hundred days on, every story that is not waiting on a beat is out")
+	var waiting: int = d.news["stories"].filter(func(st): return st.has("after_beat") or float(st.get("after_days", 0)) > 400.0).size()
+	check(g.news["posted"].size() >= d.news["stories"].size() - waiting, "Four hundred days on, every story due by then that is not waiting on a beat is out")
 	for id in ["farside_silence", "hello_back", "first_delegate"]:
 		check(not id in g.news["posted"], "%s still waits for its beat" % id)
 	g.story["done"].append("the_occultation")

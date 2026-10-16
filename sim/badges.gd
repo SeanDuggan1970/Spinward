@@ -41,6 +41,8 @@ static func met(state, badge: Dictionary) -> bool:
 				return false
 		elif int(b.get("rounds", 0)) < need:
 			return false
+	if badge.has("worked") and not badge["worked"].any(func(site): return not state.sites.get("worked", {}).get(site, []).is_empty()):
+		return false
 	if badge.has("slept_days") and float(state.sleep.get("total_s", 0.0)) < float(badge["slept_days"]) * 86400.0:
 		return false
 	return true
