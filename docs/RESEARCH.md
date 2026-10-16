@@ -90,6 +90,17 @@ Plan: a curated catalog of about 30 major bodies plus a hand-picked set of named
   - A captured asteroid as counterweight ([Dezeen](https://www.dezeen.com/2024/01/09/jordan-william-hughes-space-elevator/amp/)).
 - **Fiction:** in Red Mars, cars go up and down together; in Clarke's *The Fountains of Paradise*, the elevator rises from a mountain temple ([Space elevators in fiction](https://en.wikipedia.org/wiki/Space_elevators_in_fiction)).
 
+## 8. Comets and the famous small bodies
+
+- **Halley (1P)**: next perihelion 28 July 2061, at about 0.59 AU; next after that, March 2134. Its orbit is retrograde (inclination 162 degrees). The nucleus is 15 x 8 x 8 km, mass about 2.2e14 kg and very dark (albedo 0.04). Giotto passed 596 km from the nucleus at 68 km/s in 1986 and lost its camera to dust; the Vega probes went first and guided it ([ESA Giotto](https://www.esa.int/Science_Exploration/Space_Science/Giotto_overview)). Hydrogen cyanide was found in its coma.
+- **67P/Churyumov-Gerasimenko**: a 6.4-year orbit out to 5.7 AU. Rosetta orbited it from 2014 to 2016, often at 10 to 30 km, and backed off to a few hundred km near perihelion when dust confused its star trackers. Philae's harpoons failed to fire and it bounced from Agilkia. Mass 1.0e13 kg.
+- **Activity**: water ice sublimates strongly inside about 3 AU; water production near perihelion was about 7e29 molecules/s for Halley in 1986 and about 1e28 for 67P in 2015.
+- **Bennu**: OSIRIS-REx sampled it in October 2020; the sampler sank into a surface that behaved like a ball pit. GM 4.892 m^3/s^2, mean radius 245 m. It ejects small particles now and then.
+- **Ryugu**: Hayabusa2 made an artificial crater in April 2019 and returned samples rich in hydrated clays. Mass about 4.5e11 kg, mean radius 448 m.
+- **Didymos and Dimorphos**: DART hit Dimorphos on 26 September 2022 and shortened its 11 h 55 min orbit by about 33 minutes.
+
+**Bent for play** (`sim/comet.gd`): activity follows sunlight (1/r^2) with a hard onset at 3 AU, where real comets vary a great deal, outburst and switch jets on with the local dawn. The coma is a sphere of fixed radius for its activity. The orbit ignores the push of outgassing (non-gravitational forces), which moves Halley's perihelion date by a few days per orbit; the baked orbit is fitted to Horizons in 2061 and 2063, so the error over the decade is small.
+
 ## Open research for later passes
 
 - Readable orbit-planning UI patterns (KSP manoeuvre nodes versus one-click "AI plot course").

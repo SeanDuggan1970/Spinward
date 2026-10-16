@@ -532,6 +532,8 @@ func _handle_events() -> void:
 					line += " Paid %s." % UI.money(float(d["credits"]))
 				if float(d["lost_t"]) > 0.05:
 					line += " %.1f t left behind: no room." % d["lost_t"]
+				if float(d.get("dust_wear", 0.0)) > 0.001:
+					line += " The dust took %d%% off every module's condition." % int(ceil(float(d["dust_wear"]) * 100.0))
 				notice(line, UI.WARN if d["went_wrong"] else UI.GOOD)
 				comms.append("%s  %s" % [_clock(e["time_s"]), line])
 				refresh = true

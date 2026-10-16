@@ -278,5 +278,330 @@
 				"text": "You close to fifty kilometres and send the oldest greeting there is: a count, one to ten. For two days, nothing. Then your own count comes back, in your own voice, from all around the sky at once."
 			}
 		}
+	},
+	"halley_watch": {
+		"name": "Halley's Comet",
+		"kind": "comet",
+		"visibility": "known",
+		"description": "The comet everyone has heard of, back for the first time since 1986. It falls past the Sun on 28 July 2061 going the wrong way round, so matching it costs more than any trip in the system. The few who get here will tell their grandchildren. Keep outside the coma, and take your time.",
+		"location": {
+			"type": "orbit",
+			"parent": "halley",
+			"elements": {
+				"a_m": 400000.0,
+				"e": 0.0,
+				"i_deg": 70.0,
+				"node_deg": 0.0,
+				"peri_deg": 0.0,
+				"m0_deg": 0.0
+			}
+		},
+		"activities": {
+			"watch": {
+				"name": "Sample the coma from standoff",
+				"needs": [
+					"survey"
+				],
+				"comet": "active",
+				"days": 5.0,
+				"risk": 0.0,
+				"credits": 140000,
+				"rep": {
+					"Terran Compact Science": 12,
+					"The Commons": 6
+				},
+				"text": "Five days riding alongside at four hundred kilometres, sniffing the gas and catching dust on aerogel. Giotto saw this nucleus for a few seconds at 68 km/s. You get to watch it breathe. The data goes home by radio, and half the system tunes in."
+			},
+			"dive": {
+				"name": "Dive through the inner coma",
+				"needs": [
+					"survey"
+				],
+				"comet": "active",
+				"in_coma": true,
+				"days": 2.0,
+				"risk": 0.1,
+				"credits": 220000,
+				"rep": {
+					"Terran Compact Science": 18
+				},
+				"yields": {
+					"volatiles": [
+						0.1,
+						0.4
+					]
+				},
+				"text": "Two days down among the jets, hull pinging like hail on a tin roof, star trackers lost in the glitter. You come out with a hold full of the oldest ice there is and a ship that needs a wash."
+			},
+			"land": {
+				"name": "Land on the nucleus",
+				"needs": [
+					"lander"
+				],
+				"comet": "quiet",
+				"days": 3.0,
+				"risk": 0.2,
+				"yields": {
+					"water_ice": [
+						6,
+						14
+					],
+					"volatiles": [
+						1,
+						3
+					]
+				},
+				"rep": {
+					"Terran Compact Science": 10
+				},
+				"text": "Halley's nucleus is blacker than coal and as light as a snowdrift. You anchor with harpoons, as Philae meant to, and bring up ice that has been frozen since before there were planets."
+			}
+		}
+	},
+	"comet_67p_claim": {
+		"name": "67P: Rosetta's comet",
+		"kind": "comet",
+		"visibility": "known",
+		"description": "The rubber-duck comet Rosetta orbited for two years. Four kilometres of dusty ice on a six-and-a-half-year loop out to Jupiter's orbit. Asleep for most of the decade, which makes it the best homestead ice in the inner system, as long as you are gone, or dug in, when it wakes.",
+		"location": {
+			"type": "orbit",
+			"parent": "comet_67p",
+			"elements": {
+				"a_m": 30000.0,
+				"e": 0.0,
+				"i_deg": 60.0,
+				"node_deg": 40.0,
+				"peri_deg": 0.0,
+				"m0_deg": 0.0
+			}
+		},
+		"activities": {
+			"survey": {
+				"name": "Survey both lobes",
+				"needs": [
+					"survey"
+				],
+				"days": 5.0,
+				"risk": 0.0,
+				"credits": 45000,
+				"rep": {
+					"The Commons": 6,
+					"Belt Assembly": 4
+				},
+				"text": "Five days of radar sounding through the neck. The cliffs Rosetta photographed have slumped and moved; the claims office buys the new map."
+			},
+			"prospect": {
+				"name": "Land at Agilkia and core",
+				"needs": [
+					"lander"
+				],
+				"comet": "quiet",
+				"days": 3.0,
+				"risk": 0.15,
+				"yields": {
+					"water_ice": [
+						6,
+						16
+					],
+					"volatiles": [
+						1,
+						3
+					]
+				},
+				"text": "Down where Philae first bounced. You have better harpoons. Three cores of dirty ice, all of it going spare."
+			},
+			"mine": {
+				"name": "Set up the rig and mine ice",
+				"needs": [
+					"lander",
+					"mining"
+				],
+				"comet": "quiet",
+				"days": 12.0,
+				"risk": 0.15,
+				"yields": {
+					"water_ice": [
+						30,
+						60
+					],
+					"volatiles": [
+						4,
+						10
+					]
+				},
+				"text": "Twelve days at the rig in the Hapi valley, where the ice is closest. Water is the most useful thing there is out here, and this comet is mostly water."
+			},
+			"sample": {
+				"name": "Sample the waking coma",
+				"needs": [
+					"survey"
+				],
+				"comet": "active",
+				"days": 4.0,
+				"risk": 0.0,
+				"credits": 60000,
+				"rep": {
+					"Terran Compact Science": 8
+				},
+				"text": "Four days at standoff as the jets switch on with the dawn. Rosetta's team asked questions about this comet's water that are still open. Your data answers two of them."
+			}
+		}
+	},
+	"bennu_survey": {
+		"name": "Bennu",
+		"kind": "survey",
+		"visibility": "known",
+		"description": "The rubble-pile asteroid OSIRIS-REx touched in 2020 and found it was barely a solid at all: the sampler sank in like a ball pit. Carbon-rich, a little water in its clays, and an easy trip from Earth.",
+		"location": {
+			"type": "orbit",
+			"parent": "bennu",
+			"elements": {
+				"a_m": 2000.0,
+				"e": 0.0,
+				"i_deg": 90.0,
+				"node_deg": 0.0,
+				"peri_deg": 0.0,
+				"m0_deg": 0.0
+			}
+		},
+		"activities": {
+			"survey": {
+				"name": "Map it boulder by boulder",
+				"needs": [
+					"survey"
+				],
+				"days": 3.0,
+				"risk": 0.0,
+				"credits": 16000,
+				"rep": {
+					"Terran Compact Science": 4
+				},
+				"text": "Three days of close passes. Bennu has shed a little more gravel since 2020; the Compact wants to know where it went."
+			},
+			"prospect": {
+				"name": "Touch and go",
+				"needs": [
+					"lander"
+				],
+				"days": 1.0,
+				"risk": 0.2,
+				"yields": {
+					"regolith": [
+						2,
+						6
+					],
+					"water_ice": [
+						0.5,
+						2
+					],
+					"volatiles": [
+						0.2,
+						0.8
+					]
+				},
+				"text": "A touch and a puff of gas, as OSIRIS-REx did, then a quick back-off before the surface swallows the pad. A sack of dark, hydrated gravel."
+			}
+		}
+	},
+	"ryugu_survey": {
+		"name": "Ryugu",
+		"kind": "survey",
+		"visibility": "known",
+		"description": "The spinning-top asteroid Hayabusa2 shot a crater into in 2019. Dark, carbon-rich and full of hydrated clays. A good first place to learn to mine on a small world, a short hop from Earth.",
+		"location": {
+			"type": "orbit",
+			"parent": "ryugu",
+			"elements": {
+				"a_m": 3000.0,
+				"e": 0.0,
+				"i_deg": 85.0,
+				"node_deg": 90.0,
+				"peri_deg": 0.0,
+				"m0_deg": 0.0
+			}
+		},
+		"activities": {
+			"survey": {
+				"name": "Survey from orbit",
+				"needs": [
+					"survey"
+				],
+				"days": 3.0,
+				"risk": 0.0,
+				"credits": 18000,
+				"rep": {
+					"Terran Compact Science": 4
+				},
+				"text": "Three days of passes. The crater Hayabusa2 made is still there, sharp-edged in the low gravity."
+			},
+			"mine": {
+				"name": "Set up the rig and mine",
+				"needs": [
+					"lander",
+					"mining"
+				],
+				"days": 8.0,
+				"risk": 0.12,
+				"yields": {
+					"water_ice": [
+						6,
+						14
+					],
+					"volatiles": [
+						2,
+						5
+					],
+					"regolith": [
+						10,
+						20
+					]
+				},
+				"text": "Eight days drilling clays near the equator ridge. Bake them and they give up their water."
+			}
+		}
+	},
+	"dart_crater": {
+		"name": "Didymos and the DART crater",
+		"kind": "heritage",
+		"visibility": "known",
+		"description": "In 2022 the DART spacecraft hit Didymos' little moon Dimorphos on purpose and changed its orbit: the first time people moved a world to show they could protect their own. Dimorphos still circles Didymos every 11 hours 23 minutes, half an hour faster than before. Visitors come to see where.",
+		"location": {
+			"type": "orbit",
+			"parent": "didymos",
+			"elements": {
+				"a_m": 3000.0,
+				"e": 0.0,
+				"i_deg": 10.0,
+				"node_deg": 0.0,
+				"peri_deg": 0.0,
+				"m0_deg": 0.0
+			}
+		},
+		"activities": {
+			"survey": {
+				"name": "Survey the impact site",
+				"needs": [
+					"survey"
+				],
+				"days": 2.0,
+				"risk": 0.0,
+				"credits": 20000,
+				"rep": {
+					"Terran Compact Science": 6,
+					"The Commons": 4
+				},
+				"text": "Two days mapping the scar on Dimorphos and the debris it threw into orbit. The planetary defence office buys the data every decade, to see how a nudged world settles."
+			},
+			"visit": {
+				"name": "Pay your respects",
+				"needs": [],
+				"days": 0.5,
+				"risk": 0.0,
+				"rep": {
+					"The Commons": 2
+				},
+				"text": "Half a day holding station over the crater. Someone left a small plaque in orbit: a list of the DART team, and under it, 'We could, so we did.'"
+			}
+		}
 	}
 }

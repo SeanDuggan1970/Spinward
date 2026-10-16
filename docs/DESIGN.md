@@ -1207,6 +1207,23 @@ What is left is `Navigation.plan` (about 2 ms a local trip, mostly the 97-step `
 
 Tools: `tools/time_tests.gd` times each test function (`ONLY=test_a,test_b` to pick). `tools/determinism_hash.gd` prints hashes of `state.to_dict()` and the events after a fixed scripted game, with player route plans; run it before and after any speed change and diff the `DET` lines.
 
+## Famous bodies and comets (Oct 2026)
+
+Sean's direction (2026-10-15): "objects like Halley's comet and other large famous and useful real estate and resources... though I'm sure a comet might be silly to approach especially when outgassing." He chose to add all of them at once.
+
+- **New bodies** (`tools/bake_famous_bodies.py`, orbits from JPL Horizons like every other body):
+  - **Halley's Comet** (`halley`). Its next perihelion is 28 July 2061, five months into the game. It orbits backwards, so matching it is the dearest trip in the system: a prestige feat, with a badge (Once in a Lifetime).
+  - **67P/Churyumov-Gerasimenko** (`comet_67p`), Rosetta's comet. Asleep for most of the decade, so it is homestead ice: land, core and mine it while it sleeps.
+  - **Bennu and Ryugu**: carbon-rich, water-bearing near-Earth rocks, an easy trip from Earth. Survey, touch-and-go and a first mining site.
+  - **Didymos**, with the DART crater on its moonlet Dimorphos as a heritage site (badge: We Could, So We Did). Dimorphos is not a body of its own; the site holds station over it.
+- **Comets are not silly to approach, only to rush.** Rosetta orbited an active comet at 10 to 30 km for two years, and Giotto, flying through Halley at 68 km/s, lost its camera. So `sim/comet.gd` models activity, set in `balance.comets`:
+  - A comet is dormant beyond `onset_au` (3 AU, where water ice starts to sublimate). Closer in, activity rises with sunlight (1/r^2), scaled so 1 is Halley at 1 AU. Each comet's `bodies.json` `activity.strength` sets its own scale (67P is 0.15).
+  - A site activity's `"comet"` is `"quiet"` (land, drill: only while dormant) or `"active"` (sample the coma: only once awake). Between `quiet_below` and `active_from` a comet is "stirring", and neither is allowed.
+  - `"in_coma": true` work (Halley's dive) adds risk, and dust takes condition off every module, by activity and days (`dust_wear_per_day`, capped at `dust_wear_max`).
+  - The coma's radius (`coma_km` x sqrt(activity)) shows on the site screen. The system map draws an active comet's tail pointing away from the Sun.
+- **News**: Halley wakes (day -12), shows to the naked eye (day 98), rounds the Sun (day 149) and goes quiet (day 420); forty years since DART (day 574, 26 September 2062).
+- **Not yet**: jets and a coma in the flight view (the `plumes` data is static, so a comet's plumes would need to follow its activity), and dust noise on the scanner.
+
 ## Milestones
 
 - **M0 – Foundation:** done.
