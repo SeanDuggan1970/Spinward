@@ -326,3 +326,10 @@ Full write-up: [2026-10-07-economy-together.md](2026-10-07-economy-together.md).
 - New data: `balance.comets`, five bodies (Halley, 67P, Bennu, Ryugu, Didymos) with five sites, seven news stories and two badges. Orbits are provisional until the JPL bake.
 - Balance bot re-run (5 seeds, 180 days, upgrade=1): identical, seed for seed, mean 105,630 cr, median first upgrade day 10.7. The bot trades between ports and never works sites, so it doesn't see them.
 - Reachability with the stand-in orbits, from Halo Depot at day 0, 60 and 120: Bennu about 115 days in a Mule (at the edge of its larder), and Ryugu and Didymos need a Courier (about 115 days). Halley and 67P need a deep freighter (Halley 76 to 180 days). Recheck once the real orbits are baked; the near-Earth rocks' phases will move these a lot.
+
+
+## More kinds of travellers, and kindness on the lanes (2026-10-17)
+
+- New data: ten hitchhiker trades in `favours.hitchhikers.trades` (tourist, musician, poet, artist, aeroponics grower, doctor, surgeon, nurse, teacher, scientist), with an optional per-trade `fare_cr` and `goodwill_rep`; `favours.kindness` (chance per arrival and five forms); more contract passenger groups; more shuttle comms lines.
+- The five helpful trades (engineer, navigator, pilot, cook, tinkerer) are now about half as likely in a given hitchhiker (weight 12 of 24).
+- Balance bot (5 seeds, 180 days, upgrade=1 hikers=1 fit=cargo.1:passenger_berths), before and after: mean 97,478 cr to 100,498 cr, hitchhiker fares 6,200 to 8,200 cr in total, 10 kindnesses across the five runs. Seed-to-seed spread (45,000 to 137,000 cr) swamps the difference: this is flavour with small perks, not a new income stream. The bot never carries contract passengers, so the passenger kindness chance (0.12) is untested by it.

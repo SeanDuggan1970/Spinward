@@ -328,6 +328,55 @@ static func install_tune(ship: Dictionary, data, id: String, source: String, t: 
 	return ""
 
 
+# ---- Kindness -------------------------------------------------------------------------
+
+## Maybe the people at `place` do something nice for the pilot who brought `who`
+## (data/favours.json "kindness"; `key` picks the chance: "hitchhiker" or "passengers").
+## Vouchers and cash go straight into the state. Returns the line to show, or "".
+## All randomness comes from rng.
+static func kindness(state, data, rng: RandomNumberGenerator, place: String, who: String, key: String) -> String:
+	var cfg: Dictionary = data.favours.get("kindness", {})
+	if cfg.is_empty() or rng.randf() >= float(cfg["chance"].get(key, 0.0)):
+		return ""
+	ensure(state)
+	var op := operator_of(data, place)
+	var forms: Dictionary = cfg["forms"]
+	var keys: Array = forms.keys().filter(func(f): return f != "yard" or not yard_names(data, op).is_empty())
+	keys.sort()
+	var total := 0.0
+	for f in keys:
+		total += float(forms[f]["weight"])
+	var roll := rng.randf() * total
+	var form := ""
+	for f in keys:
+		form = f
+		roll -= float(forms[f]["weight"])
+		if roll <= 0.0:
+			break
+	var spec: Dictionary = forms[form]
+	var words := {"who": who, "place": String(data.places[place]["name"]), "op": op, "days": "", "tonnes": "", "pct": "", "value": ""}
+	match form:
+		"docking", "fuel":
+			var days := roundf(_range(rng, spec["days"]))
+			_add_voucher(state, {"form": form, "operator": op, "discount": float(spec["discount"]), "expires_t": state.time_s + days * DAY})
+			words["days"] = "%d" % int(days)
+			words["pct"] = "%d" % int(round(float(spec["discount"]) * 100.0))
+		"refuel":
+			var t := snappedf(_range(rng, spec["tonnes"]), 0.5)
+			_add_voucher(state, {"form": "refuel", "operator": op, "tonnes": t, "expires_t": state.time_s + float(spec["expires_days"]) * DAY})
+			words["tonnes"] = "%.1f" % t
+		"yard":
+			var value := snappedf(_range(rng, spec["value_cr"]), 50.0)
+			_add_voucher(state, {"form": "yard", "operator": op, "value_cr": value, "expires_t": state.time_s + float(spec["expires_days"]) * DAY})
+			words["value"] = "%d" % int(value)
+		"cash":
+			var cash := snappedf(_range(rng, spec["credits"]), float(spec.get("step_cr", 50.0)))
+			state.credits += cash
+			words["value"] = "%d" % int(cash)
+	var lines: Array = spec["text"]
+	return String(lines[rng.randi() % lines.size()]).format(words)
+
+
 # ---- Hitchhikers ----------------------------------------------------------------------
 
 ## Someone at `place` asking for a ride. All randomness comes from rng.
@@ -355,7 +404,8 @@ static func make_hiker(data, state, rng: RandomNumberGenerator, place: String) -
 	pool.sort()
 	var to: String = pool[rng.randi() % pool.size()]
 	var spec: Dictionary = trades[trade]
-	var fare := snappedf(rng.randf_range(float(cfg["fare_cr"][0]), float(cfg["fare_cr"][1])), float(cfg["fare_step_cr"]))
+	var fares: Array = spec.get("fare_cr", cfg["fare_cr"])
+	var fare := snappedf(rng.randf_range(float(fares[0]), float(fares[1])), float(cfg["fare_step_cr"]))
 	var lines := {}
 	for stage in ["board", "mid", "leave"]:
 		var options: Array = spec[stage]

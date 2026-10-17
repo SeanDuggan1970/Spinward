@@ -465,6 +465,12 @@ func _handle_events() -> void:
 			"favour_granted":
 				notice(d["text"], UI.GOOD)
 				refresh = true
+			"kindness":
+				notice(d["text"], UI.GOOD)
+				comms.append("%s  %s" % [_clock(e["time_s"]), d["text"]])
+				if comms.size() > COMMS_KEEP:
+					comms.pop_front()
+				refresh = true
 			"voucher_expired":
 				notice("A voucher from %s has expired." % d["operator"], UI.WARN)
 				refresh = true
@@ -477,7 +483,8 @@ func _handle_events() -> void:
 			"hitchhiker_boarded", "hitchhiker_line", "hitchhiker_helped", "hitchhiker_left":
 				var hline: String = d["text"]
 				if e["type"] == "hitchhiker_left":
-					hline += "  (%s%s)" % ["fare %s" % UI.money(float(d["fare"])) if float(d["fare"]) > 0.0 else "no fare", ", fitted a tune: %s" % sim.data.favours["tunes"][d["tune"]]["name"] if d["tune"] != "" else ""]
+					hline += "  (%s%s%s)" % ["fare %s" % UI.money(float(d["fare"])) if float(d["fare"]) > 0.0 else "no fare", ", fitted a tune: %s" % sim.data.favours["tunes"][d["tune"]]["name"] if d["tune"] != "" else "",
+						", goodwill with %s" % sim.data.places[d["place"]].get("operator", "the port") if float(d.get("goodwill", 0.0)) > 0.0 else ""]
 				notice(hline, UI.GOOD if e["type"] != "hitchhiker_line" else UI.TEXT)
 				comms.append("%s  %s" % [_clock(e["time_s"]), hline])
 				if comms.size() > COMMS_KEEP:
