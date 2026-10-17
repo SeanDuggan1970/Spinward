@@ -340,7 +340,7 @@ func keep_ship() -> void:
 func count_events() -> void:
 	for e in sim.take_events():
 		var ty: String = e["type"]
-		if ty in ["module_fault", "wof_lapsed", "insurance_lapsed", "insurance_void", "hitchhiker_asks", "hitchhiker_boarded", "hitchhiker_left", "hitchhiker_refused", "favour_granted", "voucher_used", "unfit_surcharge", "passengers_refused", "condition_low"]:
+		if ty in ["module_fault", "wof_lapsed", "insurance_lapsed", "insurance_void", "hitchhiker_asks", "hitchhiker_boarded", "hitchhiker_left", "hitchhiker_refused", "favour_granted", "voucher_used", "unfit_surcharge", "passengers_refused", "condition_low", "kindness"]:
 			counts[ty] = int(counts.get(ty, 0)) + 1
 		if ty == "contract_delivered" and job_values.has(int(e["data"].get("id", -1))):
 			var iv: Dictionary = job_values[int(e["data"]["id"])]

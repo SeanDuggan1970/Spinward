@@ -365,6 +365,13 @@ func _deliver(job: Dictionary) -> void:
 	sim().emit("contract_delivered", {"id": job["id"], "on_time": on_time, "credits": pay + float(kind_pay.get("credits", 0.0)), "rep": rep, "client": job["client"]})
 	if not kind_pay.is_empty():
 		sim().emit("favour_granted", {"id": job["id"], "form": kind_pay["form"], "text": kind_pay["text"], "client": job["client"]})
+	# Passengers brought on time to a port: sometimes the people there do something kind
+	# for the pilot who brought them.
+	if on_time and int(job.get("passengers", 0)) > 0 and not job.get("covert", false) and data.places.has(job["to"]):
+		var kind := {"text": ""}
+		_with_rng(func(): kind["text"] = Favours.kindness(s, data, _rng, job["to"], String(job["item"]), "passengers"))
+		if kind["text"] != "":
+			sim().emit("kindness", {"place": job["to"], "who": job["item"], "text": kind["text"]})
 
 
 func _check_failures() -> void:

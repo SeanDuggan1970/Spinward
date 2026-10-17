@@ -1,5 +1,5 @@
 {
-	"_note": "Favours: rewards in kind, hitchhikers and engine tunes (sim/favours.gd, sim/systems/favour_system.gd). in_kind: some contract offers pay part of the reward in something other than credits. chance is per contract kind, scaled by client_mult (per operator); kind_share is the share of the reward paid in kind. value_cr is what the card shows beside the offer; the cash part drops by value_cr x cash_offset (below 1: a voucher you can only spend at one client's yards is worth a little more on paper than the cash it replaces, so taking one is a fair deal). Forms: yard (a credit at the client's shipyards, spent on repairs), docking (free tug, days), fuel (a discount on propellant, days), refuel (free tonnes), favour (reputation with the client), tune (an engine tune from tunes, below). value_per_unit turns a target value into days, tonnes or reputation. client_forms overrides a form's weight for one operator. hitchhikers: 'have spacesuit, will travel'. A hitchhiker needs a free berth, pays fare_cr on arrival, and helps by trade while aboard (summed over everyone aboard): heal_per_day (damage mended a day while flying), fuel_trim (share of a departure's propellant saved), tug_mult (multiplies the auto-dock fee), life_support_mult (stretches life support) and wear_mult (for maintenance to read, see ShipStats.wear_mult). A tinkerer may leave a tune from tune_ids on parting. tunes: per-drive modifiers; thrust_pct, isp_pct and heat_pct feed ShipStats (so routes and fuel use follow), wear_pct is for maintenance to read. A tune belongs to the drive module it was fitted to and stops counting if that drive is swapped out.",
+	"_note": "Favours: rewards in kind, hitchhikers and engine tunes (sim/favours.gd, sim/systems/favour_system.gd). in_kind: some contract offers pay part of the reward in something other than credits. chance is per contract kind, scaled by client_mult (per operator); kind_share is the share of the reward paid in kind. value_cr is what the card shows beside the offer; the cash part drops by value_cr x cash_offset (below 1: a voucher you can only spend at one client's yards is worth a little more on paper than the cash it replaces, so taking one is a fair deal). Forms: yard (a credit at the client's shipyards, spent on repairs), docking (free tug, days), fuel (a discount on propellant, days), refuel (free tonnes), favour (reputation with the client), tune (an engine tune from tunes, below). value_per_unit turns a target value into days, tonnes or reputation. client_forms overrides a form's weight for one operator. hitchhikers: 'have spacesuit, will travel'. A hitchhiker needs a free berth, pays fare_cr on arrival, and helps by trade while aboard (summed over everyone aboard): heal_per_day (damage mended a day while flying), fuel_trim (share of a departure's propellant saved), tug_mult (multiplies the auto-dock fee), life_support_mult (stretches life support) and wear_mult (for maintenance to read, see ShipStats.wear_mult). A tinkerer may leave a tune from tune_ids on parting. A trade may set its own fare_cr range (a tourist pays for the view), and goodwill_rep is reputation with the operator of their stop, earned when you set them down there (doctors, nurses, teachers, growers, artists and the like are welcome wherever they go). tunes: per-drive modifiers; thrust_pct, isp_pct and heat_pct feed ShipStats (so routes and fuel use follow), wear_pct is for maintenance to read. A tune belongs to the drive module it was fitted to and stops counting if that drive is swapped out.",
 	"in_kind": {
 		"chance": {
 			"package": 0.12,
@@ -119,6 +119,42 @@
 		}
 	},
 	"max_tunes_per_drive": 2,
+	"kindness": {
+		"_note": "Small kindnesses for those who ply the lanes (Favours.kindness): when you set down a hitchhiker the port was waiting for (a trade with goodwill_rep) at their stop, or deliver contract passengers on time, the people there may do something nice for you. chance is per arrival, by who you brought. Each form is a voucher at the port operator's ports (docking: free tugs for days; fuel: a discount for days; refuel: free tonnes; yard: a small repair credit, only where the operator has yards) or cash (a whip-round). text: lines with {who} (who you brought), {place}, {op}, {days}, {tonnes}, {pct}, {value}.",
+		"chance": {"hitchhiker": 0.35, "passengers": 0.12},
+		"forms": {
+			"docking": {
+				"weight": 3,
+				"days": [7, 21],
+				"discount": 1.0,
+				"text": ["The tug crew at {place} heard you brought {who}. No tug fees at {op} ports for {days} days.", "{place} harbourmaster: 'You brought us {who}. Your tugs are on the house for {days} days, anywhere {op} runs.'"]
+			},
+			"fuel": {
+				"weight": 2,
+				"days": [10, 30],
+				"discount": 0.2,
+				"text": ["The fuel crew at {place} knock {pct}% off for {days} days. 'Anyone who brings us {who} pays less here.'"]
+			},
+			"refuel": {
+				"weight": 2,
+				"tonnes": [1.0, 4.0],
+				"expires_days": 60,
+				"text": ["Somebody at {place} has quietly topped up a tank in your name: {tonnes} t of propellant, free at {op} ports.", "A note on your docking clamp: 'For bringing {who}. {tonnes} t of propellant, on {op}.'"]
+			},
+			"yard": {
+				"weight": 1,
+				"value_cr": [300, 1200],
+				"expires_days": 90,
+				"text": ["The yard at {place} owes you one for bringing {who}: a repair credit worth {value} cr at {op} yards."]
+			},
+			"cash": {
+				"weight": 1.5,
+				"credits": [100, 500],
+				"step_cr": 50,
+				"text": ["The hub at {place} passed the hat round for the pilot who brought {who}: {value} cr.", "A whip-round at {place}, for bringing {who}: {value} cr and a lot of handshakes."]
+			}
+		}
+	},
 	"hitchhikers": {
 		"chance": 0.4,
 		"cooldown_days": 3.0,
@@ -181,6 +217,97 @@
 				"board": ["{name} eyes your drive bay a little too long. 'Tinkerer. I fix things that are not broken yet.'"],
 				"mid": ["{name} has a laptop open on a thrust map. 'Hm. No. Hm. Yes, maybe.'"],
 				"leave": ["{name}: 'Left something on your drive controller. It is better than it was. Probably.'"]
+			},
+			"tourist": {
+				"weight": 2,
+				"label": "tourist",
+				"blurb": "pays well for the view",
+				"fare_cr": [200, 900],
+				"board": ["{name} has a camera on each shoulder. 'Tourist! Is it true you can see {to} from the galley?'", "{name} clips in, beaming. 'My first time off Earth. Do not tell me anything frightening.'"],
+				"mid": ["{name} has been at the window for six hours. 'I am not tired. I am never going to be tired again.'"],
+				"leave": ["{name}: 'Best money I ever spent. I am telling everyone about you.'"]
+			},
+			"musician": {
+				"weight": 1,
+				"label": "musician",
+				"blurb": "plays the port a welcome",
+				"goodwill_rep": 0.5,
+				"board": ["{name} folds a fiddle case into the locker like it is made of glass. 'Musician. I play for my supper, and for yours.'"],
+				"mid": ["{name} has been playing in the lounge. The air handler, it turns out, hums in A."],
+				"leave": ["{name}: 'There is a concert on the hub tonight. You are on the guest list, and so is your ship.'"]
+			},
+			"poet": {
+				"weight": 1,
+				"label": "poet",
+				"blurb": "writes the ship into a poem",
+				"goodwill_rep": 0.5,
+				"board": ["{name} brings a notebook and very little else. 'Poet. I am going to {to} to write about the people who live there.'"],
+				"mid": ["{name} reads you a draft. It is about the drive. It is better than you expected."],
+				"leave": ["{name}: 'You are in it now, you know. Third verse. The kind one.'"]
+			},
+			"artist": {
+				"weight": 1,
+				"label": "artist",
+				"blurb": "brings colour to the habitats",
+				"goodwill_rep": 0.5,
+				"board": ["{name} wrestles a crate of pigments through the hatch. 'Artist. They have a whole blank ring at {to} and they asked for me.'"],
+				"mid": ["{name} has sketched the whole crew. Your nose is, apparently, 'architectural'."],
+				"leave": ["{name}: 'Come and see the mural when it is done. You will be somewhere in the corner.'"]
+			},
+			"aeroponics": {
+				"weight": 1.5,
+				"label": "aeroponics grower",
+				"blurb": "tends your air garden and the farms ahead",
+				"life_support_mult": 1.1,
+				"goodwill_rep": 1.0,
+				"board": ["{name} arrives with a tray of seedlings under a dome. 'Aeroponics. Roots in the mist, no tanks to slosh. {to} wants a farm.'"],
+				"mid": ["{name} has rewired your scrubber garden. The air tastes greener. That should not be possible."],
+				"leave": ["{name}: 'I left you a cutting. Mist it twice a day and it will keep you breathing a little longer.'"]
+			},
+			"doctor": {
+				"weight": 1,
+				"label": "doctor",
+				"blurb": "goes where a clinic is short-handed",
+				"goodwill_rep": 1.0,
+				"board": ["{name} carries a battered medical bag. 'Doctor. They are short at {to}, and I have never been good at saying no.'"],
+				"mid": ["{name} gives everyone aboard a check-up whether they wanted one or not. Drink more water, apparently."],
+				"leave": ["{name}: 'The clinic sends its thanks. So do the patients, though they do not know it yet.'"]
+			},
+			"surgeon": {
+				"weight": 0.5,
+				"label": "surgeon",
+				"blurb": "is needed for an operation ahead",
+				"goodwill_rep": 1.5,
+				"board": ["{name} has steady hands and a sealed case. 'Surgeon. There is a list at {to} that cannot wait for the scheduled ferry.'"],
+				"mid": ["{name} is practising knots on the galley table. Very small knots. Very fast."],
+				"leave": ["{name}: 'Thank you. You may have saved somebody today, and you will never know who.'"]
+			},
+			"nurse": {
+				"weight": 1,
+				"label": "nurse",
+				"blurb": "joins a new clinic",
+				"goodwill_rep": 1.0,
+				"board": ["{name} swings aboard with a kit bag and a grin. 'Nurse. New clinic at {to}. Somebody has to run it properly.'"],
+				"mid": ["{name} has reorganised your first-aid locker. It is now labelled. In colours."],
+				"leave": ["{name}: 'If you ever need patching up out here, ask for me by name.'"]
+			},
+			"teacher": {
+				"weight": 1.5,
+				"label": "teacher",
+				"blurb": "starts at a settlement school",
+				"goodwill_rep": 1.0,
+				"board": ["{name} has a box of books, real paper. 'Teacher. Twenty-three children at {to} and nobody to tell them about the stars.'"],
+				"mid": ["{name} has worked out your burn plan as a maths lesson. You got a B."],
+				"leave": ["{name}: 'The children will want to meet the pilot. Expect drawings.'"]
+			},
+			"scientist": {
+				"weight": 1.5,
+				"label": "scientist",
+				"blurb": "relieves a research team",
+				"goodwill_rep": 1.0,
+				"board": ["{name} floats in with three instrument cases and a thermos. 'Scientist. Relieving the team at {to}. They have been there far too long.'"],
+				"mid": ["{name} has taken a sample of something in the air loop. 'Fascinating. Harmless. Mostly.'"],
+				"leave": ["{name}: 'I will put your ship in the acknowledgements. That is a great honour. Nobody reads them.'"]
 			}
 		}
 	}
