@@ -44,9 +44,12 @@ static func rides_here(data, place: String) -> Array:
 	var anchor: String = p.get("foot_of", "")
 	if anchor == "":
 		return []
-	var line: Dictionary = data.places[anchor]["elevator"]
-	if p.get("counterweight", false):
+	var line: Dictionary = data.places[anchor].get("elevator", {})
+	# A base the port's shuttle serves is foot_of it too, but off the ribbon.
+	if p.get("counterweight", false) and line.get("counterweight", {}).get("place", "") == place:
 		return [{"anchor": anchor, "line": _leg(line), "to": anchor, "dir": "in", "down": false}]
+	if line.get("foot", "") != place:
+		return []
 	return [{"anchor": anchor, "line": line, "to": anchor, "dir": "up", "down": false}]
 
 

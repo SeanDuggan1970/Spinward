@@ -349,6 +349,9 @@ func _handle_events() -> void:
 			"elevator_departed":
 				var line: Dictionary = sim.data.places[d["line"]]["elevator"]
 				notice("On %s for %s: %s. Fare %s." % [line["name"], sim.data.places[d["to"]]["name"], UI.duration(float(d["hours"]) * 3600.0), UI.money(float(d["fare"]))], UI.AMBER)
+			"shuttle_departed":
+				var shuttle: Dictionary = sim.data.places[d["line"]]["shuttle"]
+				notice("On %s %s %s: %s. Fare %s." % [shuttle["name"], "down to" if d["down"] else "up to", sim.data.places[d["to"]]["name"], UI.duration(float(d["hours"]) * 3600.0), UI.money(float(d["fare"]))], UI.AMBER)
 			"pod_fitted":
 				notice("Fitted a %s to the lander." % String(sim.data.pods["pods"][d["pod"]]["name"]).to_lower(), UI.GOOD)
 				refresh = true
@@ -426,6 +429,13 @@ func _handle_events() -> void:
 				play_sfx("dock_clunk", -8.0)
 				if d["down"]:
 					notice("At %s. Your ship waits at %s." % [sim.data.places[d["place"]]["name"], sim.data.places[sim.data.places[d["place"]]["foot_of"]]["name"]], UI.GOOD)
+				else:
+					notice("Back at %s, and back aboard." % sim.data.places[d["place"]]["name"], UI.GOOD)
+				refresh = true
+			"shuttle_arrived":
+				play_sfx("dock_clunk", -8.0)
+				if d["down"]:
+					notice("Down at %s. Your ship waits at %s." % [sim.data.places[d["place"]]["name"], sim.data.places[sim.data.places[d["place"]]["foot_of"]]["name"]], UI.GOOD)
 				else:
 					notice("Back at %s, and back aboard." % sim.data.places[d["place"]]["name"], UI.GOOD)
 				refresh = true
@@ -690,6 +700,9 @@ func _sound_for(mode: String) -> void:
 		"elevator":
 			sound = "climber_loop"
 			db = -9.0
+		"shuttle":
+			sound = "drive_loop"
+			db = -16.0
 	if sound == "":
 		_ambience.stop()
 	elif _ambience.stream == null or _ambience.stream.resource_path != "res://assets/audio/%s.wav" % sound or not _ambience.playing:
@@ -698,7 +711,7 @@ func _sound_for(mode: String) -> void:
 		_ambience.volume_db = db
 		_ambience.play()
 	# Inside a pressurised room (station, town, climber cab), the air moves.
-	if mode in ["docked", "on_site", "elevator"]:
+	if mode in ["docked", "on_site", "elevator", "shuttle"]:
 		if not _cabin.playing:
 			_cabin.volume_db = -24.0
 			_cabin.play()
@@ -771,6 +784,9 @@ func _sync_mode() -> void:
 			_fade_in(0.7)
 		"elevator":
 			_screen = load("res://view/climber_view.gd").new(sim)
+			_layer.add_child(_screen)
+		"shuttle":
+			_screen = load("res://view/shuttle_view.gd").new(sim)
 			_layer.add_child(_screen)
 
 
@@ -850,7 +866,7 @@ func _time_step(event: InputEvent) -> int:
 	if _mode == "transit":
 		slower.append("transit_time_slower")
 		faster.append("transit_time_faster")
-	elif _mode == "elevator":
+	elif _mode in ["elevator", "shuttle"]:
 		slower.append("climber_time_slower")
 		faster.append("climber_time_faster")
 	for n in faster:
@@ -1802,7 +1818,8 @@ func _crash_tour(dir: String) -> void:
 	_quit()
 
 
-## Windowed: ride each elevator down, shooting the cab view on the way and the town at
+## Windowed: ride each elevator down (and fly the Mars shuttle to each base and back),
+## shooting the cab view on the way and the town at
 ## the bottom, then ride back up.
 func _ride_tour(dir: String) -> void:
 	DirAccess.make_dir_recursive_absolute(dir)
@@ -1846,6 +1863,31 @@ func _ride_tour(dir: String) -> void:
 			await get_tree().process_frame
 		_shot("%s/%s-foot-departures.png" % [dir, anchor])
 		print("RIDE_OK %s -> %s (%s)" % [anchor, sim.state.location.get("place", "?"), sim.state.location.get("status", "?")])
+	# Then the shuttle down to each Mars base and back up.
+	for base in sim.data.places["ares_ring"]["shuttle"]["stops"]:
+		for leg in [base, "ares_ring"]:
+			if leg == base:
+				sim.state.location = {"status": "docked", "place": "ares_ring"}
+			var err: String = sim.apply({"type": "take_shuttle", "to": leg})
+			if err != "":
+				print("SHUTTLE_FAIL %s: %s" % [leg, err])
+				break
+			_handle_events()
+			_sync_mode()
+			var loc: Dictionary = sim.state.location
+			for f in [0.03, 0.4, 0.75, 0.97]:
+				sim.state.time_s = lerpf(float(loc["depart_t"]), float(loc["arrive_t"]), f)
+				for _i in 20:
+					await get_tree().process_frame
+				_shot("%s/shuttle-%s-%s-%02d.png" % [dir, base, "down" if leg == base else "up", int(f * 100.0)])
+			sim.advance_game_time(float(loc["arrive_t"]) - sim.state.time_s + 1.0)
+			_handle_events()
+			_sync_mode()
+			for _i in 10:
+				await get_tree().process_frame
+			if leg == base:
+				_shot("%s/shuttle-%s.png" % [dir, base])
+		print("SHUTTLE_OK %s (%s)" % [base, sim.state.location.get("place", "?")])
 	_quit()
 
 

@@ -100,6 +100,8 @@ func _initialize() -> void:
 	test_story_arcs_in_depth()
 	test_story_favour_after_abandon()
 	test_elevator_not_stranded_at_foot()
+	test_mars_shuttle()
+	test_shuttle_view_profile()
 	test_edge_cases()
 	test_power_budget()
 	test_power_drain_and_shedding()
@@ -2238,6 +2240,103 @@ func test_elevator_not_stranded_at_foot() -> void:
 	sim.advance_game_time(56.0 * 3600.0 + 1.0)
 	check(s.location == {"status": "docked", "place": "halo_depot"}, "Back at the depot")
 	check(sim.apply({"type": "ride_elevator"}) != "", "In debt, the pilot cannot ride down again")
+
+
+## The Mars shuttle: down from Ares Ring to each base with your hold, your ship left
+## docked above; fares, the cargo limit, the base a project builds, no flying to or
+## from a base, saves mid-flight, and never stranded below.
+func test_mars_shuttle() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var Shuttle := preload("res://sim/systems/shuttle_system.gd")
+	var Elevator := preload("res://sim/systems/elevator_system.gd")
+	var line: Dictionary = d.places["ares_ring"]["shuttle"]
+	var bases: Array = line["stops"].keys()
+	check(bases.size() >= 4, "The Accord shuttle serves at least four Mars bases")
+	check(Shuttle.flights_here(d, "kibo_ring").is_empty() and Shuttle.blocked(d, s, "kibo_ring") == "no shuttle calls here", "No shuttle at Kibo Ring")
+	check(Shuttle.flights_here(d, "pavonis_foot").is_empty(), "Pavonis Foot is the ribbon's, not the shuttle's")
+	for base in bases:
+		check(d.places[base]["foot_of"] == "ares_ring" and d.places[base]["location"]["type"] == "surface" and d.places[base]["location"]["parent"] == "mars", "%s is a town on Mars below Ares Ring" % base)
+		check(Elevator.rides_here(d, base).is_empty(), "No ribbon runs from %s" % base)
+		check(not Perks.place_open(s, d, base), "No ship can fly to %s" % base)
+		var up: Dictionary = Shuttle.flight_to(d, base)
+		check(not up["down"] and up["to"] == "ares_ring", "From %s the flight is up, to Ares Ring" % base)
+		var r := V.distance(sim.ephemeris.position(base, s.time_s), sim.ephemeris.position("mars", s.time_s))
+		check(absf(r - float(d.bodies["mars"]["radius_m"])) < 1.0, "%s sits on the surface" % base)
+	check(Elevator.rides_here(d, "ares_ring").size() == 2 and Shuttle.flights_here(d, "ares_ring").size() == bases.size(), "Ares Ring has the ribbon's two rides and a flight to each base")
+	# Fares: a seat plus so much a tonne.
+	s.ship["cargo"] = {"machine_parts": 2.0, "medical": 0.5}
+	var stop: Dictionary = line["stops"]["jezero_dome"]
+	check(absf(Shuttle.fare(d, s, "ares_ring", "jezero_dome") - (float(stop["fare"]) + 2.5 * float(stop["fare_per_t"]))) < 1e-9, "The fare is a seat and so much a tonne")
+	check(absf(Shuttle.fare(d, s, "jezero_dome") - Shuttle.fare(d, s, "ares_ring", "jezero_dome")) < 1e-9, "Up costs what down does")
+	# Down to Jezero with the hold, the ship left above.
+	s.location = {"status": "docked", "place": "ares_ring"}
+	s.credits = 5000.0
+	var fare := Shuttle.fare(d, s, "ares_ring", "jezero_dome")
+	check(sim.apply({"type": "take_shuttle", "to": "jezero_dome"}) == "" and s.location["status"] == "shuttle" and s.location["down"], "The shuttle leaves for Jezero")
+	check(absf(5000.0 - fare - s.credits) < 1e-9, "and the fare is paid")
+	for cmd in [{"type": "buy", "good": "food", "tonnes": 1}, {"type": "depart", "to": "kibo_ring"}, {"type": "take_shuttle"}, {"type": "ride_elevator"}, {"type": "refuel", "fill": true}, {"type": "dock"}]:
+		check(sim.apply(cmd) != "", "In flight, %s is refused" % cmd["type"])
+	var saved := SaveIO.from_text(SaveIO.to_text(s))
+	check(saved != null and saved.to_dict() == s.to_dict(), "A save mid-flight is lossless")
+	sim.advance_game_time(float(stop["hours"]) * 3600.0 - 10.0)
+	check(s.location["status"] == "shuttle", "Ten seconds out, still flying")
+	sim.advance_game_time(20.0)
+	check(s.location == {"status": "docked", "place": "jezero_dome"} and s.time_scale == float(d.balance["time"]["arrival_scale"]), "Down at Jezero, time back to x1")
+	check("shuttle_arrived" in sim.take_events().map(func(e): return e["type"]), "Arrival is announced")
+	check(float(s.ship["cargo"]["machine_parts"]) == 2.0, "The hold came down too")
+	check(sim.apply({"type": "sell", "good": "machine_parts", "tonnes": 2.0}) == "", "Jezero's market buys")
+	check(sim.apply({"type": "depart", "to": "kibo_ring"}).contains("take the shuttle"), "You can't fly from a base: your ship is up at the ring")
+	check(s.contracts["board"].get("jezero_dome", []).is_empty(), "No job board below")
+	check(s.badges["earned"].has("red_dust"), "Red Dust is earned")
+	# Never stranded: the flight up goes on credit.
+	s.credits = 5.0
+	check(sim.apply({"type": "take_shuttle"}) == "" and not s.location["down"] and s.credits < 0.0, "Broke below, the flight up goes on credit")
+	sim.advance_game_time(float(stop["hours"]) * 3600.0 + 1.0)
+	check(s.location == {"status": "docked", "place": "ares_ring"}, "Back at Ares Ring, back aboard")
+	check(sim.apply({"type": "take_shuttle", "to": "jezero_dome"}).begins_with("the fare is"), "In debt, nobody flies down")
+	# The shuttle lifts at most max_t; Tharsis Domes wait for their project.
+	s.credits = 1.0e6
+	s.ship["cargo"] = {"water_ice": float(line["max_t"]) + 1.0}
+	check(sim.apply({"type": "take_shuttle", "to": "candor_terraces"}) == "the shuttle lifts at most %d t" % int(line["max_t"]), "Too much cargo for the shuttle is refused")
+	s.ship["cargo"] = {}
+	check(sim.apply({"type": "take_shuttle", "to": "tharsis_domes"}) == "Tharsis Domes is still being built", "Tharsis Domes take nobody until the greenhouses are finished")
+	s.projects["ares_greenhouses"]["done"] = true
+	check(sim.apply({"type": "take_shuttle", "to": "tharsis_domes"}) == "", "and then the shuttle flies there")
+	check(sim.apply({"type": "take_shuttle", "to": "kibo_ring"}) != "", "(not mid-flight)")
+	var nowhere := fresh()
+	nowhere.state.location = {"status": "docked", "place": "ares_ring"}
+	check(nowhere.apply({"type": "take_shuttle", "to": "kibo_ring"}) == "the shuttle doesn't go there", "The shuttle goes only to its bases")
+
+
+## The shuttle view's flight profile: it starts at the port's height and ends on the pad
+## going down (and the reverse going up), never below the ground, the plasma only in entry.
+func test_shuttle_view_profile() -> void:
+	var View := preload("res://view/shuttle_view.gd")
+	var t0 := 1000.0
+	var t1 := t0 + 3.0 * 3600.0
+	var orbit_m := 400000.0
+	var orbit_v := 3360.0
+	var first: Dictionary = View.profile(true, t0, t1, t0, orbit_m, orbit_v)
+	var last: Dictionary = View.profile(true, t0, t1, t1, orbit_m, orbit_v)
+	check(absf(float(first["h"]) - orbit_m) < 1.0 and float(last["h"]) == 0.0 and float(last["v"]) == 0.0, "Down: from the ring's height to the pad, at rest")
+	var low := INF
+	var hot := []
+	var rising := false
+	var prev := orbit_m + 1.0
+	for k in 1001:
+		var p: Dictionary = View.profile(true, t0, t1, lerpf(t0, t1, float(k) / 1000.0), orbit_m, orbit_v)
+		low = minf(low, float(p["h"]))
+		if float(p["plasma"]) > 0.0:
+			hot.append(p["phase"])
+		rising = rising or float(p["h"]) > prev + 1e-6
+		prev = float(p["h"])
+	check(low >= 0.0 and not rising, "Down never goes below the ground or climbs back")
+	check(not hot.is_empty() and hot.all(func(ph): return ph == "Entry"), "Plasma only in entry")
+	var up0: Dictionary = View.profile(false, t0, t1, t0, orbit_m, orbit_v)
+	var up1: Dictionary = View.profile(false, t0, t1, t1, orbit_m, orbit_v)
+	check(float(up0["h"]) == 0.0 and absf(float(up1["h"]) - orbit_m) < 1.0, "Up: from the pad to the ring's height")
 
 
 ## Edge cases found by reading the sim: empty holds, huge balances, saves in odd moments.

@@ -118,8 +118,21 @@ func validate() -> Array[String]:
 				problems.append("place %s: elevator on unknown body" % id)
 			if p["elevator"].has("project") and not projects.has(p["elevator"]["project"]):
 				problems.append("place %s: elevator built by unknown project" % id)
-		if p.has("foot_of") and not places.get(p["foot_of"], {}).has("elevator"):
-			problems.append("place %s: foot of %s, which has no elevator" % [id, p["foot_of"]])
+		if p.has("foot_of"):
+			var up: Dictionary = places.get(p["foot_of"], {})
+			var line: Dictionary = up.get("elevator", {})
+			if not (line.get("foot", "") == id or line.get("counterweight", {}).get("place", "") == id or up.get("shuttle", {}).get("stops", {}).has(id)):
+				problems.append("place %s: foot of %s, whose elevator and shuttle don't reach it" % [id, p["foot_of"]])
+		if p.has("shuttle"):
+			if not bodies.has(p["shuttle"].get("body", "")):
+				problems.append("place %s: shuttle to unknown body" % id)
+			for base in p["shuttle"].get("stops", {}):
+				var stop: Dictionary = p["shuttle"]["stops"][base]
+				if not places.has(base) or places[base].get("foot_of", "") != id or places[base].get("location", {}).get("type", "") != "surface":
+					problems.append("place %s: shuttle stop %s must be a surface place that is foot_of it" % [id, base])
+				for key in ["hours", "fare", "fare_per_t"]:
+					if not stop.has(key):
+						problems.append("place %s: shuttle stop %s needs %s" % [id, base, key])
 		if p.has("elevator") and p["elevator"].has("counterweight"):
 			var cw: String = p["elevator"]["counterweight"].get("place", "")
 			if not places.has(cw) or places[cw].get("foot_of", "") != id or not places[cw].get("counterweight", false):
