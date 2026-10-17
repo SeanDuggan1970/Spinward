@@ -5,8 +5,9 @@
 ## X boom can only face a direction in the ship's Y-Z plane, so in transit the ship
 ## rolls about its line of travel (roll_to_sun) to put the Sun in that plane; then
 ## solar wings face it square on and radiators turn edge-on to it, so they shed heat
-## instead of soaking up sunlight. A radiator on a Y boom is edge-on to that plane
-## already, so it holds square to the ship's X axis. While docking the pilot owns
+## instead of soaking up sunlight. A radiator on a Y boom stands in that plane, so it
+## is edge-on already and holds square to the ship's X axis; it only turns when the
+## Sun leaves the plane (while the pilot owns the roll). While docking the pilot owns
 ## the roll, and the panels do the best a single hinge can.
 ##
 ## For docking the panels stow: each turns flat (in the plane of its boom and the
@@ -23,6 +24,9 @@ extends RefCounted
 ## Slew rates, radians per real second: the hardware is not fast.
 const ARRAY_RATE := 0.5
 const DISH_RATE := 0.8
+## A radiator holds its angle while the Sun is within about this much (the sine of
+## the angle) of its boom, where any angle is edge-on.
+const EDGE_HOLD := 0.05
 ## The mast can't look down through the hull.
 const DISH_MIN_EL := -0.35
 ## Folding, fraction of the whole stow per second (game seconds in transit).
@@ -98,12 +102,21 @@ static func aim(rig: Dictionary, ship_basis: Basis, sun: Vector3, target: Vector
 		if not is_instance_valid(node):
 			continue
 		var aim_face := face
-		var roll := float(a.get("roll", 0.0))
-		if roll != 0.0:
-			# The boom's own frame: the Sun as seen with the boom laid along X.
-			var r := Basis(Vector3.BACK, -roll) * s
+		# The boom's own frame: the Sun as seen with the boom laid along X.
+		var r := Basis(Vector3.BACK, -float(a.get("roll", 0.0))) * s
+		if a.has("roll"):
 			aim_face = atan2(r.z, r.y)
-		var want: float = aim_face if a["kind"] == "solar" else aim_face + PI * 0.5
+		var want: float = aim_face
+		if a["kind"] != "solar":
+			# A radiator sheds heat from both faces, so either edge-on angle will do:
+			# take the nearer, rather than swinging half a turn when the Sun crosses
+			# the beam. With the Sun nearly along the boom every angle is edge-on, so
+			# hold still instead of chasing a noisy target.
+			want = aim_face + PI * 0.5
+			if Vector2(r.y, r.z).length() < EDGE_HOLD:
+				want = node.rotation.x
+			elif absf(angle_difference(node.rotation.x, want + PI)) < absf(angle_difference(node.rotation.x, want)):
+				want += PI
 		if fold > 0.0:
 			# Ease from the tracking angle to flat as the stow begins.
 			node.rotation.x = wrapf(lerp_angle(want, 0.0, flat), -PI, PI)
