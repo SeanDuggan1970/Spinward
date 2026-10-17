@@ -1224,6 +1224,31 @@ Sean's direction (2026-10-15): "objects like Halley's comet and other large famo
 - **News**: Halley wakes (day -12), shows to the naked eye (day 98), rounds the Sun (day 149) and goes quiet (day 420); forty years since DART (day 574, 26 September 2062).
 - **Not yet**: jets and a coma in the flight view (the `plumes` data is static, so a comet's plumes would need to follow its activity), and dust noise on the scanner.
 
+## Mars bases and the surface shuttle (Oct 2026)
+
+Sean's direction (2026-10-17): "bases on Mars, domes etc.. with the ability for the player to get a flight to the surface and back obviously."
+
+- **The bases** (`places.json`, `foot_of: "ares_ring"`, location type `surface`): towns your ship can't land at, each with its own market, below Ares Ring.
+
+  | Base | Where | What it is | Flight | Fare |
+  |---|---|---|---|---|
+  | Jezero | the old delta, 18.4 N 77.5 E | the oldest town: six domes, the Perseverance school, a bar (the Sample Cache) | 3 h | 180 cr + 110 cr/t |
+  | Candor Terraces | Candor Chasma, Valles Marineris | cliff homes, terraced greenhouses, water baked out of old salts | 2.5 h | 200 cr + 110 cr/t |
+  | Hellas Deep | the floor of the Hellas basin, 42 S | aeroponic farms under the thickest air on Mars | 5 h | 260 cr + 130 cr/t |
+  | Tharsis Domes | the Tharsis plateau | the greenhouse domes, open once the Tharsis greenhouses project finishes | 2.5 h | 160 cr + 100 cr/t |
+
+- **The shuttle** (`ares_ring.shuttle`, `sim/systems/shuttle_system.gd`, command `take_shuttle {to}`): works like an elevator ride (status `shuttle`, then docked at the base), but by rocket and in hours rather than days.
+  - Your ship stays docked at Ares Ring; your hold flies with you, up to the shuttle's `max_t` (20 t).
+  - The fare is a seat plus so much a tonne. Down needs it in hand; the flight up goes on credit, so nobody is stranded below.
+  - A base built by a project (`opens_with`) takes nobody until it is finished.
+  - No job board, yard or fuel below; to fly again, take the shuttle back up.
+- **The flight view** (`view/shuttle_view.gd`): a chase view of the Accord's lifting body over Mars at true size, the base's domes and pad at the mesh's pole (a vertex, so the ground there is exact). Down: waiting for the ground track, the deorbit burn, the fall, seven minutes of entry plasma, and a landing on the belly retros. Up: lift-off, the climb, the coast up and the chase to the ring. The phases run to set times from each end, so a longer flight is a longer wait in orbit. Each base's dome count and size are its `look`.
+- **Badges:** Red Dust (any base) and Dome Hopper (all four).
+- **Capture:** `--ride=<dir>` now also flies the shuttle to each base and back.
+- **Departures from hard physics:**
+  - Hellas lies south of the ring's 25 degree inclination. A real shuttle would need a costly plane change; ours waits longer for a dogleg and charges more.
+  - Every flight's length is fixed per base rather than set by when the ground track next passes over it.
+
 ## Milestones
 
 - **M0 – Foundation:** done.

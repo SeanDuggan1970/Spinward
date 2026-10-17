@@ -178,9 +178,10 @@ func _depart(command: Dictionary) -> String:
 		return "you don't know where that is"
 	var here: String = s.location["place"]
 	if sim().data.places.get(here, {}).has("foot_of"):
-		return "your ship is up at %s: ride the ribbon back first" % sim().data.places[sim().data.places[here]["foot_of"]]["name"]
+		var up: String = sim().data.places[here]["foot_of"]
+		return "your ship is up at %s: %s back first" % [sim().data.places[up]["name"], "take the shuttle" if _by_shuttle(here) else "ride the ribbon"]
 	if sim().data.locations[to].has("foot_of"):
-		return "ships can't land at %s: ride the elevator down from %s" % [sim().data.locations[to]["name"], sim().data.places[sim().data.locations[to]["foot_of"]]["name"]]
+		return "ships can't land at %s: %s down from %s" % [sim().data.locations[to]["name"], "take the shuttle" if _by_shuttle(to) else "ride the elevator", sim().data.places[sim().data.locations[to]["foot_of"]]["name"]]
 	if not Perks.place_open(s, sim().data, to):
 		return "%s is not open yet" % sim().data.locations[to]["name"]
 	if command.has("route"):
@@ -330,3 +331,9 @@ static func plan_for(ship: Dictionary, data, eph, here: String, to: String, t: f
 	var job := RoutePlanner.prepare(ship, data, eph, here, to, t)
 	job["hop"] = RoutePlanner.is_orbital_hop(data, eph, here, to, t)
 	return RoutePlanner.options_or_quick(job, quick)
+
+
+## A base reached by its port's shuttle rather than down a ribbon.
+func _by_shuttle(place: String) -> bool:
+	var port: String = sim().data.places[place]["foot_of"]
+	return sim().data.places[port].get("shuttle", {}).get("stops", {}).has(place)

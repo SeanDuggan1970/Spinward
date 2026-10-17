@@ -12,6 +12,7 @@ const ShipyardSystem := preload("res://sim/systems/shipyard_system.gd")
 const EconomySystem := preload("res://sim/systems/economy_system.gd")
 const ProjectSystem := preload("res://sim/systems/project_system.gd")
 const ElevatorSystem := preload("res://sim/systems/elevator_system.gd")
+const ShuttleSystem := preload("res://sim/systems/shuttle_system.gd")
 const DamageSystem := preload("res://sim/systems/damage_system.gd")
 const TipsText := preload("res://view/tips_text.gd")
 const TravelSystem := preload("res://sim/systems/travel_system.gd")
@@ -299,6 +300,9 @@ func _departures_tab(place_id: String) -> Control:
 	# to your ship).
 	for ride in ElevatorSystem.rides_here(d, place_id):
 		parts[1].add_child(_elevator_panel(place_id, ride))
+	# The shuttle down to each base it serves (or, at a base, back up to your ship).
+	for flight in ShuttleSystem.flights_here(d, place_id):
+		parts[1].add_child(_shuttle_panel(place_id, flight))
 	# Sites share the departures screen, but only ports live in data.places.
 	if d.locations[place_id].has("foot_of"):
 		return parts[0]
@@ -411,6 +415,42 @@ func _elevator_panel(place_id: String, here: Dictionary) -> Control:
 		info.add_child(UI.label(why.capitalize(), UI.WARN, 13))
 	var verbs := {"down": "Ride down", "out": "Ride out", "up": "Ride up", "in": "Ride in"}
 	row.add_child(UI.button(verbs[dir], send.bind({"type": "ride_elevator", "to": to}), why == ""))
+	return p[0]
+
+
+## Flying the shuttle from here: where it lands, how long, the fare for what you carry.
+func _shuttle_panel(place_id: String, flight: Dictionary) -> Control:
+	var d = sim.data
+	var s = sim.state
+	var line: Dictionary = flight["line"]
+	var stop: Dictionary = flight["stop"]
+	var to: String = flight["to"]
+	var to_name: String = d.places[to]["name"]
+	var p := UI.panel("%s  ·  %s" % [String(line["name"]).to_upper(), ("down to " if flight["down"] else "up to ") + to_name])
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 16)
+	p[1].add_child(row)
+	var info := VBoxContainer.new()
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(info)
+	if flight["down"]:
+		var town := UI.label(d.places[to]["description"], UI.DIM, 12)
+		town.autowrap_mode = TextServer.AUTOWRAP_WORD
+		town.custom_minimum_size = Vector2(200, 0)
+		info.add_child(town)
+		var via := UI.label(String(stop.get("via", "")) + " Your ship stays docked here; your hold flies with you in the shuttle's bay.", UI.TEXT, 12)
+		via.autowrap_mode = TextServer.AUTOWRAP_WORD
+		via.custom_minimum_size = Vector2(200, 0)
+		info.add_child(via)
+	else:
+		info.add_child(UI.label("Your ship is docked at %s. Your hold flies with you." % to_name, UI.TEXT, 13))
+	var fare := ShuttleSystem.fare(d, s, place_id, to)
+	info.add_child(UI.label("%s flight   ·   fare %s (a seat, and %d cr a tonne for the %.1f t you carry, up to %d t)" % [
+		UI.duration(float(stop["hours"]) * 3600.0), UI.money(fare), int(stop["fare_per_t"]), ShipStats.cargo_t(s.ship), int(line.get("max_t", 0))]))
+	var why := ShuttleSystem.blocked(d, s, place_id, to)
+	if why != "":
+		info.add_child(UI.label(why.capitalize(), UI.WARN, 13))
+	row.add_child(UI.button("Fly down" if flight["down"] else "Fly up", send.bind({"type": "take_shuttle", "to": to}), why == ""))
 	return p[0]
 
 

@@ -76,7 +76,7 @@
 			]
 		},
 		{
-			"id": "climber", "name": "Riding an elevator", "when": "in the climber cab",
+			"id": "climber", "name": "Riding an elevator or shuttle", "when": "in the climber cab or shuttle seat",
 			"rows": [
 				{"action": "climber_look_left", "label": "Look left", "key": ["Left"], "pad": ["rx-"]},
 				{"action": "climber_look_right", "label": "Look right", "key": ["Right"], "pad": ["rx+"]},
