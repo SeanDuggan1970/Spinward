@@ -4637,6 +4637,21 @@ func test_radiator_layouts() -> void:
 			check(aft < bell_z, "%s (%s): every radiator ends ahead of the bells (%.1f < %.1f)" % [hull, layout, aft, bell_z])
 			check(edge_on, "%s (%s): every radiator turns edge-on to the Sun" % [hull, layout])
 			check(turned == (2 if layout == "cross" else 0), "%s (%s): the cross turns its second pair onto Y" % [hull, layout])
+			# Off the ship's Y-Z plane (the pilot owns the roll) every radiator still
+			# finds edge-on; and as the Sun crosses the beam none swings half a turn.
+			var off := Vector3(0.6, 0.3, 0.7).normalized()
+			ShipRig.aim(rig, Basis.IDENTITY, off, Vector3.FORWARD, -1.0)
+			check(_radiators_edge_on(rig, root, off), "%s (%s): edge-on with the Sun off the beam plane" % [hull, layout])
+			ShipRig.aim(rig, Basis.IDENTITY, Vector3(0, 1, 0.3).normalized(), Vector3.FORWARD, -1.0)
+			var before: Array = rig["arrays"].map(func(a): return (a["node"] as Node3D).rotation.x)
+			var swing := 0.0
+			for i in 20:
+				var crossing := Vector3(0, 1, 0.3 - 0.03 * float(i)).normalized()
+				ShipRig.aim(rig, Basis.IDENTITY, crossing, Vector3.FORWARD, 0.5)
+			for i in rig["arrays"].size():
+				if rig["arrays"][i]["kind"] == "radiator":
+					swing = maxf(swing, absf(angle_difference(float(before[i]), (rig["arrays"][i]["node"] as Node3D).rotation.x)))
+			check(swing < 0.8 and _radiators_edge_on(rig, root, Vector3(0, 1, -0.27).normalized()), "%s (%s): radiators turn smoothly as the Sun crosses the beam (%.2f rad)" % [hull, layout, swing])
 			root.free()
 		look.erase("radiators")
 
@@ -4648,6 +4663,20 @@ func _to_root(node: Node3D, root: Node3D) -> Transform3D:
 		xf = node.transform * xf
 		node = node.get_parent()
 	return xf
+
+
+func _radiators_edge_on(rig: Dictionary, root: Node3D, sun: Vector3) -> bool:
+	for a in rig["arrays"]:
+		if a["kind"] != "radiator":
+			continue
+		var xf := Transform3D.IDENTITY
+		var node: Node = a["node"]
+		while node != root:
+			xf = (node as Node3D).transform * xf
+			node = node.get_parent()
+		if absf((xf.basis * Vector3.UP).normalized().dot(sun)) > 0.02:
+			return false
+	return true
 
 
 func test_docking_bays() -> void:
