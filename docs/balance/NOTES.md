@@ -326,3 +326,10 @@ Full write-up: [2026-10-07-economy-together.md](2026-10-07-economy-together.md).
 - New data: `balance.comets`, five bodies (Halley, 67P, Bennu, Ryugu, Didymos) with five sites, seven news stories and two badges. Orbits are provisional until the JPL bake.
 - Balance bot re-run (5 seeds, 180 days, upgrade=1): identical, seed for seed, mean 105,630 cr, median first upgrade day 10.7. The bot trades between ports and never works sites, so it doesn't see them.
 - Reachability with the stand-in orbits, from Halo Depot at day 0, 60 and 120: Bennu about 115 days in a Mule (at the edge of its larder), and Ryugu and Didymos need a Courier (about 115 days). Halley and 67P need a deep freighter (Halley 76 to 180 days). Recheck once the real orbits are baked; the near-Earth rocks' phases will move these a lot.
+
+
+## Mars bases and the surface shuttle (2026-10-17)
+
+- New data: four Mars bases in `places.json` (Jezero, Candor Terraces, Hellas Deep, Tharsis Domes, all `foot_of` Ares Ring) with their own markets, `ares_ring.shuttle` (fares 160 to 260 cr a seat plus 100 to 130 cr/t, 20 t limit, 2.5 to 5 h), and two badges.
+- Balance bot re-run (5 seeds, 180 days, upgrade=1): identical, seed for seed, mean 105,630 cr, median first upgrade day 10.7. The bot never takes the shuttle, so it doesn't see the bases' markets.
+- Worth a hand-played check: the per-tonne fare (100 to 130 cr/t) is small beside food (600 cr base) and medical (5,000 cr), so shuttling high-value goods down to a base short of them may pay well. That's intended as a small side trade; raise `fare_per_t` if it turns into the best route at Mars.

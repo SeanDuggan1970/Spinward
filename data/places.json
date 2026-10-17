@@ -593,7 +593,7 @@
 	"ares_ring": {
 		"name": "Ares Ring",
 		"operator": "Mars Accord",
-		"description": "The Mars up-port, 400 km above Arsia Mons. The settlements below ship up deuterium-rich water and the first Martian produce; they want parts, electronics and medicine more than anything. Fuel, and a yard that will fit long-haul tankage. Beyond the limb, if the Accord gets its way, a ribbon will one day hang from Pavonis Mons.",
+		"description": "The Mars up-port, 400 km above Arsia Mons. The settlements below ship up deuterium-rich water and the first Martian produce; they want parts, electronics and medicine more than anything. Accord shuttles drop to the domes below several times a sol. Fuel, and a yard that will fit long-haul tankage. Beyond the limb, if the Accord gets its way, a ribbon will one day hang from Pavonis Mons.",
 		"location": {
 			"type": "orbit",
 			"parent": "mars",
@@ -692,6 +692,38 @@
 				"via": "From the anchor at areostationary, outward another 7,400 km to the counterweight: two days of climbing away from Mars, getting heavier the wrong way."
 			},
 			"power": "beam"
+		},
+		"shuttle": {
+			"name": "the Accord surface shuttle",
+			"body": "mars",
+			"max_t": 20,
+			"craft": "a blunt winged lifting body with a heat shield for a belly, sixteen seats and a cargo bay",
+			"stops": {
+				"jezero_dome": {
+					"hours": 3.0,
+					"fare": 180,
+					"fare_per_t": 110,
+					"via": "Wait for the ground track, a deorbit burn, seven minutes of fire through the thin air, then down on retros to the pad at the delta's edge."
+				},
+				"candor_terraces": {
+					"hours": 2.5,
+					"fare": 200,
+					"fare_per_t": 110,
+					"via": "Down over Tharsis and into the canyon, the walls rising seven kilometres either side, then a retro landing on the shelf pad."
+				},
+				"hellas_deep": {
+					"hours": 5.0,
+					"fare": 260,
+					"fare_per_t": 130,
+					"via": "Hellas lies well south of the ring's track, so the shuttle waits a sol's quarter for a dogleg down, then the longest glide on Mars: the basin's air is the thickest there is."
+				},
+				"tharsis_domes": {
+					"hours": 2.5,
+					"fare": 160,
+					"fare_per_t": 100,
+					"via": "Straight down onto the plateau below the ring, between the volcanoes, to the pad beside the big dome."
+				}
+			}
 		}
 	},
 	"piazzi_station": {
@@ -1363,6 +1395,177 @@
 			"habitat_modules": 0.3
 		},
 		"recipes": []
+	},
+	"jezero_dome": {
+		"name": "Jezero",
+		"operator": "Mars Accord",
+		"foot_of": "ares_ring",
+		"description": "The oldest town on Mars: six domes on the old river delta in Jezero crater, where Perseverance cached its samples sixty years ago. The rover stands in the school's atrium and the children are taught to wave at it. Clinics, a conservatory, and the best bread on the planet. Ships can't land here: Accord shuttles fly down from Ares Ring.",
+		"location": {
+			"type": "surface",
+			"parent": "mars",
+			"lat_deg": 18.4,
+			"lon_deg": 77.5,
+			"day_s": 88642.0
+		},
+		"services": [
+			"market",
+			"bar"
+		],
+		"market": {
+			"food": 80,
+			"water_ice": 120,
+			"oxygen": 60,
+			"volatiles": 50,
+			"machine_parts": 15,
+			"electronics": 6,
+			"medical": 4,
+			"habitat_modules": 10
+		},
+		"produces": {
+			"food": 3.0,
+			"water_ice": 4.0,
+			"oxygen": 1.5,
+			"volatiles": 1.5
+		},
+		"consumes": {
+			"machine_parts": 0.8,
+			"electronics": 0.3,
+			"medical": 0.2,
+			"habitat_modules": 0.4
+		},
+		"recipes": [],
+		"bar": {
+			"name": "the Sample Cache",
+			"patrons": 40,
+			"round_cr": 8
+		},
+		"look": {
+			"domes": 6,
+			"dome_m": 80
+		}
+	},
+	"candor_terraces": {
+		"name": "Candor Terraces",
+		"operator": "Mars Accord",
+		"foot_of": "ares_ring",
+		"description": "Homes cut into the cliffs of Candor Chasma, deep in Valles Marineris, with greenhouses stepping down the canyon wall in terraces under glass. The rock is full of water bound up in old salts, and the town bakes it out. Painters come for the light at the bottom of a canyon seven kilometres deep. Ships can't land here: Accord shuttles fly down from Ares Ring.",
+		"location": {
+			"type": "surface",
+			"parent": "mars",
+			"lat_deg": -6.5,
+			"lon_deg": -71.0,
+			"day_s": 88642.0
+		},
+		"services": [
+			"market"
+		],
+		"market": {
+			"water_ice": 200,
+			"refined_metals": 40,
+			"regolith": 200,
+			"food": 30,
+			"machine_parts": 15,
+			"medical": 3,
+			"electronics": 5,
+			"habitat_modules": 8
+		},
+		"produces": {
+			"water_ice": 5.0,
+			"refined_metals": 1.5,
+			"regolith": 6.0
+		},
+		"consumes": {
+			"food": 2.0,
+			"machine_parts": 0.8,
+			"medical": 0.2,
+			"electronics": 0.2,
+			"habitat_modules": 0.3
+		},
+		"recipes": [],
+		"look": {
+			"domes": 3,
+			"dome_m": 45
+		}
+	},
+	"hellas_deep": {
+		"name": "Hellas Deep",
+		"operator": "Mars Accord",
+		"foot_of": "ares_ring",
+		"description": "Domes on the floor of the Hellas basin, seven kilometres below the datum, where the air is the thickest on Mars and a dropped glass of water boils slowly rather than at once. Aeroponic farms, root-misted and soil-free, feed a third of the planet. Ships can't land here: Accord shuttles fly down from Ares Ring.",
+		"location": {
+			"type": "surface",
+			"parent": "mars",
+			"lat_deg": -42.4,
+			"lon_deg": 70.5,
+			"day_s": 88642.0
+		},
+		"services": [
+			"market"
+		],
+		"market": {
+			"food": 160,
+			"oxygen": 90,
+			"water_ice": 40,
+			"machine_parts": 12,
+			"electronics": 5,
+			"medical": 3
+		},
+		"produces": {
+			"food": 5.0,
+			"oxygen": 2.0
+		},
+		"consumes": {
+			"water_ice": 2.0,
+			"machine_parts": 0.6,
+			"electronics": 0.2,
+			"medical": 0.15
+		},
+		"recipes": [],
+		"look": {
+			"domes": 7,
+			"dome_m": 90
+		}
+	},
+	"tharsis_domes": {
+		"name": "Tharsis Domes",
+		"operator": "Mars Accord",
+		"foot_of": "ares_ring",
+		"description": "The greenhouse domes on the Tharsis plateau, the largest pressurised fields off Earth, so Mars can feed itself. Under the big dome it rains on purpose once a week, and people come out to stand in it. Ships can't land here: Accord shuttles fly down from Ares Ring.",
+		"location": {
+			"type": "surface",
+			"parent": "mars",
+			"lat_deg": -2.0,
+			"lon_deg": -104.0,
+			"day_s": 88642.0
+		},
+		"services": [
+			"market"
+		],
+		"market": {
+			"food": 200,
+			"oxygen": 100,
+			"water_ice": 60,
+			"machine_parts": 10,
+			"electronics": 4,
+			"medical": 2
+		},
+		"produces": {
+			"food": 8.0,
+			"oxygen": 3.0
+		},
+		"consumes": {
+			"water_ice": 3.0,
+			"machine_parts": 0.5,
+			"electronics": 0.2,
+			"medical": 0.1
+		},
+		"recipes": [],
+		"opens_with": "ares_greenhouses",
+		"look": {
+			"domes": 4,
+			"dome_m": 160
+		}
 	},
 	"tsiolkovsky_wheel": {
 		"name": "Tsiolkovsky Wheel",

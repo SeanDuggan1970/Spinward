@@ -119,7 +119,7 @@ func _sweep(t: float) -> void:
 func _dark(command: Dictionary) -> String:
 	var s = sim().state
 	ensure(s)
-	if s.location.get("status") in ["approach", "elevator"]:
+	if s.location.get("status") in ["approach", "elevator", "shuttle"]:
 		return "not while you're coming in"
 	var on := bool(command.get("on", not bool(s.detection["dark"])))
 	if on and s.location.get("status") == "docked":

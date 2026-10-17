@@ -59,6 +59,31 @@
 			],
 			"renown": 1
 		},
+		"red_dust": {
+			"name": "Red Dust",
+			"text": "Flew down to Mars on the Accord shuttle and walked under a dome.",
+			"visit": [
+				"jezero_dome",
+				"candor_terraces",
+				"hellas_deep",
+				"tharsis_domes"
+			],
+			"renown": 1,
+			"rep": {
+				"Mars Accord": 0.5
+			}
+		},
+		"dome_hopper": {
+			"name": "Dome Hopper",
+			"text": "Has been to every base on Mars: Jezero, Candor, Hellas and Tharsis.",
+			"visit_all": [
+				"jezero_dome",
+				"candor_terraces",
+				"hellas_deep",
+				"tharsis_domes"
+			],
+			"renown": 2
+		},
 		"belter": {
 			"name": "Belter",
 			"text": "Docked at Psyche Claims, a long way from anywhere.",
