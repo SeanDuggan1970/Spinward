@@ -145,6 +145,18 @@ For the art check, the same window mode takes these options:
 - `--gallery=<dir>`: every station approach
 - `--flyby=<dir>`: a low lunar pass
 
+## Jump straight to a feature
+
+Skip the title and start a new game wherever you like (developer shortcuts; they work together):
+
+```powershell
+.tools/godot/Godot_v4.7.2-stable_win64_console.exe --path . -- --start=halo_depot --credits=5000000
+```
+
+- `--start=<place>`: docked at that port, or on site at a site (place ids are the keys in `data/places.json` and `data/sites.json`)
+- `--start=<place>:approach`: on the final approach to that port, ready to fly in
+- `--credits=<n>`: set your balance
+
 ## Share a web build
 
 `export_presets.cfg` has a single-threaded Web preset. [docs/SHARING.md](docs/SHARING.md) covers building, zipping and uploading to itch.io for friends to play in a browser.

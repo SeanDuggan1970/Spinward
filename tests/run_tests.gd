@@ -138,6 +138,7 @@ func _initialize() -> void:
 	test_panel_fold()
 	test_radiator_layouts()
 	test_docking_bays()
+	test_dev_shortcuts()
 	test_satellite_missions()
 	test_secret_work()
 	test_undock_timing()
@@ -4648,6 +4649,15 @@ func _to_root(node: Node3D, root: Node3D) -> Transform3D:
 		xf = node.transform * xf
 		node = node.get_parent()
 	return xf
+
+
+func test_dev_shortcuts() -> void:
+	var sim := Sim.new()
+	sim.new_game(1)
+	check(sim.apply({"type": "dev_place", "place": "halo_depot"}) == "" and sim.state.location == {"status": "docked", "place": "halo_depot"}, "--start docks at the named port")
+	check(sim.apply({"type": "dev_place", "place": "halo_depot", "approach": true}) == "" and sim.state.location["status"] == "approach", "--start=<place>:approach puts the ship on the approach")
+	check(sim.apply({"type": "dev_place", "place": "nowhere"}) != "", "--start rejects an unknown place")
+	check(sim.apply({"type": "dev_credits", "credits": 5.0e6}) == "" and is_equal_approx(sim.state.credits, 5.0e6), "--credits sets the balance")
 
 
 func test_docking_bays() -> void:
