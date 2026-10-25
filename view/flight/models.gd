@@ -173,32 +173,52 @@ static func station(geom: Dictionary, name: String = "", livery: Dictionary = {}
 		l.set_meta("no_merge", true)
 		rotor.add_child(l)
 		lights.append(l)
-	# Stencilled name on the docking face, turning with the station.
+	# The name painted on the docking end, turning with the station: on the bay's face
+	# below its doors, or on the docking face where there is no bay.
 	if name != "":
-		var stencil := Label3D.new()
-		stencil.text = name.to_upper()
-		stencil.font_size = 96
-		stencil.outline_size = 0
-		stencil.modulate = Color("1b1d20") if colour == "offwhite" else Color("e6dcc4")
-		var drum_face := kind in ["cylinder", "pair"]
-		stencil.pixel_size = float(stencil_at["px"]) if not stencil_at.is_empty() else (rh * 0.16 if drum_face else rh * 0.3) / 96.0
-		stencil.position = Vector3(0, float(stencil_at["y"]), float(stencil_at["z"])) if not stencil_at.is_empty() else Vector3(0, -(rh * 0.42 if drum_face else rh * 0.72), face_z - (11.4 if drum_face else 1.6))
-		if not bay.is_empty() and not drum_face and stencil_at.is_empty():
-			# On the bay's face, below the mouth.
-			stencil.pixel_size = (bay_outer - bay_r) * 0.4 / 96.0
-			stencil.position = Vector3(0, -(bay_r + bay_outer) * 0.5, float(bay["z_mouth"]) + 0.05)
-		stencil.double_sided = false
-		rotor.add_child(stencil)
-	# Approach corridor: fixed "rabbit" lights stepping in toward the port (or the bay).
-	var corridor_z := maxf(port_z, float(bay.get("z_mouth", port_z)))
-	for i in 10:
-		for side in [1.0, -1.0]:
-			root.add_child(Kit.beacon(Color("f0a030"), Vector3(0, side * pr * 2.0, corridor_z + 60.0 * float(i + 1)), 0.6, 2.0, 1.0 - float(i) / 10.0))
+		var hull_c: Color = livery["hull"]
+		if not bay.is_empty():
+			_paint_name(rotor, name, bay_r + 3.5, bay_outer, float(bay["z_mouth"]) + 0.1, hull_c)
+		elif not stencil_at.is_empty():
+			_paint_name(rotor, name, float(stencil_at["inner"]), float(stencil_at["outer"]), float(stencil_at["z"]), hull_c)
+		elif kind in ["cylinder", "pair"]:
+			_paint_name(rotor, name, rh * 0.32, rh * 0.6, face_z - 11.4, hull_c)
+		else:
+			_paint_name(rotor, name, rh * 0.55, rh, face_z - 1.6, hull_c)
 	# Merge per material: the rotor's parts into the rotor, the despun parts into theirs.
 	Kit.merge_static(rotor)
 	Kit.merge_static(still)
 	return {"node": root, "rotor": rotor, "port_z": port_z, "port_radius": pr, "hub_radius": rh, "hub_length": lh,
 		"ring_radius": rr, "ring_tube": rt, "lights": lights, "colliders": colliders, "type": geom.get("type", "wheel"), "bay": bay}
+
+
+## Paints `text` on a station's forward face (facing +Z at z) below the axis, in the
+## band between radii inner and outer: as large as fits inside the face's edge, and lit
+## by the sun like the hull, so it reads as paint rather than a sign hung in space.
+static func _paint_name(rotor: Node3D, text: String, inner: float, outer: float, z: float, hull: Color) -> void:
+	text = text.to_upper()
+	var font := ThemeDB.fallback_font
+	var px := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 96)
+	var margin := (outer - inner) * 0.06
+	var top := inner + margin
+	var h := (outer - inner) * 0.4
+	# Shrink until the letters' bottom corners sit inside the face's rim.
+	for i in 40:
+		var bottom := top + h
+		var half := sqrt(maxf(outer * outer - bottom * bottom, 0.0)) - margin
+		if h * px.x / px.y <= 2.0 * half:
+			break
+		h *= 0.92
+	var l := Label3D.new()
+	l.text = text
+	l.font_size = 96
+	l.outline_size = 0
+	l.shaded = true
+	l.double_sided = false
+	l.modulate = Color("1b1d20") if hull.get_luminance() > 0.45 else Color("e6dcc4")
+	l.pixel_size = h / px.y
+	l.position = Vector3(0, -(top + h * 0.5), z)
+	rotor.add_child(l)
 
 
 ## A settlement drum about Z (radius rh, length lh), with an axial docking nub on its
