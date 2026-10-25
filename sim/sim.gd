@@ -54,7 +54,7 @@ func _init(catalog: DataCatalog = null) -> void:
 	ephemeris = Ephemeris.new(data.bodies, data.locations)
 	state = GameState.new()
 	# Order matters within a tick: the clock moves first, then everything catches up to it.
-	systems = [CalendarSystem.new(), SleepSystem.new(), EconomySystem.new(), ShipyardSystem.new(), FleetSystem.new(), WearSystem.new(), FitnessSystem.new(), InsuranceSystem.new(), TravelSystem.new(), NpcSystem.new(), ProjectSystem.new(), TipSystem.new(), ContractSystem.new(), FavourSystem.new(), SiteSystem.new(), StorySystem.new(), ElevatorSystem.new(), ShuttleSystem.new(), DamageSystem.new(), PowerSystem.new(), BadgeSystem.new(), PodSystem.new(), DetectionSystem.new(), NewsSystem.new(), DevSystem.new()]
+	systems = [CalendarSystem.new(), SleepSystem.new(), EconomySystem.new(), ShipyardSystem.new(), FleetSystem.new(), WearSystem.new(), FitnessSystem.new(), InsuranceSystem.new(), TravelSystem.new(), NpcSystem.new(), ProjectSystem.new(), TipSystem.new(), ContractSystem.new(), FavourSystem.new(), SiteSystem.new(), StorySystem.new(), ElevatorSystem.new(), ShuttleSystem.new(), DamageSystem.new(), PowerSystem.new(), BadgeSystem.new(), PodSystem.new(), DetectionSystem.new(), DevSystem.new(), NewsSystem.new()]
 	for system in systems:
 		system.setup(self)
 
