@@ -20,6 +20,10 @@ Read `docs/DESIGN.md` first. It is the source of truth for scope, pillars and ar
 - Real-world data (JPL) is baked into `data/` by tools. The game never needs the internet.
 - Third-party assets need a recorded licence and a credits line.
 
+## Title screen
+
+The title screen (`view/title_screen.gd`) is the game's shop window, so it must always show the current design. Build every shot from the same builders the game uses (`Models.station`, `Models.ship`, `kestrel.gd`, `satellite_model.gd`, `SetPieces`, `SkyKit`, liveries from `Livery`), never from a copy or a hand-made stand-in. When a builder changes, the title picks it up. When you add a new kind of thing to the game (a hull, a station type, a set piece), consider giving it a title shot. After a visual change to anything the title shows, re-shoot it with `-- --title=<dir>`.
+
 ## Exception: local flight
 
 `view/flight/` integrates close-range flight and docking itself. Its only effect on the sim is the `dock` command it sends. Keep it that way, or move flight into a sim system if it needs to affect state (see `docs/DESIGN.md`).

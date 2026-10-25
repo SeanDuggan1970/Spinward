@@ -143,6 +143,7 @@ For the art check, the same window mode takes these options:
 
 - `--art=<dir>`: planet surfaces and one ship from every fleet up close
 - `--gallery=<dir>`: every station approach
+- `--title=<dir>`: every title-screen shot (re-shoot after changing anything it shows)
 - `--flyby=<dir>`: a low lunar pass
 
 ## Jump straight to a feature
