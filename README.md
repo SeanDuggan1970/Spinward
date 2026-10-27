@@ -102,7 +102,7 @@ You start docked at Kibo Ring in low Earth orbit with 10,000 credits and a secon
 You fly from the cockpit. The dashboard has the classic Elite 3D scanner: an ellipse for your horizontal plane, with forward up the screen. Each contact sits at its bearing on the ellipse, with a stalk up or down for height: green for the station, fleet colours for ships, yellow for work pods. The compass dot shows the port, solid when it's ahead and hollow when it's behind.
 
 **How to dock by hand.** The co-pilot's prompt above the dashboard walks you through it:
-1. Point the nose straight down the station's axis, along the amber corridor lights. Not at the port box: the ALIGN gauge must be under 15°.
+1. Point the nose straight down the station's axis, toward the bay doors. Not at an angle: the ALIGN gauge must be under 15°.
 2. Strafe (A/D, R/F) onto the axis. Inside 400 m, the AXIS display shows where the axis is; put the dot in the green ring.
 3. Close in (W) at the advised speed, which falls as you get near. Brake with S or X.
 4. Leave spin match on and it keys the slot for you.
@@ -143,7 +143,20 @@ For the art check, the same window mode takes these options:
 
 - `--art=<dir>`: planet surfaces and one ship from every fleet up close
 - `--gallery=<dir>`: every station approach
+- `--title=<dir>`: every title-screen shot (re-shoot after changing anything it shows)
 - `--flyby=<dir>`: a low lunar pass
+
+## Jump straight to a feature
+
+Skip the title and start a new game wherever you like (developer shortcuts; they work together):
+
+```powershell
+.tools/godot/Godot_v4.7.2-stable_win64_console.exe --path . -- --start=halo_depot --credits=5000000
+```
+
+- `--start=<place>`: docked at that port, or on site at a site (place ids are the keys in `data/places.json` and `data/sites.json`)
+- `--start=<place>:approach`: on the final approach to that port, ready to fly in
+- `--credits=<n>`: set your balance
 
 ## Share a web build
 

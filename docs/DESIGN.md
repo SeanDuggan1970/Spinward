@@ -852,8 +852,8 @@ Ships fly into a station instead of nosing up to a collar on a small hub (`view/
   - A tunnel 16 m in radius and 80 m deep, lined in pale steel and lit by rings of lamps, with yellow guide stripes.
   - It is built forward of the station's docking face, so the port at its back is exactly where the old port was. Approaches, hand-overs and trip times are unchanged.
   - A wheel's hub grows to the bay's outer width (24 m radius) where it was smaller. Habitats carry the bay as a module on their docking nub.
-  - The station's name is stencilled on the bay's face.
-  - Green and red approach lights flank the mouth.
+  - The station's name is painted on the bay's face below the doors, sized to fit inside its rim and lit like the hull.
+  - Green and red approach lights flank the mouth. Every light is mounted on the station: none hangs in empty space along the approach.
 - **Doors** (`station.door` in `data/places.json`):
   - **Iris** at the Earth wheels and the habitats: twelve blades behind the face that swing in across the mouth. Open, they lie along the rim inside a housing flange.
   - **Clamshell** at the yards and working ports: two leaves hinged top and bottom, folding outward.

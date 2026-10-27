@@ -151,7 +151,35 @@ func _ready() -> void:
 		if a.begins_with("--tour="):
 			_tour.call_deferred(a.trim_prefix("--tour="))
 			return
+	if _dev_start(args):
+		return
 	show_title()
+
+
+## Straight into a new game, skipping the title, for trying a feature without playing
+## up to it: --start=<place> docks there (on site at a site), --start=<place>:approach
+## puts the ship on its final approach, and --credits=<n> sets the balance.
+## Returns false when neither flag is given.
+func _dev_start(args: PackedStringArray) -> bool:
+	var commands := []
+	for a in args:
+		if a.begins_with("--start="):
+			var parts := a.trim_prefix("--start=").split(":")
+			commands.append({"type": "dev_place", "place": parts[0], "approach": parts.size() > 1 and parts[1] == "approach"})
+		elif a.begins_with("--credits="):
+			commands.append({"type": "dev_credits", "credits": a.trim_prefix("--credits=").to_float()})
+	if commands.is_empty():
+		return false
+	_bar.visible = true
+	_ticker.visible = true
+	for c in commands:
+		var error := sim.apply(c)
+		if error != "":
+			push_warning("%s: %s (places: %s)" % [c["type"], error, ", ".join(sim.data.locations.keys())])
+			notice("%s: %s" % [c["type"], error], UI.HAZARD)
+	_mode = ""
+	_sync_mode.call_deferred()
+	return true
 
 
 ## The attract screen. The game shell's own UI is hidden and the sim is held.

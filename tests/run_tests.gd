@@ -138,6 +138,7 @@ func _initialize() -> void:
 	test_panel_fold()
 	test_radiator_layouts()
 	test_docking_bays()
+	test_dev_shortcuts()
 	test_satellite_missions()
 	test_secret_work()
 	test_undock_timing()
@@ -4650,6 +4651,15 @@ func _to_root(node: Node3D, root: Node3D) -> Transform3D:
 	return xf
 
 
+func test_dev_shortcuts() -> void:
+	var sim := Sim.new()
+	sim.new_game(1)
+	check(sim.apply({"type": "dev_place", "place": "halo_depot"}) == "" and sim.state.location == {"status": "docked", "place": "halo_depot"}, "--start docks at the named port")
+	check(sim.apply({"type": "dev_place", "place": "halo_depot", "approach": true}) == "" and sim.state.location["status"] == "approach", "--start=<place>:approach puts the ship on the approach")
+	check(sim.apply({"type": "dev_place", "place": "nowhere"}) != "", "--start rejects an unknown place")
+	check(sim.apply({"type": "dev_credits", "credits": 5.0e6}) == "" and is_equal_approx(sim.state.credits, 5.0e6), "--credits sets the balance")
+
+
 func test_docking_bays() -> void:
 	var d = DataCatalog.load_default()
 	var Models = load("res://view/flight/models.gd")
@@ -4675,6 +4685,18 @@ func test_docking_bays() -> void:
 	# Too big for the bay: berth on a collar on the shut doors.
 	var big: Dictionary = Models.station(geom, "Kibo Ring", {}, d.balance["bays"], 400.0)
 	check(not big["bay"]["fits"] and float(big["port_z"]) > float(big["bay"]["z_mouth"]), "A ship too big for the bay berths on the doors")
+	# The name is painted on the bay's face below the doors, inside its rim, and nothing
+	# hangs in space off the docking axis.
+	var painted: Label3D = null
+	for c in st["rotor"].get_children():
+		if c is Label3D:
+			painted = c
+	check(painted != null and painted.shaded and absf(painted.position.z - mouth) < 0.5, "The station's name is painted on the bay's face")
+	if painted != null:
+		var px := ThemeDB.fallback_font.get_string_size(painted.text, HORIZONTAL_ALIGNMENT_LEFT, -1, painted.font_size) * painted.pixel_size
+		var corner := Vector2(px.x * 0.5, -painted.position.y + px.y * 0.5)
+		check(-painted.position.y - px.y * 0.5 > float(bay["r"]) and corner.length() < float(bay["outer"]), "The painted name fits between the doors and the face's rim")
+	check(st["node"].get_children().all(func(c): return not c is MeshInstance3D), "No lights float in space on the approach")
 	for n in [plain["node"], st["node"], big["node"]]:
 		n.free()
 
