@@ -101,6 +101,14 @@ Plan: a curated catalog of about 30 major bodies plus a hand-picked set of named
 
 **Bent for play** (`sim/comet.gd`): activity follows sunlight (1/r^2) with a hard onset at 3 AU, where real comets vary a great deal, outburst and switch jets on with the local dawn. The coma is a sphere of fixed radius for its activity. The orbit ignores the push of outgassing (non-gravitational forces), which moves Halley's perihelion date by a few days per orbit; the baked orbit is fitted to Horizons in 2061 and 2063, so the error over the decade is small.
 
+## 9. The Nave: a lava tube at Marius Hills
+
+- **The skylight:** the Marius Hills Hole, found by Kaguya in 2009 and imaged by LRO: nearly circular, 60–70 m across, 80–90 m deep, at about 14.1 N, 303.2 E ([JAXA](https://www.isas.jaxa.jp/e/forefront/2010/haruyama/02.shtml)). Beam theory gives the tube a maximum width of about 370 m, and GRAIL gravity data suggest tubes in the region could be kilometres wide; ESA counts hundreds of such pits ([ESA](https://www.esa.int/ESA_Multimedia/Images/2020/10/Skylight_on_the_Moon)). The game takes 340 m.
+- **Sunlight down the shaft:** a 65 m opening over an 85 m drop admits light from within atan(65/85), about 37 degrees, of overhead. At 14 N the noon Sun passes 14 degrees from overhead, and is within 37 degrees for an hour angle of about ±35 degrees: some 5.7 Earth days of each 29.5-day lunar day.
+- **Earth's place:** from 14.1 N, 56.8 W, the sub-Earth point is 57.9 degrees away, so Earth stands about 32 degrees above the eastern horizon, too low ever to be seen up the shaft.
+- **The hop from Line Foot** (0 N, 0 E): central angle 57.9 degrees, 1,755 km. The minimum-energy ballistic launch for central angle θ on a sphere of radius R and surface gravity g has speed v² = gR · 2 sin(θ/2) / (1 + sin(θ/2)) and flight-path angle (π − θ)/4. For the Moon that is 1,357 m/s at 30.5 degrees, an apex of 312 km and 31.2 minutes of flight: about 2.7 km/s of engine work for the round of launch and landing, within a lunar lander's reach (Apollo's descent and ascent stages together carried about 4.7 km/s).
+- **Simplified:** the lander's burns are drawn along the ends of the ellipse rather than as a gravity turn from the pad; the Moon's pole is the ecliptic pole (the real one is 1.5 degrees off), so Earth wobbles about 5 degrees in the lunar sky instead of 6.7, and the Moon doesn't librate in longitude.
+
 ## Open research for later passes
 
 - Readable orbit-planning UI patterns (KSP manoeuvre nodes versus one-click "AI plot course").

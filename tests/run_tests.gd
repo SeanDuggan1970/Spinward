@@ -102,6 +102,7 @@ func _initialize() -> void:
 	test_story_favour_after_abandon()
 	test_elevator_not_stranded_at_foot()
 	test_mars_shuttle()
+	test_the_nave()
 	test_shuttle_view_profile()
 	test_edge_cases()
 	test_power_budget()
@@ -2273,6 +2274,47 @@ func test_elevator_not_stranded_at_foot() -> void:
 ## The Mars shuttle: down from Ares Ring to each base with your hold, your ship left
 ## docked above; fares, the cargo limit, the base a project builds, no flying to or
 ## from a base, saves mid-flight, and never stranded below.
+func test_the_nave() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var Shuttle := preload("res://sim/systems/shuttle_system.gd")
+	# Where it is: the Marius Hills skylight, held on the near side, 58 degrees from the
+	# point under Earth (a hop of 1,755 km from Line Foot). Earth rides a few degrees
+	# north and south in the lunar sky through the month (the Moon's orbit is tilted to
+	# its equator: libration in latitude), so the angle wanders by that much.
+	for days in [0.0, 9.0, 21.0]:
+		var t: float = s.time_s + days * 86400.0
+		var moon: Array = sim.ephemeris.position("moon", t)
+		var nave := V.normalized(V.sub(sim.ephemeris.position("the_nave", t), moon))
+		var earth := V.normalized(V.sub(sim.ephemeris.position("earth", t), moon))
+		var foot := V.normalized(V.sub(sim.ephemeris.position("line_foot", t), moon))
+		var angle := rad_to_deg(acos(clampf(V.dot(nave, earth), -1.0, 1.0)))
+		check(absf(angle - 57.9) < 6.0, "The Nave stays about 58 degrees from the sub-Earth point on day %d (%.2f)" % [int(days), angle])
+		check(absf(rad_to_deg(acos(clampf(V.dot(foot, earth), -1.0, 1.0)))) < 0.01, "and Line Foot stays under Earth")
+	check(absf(V.distance(sim.ephemeris.position("the_nave", s.time_s), sim.ephemeris.position("moon", s.time_s)) - float(d.bodies["moon"]["radius_m"])) < 1.0, "The Nave sits on the surface")
+	# Where your ship is, wherever you are.
+	check(d.home_port("the_nave") == "halo_depot" and d.home_port("line_foot") == "halo_depot" and d.home_port("kibo_ring") == "kibo_ring", "Your ship waits at Halo Depot, two links up from The Nave")
+	check(not Perks.place_open(s, d, "the_nave"), "No ship can fly to The Nave")
+	# The way there: down the Luna Line, then the hopper.
+	_dock_at(sim, "halo_depot")
+	s.credits = 50000.0
+	s.ship["cargo"] = {}
+	check(sim.apply({"type": "ride_elevator"}) == "", "Down the Luna Line from Halo Depot")
+	sim.advance_game_time(float(s.location["arrive_t"]) - s.time_s + 1.0)
+	check(s.location == {"status": "docked", "place": "line_foot"}, "At Line Foot")
+	var flights := Shuttle.flights_here(d, "line_foot")
+	check(flights.size() == 1 and flights[0]["to"] == "the_nave" and flights[0]["down"], "Line Foot's hopper flies to The Nave")
+	check(sim.apply({"type": "take_shuttle", "to": "the_nave"}) == "", "Take the hopper")
+	sim.advance_game_time(float(s.location["arrive_t"]) - s.time_s + 1.0)
+	check(s.location == {"status": "docked", "place": "the_nave"}, "At The Nave")
+	check(sim.apply({"type": "buy", "good": "handmade_goods", "tonnes": 0.2}) == "", "Buy the glassblowers' work")
+	var why: String = sim.apply({"type": "depart", "to": "kibo_ring"})
+	check(why.contains("Halo Depot"), "Trying to fly off, you are told your ship is at Halo Depot (%s)" % why)
+	var back := Shuttle.flight_to(d, "the_nave")
+	check(not back["down"] and back["to"] == "line_foot", "The hopper flies back to Line Foot")
+
+
 func test_mars_shuttle() -> void:
 	var sim := fresh()
 	var s := sim.state

@@ -1500,7 +1500,7 @@
 		"name": "Line Foot",
 		"operator": "Luna Cooperative",
 		"foot_of": "halo_depot",
-		"description": "Where the Luna Line touches down, in Sinus Medii at the centre of the Moon's near side, with Earth hanging overhead and never moving. Regolith trains, a foundry, a hostel for climber crews and a bar that claims the best view in the system. Ships can't land here: you come down the ribbon.",
+		"description": "Where the Luna Line touches down, in Sinus Medii at the centre of the Moon's near side, with Earth hanging overhead and never moving. Regolith trains, a foundry, a hostel for climber crews and a bar that claims the best view in the system. Ships can't land here: you come down the ribbon. The Cooperative's hopper flies on from here to the Marius Hills.",
 		"location": {
 			"type": "surface",
 			"parent": "moon",
@@ -1543,6 +1543,78 @@
 			"name": "the Earthrise",
 			"patrons": 30,
 			"round_cr": 9
+		},
+		"shuttle": {
+			"name": "the Cooperative hopper",
+			"body": "moon",
+			"max_t": 12,
+			"craft": "a squat four-legged lander with a pressurised cab for ten, a cargo cradle and one throttleable engine. No wings, no heat shield: on the Moon there is nothing to fly on, only to fall through",
+			"stops": {
+				"the_nave": {
+					"hours": 1.0,
+					"fare": 140,
+					"fare_per_t": 80,
+					"via": "Straight up off the pad and over onto a ballistic arc: 1,360 m/s on the engine, half an hour falling 300 km above the maria, then the same burn again to set down beside the skylight. 1,750 km in under an hour."
+				}
+			}
+		}
+	},
+	"the_nave": {
+		"name": "The Nave",
+		"operator": "Luna Cooperative",
+		"foot_of": "line_foot",
+		"description": "A lava tube under the Marius Hills, sealed and filled with air: 340 m wide, two kilometres to the first bulkhead, under a roof of basalt thick enough to stop cosmic rays and the fortnight-long swing from boiling to frozen outside. Three orders of monks, a string quartet, glassblowers and a dozen families live along it, and in one-sixth gravity its columns are as thin as reeds. The skylight is glazed as a rose window. For about five days around each lunar noon the Sun stands high enough to shine straight down it, and a shaft of light walks across the floor. Earth never shows through it (outside it hangs a third of the way up the eastern sky, never moving), so there is a periscope by the altar for anyone homesick. Ships can't land here: the Cooperative's hopper flies from Line Foot.",
+		"location": {
+			"type": "surface",
+			"parent": "moon",
+			"facing": "earth",
+			"lat_deg": 14.09,
+			"lon_deg": -56.77
+		},
+		"services": [
+			"market",
+			"bar"
+		],
+		"bar": {
+			"name": "the Undercroft",
+			"patrons": 25,
+			"round_cr": 10
+		},
+		"look": {
+			"kind": "skylight",
+			"skylight_m": 65
+		},
+		"market": {
+			"food": 12,
+			"handmade_goods": 1.0,
+			"collectibles": 0.5,
+			"water_ice": 20,
+			"oxygen": 10,
+			"ceramic_feed": 8,
+			"polymer_feed": 4,
+			"machine_parts": 4,
+			"robotics": 2,
+			"medical": 1.0,
+			"gene_stock": 0.6,
+			"delicacies": 0.6,
+			"wine_spirits": 0.6
+		},
+		"produces": {
+			"food": 0.6,
+			"handmade_goods": 0.05,
+			"collectibles": 0.01
+		},
+		"consumes": {
+			"water_ice": 1.0,
+			"oxygen": 0.5,
+			"ceramic_feed": 0.4,
+			"polymer_feed": 0.2,
+			"machine_parts": 0.2,
+			"robotics": 0.1,
+			"medical": 0.05,
+			"gene_stock": 0.03,
+			"delicacies": 0.03,
+			"wine_spirits": 0.03
 		}
 	},
 	"stalk_foot": {

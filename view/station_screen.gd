@@ -426,7 +426,9 @@ func _shuttle_panel(place_id: String, flight: Dictionary) -> Control:
 	var stop: Dictionary = flight["stop"]
 	var to: String = flight["to"]
 	var to_name: String = d.places[to]["name"]
-	var p := UI.panel("%s  ·  %s" % [String(line["name"]).to_upper(), ("down to " if flight["down"] else "up to ") + to_name])
+	# A hop from a town on the surface goes "to" and "back to", not down and up.
+	var hop: bool = d.places[flight["port"]]["location"].get("type", "") == "surface"
+	var p := UI.panel("%s  ·  %s" % [String(line["name"]).to_upper(), (("to " if hop else "down to ") if flight["down"] else ("back to " if hop else "up to ")) + to_name])
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 16)
 	p[1].add_child(row)
@@ -438,12 +440,13 @@ func _shuttle_panel(place_id: String, flight: Dictionary) -> Control:
 		town.autowrap_mode = TextServer.AUTOWRAP_WORD
 		town.custom_minimum_size = Vector2(200, 0)
 		info.add_child(town)
-		var via := UI.label(String(stop.get("via", "")) + " Your ship stays docked here; your hold flies with you in the shuttle's bay.", UI.TEXT, 12)
+		var ship_at: String = d.home_port(place_id)
+		var via := UI.label(String(stop.get("via", "")) + (" Your ship stays docked here" if ship_at == place_id else " Your ship waits at %s" % d.places[ship_at]["name"]) + "; your hold flies with you in the shuttle's bay.", UI.TEXT, 12)
 		via.autowrap_mode = TextServer.AUTOWRAP_WORD
 		via.custom_minimum_size = Vector2(200, 0)
 		info.add_child(via)
 	else:
-		info.add_child(UI.label("Your ship is docked at %s. Your hold flies with you." % to_name, UI.TEXT, 13))
+		info.add_child(UI.label("Your ship is docked at %s. Your hold flies with you." % d.places[d.home_port(to)]["name"], UI.TEXT, 13))
 	var fare := ShuttleSystem.fare(d, s, place_id, to)
 	info.add_child(UI.label("%s flight   ·   fare %s (a seat, and %d cr a tonne for the %.1f t you carry, up to %d t)" % [
 		UI.duration(float(stop["hours"]) * 3600.0), UI.money(fare), int(stop["fare_per_t"]), ShipStats.cargo_t(s.ship), int(line.get("max_t", 0))]))

@@ -141,7 +141,8 @@ func _pick_hold(ship: Dictionary) -> String:
 	var wants := func(p: String) -> bool:
 		var place: Dictionary = data.places[p]
 		return place.get("consumes", {}).has(good) or place.get("recipes", []).any(func(r): return r["inputs"].has(good))
-	var ports: Array = data.places.keys().filter(func(p): return not data.places[p].has("foot_of") and data.places[p].has("station") and wants.call(p))
+	# Ports and the towns below them alike (a hold can ride a ribbon or a hopper on).
+	var ports: Array = data.places.keys().filter(func(p): return data.places[p].has("market") and wants.call(p))
 	if ports.is_empty():
 		return ""
 	ports.sort()

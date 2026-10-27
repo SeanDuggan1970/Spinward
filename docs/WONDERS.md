@@ -8,8 +8,9 @@ Owner's brief: *I believe we really will speed-run all possible futures. In a po
 
 - **Wonder over efficiency.** When energy, materials and labour are cheap and minds can design anything, the scarce thing is meaning. People build big, beautiful, odd places because they can, because they always wanted to, and because the Feed is watching.
 - **Every wonder has a reason only its people need.** A monastery in a lava tube makes sense to monks. A city on rails on Mercury makes sense to people who love sunrises. Write the reason, not the justification.
-- **Plausible enough, then bend it.** Each entry below starts from real physics or a real proposal, then says where we bend it for fun. Record the bend in [RESEARCH.md](RESEARCH.md) when a wonder enters the game, as with everything else.
-- **Built by people and minds together.** Machines and minds do the heavy lifting in a few years; people bring the wanting. Many wonders are unfinished, half-funded, or arguing about their own design. That is part of the charm.
+- **Inside physics, no magic.** Each entry starts from real physics or a real proposal. Owner's rule: *we stay inside the laws of physics as understood at that time in the game's timeline; no magic handwaves. We're just the possible, the resources, and the "this will be cool" attitude.* The game's 2060s have solved much of materials science and engineering (see *Where knowledge stands* in DESIGN.md), so strong, cheap, clear, superconducting things are fair. New laws are not. Where the game simplifies (a smoothed trajectory, an averaged orbit), it is a simplification of real physics, recorded in [RESEARCH.md](RESEARCH.md).
+- **A steering hand: boots, not pavement.** Owner's rule: *embrace folly and madness, within reason. The minds should influence and enforce: no one should be allowed to eat up resources for no good reason. There needs to be a long-view power steering it all. It won't allow a crazy idea to pave a planet, but it supports the person with a good pair of boots so they can walk the planet.* In the setting this is the Commons' Long View, with the minds and human councils that listen to it. It asks of every big build: does it use what is already there (a lava tube, a crater, a canyon) before making new? Does it take more than it gives back? Can it be undone? Does it shut anyone else out? Small, odd, personal dreams almost always pass. Vast, greedy or irreversible ones get scaled down, moved, or refused, and the news says so.
+- **Built by people and minds together.** Machines and minds do the heavy lifting in years, not centuries; people bring the wanting. Many wonders are unfinished, half-funded, or arguing about their own design. That is part of the charm.
 - **Gravity, light and air.** Gravity, light and air are the three things every wonder must answer: where does down come from, where does the light come from, what holds the air in? Answering them differently is what makes each place feel different.
 
 ## How wonders appear in the game
@@ -33,13 +34,13 @@ Most wonders should start as rumours, become projects, and end as ports or set p
 ### Cloud cities of Venus
 - **Real basis:** About 50 km above Venus the pressure is near one bar and the temperature near Earth's. Breathable air is a lifting gas in Venus's CO2, so a habitat full of air floats. NASA's HAVOC study (2014) sketched crewed airships there and a floating cloud city as the long-term goal ([coverage](https://www.blimpinfo.com/airships/nasa-study-proposes-airships-cloud-cities-for-venus-exploration/), [Vice](https://www.vice.com/en/article/please-build-a-cloud-city-over-venus)). Gravity is 0.9 g: the most Earth-like anywhere.
 - **The dream:** Sky castles for real. Towers and gardens hanging under transparent envelopes kilometres across, sailing round the planet about every four Earth days on the super-rotating winds (so a day and a night each last about two), sulphuric clouds below like an endless white sea. Walkways between envelopes; a cathedral whose nave is the gas bag.
-- **Bend:** Acid-proof envelopes and cheap ascent vehicles are taken as solved.
+- **Physics:** No new physics, only hard engineering: acid-resistant fluoropolymer envelopes, and real rockets to leave. At 0.9 g, climbing from the clouds to orbit takes about 7 km/s, nearly as much as from Earth, so Venus exports little that is heavy.
 - **In game:** Opens Venus as a region (tier 2–3). Port: *Aphrodite's Rest* or similar. Exports: collectibles, "Venus light" art, sulphur chemicals. Imports: everything solid. Feed destination: the first wedding over Venus.
 
 ### Titan's sky towns and human flight
 - **Real basis:** Titan has a thicker atmosphere than Earth (about 1.5 bar) and gravity of 0.14 g, so a person with strapped-on wings can fly under their own power. No pressure suit needed, only warmth and a mask.
 - **The dream:** Towns hung from cliffs and balloons over the methane seas, where everyone flies. Wing-makers are the best-paid artisans. Annual races across Kraken Mare. Orange sky, Saturn invisible behind the haze, a sunset that lasts for days.
-- **Bend:** Cold is the real problem (about -180 °C); we let insulation and fusion power make it simple.
+- **Physics:** Cold is the real problem (about -180 °C): an insulated, heated flying suit and fusion-warmed towns answer it. The thick, cold air carries heat away fast, so suits are thick and flights are short.
 - **In game:** Huygens Port gains a foot-of town (*Wingfall*) and sells flights to Feed crews. Imports: handmade wings, delicacies. A "First" contract: fly across Ligeia Mare.
 
 ## 2. Under the rock: cathedrals of stone
@@ -47,7 +48,7 @@ Most wonders should start as rumours, become projects, and end as ports or set p
 ### The lava-tube cathedrals of the Moon
 - **Real basis:** The Marius Hills pit is a skylight 60–70 m wide and 80–90 m deep into a lava tube that gravity data suggest could hold a city ([JAXA](https://www.isas.jaxa.jp/e/forefront/2010/haruyama/02.shtml), [ESA](https://www.esa.int/ESA_Multimedia/Images/2020/10/Skylight_on_the_Moon)). The Mare Ingenii skylight is wider still. Rock overhead stops radiation and micrometeorites, and the temperature inside is steady.
 - **The dream:** Seal the tube, fill it with air, and you have a natural nave hundreds of metres wide and kilometres long. In one-sixth gravity, columns can be slender and vaults impossibly high. The skylight becomes a rose window with Earth framed in it. Monasteries, concert halls, and the quietest place in the Earth–Moon system.
-- **Bend:** Lunar tubes may be much bigger than Earth's (low gravity lets them stay open); we take the biggest estimates.
+- **Physics:** Lunar tubes can be far bigger than Earth's because low gravity lets their roofs span more; the game takes the larger published estimates. The Nave (below) is built on these numbers.
 - **In game:** Tier 1, close to home. Port at the foot of the Luna Line or a new foot-of at Marius Hills: *The Nave*. Exports: handmade goods, music, collectibles. Wants: ceramic feed, glass, gene stock for its gardens. Pilgrims as passengers.
 
 ### The spin cathedral in a hollowed rock
@@ -79,7 +80,7 @@ Most wonders should start as rumours, become projects, and end as ports or set p
 ### Transparent domes and glass tube-ways
 - **Real basis:** Transparent ceramics (aluminium oxynitride, sapphire, spinel) are already stronger than glass. In the 2060s they are cheap (DESIGN.md: materials science is largely solved), so "transparent aluminium" is ordinary building stock.
 - **The dream:** Domes you can't see the frame of. Glass tubes linking domes, stations and towns, with trams and walkways inside, so you cross a crater floor or a gap between modules with the stars all round you. Whole streets under glass. The retro-future of the 1950s comics, finally built.
-- **Bend:** Radiation shielding through clear walls is the honest problem. We let thick ceramic, water layers and magnetic shields handle it, and let people go below to sleep.
+- **Physics:** Radiation through clear walls is the honest problem. The answers are real ones: thick ceramic, water held between panes, superconducting magnetic shields (heavy, but this era has the superconductors), and bedrooms below ground. Glass is for the waking hours.
 - **In game:** The default look of new towns from the cap's-off era, and a strong demand for ceramic and glass feed everywhere.
 
 ## 4. Air without walls: flying worlds
@@ -87,13 +88,13 @@ Most wonders should start as rumours, become projects, and end as ports or set p
 ### The Long Breath (a bubble of air in space)
 - **Real basis:** Dani Eder's "bubbleworld" (1995): a huge shell held up by the air inside it ([yarchive](https://www.yarchive.net/space/exotic/bubbleworld.html)). Karl Schroeder's *Virga* novels imagine a fullerene balloon thousands of kilometres across, with artificial suns and spinning wooden town wheels ([Kirkus](https://www.kirkusreviews.com/book-reviews/karl-schroeder/sun-of-suns/)).
 - **The dream:** Start small: a transparent sphere a few kilometres across at a Lagrange point, filled with air, no spin, no down. People fly with wings, sleep in hammocks tethered to floating gardens, swim through drifting lakes. A lamp at the centre for a sun. A city of birds.
-- **Bend:** Even a few kilometres of air is a lot of gas, and the shell must stop air leaking and rocks getting in. We call it solved with ceramic and graphene film.
+- **Physics:** At this size the air's own gravity holds nothing in; the shell's tension does. A sphere 1 km in radius at half an atmosphere (oxygen-rich, so it is still good to breathe) holds about 2.5 million tonnes of air, and its wall carries about 25 kN per metre: roughly a centimetre of carbon fibre, a few hundred thousand tonnes. A micrometeorite hole leaks slowly enough to patch at leisure. Zero gravity is still bad for bones, so residents spend time each day in spinning gyms, as station crews do.
 - **In game:** Tier 2–3 project near L4 or L5. A Feed destination with its own sports. Exports: collectibles, handmade wings. A perfect "First" generator: first person to fly round it, first child born there.
 
 ### Ring cities with open sky (the Bishop rim)
 - **Real basis:** A Bishop ring is a spinning ring 1,000 km across with walls high enough to hold an atmosphere with no roof. Far beyond the 2060s at full size.
 - **The dream:** A small version: a ring tens of kilometres across with high walls and a roof of air, open to the stars at the top. The sky is real.
-- **Bend:** At small sizes the walls must be absurdly high or the air thin; we let a transparent "lid" do it and call the walls a style choice.
+- **Physics:** Walls only hold air without a roof when they are tens of kilometres high, which needs a ring the size of a small planet's width. At tens of kilometres across, a ring needs a roof. So the in-game version is a wide ring with a clear roof so high above the fields that it reads as sky. The true open-topped Bishop ring stays a Commons dream.
 - **In game:** A rumour and Commons dream at first; a late-game project.
 
 ## 5. Swarms and stacks: a crowd of cylinders
@@ -106,7 +107,7 @@ Most wonders should start as rumours, become projects, and end as ports or set p
 ## 6. Moving cities
 
 ### Terminator, the city on rails (Mercury)
-- **Real basis:** Kim Stanley Robinson's *2312*: a city on Mercury riding tracks round the planet, staying just ahead of the sunrise, driven by the rails' own expansion in the heat ([summary](https://en.wikipedia.org/wiki/2312_(novel))). Mercury's slow rotation means the day–night line moves at walking pace.
+- **Real basis:** Kim Stanley Robinson's *2312*: a city on Mercury riding tracks round the planet, staying just ahead of the sunrise ([summary](https://en.wikipedia.org/wiki/2312_(novel))). Mercury's slow rotation means the day–night line moves at walking pace. In the novel the rails' expansion in the heat drives the city; ours runs on electric motors fed by the sunlit side, and keeps the thermal-expansion story as local folklore.
 - **The dream:** Built exactly as the book imagined, because someone loved the book. Every morning the bravest walk out to the Dawn Wall to see the Sun rise.
 - **In game:** Opens Mercury (tier 3). Exports: metals, solar power, collectibles. A port that moves round the body.
 
@@ -119,7 +120,7 @@ Most wonders should start as rumours, become projects, and end as ports or set p
 ### Hanging towns under Europa's ice
 - **Real basis:** Europa has a liquid ocean under kilometres of ice; the surface is drenched in Jupiter's radiation, the ocean is shielded.
 - **The dream:** Towns hanging upside down from the underside of the ice like chandeliers, lit windows reflected in black water, submarines for trams. Divers, scientists, and those who simply want to be very far away.
-- **Bend:** Drilling through 10–30 km of ice is taken as done.
+- **Physics:** The ice is 10 to 30 km thick. Fusion-heated melt shafts get through it in a year or so of work; the shaft is sealed behind each crew so the ocean stays clean.
 - **In game:** Late game; a dream and a news thread first (with a strong "don't contaminate the ocean" argument among minds and people).
 
 ### The geyser spa at Enceladus
@@ -160,7 +161,7 @@ The things nobody needs, and everyone remembers:
 - **A second moonrise:** a mirror in orbit that a town on Earth paid for, so it rises over their hills every night. (Astronomers object.)
 - **The Long Clock on the Moon:** a clock built to run for ten thousand years, ticking once a lunar day.
 - **Sculpture in comet ice and asteroid stone:** a face carved on a rock that passes Earth every few years.
-- **A cathedral organ played by the solar wind** at a Lagrange point, its pipes kilometres long.
+- **The solar-wind organ** at a Lagrange point: the wind is far too thin to sound a pipe, so its antennas and particle counters turn the Sun's gusts and radio noise into music, played on a real organ in a hall inside.
 - **A replica of a fictional place:** some fan collective will hollow a rock and build their favourite fantasy city inside it, exactly to the books. The game should have several, under made-up names.
 - **Memorial statites:** sails held still by sunlight, carrying names.
 
@@ -187,7 +188,7 @@ These belong in the sky full of homesteads in *The cap's off*: beacons, chatter,
 
 Chosen for reach (close to where the player already flies), variety (gravity, light and air answered differently each time), and economy (each wants the new goods):
 
-1. **The Nave** (lunar lava-tube cathedral, Marius Hills). Tier 1, close to home, cheap to build as a foot-of town and an underground set piece. Wants ceramic feed and gene stock; exports handmade goods.
+1. **The Nave** (lunar lava-tube cathedral, Marius Hills). **In** (27 October 2026): a town reached by the Cooperative's hopper from Line Foot. See *The Nave* in DESIGN.md.
 2. **The Long Breath** (air bubble at L5, near the Kernel). Tier 2 project, then a port. A showcase for flying people and for Firsts and the Feed.
 3. **Cloud city over Venus.** Opens Venus: the most Earth-like gravity and a true sky castle. Bigger work: a new body, region and market.
 4. **The Long Hall** (roof over Coprates Chasma). Mars megaproject in segments, like the Selene Ring.

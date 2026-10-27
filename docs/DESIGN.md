@@ -38,6 +38,10 @@ Owner's brief: *once AI and space travel arrive, the solar system will be packed
 
 The tropes are fine: cults, survivalists, tribes and corporate dynasties all fit. They follow the pillars. They are eccentric, stubborn, overconfident or in over their heads, not villains. The frontier's real danger is still space itself.
 
+**The steering hand: boots, not pavement** (owner, 27 October 2026). Folly and madness are welcome, within reason. Nobody gets to eat resources for no good reason. The minds, through the Commons' Long View and the councils that listen to it, steer the whole release of pressure: they won't let a crazy idea pave a planet, but they'll back the person with a good pair of boots who wants to walk it. Every big build is asked whether it uses what is already there, takes more than it gives back, can be undone, and shuts anyone out. Small, personal, odd dreams nearly always pass; vast, greedy or irreversible ones get scaled down, moved or refused, and the news says so. See [WONDERS.md](WONDERS.md).
+
+**Inside physics.** Everything stays within the laws of physics as understood in the game's 2060s: no magic, no new laws. The era's solved materials science makes strong, cheap, clear and superconducting things fair; anything simplified is a simplification of real physics, recorded in RESEARCH.md.
+
 **The work that is still human.** Machines do almost all the labour, but people are still needed, and paid, for the parts that need a person:
 - **Second Opinion:** an engineer a robot calls in when its own models disagree. Often the job is to look, listen, and say "no, that's fine" or "no, stop".
 - **Percussive Maintenance:** knowing exactly where to kick a machine, and how hard. Half folklore, half the only fix that works out here.
@@ -1338,6 +1342,21 @@ Sean's direction (2026-10-17): "bases on Mars, domes etc.. with the ability for 
 - **Departures from hard physics:**
   - Hellas lies south of the ring's 25 degree inclination. A real shuttle would need a costly plane change; ours waits longer for a dogleg and charges more.
   - Every flight's length is fixed per base rather than set by when the ground track next passes over it.
+
+## The Nave (Oct 2026)
+
+Owner's direction (2026-10-27): start building the wonders shortlist with the Nave, inside the laws of physics, folly welcome, with the minds' long view steering.
+
+- **The place** (`places.json` `the_nave`, `foot_of: "line_foot"`): a town in the lava tube under the real Marius Hills skylight (14.09 N, 56.77 W; the pit is 60–70 m wide and 80–90 m deep). The tube is sealed and filled with air: 340 m wide and two kilometres to the first bulkhead, under a basalt roof that stops cosmic rays and the day–night temperature swing. Monks of three orders, a string quartet, glassblowers and a dozen families; a bar, the Undercroft.
+  - **Light:** the skylight is glazed as a rose window. The shaft lets in sunlight only when the Sun is within about 37 degrees of overhead, which at 14 N is about five Earth days around each lunar noon. Earth stands about 32 degrees up in the eastern sky and never shows through it, hence the periscope by the altar.
+  - **Market:** small. Makes handmade goods, a few collectibles and its own staples; wants ceramic feed (liner and glass), polymer feed, water, air, gene stock for its gardens, and a little wine and Earth delicacies.
+- **Getting there:** your ship stays at Halo Depot. Ride the Luna Line down to Line Foot, then take **the Cooperative hopper** (`line_foot.shuttle`): 1,755 km, 1 hour door to door, 140 cr + 80 cr/t, up to 12 t. Back the same way.
+  - A town can now be `foot_of` another town (the Nave below Line Foot below Halo Depot). `DataCatalog.home_port(place)` follows the chain to where your ship is, for the notices, the shuttle panel and the refusal to fly off.
+- **The hop** (`view/shuttle_view.gd`): a minimum-energy ballistic arc, solved exactly (Kepler's equation by bisection): launch at about 1,357 m/s, 30 degrees above the horizon, coast 31 minutes through a 312 km apex, and land on the same burn in reverse. No wings, no heat shield: on a world without air (`look.atmosphere` absent) the view flies a four-legged lander on one engine, and an airless descent from orbit brakes on that engine rather than entering. Plasma only ever shows where there is air.
+- **Where it sits:** a surface place with `facing` and `lat_deg`/`lon_deg` keeps its spot on a tidally locked world (`sim/ephemeris.gd`), measured from the point under the body it faces.
+- **News:** first light in the Nave (backdated), and the Long View backing a second bulkhead while turning down a hundred-dome field above it ("use what is there").
+- **Attract screen:** the caption plate's hold line can now be bound for towns below ports, the Nave among them.
+- **Simplifications (RESEARCH.md §9):** the hopper's flight is always the same hour; the Moon's pole is taken as the ecliptic pole (1.5 degrees off), so Earth's wobble in the lunar sky is about 5 degrees, not the real 6.7, and there is no libration in longitude.
 
 ## Milestones
 

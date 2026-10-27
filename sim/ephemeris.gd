@@ -4,7 +4,9 @@
 ## two-body system, solved from the circular restricted three-body model) or "surface"
 ## (a town on a body: at lat/lon, turning with its day, or always under the body it
 ## faces, like the Moon's near side under Earth; with radius_m, held that far out
-## instead, as an elevator's counterweight is).
+## instead, as an elevator's counterweight is). A town on a tidally locked world can
+## give lat/lon as well as facing: measured from the point under the body it faces,
+## longitude east positive, so it keeps its place on the near side.)
 extends RefCounted
 
 const V := preload("res://sim/v3.gd")
@@ -140,18 +142,27 @@ func surface_point(where: Dictionary, t: float) -> Array:
 	# radius_m: from the body's centre, for a point held above the surface (an
 	# elevator's counterweight, turning with the world); else on the surface.
 	var r := float(where.get("radius_m", bodies[parent]["radius_m"]))
-	if where.has("facing"):
-		return V.add(c, V.scale(V.normalized(V.sub(position(where["facing"], t), c)), r))
-	var lat := deg_to_rad(float(where.get("lat_deg", 0.0)))
-	var lon := deg_to_rad(float(where.get("lon_deg", 0.0))) + TAU * t / float(where.get("day_s", 86400.0))
 	var pole := [0.0, 0.0, 1.0]
 	var b: Dictionary = bodies[parent]
 	if b.has("pole_ra_deg"):
 		var ra := deg_to_rad(float(b["pole_ra_deg"]))
 		var dec := deg_to_rad(float(b["pole_dec_deg"]))
 		pole = equatorial_to_ecliptic([cos(dec) * cos(ra), cos(dec) * sin(ra), sin(dec)])
-	var x := V.cross([0.0, 0.0, 1.0], pole)
-	x = V.normalized(x) if V.length(x) > 1e-6 else [1.0, 0.0, 0.0]
+	var lat := deg_to_rad(float(where.get("lat_deg", 0.0)))
+	var x: Array
+	var lon: float
+	if where.has("facing"):
+		var toward := V.normalized(V.sub(position(where["facing"], t), c))
+		if not where.has("lat_deg") and not where.has("lon_deg"):
+			return V.add(c, V.scale(toward, r))
+		# Longitude 0 under the body it faces, on that body's equator.
+		x = V.sub(toward, V.scale(pole, V.dot(toward, pole)))
+		x = V.normalized(x) if V.length(x) > 1e-6 else [1.0, 0.0, 0.0]
+		lon = deg_to_rad(float(where.get("lon_deg", 0.0)))
+	else:
+		x = V.cross([0.0, 0.0, 1.0], pole)
+		x = V.normalized(x) if V.length(x) > 1e-6 else [1.0, 0.0, 0.0]
+		lon = deg_to_rad(float(where.get("lon_deg", 0.0))) + TAU * t / float(where.get("day_s", 86400.0))
 	var y := V.cross(pole, x)
 	var d := V.add(V.add(V.scale(x, cos(lat) * cos(lon)), V.scale(y, cos(lat) * sin(lon))), V.scale(pole, sin(lat)))
 	return V.add(c, V.scale(d, r))

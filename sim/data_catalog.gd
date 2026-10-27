@@ -81,6 +81,19 @@ func load_from(root: String) -> void:
 		"logbook_age_days": float(broker_file.get("logbook_age_days", 3.0))}
 
 
+## The port where a ship stays while its pilot is at `place`: the place itself, or for
+## a town reached by ribbon or shuttle (possibly one beyond another, as a hop from an
+## elevator's foot), the port at the top of that chain.
+func home_port(place: String) -> String:
+	var at := place
+	for _i in 8:
+		var up: String = locations.get(at, {}).get("foot_of", "")
+		if up == "":
+			return at
+		at = up
+	return at
+
+
 func read_json(path: String) -> Dictionary:
 	var text := FileAccess.get_file_as_string(path)
 	var parsed = JSON.parse_string(text)

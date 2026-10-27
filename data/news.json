@@ -301,6 +301,20 @@
 			"dateline": "The lanes",
 			"headline": "The lanes have a theory, and won't say what",
 			"body": "Lane minds have been unusually talkative this month, with one topic and thousands of opinions. Asked to summarise, a nav beacon at L1 said 'we think something is watching the crewed ships', then added 'probably in a nice way'."
+		},
+		{
+			"id": "nave_first_light",
+			"after_days": -20,
+			"dateline": "Marius Hills, the Moon",
+			"headline": "First light in the Nave",
+			"body": "At lunar noon on Tuesday the Sun stood high enough over the Marius Hills to shine straight down the skylight, through the new rose window and onto the floor of the lava tube the Cooperative sealed last year. Three orders of monks, a string quartet and most of Line Foot were there to see it. The light stays for five days, then not again for a month. Hopper seats from Line Foot are sold out."
+		},
+		{
+			"id": "nave_second_bulkhead",
+			"after_days": 24,
+			"dateline": "Marius Hills, the Moon",
+			"headline": "The Long View backs the Nave's second bulkhead, not the dome field",
+			"body": "The Commons' Long View has signed off on sealing another four kilometres of the Marius Hills tube, and turned down a developer's plan to cover the hills above it with a hundred domes. 'The tube was already there, and the rock was already doing the shielding,' its note reads. 'Use what is there. We will help anyone who wants to walk these hills; we will not help anyone pave them.' The Nave's glassblowers have asked for ceramic feed and patience, in that order."
 		}
 	],
 	"projects": {
