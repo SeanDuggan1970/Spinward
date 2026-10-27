@@ -368,3 +368,18 @@ Full write-up: [2026-10-07-economy-together.md](2026-10-07-economy-together.md).
 - **Worth a hand-played check:**
   - Water to Venus. Aphrodite's Rest and Cytherea Station both consume water with nothing producing it nearby, so the price there sits at the ceiling (3x base). Against the glider's 260 cr/t and the long trip, is it worth it?
   - Wings and art from the Long Breath, and handmade goods from the Nave. Their volumes are tiny by design (a few tonnes of target stock).
+
+
+## Bergs, and orbital pharmaceuticals trimmed (2026-10-27)
+
+- Changed data: `balance.bergs` (water ice pushed in to the Kernel, Psyche Claims and Cytherea Station on a schedule), and `orbital_pharma` base price 18,000 -> 15,000 cr/t.
+- Why the trim: with the bergs in, the bot's top route was again the Kernel's orbital pharmaceuticals to Clarke Exchange (48.9k over four legs in seed 1), about 1.57 times the next best (31.1k), and it had led in the run before too. The target is no route above about 1.5 times the next for long.
+- Balance bot (5 seeds, 180 days, upgrade=1):
+
+  | | Mean credits, day 180 | Median first upgrade | End credits by seed |
+  |---|---|---|---|
+  | With the bergs | 107,261 | day 6.7 | 193k, 58k, 92k, 118k, 76k |
+  | Pharmaceuticals at 15,000 | 93,194 | day 6.6 | 102k, 153k, 56k, 89k, 66k |
+
+- **After the trim:** pharmaceuticals drop to fifth (Kalpana One to Kibo Ring, 29k). Compute cores into Trojan Yards, whose drone works eat them, now lead from four different sources; the best single route (Clarke Exchange, 67k over seven legs) is 1.29 times the next (52k). The means differ by less than the seeds do.
+- **The bergs** don't show in the bot's routes: it doesn't buy water for the Kernel, Psyche or Venus. A berg landing drops water there for a few weeks; hand-play should check whether that makes a nice opportunistic run (lunar water to the Kernel just after a berg is a bad idea; just before, a good one).
