@@ -94,13 +94,18 @@ static func panel(title: String) -> Array:
 
 
 static func money(credits: float) -> String:
-	var n := int(round(credits))
+	return thousands(credits) + " cr"
+
+
+## A whole number with commas between the thousands: 24000 -> "24,000".
+static func thousands(x: float) -> String:
+	var n := int(round(x))
 	var s := str(absi(n))
 	var out := ""
 	while s.length() > 3:
 		out = "," + s.substr(s.length() - 3) + out
 		s = s.substr(0, s.length() - 3)
-	return ("-" if n < 0 else "") + s + out + " cr"
+	return ("-" if n < 0 else "") + s + out
 
 
 static func duration(seconds: float) -> String:

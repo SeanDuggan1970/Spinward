@@ -558,7 +558,7 @@ func _handle_events() -> void:
 				refresh = true
 			"berg_arrived":
 				if float(d["tonnes"]) > 0.5:
-					var line := "%s has parked a %s t berg from %s off %s: %.0f t of %s on the market." % [String(d["tug"]).left(1).to_upper() + String(d["tug"]).substr(1), _thousands(float(d["berg_t"])), d["from"], sim.data.places[d["place"]]["name"], float(d["tonnes"]), String(sim.data.goods[d["good"]]["name"]).to_lower()]
+					var line := "%s has parked a %s t berg from %s off %s: %.0f t of %s on the market." % [String(d["tug"]).left(1).to_upper() + String(d["tug"]).substr(1), UI.thousands(float(d["berg_t"])), d["from"], sim.data.places[d["place"]]["name"], float(d["tonnes"]), String(sim.data.goods[d["good"]]["name"]).to_lower()]
 					notice(line, UI.AMBER)
 					comms.append("%s  %s" % [_clock(e["time_s"]), line])
 					refresh = true
@@ -674,16 +674,6 @@ func _tip_by_id(id: int) -> Dictionary:
 
 func _clock(t: float) -> String:
 	return Time.get_datetime_string_from_unix_time(int(t + 946728000.0)).substr(11, 5)
-
-
-## 24000 -> "24,000".
-static func _thousands(x: float) -> String:
-	var n := str(int(round(x)))
-	var out := ""
-	while n.length() > 3:
-		out = "," + n.right(3) + out
-		n = n.left(n.length() - 3)
-	return n + out
 
 
 func notice(text: String, colour: Color = UI.TEXT) -> void:

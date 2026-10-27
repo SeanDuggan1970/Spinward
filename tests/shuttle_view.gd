@@ -92,6 +92,10 @@ func _fly_line(sim: Sim, port: String) -> void:
 			check(hot_ok, "Flying %s, plasma only in entry, and only where there is air" % way)
 			check(lit, "Flying %s, the engines fire" % way)
 			check(air == (view._engine == null), "Flying %s, a winged shuttle where there is air, a lander where there isn't" % way)
+			# From orbit you fly down and up; from a town on the surface, to and back.
+			var hop: bool = sim.data.places[port]["location"]["type"] == "surface"
+			var words := ("TO " if leg == base else "BACK TO ") if hop else ("DOWN TO " if leg == base else "UP TO ")
+			check(view._title.text.contains("·  " + words), "Flying %s, the title says %s(%s)" % [way, words, view._title.text])
 			view.free()
 			sim.advance_game_time(float(loc["arrive_t"]) - sim.state.time_s + 1.0)
 			check(sim.state.location == {"status": "docked", "place": leg}, "Arrived at %s" % leg)

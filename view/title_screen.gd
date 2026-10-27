@@ -178,6 +178,7 @@ func _pick_hero(hull: String = "") -> void:
 		var fleet_names: Array = fleet["names"]
 		livery = Livery.for_ship(data, fleet["operator"], fleet_names[_rng.randi() % fleet_names.size()])
 	_caption = {}
+	var ship := _ship_dict(_hero_hull)
 	var model: Dictionary
 	if _hero_hull == "kestrel" and data.pods.has("pods"):
 		# The humpback lander with one of its pods, a different one each time.
@@ -187,8 +188,8 @@ func _pick_hero(hull: String = "") -> void:
 		model = load("res://view/flight/kestrel.gd").build(livery, 1.0, String(spec.get("look", "cargo")))
 		_caption = {"name": "Kestrel lander  ·  %s pod" % String(spec["name"]).to_lower(), "description": String(spec.get("description", ""))}
 	else:
-		model = Models.ship(_ship_dict(_hero_hull), data, livery)
-	_hold = _pick_hold(_ship_dict(_hero_hull))
+		model = Models.ship(ship, data, livery)
+	_hold = _pick_hold(ship)
 	_hero = model["node"]
 	_hero_rig = model["rig"]
 	_hero_model = model

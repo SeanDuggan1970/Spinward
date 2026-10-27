@@ -17,6 +17,7 @@ const Kit := preload("res://view/flight/kit.gd")
 const Bindings := preload("res://view/bindings.gd")
 const SkyKit := preload("res://view/flight/sky.gd")
 const UI := preload("res://view/ui/ui_kit.gd")
+const ShuttleSystem := preload("res://sim/systems/shuttle_system.gd")
 
 ## The down profile, in seconds before touchdown: the deorbit burn starts, ends, the
 ## shuttle meets the air, and the retros take over. The air's top and the height
@@ -97,7 +98,7 @@ func _ready() -> void:
 	var orbit_r := float(ring.get("a_m", ground_r + 400000.0))
 	_orbit_m = orbit_r - _radius
 	_orbit_v = sqrt(gm / orbit_r)
-	if sim.data.places[port]["location"].get("type", "") == "surface":
+	if ShuttleSystem.is_hop(sim.data, port):
 		var a: Array = eph.relative(port, _body, t)
 		var b: Array = eph.relative(_base, _body, t)
 		var cosang := clampf(V.dot(a, b) / (V.length(a) * V.length(b)), -1.0, 1.0)
@@ -146,6 +147,7 @@ func _build_base(place: Dictionary) -> Node3D:
 	var n := Node3D.new()
 	var look: Dictionary = place.get("look", {})
 	if look.get("kind", "") == "skylight":
+		_pad(n)
 		_build_skylight(n, float(look.get("skylight_m", 65.0)))
 		return n
 	if look.get("kind", "") == "canyon":
@@ -159,18 +161,7 @@ func _build_base(place: Dictionary) -> Node3D:
 		return n
 	var count := int(look.get("domes", 5))
 	var size := float(look.get("dome_m", 70.0))
-	var pad := MeshInstance3D.new()
-	var disc := CylinderMesh.new()
-	disc.top_radius = 45.0
-	disc.bottom_radius = 47.0
-	disc.height = 1.0
-	disc.radial_segments = 48
-	pad.mesh = disc
-	pad.material_override = Kit.mat("grey")
-	n.add_child(pad)
-	for k in 8:
-		var a := TAU * float(k) / 8.0
-		n.add_child(Kit.beacon(Color("ffb050"), Vector3(cos(a) * 46.0, 0.8, sin(a) * 46.0), 0.6, 1.6, float(k) / 8.0))
+	_pad(n)
 	# Domes in a loose ring beside the pad, each its own size (a hash, not the sim's dice).
 	var salt := hash(_base)
 	var field := StandardMaterial3D.new()
@@ -206,6 +197,22 @@ func _build_base(place: Dictionary) -> Node3D:
 		fields.position = at + Vector3(0, 0.3, 0)
 		n.add_child(fields)
 	return n
+
+
+## The landing pad at the origin, and the lights round its rim.
+func _pad(n: Node3D) -> void:
+	var pad := MeshInstance3D.new()
+	var disc := CylinderMesh.new()
+	disc.top_radius = 45.0
+	disc.bottom_radius = 47.0
+	disc.height = 1.0
+	disc.radial_segments = 48
+	pad.mesh = disc
+	pad.material_override = Kit.mat("grey")
+	n.add_child(pad)
+	for k in 8:
+		var a := TAU * float(k) / 8.0
+		n.add_child(Kit.beacon(Color("ffb050"), Vector3(cos(a) * 46.0, 0.8, sin(a) * 46.0), 0.6, 1.6, float(k) / 8.0))
 
 
 ## A lava tube's skylight beside the pad: a dark pit glazed over, its glass catching
@@ -250,15 +257,7 @@ func _build_skylight(n: Node3D, width: float) -> void:
 ## cliffs `depth` high and `width` apart, a clear roof spanning them at the rim with
 ## its anchor cables, the end wall with its doors, and the river and fields below.
 func _build_canyon(n: Node3D, width: float, length: float, depth: float) -> void:
-	var pad := MeshInstance3D.new()
-	var disc := CylinderMesh.new()
-	disc.top_radius = 45.0
-	disc.bottom_radius = 47.0
-	disc.height = 1.0
-	disc.radial_segments = 48
-	pad.mesh = disc
-	pad.material_override = Kit.mat("grey")
-	n.add_child(pad)
+	_pad(n)
 	var start := 400.0
 	var rock := Kit.mat("rust")
 	for side in [-1.0, 1.0]:
@@ -283,23 +282,13 @@ func _build_canyon(n: Node3D, width: float, length: float, depth: float) -> void
 	fields.emission_energy_multiplier = 0.3
 	n.add_child(Kit.box(Vector3(length, 1.0, width * 0.8), fields, Vector3(start + length * 0.5, 0.5, 0.0)))
 	n.add_child(Kit.box(Vector3(length, 1.2, 60.0), Kit.mat("dark"), Vector3(start + length * 0.5, 0.6, 0.0)))
-	for k in 6:
-		n.add_child(Kit.beacon(Color("ffb050"), Vector3(-46.0 + 18.0 * k, 0.8, 50.0), 0.6, 1.6, float(k) / 6.0))
 
 
 ## A city on rails (Terminator): its tracks running off both ways into the dark, the
 ## long platform that rides them with its domes and gardens, and the Dawn Wall
 ## standing up at its sunward end. The landing pad is beside it.
 func _build_rail_city(n: Node3D) -> void:
-	var pad := MeshInstance3D.new()
-	var disc := CylinderMesh.new()
-	disc.top_radius = 45.0
-	disc.bottom_radius = 47.0
-	disc.height = 1.0
-	disc.radial_segments = 48
-	pad.mesh = disc
-	pad.material_override = Kit.mat("grey")
-	n.add_child(pad)
+	_pad(n)
 	var steel := Kit.mat("steel")
 	for k in 20:
 		var z := 140.0 + 14.0 * float(k)
@@ -322,8 +311,6 @@ func _build_rail_city(n: Node3D) -> void:
 		n.add_child(dome)
 	# The Dawn Wall: the shield at the sunward end, taller than everything else.
 	n.add_child(Kit.box(Vector3(20.0, 160.0, 340.0), Kit.mat("offwhite"), Vector3(470.0, 80.0, 273.0)))
-	for k in 6:
-		n.add_child(Kit.beacon(Color("ffb050"), Vector3(-46.0 + 18.0 * k, 0.8, 50.0), 0.6, 1.6, float(k) / 6.0))
 
 
 ## A city that floats: the landing deck at the origin, and round it the envelopes
@@ -704,7 +691,8 @@ func _update() -> void:
 	camera.look_at_from_position(cam, pos, up)
 	var left := maxf(float(_loc["arrive_t"]) - t, 0.0)
 	var to_name: String = sim.data.places[_loc["to"]]["name"]
-	_title.text = "%s  ·  %s TO %s" % [String(_line["name"]).to_upper(), "DOWN" if _loc["down"] else "UP", to_name.to_upper()]
+	var way := ("TO" if _loc["down"] else "BACK TO") if not _hop.is_empty() else ("DOWN TO" if _loc["down"] else "UP TO")
+	_title.text = "%s  ·  %s %s" % [String(_line["name"]).to_upper(), way, to_name.to_upper()]
 	var lines := [
 		String(p["phase"]),
 		"",

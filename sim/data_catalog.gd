@@ -266,6 +266,9 @@ func validate() -> Array[String]:
 			problems.append("berg %s: %s is not traded at %s" % [b.get("id", "?"), b.get("good", "?"), b.get("place", "?")])
 		if float(b.get("every_days", 0.0)) <= 0.0 or float(b.get("tonnes", 0.0)) <= 0.0:
 			problems.append("berg %s: every_days and tonnes must be positive" % b.get("id", "?"))
+		for key in ["id", "first_day", "berg_t", "from", "tug"]:
+			if not b.has(key):
+				problems.append("berg %s: needs %s" % [b.get("id", "?"), key])
 	for id in brokers:
 		var b: Dictionary = brokers[id]
 		if not places.has(b.get("place", "")):

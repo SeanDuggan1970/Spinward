@@ -38,6 +38,12 @@ static func port_of(data, place: String) -> String:
 	return ""
 
 
+## True when `port` is itself on the surface, so its flights are hops across the
+## world (to and back), not down from orbit and up.
+static func is_hop(data, port: String) -> bool:
+	return data.places[port]["location"].get("type", "") == "surface"
+
+
 ## Every flight from where you are docked: [{port, line (the shuttle: name, body, max_t),
 ## stop (that base's hours, fare, fare_per_t, via), to, down}]. From the port, one down to
 ## each base; from a base, one back up. Empty if no shuttle calls here.
