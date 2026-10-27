@@ -2416,8 +2416,9 @@ func test_edge_cases() -> void:
 	_dock_at(sim, "trojan_yards")
 	check(sim.apply({"type": "install_module", "slot": "cargo.0", "module": "cargo_pod_l"}) == "", "A rich pilot can fit a big pod")
 	check(s.credits < 1.0e15 and s.credits > 1.0e15 - 1.0e6, "and pays the price")
-	# Broke: nothing is bought with nothing.
+	# Broke: nothing is bought with nothing (with stock on the shelf, so credits are the reason).
 	s.credits = 0.0
+	s.markets["trojan_yards"]["electronics"] = 10.0
 	check(sim.apply({"type": "buy", "good": "electronics", "tonnes": 1.0}) == "not enough credits", "No credits, no cargo")
 	check(sim.apply({"type": "install_module", "slot": "cargo.0", "module": "cargo_pod_l"}) != "" or s.ship["modules"]["cargo.0"] == "cargo_pod_l", "No credits, no upgrades (unless already fitted)")
 	check(s.ship["cargo"].is_empty() and s.credits == 0.0, "and nothing was taken")
