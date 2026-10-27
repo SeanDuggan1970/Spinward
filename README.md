@@ -158,6 +158,20 @@ Skip the title and start a new game wherever you like (developer shortcuts; they
 - `--start=<place>:approach`: on the final approach to that port, ready to fly in
 - `--credits=<n>`: set your balance
 
+To see the wonders (docs/WONDERS.md):
+
+| Start with | What you'll see |
+|---|---|
+| `--start=the_nave` | the lava-tube town under the Marius Hills skylight (take the hopper back to Line Foot to watch the hop) |
+| `--start=line_foot` | the hopper's departure to the Nave |
+| `--start=aphrodites_rest` | the cloud city over Venus; `--start=cytherea_station:approach` for its up-port |
+| `--start=kernel_l5:approach` | the Long Breath going up off the Kernel, and a parked iceberg |
+| `--start=huygens_port:approach` | the first hammerhead station, over Titan |
+| `--start=perihelion_station` | Mercury's up-port (Terminator opens once its rails are built) |
+| `--start=ares_ring` | the shuttle to the Long Hall (open once its project is done) |
+
+The Long Breath, the Long Hall, the Ceres megasatellite and Terminator are built by projects, so they show up in the game only as their projects progress.
+
 ## Share a web build
 
 `export_presets.cfg` has a single-threaded Web preset. [docs/SHARING.md](docs/SHARING.md) covers building, zipping and uploading to itch.io for friends to play in a browser.
