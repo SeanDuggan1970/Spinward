@@ -60,13 +60,31 @@
 			"propellant": 160,
 			"deuterium": 4,
 			"platinum_metals": 2,
-			"volatiles": 60
+			"volatiles": 60,
+			"storage_lattices": 24,
+			"sensors_optics": 10,
+			"robotics": 20,
+			"delicacies": 12,
+			"wine_spirits": 8,
+			"handmade_goods": 3,
+			"keepsakes": 1.2,
+			"gene_stock": 2,
+			"orbital_pharma": 1.6,
+			"collectibles": 0.8
 		},
 		"produces": {
 			"electronics": 3,
 			"medical": 0.6,
 			"food": 8,
-			"machine_parts": 4
+			"machine_parts": 4,
+			"storage_lattices": 1.2,
+			"sensors_optics": 0.5,
+			"robotics": 1.0,
+			"delicacies": 0.6,
+			"wine_spirits": 0.4,
+			"handmade_goods": 0.15,
+			"keepsakes": 0.06,
+			"gene_stock": 0.1
 		},
 		"consumes": {
 			"helium3": 0.05,
@@ -75,7 +93,9 @@
 			"propellant": 8,
 			"deuterium": 0.15,
 			"platinum_metals": 0.03,
-			"volatiles": 2
+			"volatiles": 2,
+			"orbital_pharma": 0.08,
+			"collectibles": 0.04
 		},
 		"recipes": [],
 		"features": [
@@ -125,17 +145,33 @@
 			"food": 60,
 			"oxygen": 40,
 			"propellant": 80,
-			"refined_metals": 30
+			"refined_metals": 30,
+			"delicacies": 8,
+			"wine_spirits": 6,
+			"handmade_goods": 2,
+			"keepsakes": 1.0,
+			"orbital_pharma": 2,
+			"collectibles": 1.0,
+			"carbon_fibre": 10,
+			"storage_lattices": 6
 		},
 		"produces": {
-			"refined_metals": 1.5
+			"refined_metals": 1.5,
+			"delicacies": 0.4,
+			"wine_spirits": 0.3,
+			"handmade_goods": 0.1,
+			"keepsakes": 0.05
 		},
 		"consumes": {
 			"electronics": 0.8,
 			"machine_parts": 2,
 			"food": 3,
 			"oxygen": 2,
-			"propellant": 4
+			"propellant": 4,
+			"orbital_pharma": 0.1,
+			"collectibles": 0.05,
+			"carbon_fibre": 0.5,
+			"storage_lattices": 0.3
 		},
 		"recipes": [],
 		"features": [
@@ -182,14 +218,18 @@
 			"regolith": 300,
 			"refined_metals": 25,
 			"electronics": 8,
-			"machine_parts": 25
+			"machine_parts": 25,
+			"delicacies": 0.6,
+			"robotics": 4
 		},
 		"produces": {
 			"regolith": 15,
 			"water_ice": 6
 		},
 		"consumes": {
-			"food": 1
+			"food": 1,
+			"delicacies": 0.03,
+			"robotics": 0.2
 		},
 		"recipes": [
 			{
@@ -268,7 +308,12 @@
 			"food": 60,
 			"medical": 4,
 			"machine_parts": 40,
-			"electronics": 10
+			"electronics": 10,
+			"robotics": 8,
+			"delicacies": 1.2,
+			"wine_spirits": 0.6,
+			"sensors_optics": 1.0,
+			"ceramic_feed": 60
 		},
 		"produces": {
 			"water_ice": 25,
@@ -279,7 +324,11 @@
 			"food": 3,
 			"medical": 0.2,
 			"machine_parts": 2,
-			"electronics": 0.5
+			"electronics": 0.5,
+			"robotics": 0.4,
+			"delicacies": 0.06,
+			"wine_spirits": 0.03,
+			"sensors_optics": 0.05
 		},
 		"recipes": [
 			{
@@ -288,6 +337,14 @@
 				},
 				"outputs": {
 					"propellant": 2
+				}
+			},
+			{
+				"inputs": {
+					"regolith": 10
+				},
+				"outputs": {
+					"ceramic_feed": 3
 				}
 			}
 		],
@@ -355,7 +412,12 @@
 			"oxygen": 40,
 			"propellant": 60,
 			"platinum_metals": 1,
-			"volatiles": 40
+			"volatiles": 40,
+			"carbon_fibre": 12,
+			"ceramic_feed": 20,
+			"sensors_optics": 1.0,
+			"polymer_feed": 12,
+			"robotics": 30
 		},
 		"produces": {},
 		"consumes": {
@@ -363,7 +425,10 @@
 			"oxygen": 2,
 			"propellant": 3,
 			"platinum_metals": 0.02,
-			"volatiles": 1.5
+			"volatiles": 1.5,
+			"carbon_fibre": 0.6,
+			"ceramic_feed": 1.0,
+			"sensors_optics": 0.05
 		},
 		"recipes": [
 			{
@@ -390,6 +455,16 @@
 				},
 				"outputs": {
 					"habitat_modules": 2
+				}
+			},
+			{
+				"inputs": {
+					"refined_metals": 2,
+					"electronics": 0.3,
+					"polymer_feed": 0.6
+				},
+				"outputs": {
+					"robotics": 1.5
 				}
 			}
 		],
@@ -450,16 +525,32 @@
 			"oxygen": 40,
 			"refined_metals": 30,
 			"machine_parts": 30,
-			"volatiles": 50
+			"volatiles": 50,
+			"orbital_pharma": 1.6,
+			"polymer_feed": 20,
+			"ceramic_feed": 16,
+			"gene_stock": 0.8,
+			"handmade_goods": 0.6,
+			"delicacies": 1.6,
+			"robotics": 6,
+			"bio_feed": 30
 		},
-		"produces": {},
+		"produces": {
+			"orbital_pharma": 0.08
+		},
 		"consumes": {
 			"habitat_modules": 2.5,
 			"food": 4,
 			"medical": 0.3,
 			"water_ice": 6,
 			"oxygen": 2,
-			"volatiles": 2
+			"volatiles": 2,
+			"polymer_feed": 1.0,
+			"ceramic_feed": 0.8,
+			"gene_stock": 0.04,
+			"handmade_goods": 0.03,
+			"delicacies": 0.08,
+			"robotics": 0.3
 		},
 		"recipes": [
 			{
@@ -468,6 +559,15 @@
 				},
 				"outputs": {
 					"food": 3
+				}
+			},
+			{
+				"inputs": {
+					"food": 1,
+					"water_ice": 1
+				},
+				"outputs": {
+					"bio_feed": 1.5
 				}
 			}
 		],
@@ -521,11 +621,20 @@
 			"machine_parts": 40,
 			"electronics": 20,
 			"habitat_modules": 20,
-			"propellant": 50
+			"propellant": 50,
+			"storage_lattices": 8,
+			"handmade_goods": 1.2,
+			"orbital_pharma": 0.8,
+			"delicacies": 2,
+			"wine_spirits": 1.0,
+			"bio_feed": 8
 		},
 		"produces": {
 			"electronics": 1.0,
-			"medical": 0.3
+			"medical": 0.3,
+			"storage_lattices": 0.4,
+			"handmade_goods": 0.06,
+			"orbital_pharma": 0.04
 		},
 		"consumes": {
 			"food": 5,
@@ -533,7 +642,10 @@
 			"oxygen": 3,
 			"machine_parts": 1,
 			"habitat_modules": 0.6,
-			"propellant": 2
+			"propellant": 2,
+			"delicacies": 0.1,
+			"wine_spirits": 0.05,
+			"bio_feed": 0.4
 		},
 		"recipes": [],
 		"features": [
@@ -578,7 +690,10 @@
 			"machine_parts": 30,
 			"food": 30,
 			"medical": 4,
-			"oxygen": 30
+			"oxygen": 30,
+			"sensors_optics": 2,
+			"storage_lattices": 5,
+			"delicacies": 0.5
 		},
 		"produces": {},
 		"consumes": {
@@ -586,7 +701,10 @@
 			"machine_parts": 1.2,
 			"food": 1.5,
 			"medical": 0.1,
-			"oxygen": 1.2
+			"oxygen": 1.2,
+			"sensors_optics": 0.12,
+			"storage_lattices": 0.25,
+			"delicacies": 0.02
 		},
 		"recipes": []
 	},
@@ -648,19 +766,33 @@
 			"habitat_modules": 20,
 			"propellant": 200,
 			"oxygen": 80,
-			"volatiles": 40
+			"volatiles": 40,
+			"wine_spirits": 1.0,
+			"robotics": 12,
+			"polymer_feed": 16,
+			"gene_stock": 1.0,
+			"delicacies": 2,
+			"keepsakes": 0.5,
+			"storage_lattices": 3
 		},
 		"produces": {
 			"deuterium": 0.3,
 			"food": 4,
-			"water_ice": 6
+			"water_ice": 6,
+			"wine_spirits": 0.05
 		},
 		"consumes": {
 			"machine_parts": 3,
 			"electronics": 0.8,
 			"medical": 0.4,
 			"habitat_modules": 1.5,
-			"oxygen": 2
+			"oxygen": 2,
+			"robotics": 0.6,
+			"polymer_feed": 0.8,
+			"gene_stock": 0.05,
+			"delicacies": 0.1,
+			"keepsakes": 0.01,
+			"storage_lattices": 0.15
 		},
 		"recipes": [
 			{
@@ -772,7 +904,14 @@
 			"machine_parts": 40,
 			"oxygen": 60,
 			"refined_metals": 120,
-			"platinum_metals": 2
+			"platinum_metals": 2,
+			"robotics": 10,
+			"sensors_optics": 1.2,
+			"delicacies": 1.6,
+			"wine_spirits": 0.8,
+			"gene_stock": 0.6,
+			"polymer_feed": 40,
+			"carbon_fibre": 6
 		},
 		"produces": {
 			"water_ice": 20,
@@ -784,7 +923,12 @@
 			"electronics": 0.6,
 			"machine_parts": 2,
 			"refined_metals": 2.0,
-			"platinum_metals": 0.01
+			"platinum_metals": 0.01,
+			"robotics": 0.5,
+			"sensors_optics": 0.06,
+			"delicacies": 0.08,
+			"wine_spirits": 0.04,
+			"gene_stock": 0.03
 		},
 		"recipes": [
 			{
@@ -801,6 +945,15 @@
 				},
 				"outputs": {
 					"oxygen": 1
+				}
+			},
+			{
+				"inputs": {
+					"volatiles": 4
+				},
+				"outputs": {
+					"polymer_feed": 2,
+					"carbon_fibre": 0.3
 				}
 			}
 		],
@@ -890,7 +1043,12 @@
 			"oxygen": 40,
 			"machine_parts": 30,
 			"medical": 3,
-			"water_ice": 60
+			"water_ice": 60,
+			"robotics": 12,
+			"delicacies": 1.0,
+			"wine_spirits": 0.8,
+			"sensors_optics": 0.8,
+			"ceramic_feed": 8
 		},
 		"produces": {
 			"refined_metals": 10,
@@ -901,7 +1059,12 @@
 			"oxygen": 2,
 			"machine_parts": 2.5,
 			"medical": 0.2,
-			"water_ice": 3
+			"water_ice": 3,
+			"robotics": 0.6,
+			"delicacies": 0.05,
+			"wine_spirits": 0.04,
+			"sensors_optics": 0.04,
+			"ceramic_feed": 0.4
 		},
 		"recipes": [],
 		"hazards": {
@@ -962,7 +1125,13 @@
 			"machine_parts": 60,
 			"oxygen": 80,
 			"refined_metals": 60,
-			"habitat_modules": 15
+			"habitat_modules": 15,
+			"sensors_optics": 2,
+			"storage_lattices": 4,
+			"delicacies": 1.6,
+			"wine_spirits": 1.0,
+			"keepsakes": 0.5,
+			"handmade_goods": 0.5
 		},
 		"produces": {
 			"water_ice": 18
@@ -971,7 +1140,13 @@
 			"food": 4,
 			"medical": 0.5,
 			"electronics": 1.2,
-			"machine_parts": 3
+			"machine_parts": 3,
+			"sensors_optics": 0.1,
+			"storage_lattices": 0.2,
+			"delicacies": 0.08,
+			"wine_spirits": 0.05,
+			"keepsakes": 0.01,
+			"handmade_goods": 0.02
 		},
 		"recipes": [
 			{
@@ -1036,7 +1211,14 @@
 			"medical": 6,
 			"electronics": 15,
 			"machine_parts": 50,
-			"habitat_modules": 10
+			"habitat_modules": 10,
+			"robotics": 8,
+			"delicacies": 1.4,
+			"wine_spirits": 1.0,
+			"gene_stock": 0.5,
+			"keepsakes": 0.5,
+			"polymer_feed": 50,
+			"carbon_fibre": 12
 		},
 		"produces": {
 			"volatiles": 12,
@@ -1047,9 +1229,24 @@
 			"medical": 0.4,
 			"electronics": 1.0,
 			"machine_parts": 2.5,
-			"habitat_modules": 0.5
+			"habitat_modules": 0.5,
+			"robotics": 0.4,
+			"delicacies": 0.07,
+			"wine_spirits": 0.05,
+			"gene_stock": 0.02,
+			"keepsakes": 0.01
 		},
-		"recipes": []
+		"recipes": [
+			{
+				"inputs": {
+					"volatiles": 4
+				},
+				"outputs": {
+					"polymer_feed": 2.5,
+					"carbon_fibre": 0.6
+				}
+			}
+		]
 	},
 	"plume_watch": {
 		"name": "Plume Watch",
@@ -1089,15 +1286,24 @@
 			"medical": 3,
 			"electronics": 8,
 			"machine_parts": 15,
-			"oxygen": 20
+			"oxygen": 20,
+			"collectibles": 0.5,
+			"sensors_optics": 1.2,
+			"delicacies": 0.6,
+			"storage_lattices": 1.6
 		},
-		"produces": {},
+		"produces": {
+			"collectibles": 0.01
+		},
 		"consumes": {
 			"food": 1,
 			"medical": 0.1,
 			"electronics": 0.4,
 			"machine_parts": 0.6,
-			"oxygen": 0.8
+			"oxygen": 0.8,
+			"sensors_optics": 0.06,
+			"delicacies": 0.03,
+			"storage_lattices": 0.08
 		},
 		"recipes": []
 	},
@@ -1157,7 +1363,12 @@
 			"medical": 5,
 			"machine_parts": 40,
 			"electronics": 10,
-			"volatiles": 80
+			"volatiles": 80,
+			"robotics": 8,
+			"delicacies": 1.0,
+			"wine_spirits": 0.6,
+			"handmade_goods": 0.5,
+			"sensors_optics": 0.6
 		},
 		"produces": {
 			"refined_metals": 4,
@@ -1168,7 +1379,12 @@
 			"medical": 0.3,
 			"machine_parts": 2,
 			"electronics": 0.6,
-			"water_ice": 3
+			"water_ice": 3,
+			"robotics": 0.4,
+			"delicacies": 0.05,
+			"wine_spirits": 0.03,
+			"handmade_goods": 0.02,
+			"sensors_optics": 0.03
 		},
 		"recipes": [
 			{
@@ -1250,13 +1466,19 @@
 			"platinum_metals": 4,
 			"volatiles": 50,
 			"refined_metals": 80,
-			"food": 10
+			"food": 10,
+			"storage_lattices": 20,
+			"orbital_pharma": 0.6,
+			"sensors_optics": 1.6,
+			"ceramic_feed": 10
 		},
 		"produces": {
 			"electronics": 2.5,
 			"machine_parts": 2.0,
 			"propellant": 6.0,
-			"water_ice": 4.0
+			"water_ice": 4.0,
+			"storage_lattices": 1.0,
+			"orbital_pharma": 0.03
 		},
 		"consumes": {
 			"deuterium": 0.12,
@@ -1264,7 +1486,9 @@
 			"platinum_metals": 0.05,
 			"volatiles": 1.5,
 			"refined_metals": 2.0,
-			"food": 0.2
+			"food": 0.2,
+			"sensors_optics": 0.08,
+			"ceramic_feed": 0.5
 		},
 		"recipes": [],
 		"features": [
@@ -1295,7 +1519,9 @@
 			"food": 30,
 			"machine_parts": 20,
 			"medical": 3,
-			"electronics": 6
+			"electronics": 6,
+			"robotics": 3,
+			"delicacies": 0.5
 		},
 		"produces": {
 			"regolith": 20.0,
@@ -1308,7 +1534,9 @@
 			"machine_parts": 0.6,
 			"medical": 0.08,
 			"electronics": 0.2,
-			"water_ice": 1.0
+			"water_ice": 1.0,
+			"robotics": 0.15,
+			"delicacies": 0.02
 		},
 		"recipes": [],
 		"bar": {
@@ -1340,7 +1568,10 @@
 			"medical": 4,
 			"electronics": 6,
 			"machine_parts": 25,
-			"habitat_modules": 10
+			"habitat_modules": 10,
+			"robotics": 3,
+			"delicacies": 0.6,
+			"polymer_feed": 6
 		},
 		"produces": {
 			"water_ice": 15.0,
@@ -1352,7 +1583,10 @@
 			"medical": 0.1,
 			"electronics": 0.2,
 			"machine_parts": 0.5,
-			"habitat_modules": 0.2
+			"habitat_modules": 0.2,
+			"robotics": 0.15,
+			"delicacies": 0.03,
+			"polymer_feed": 0.3
 		},
 		"recipes": []
 	},
@@ -1380,19 +1614,27 @@
 			"machine_parts": 20,
 			"electronics": 8,
 			"medical": 4,
-			"habitat_modules": 15
+			"habitat_modules": 15,
+			"collectibles": 0.5,
+			"robotics": 4,
+			"gene_stock": 0.5,
+			"delicacies": 0.6
 		},
 		"produces": {
 			"food": 4.0,
 			"deuterium": 0.15,
 			"water_ice": 6.0,
-			"volatiles": 2.0
+			"volatiles": 2.0,
+			"collectibles": 0.01
 		},
 		"consumes": {
 			"machine_parts": 1.0,
 			"electronics": 0.4,
 			"medical": 0.15,
-			"habitat_modules": 0.3
+			"habitat_modules": 0.3,
+			"robotics": 0.2,
+			"gene_stock": 0.02,
+			"delicacies": 0.03
 		},
 		"recipes": []
 	},
@@ -1420,19 +1662,27 @@
 			"machine_parts": 15,
 			"electronics": 6,
 			"medical": 4,
-			"habitat_modules": 10
+			"habitat_modules": 10,
+			"collectibles": 0.5,
+			"gene_stock": 0.5,
+			"polymer_feed": 6,
+			"delicacies": 0.6
 		},
 		"produces": {
 			"food": 3.0,
 			"water_ice": 4.0,
 			"oxygen": 1.5,
-			"volatiles": 1.5
+			"volatiles": 1.5,
+			"collectibles": 0.015
 		},
 		"consumes": {
 			"machine_parts": 0.8,
 			"electronics": 0.3,
 			"medical": 0.2,
-			"habitat_modules": 0.4
+			"habitat_modules": 0.4,
+			"gene_stock": 0.02,
+			"polymer_feed": 0.3,
+			"delicacies": 0.03
 		},
 		"recipes": [],
 		"bar": {
@@ -1468,19 +1718,25 @@
 			"machine_parts": 15,
 			"medical": 3,
 			"electronics": 5,
-			"habitat_modules": 8
+			"habitat_modules": 8,
+			"ceramic_feed": 30,
+			"robotics": 4,
+			"delicacies": 0.5
 		},
 		"produces": {
 			"water_ice": 5.0,
 			"refined_metals": 1.5,
-			"regolith": 6.0
+			"regolith": 6.0,
+			"ceramic_feed": 1.5
 		},
 		"consumes": {
 			"food": 2.0,
 			"machine_parts": 0.8,
 			"medical": 0.2,
 			"electronics": 0.2,
-			"habitat_modules": 0.3
+			"habitat_modules": 0.3,
+			"robotics": 0.2,
+			"delicacies": 0.02
 		},
 		"recipes": [],
 		"look": {
@@ -1509,17 +1765,23 @@
 			"water_ice": 40,
 			"machine_parts": 12,
 			"electronics": 5,
-			"medical": 3
+			"medical": 3,
+			"wine_spirits": 1.2,
+			"gene_stock": 0.5,
+			"bio_feed": 6
 		},
 		"produces": {
 			"food": 5.0,
-			"oxygen": 2.0
+			"oxygen": 2.0,
+			"wine_spirits": 0.06
 		},
 		"consumes": {
 			"water_ice": 2.0,
 			"machine_parts": 0.6,
 			"electronics": 0.2,
-			"medical": 0.15
+			"medical": 0.15,
+			"gene_stock": 0.02,
+			"bio_feed": 0.3
 		},
 		"recipes": [],
 		"look": {
@@ -1548,17 +1810,25 @@
 			"water_ice": 60,
 			"machine_parts": 10,
 			"electronics": 4,
-			"medical": 2
+			"medical": 2,
+			"wine_spirits": 0.8,
+			"gene_stock": 0.6,
+			"bio_feed": 8,
+			"polymer_feed": 4
 		},
 		"produces": {
 			"food": 8.0,
-			"oxygen": 3.0
+			"oxygen": 3.0,
+			"wine_spirits": 0.04
 		},
 		"consumes": {
 			"water_ice": 3.0,
 			"machine_parts": 0.5,
 			"electronics": 0.2,
-			"medical": 0.1
+			"medical": 0.1,
+			"gene_stock": 0.03,
+			"bio_feed": 0.4,
+			"polymer_feed": 0.2
 		},
 		"recipes": [],
 		"opens_with": "ares_greenhouses",
@@ -1614,19 +1884,31 @@
 			"oxygen": 100,
 			"machine_parts": 40,
 			"habitat_modules": 20,
-			"propellant": 80
+			"propellant": 80,
+			"sensors_optics": 4,
+			"handmade_goods": 0.8,
+			"delicacies": 2,
+			"wine_spirits": 1.0,
+			"collectibles": 0.5,
+			"bio_feed": 6
 		},
 		"produces": {
 			"food": 6.0,
 			"electronics": 1.0,
-			"medical": 0.3
+			"medical": 0.3,
+			"sensors_optics": 0.2,
+			"handmade_goods": 0.04
 		},
 		"consumes": {
 			"water_ice": 6.0,
 			"oxygen": 3.0,
 			"machine_parts": 1.0,
 			"habitat_modules": 0.3,
-			"propellant": 2.0
+			"propellant": 2.0,
+			"delicacies": 0.1,
+			"wine_spirits": 0.05,
+			"collectibles": 0.02,
+			"bio_feed": 0.3
 		},
 		"recipes": []
 	},
@@ -1677,11 +1959,21 @@
 			"habitat_modules": 25,
 			"electronics": 12,
 			"medical": 8,
-			"refined_metals": 20
+			"refined_metals": 20,
+			"handmade_goods": 1.0,
+			"orbital_pharma": 0.6,
+			"delicacies": 2,
+			"wine_spirits": 1.2,
+			"keepsakes": 0.5,
+			"gene_stock": 0.8,
+			"polymer_feed": 12,
+			"ceramic_feed": 10
 		},
 		"produces": {
 			"food": 9.0,
-			"oxygen": 1.5
+			"oxygen": 1.5,
+			"handmade_goods": 0.05,
+			"orbital_pharma": 0.03
 		},
 		"consumes": {
 			"water_ice": 4.0,
@@ -1691,7 +1983,13 @@
 			"electronics": 0.3,
 			"medical": 0.25,
 			"refined_metals": 0.5,
-			"food": 3.0
+			"food": 3.0,
+			"delicacies": 0.1,
+			"wine_spirits": 0.06,
+			"keepsakes": 0.02,
+			"gene_stock": 0.04,
+			"polymer_feed": 0.6,
+			"ceramic_feed": 0.5
 		},
 		"recipes": []
 	},
@@ -1740,7 +2038,11 @@
 			"machine_parts": 25,
 			"electronics": 15,
 			"medical": 6,
-			"habitat_modules": 12
+			"habitat_modules": 12,
+			"delicacies": 1.2,
+			"wine_spirits": 0.6,
+			"bio_feed": 6,
+			"storage_lattices": 2
 		},
 		"produces": {
 			"food": 3.5,
@@ -1753,7 +2055,11 @@
 			"habitat_modules": 0.3,
 			"electronics": 0.4,
 			"food": 1.5,
-			"medical": 0.1
+			"medical": 0.1,
+			"delicacies": 0.06,
+			"wine_spirits": 0.03,
+			"bio_feed": 0.3,
+			"storage_lattices": 0.1
 		},
 		"recipes": []
 	},
@@ -1803,11 +2109,21 @@
 			"electronics": 12,
 			"medical": 6,
 			"habitat_modules": 20,
-			"refined_metals": 80
+			"refined_metals": 80,
+			"collectibles": 0.5,
+			"handmade_goods": 0.8,
+			"delicacies": 2,
+			"wine_spirits": 1.2,
+			"keepsakes": 0.5,
+			"gene_stock": 1.0,
+			"polymer_feed": 16,
+			"robotics": 8
 		},
 		"produces": {
 			"food": 10.0,
-			"oxygen": 1.5
+			"oxygen": 1.5,
+			"collectibles": 0.02,
+			"handmade_goods": 0.04
 		},
 		"consumes": {
 			"water_ice": 10.0,
@@ -1818,7 +2134,13 @@
 			"medical": 0.4,
 			"habitat_modules": 0.6,
 			"refined_metals": 1.5,
-			"food": 3.0
+			"food": 3.0,
+			"delicacies": 0.12,
+			"wine_spirits": 0.06,
+			"keepsakes": 0.02,
+			"gene_stock": 0.05,
+			"polymer_feed": 0.8,
+			"robotics": 0.4
 		},
 		"recipes": []
 	},
@@ -1868,7 +2190,10 @@
 			"electronics": 8,
 			"food": 40,
 			"medical": 3,
-			"oxygen": 30
+			"oxygen": 30,
+			"robotics": 6,
+			"delicacies": 0.8,
+			"ceramic_feed": 50
 		},
 		"produces": {
 			"regolith": 20.0,
@@ -1881,9 +2206,20 @@
 			"electronics": 0.5,
 			"food": 1.5,
 			"medical": 0.15,
-			"oxygen": 0.5
+			"oxygen": 0.5,
+			"robotics": 0.3,
+			"delicacies": 0.04
 		},
-		"recipes": []
+		"recipes": [
+			{
+				"inputs": {
+					"regolith": 8
+				},
+				"outputs": {
+					"ceramic_feed": 2.5
+				}
+			}
+		]
 	},
 	"ballast_point": {
 		"name": "Ballast Point",
@@ -1910,7 +2246,8 @@
 			"refined_metals": 60,
 			"machine_parts": 6,
 			"food": 8,
-			"medical": 1
+			"medical": 1,
+			"delicacies": 0.5
 		},
 		"produces": {
 			"refined_metals": 0.6
@@ -1918,7 +2255,8 @@
 		"consumes": {
 			"food": 0.2,
 			"machine_parts": 0.05,
-			"medical": 0.01
+			"medical": 0.01,
+			"delicacies": 0.01
 		},
 		"recipes": []
 	},
@@ -1949,14 +2287,16 @@
 			"water_ice": 40,
 			"volatiles": 15,
 			"food": 6,
-			"machine_parts": 4
+			"machine_parts": 4,
+			"delicacies": 0.5
 		},
 		"produces": {
 			"water_ice": 0.5
 		},
 		"consumes": {
 			"food": 0.15,
-			"machine_parts": 0.03
+			"machine_parts": 0.03,
+			"delicacies": 0.01
 		},
 		"recipes": []
 	},
@@ -1988,14 +2328,16 @@
 			"regolith": 80,
 			"refined_metals": 20,
 			"food": 8,
-			"electronics": 2
+			"electronics": 2,
+			"delicacies": 0.5
 		},
 		"produces": {
 			"regolith": 0.8
 		},
 		"consumes": {
 			"food": 0.25,
-			"electronics": 0.02
+			"electronics": 0.02,
+			"delicacies": 0.01
 		},
 		"recipes": []
 	}

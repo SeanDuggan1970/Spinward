@@ -67,6 +67,7 @@ func _initialize() -> void:
 	test_clock_and_commands()
 	test_orbits()
 	test_economy()
+	test_frontier_goods()
 	test_travel()
 	test_shipyard()
 	test_npcs()
@@ -235,6 +236,32 @@ func test_orbits() -> void:
 	var geo := eph.relative("clarke_exchange", "earth", 3600.0)
 	var normal := V.normalized(V.cross(eph.relative("clarke_exchange", "earth", 0.0), geo))
 	check(absf(rad_to_deg(acos(absf(normal[2]))) - 23.44) < 0.05, "GEO lies in Earth's equatorial plane")
+
+
+func test_frontier_goods() -> void:
+	var sim := fresh()
+	var d := sim.data
+	# Every good has somewhere that makes it and somewhere that wants it.
+	for good in d.goods:
+		var made := false
+		var wanted := false
+		for place in d.places:
+			var p: Dictionary = d.places[place]
+			made = made or p.get("produces", {}).has(good)
+			wanted = wanted or p.get("consumes", {}).has(good)
+			for r in p.get("recipes", []):
+				made = made or r["outputs"].has(good)
+				wanted = wanted or r["inputs"].has(good)
+		check(made and wanted, "%s is made somewhere and wanted somewhere" % good)
+	# A save from before the frontier goods: the new goods open at target and trade.
+	var s := sim.state
+	s.markets["kibo_ring"].erase("delicacies")
+	s.markets["kibo_ring"].erase("storage_lattices")
+	var loaded := Sim.new()
+	loaded.load_state(SaveIO.from_text(SaveIO.to_text(s)))
+	loaded.tick(1.0)
+	check(loaded.state.markets["kibo_ring"].has("delicacies"), "Old saves open the new goods' markets")
+	check(loaded.apply({"type": "buy", "good": "delicacies", "tonnes": 1}) == "", "The new goods trade in an old save")
 
 
 func test_economy() -> void:

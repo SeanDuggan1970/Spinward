@@ -32,11 +32,26 @@ func start_game() -> void:
 
 func tick(_game_dt: float) -> void:
 	var s = sim().state
+	_open_markets()
 	# A day at a time while the player sleeps (Sim.step_s).
 	var step: float = sim().step_s()
 	while s.economy_t + step <= s.time_s:
 		_integrate(step / 86400.0)
 		s.economy_t += step
+
+
+## Markets a save made before a place or a good was added does not have: open them
+## at target.
+func _open_markets() -> void:
+	var data = sim().data
+	var markets: Dictionary = sim().state.markets
+	for place in data.places:
+		if not markets.has(place):
+			markets[place] = {}
+		var stock: Dictionary = markets[place]
+		for good in data.places[place].get("market", {}):
+			if not stock.has(good):
+				stock[good] = Market.target(data, place, good)
 
 
 func _integrate(days: float) -> void:
@@ -47,12 +62,6 @@ func _integrate(days: float) -> void:
 	var cap_mult := float(e["max_stock_mult"])
 	for place in data.places:
 		var p: Dictionary = data.places[place]
-		if not state.markets.has(place):
-			# A place added since this save was made: open its market at target.
-			var fresh := {}
-			for good in p.get("market", {}):
-				fresh[good] = Market.target(data, place, good)
-			state.markets[place] = fresh
 		var stock: Dictionary = state.markets[place]
 		var mods: Dictionary = state.place_mods.get(place, {})
 		var produce_mult := float(mods.get("produces_mult", 1.0))

@@ -124,26 +124,26 @@ Other upgrade tracks: cargo, tanks, radiators (heat), shielding (radiation), sen
 
 ## Economy
 
-- **Goods** (first set): water ice, oxygen, propellant, fusion pellets, regolith, refined metals, electronics, food, medical supplies, machine parts, habitat modules, survey data.
+- **Goods:** 28 in six groups (`data/goods.json`), listed in *Goods for the 2060s* below.
 - **Places** produce and consume goods through **recipes** (inputs → outputs per day), defined in `data/`.
 - **Price** follows stock against the target stock, within a band per good and place. Buying raises local prices and selling lowers them, so a route's profit fades if you farm it.
 - **Events** shift supply and demand: a solar storm grounds traffic, a new habitat opens, a comet arrives.
 - **Post-scarcity flavour:** basic goods get cheaper over the campaign as automation spreads. Profit moves to rare, distant, time-critical or skilled work. This keeps the frontier attractive and stops early routes from staying optimal.
 
-### Proposed goods for the 2060s (draft, 27 October 2026, awaiting the owner's sign-off)
+### Goods for the 2060s (27 October 2026)
 
 Owner's brief: *the goods for sale are too generic. In the future much of the shipping will be high-tech processors and storage, and 3D-printer feedstocks (metals, plastics, organics), plus luxury goods. Many pioneers will crave top-end things from Earth: space rats in godlike machines wanting a taste of home.*
 
-The current 14 goods (`data/goods.json`) are mostly raw materials and basics. The proposal is about 28, in six groups. Ids stay the same where only the name changes, so saves keep working; saves holding a removed id get a migration.
+The first 14 goods were mostly raw materials and basics. There are now 28, in six groups. Ids stayed the same where only the name changed (`electronics` is Compute cores, `refined_metals` is Metal powders, `food` is Staples), so saves keep working, and a save made before a good existed opens that market at its target stock (`economy_system.gd` `_open_markets`).
 
 - **Bulk (keep):** water ice, oxygen, propellant, regolith, volatiles, deuterium, helium-3, platinum metals, machine parts, habitat modules, medical supplies.
-- **High tech** (split from electronics): compute cores (processors and mind-grade accelerators), storage lattices (dense memory for minds, archives and the Feed), sensors and optics, drones and robotics.
+- **High tech:** compute cores (processors and mind-grade accelerators), storage lattices (dense memory for minds, archives and the Feed), sensors and optics, drones and robotics.
 - **Printer feedstocks:** metal powders (the `refined_metals` id, renamed), polymer feed, bio feed, ceramic and glass feed, carbon fibre and graphene.
 - **Food:** staples (the `food` id, renamed: vat-grown and hydroponic, cheap everywhere), seeds and gene stock.
 - **Luxuries from Earth:** Earth delicacies (coffee, chocolate, cheese, fresh fruit), fine wine and spirits, handmade goods, keepsakes and antiques. Light and dear, worth more the further from Earth.
 - **Frontier exports to Earth:** orbital pharmaceuticals and crystals (grown in microgravity), frontier collectibles (the first Martian vintage, comet-carved art, things the Feed made famous).
 
-Markets follow the setting: Earth-orbit ports export compute and luxuries, Mars brews and grows, the Belt prints from powders, and the outer system pays most for a taste of home. Light, valuable goods could make small ships too rich, so prices and quantities are tuned with the balance bot before this ships. Contracts and news then name the new goods.
+Markets follow the setting. Kibo Ring and Clarke Exchange bring luxuries and high tech up from Earth and send pharmaceuticals and collectibles down. Kibo, Kalpana and Landauer Deep make storage; Tsiolkovsky makes optics; Trojan Yards prints drones. Piazzi and Huygens crack volatiles into polymer and carbon; Shackleton, Selene and Candor sinter ceramic feed; the Kernel grows bio feed and pharmaceuticals. Mars brews (a little) and makes collectibles. Nearly everyone wants Earth delicacies, and the far ports want them most. Each new good's target stock is 20 days of its flow. Next: contracts and news that name the new goods.
 
 ## Megastructures: the awe ladder
 
