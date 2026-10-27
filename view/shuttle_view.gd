@@ -84,20 +84,24 @@ func _ready() -> void:
 	_line = sim.data.places[port]["shuttle"]
 	_base = _loc["to"] if _loc["down"] else _loc["from"]
 	_body = _line["body"]
-	_radius = float(sim.data.bodies[_body]["radius_m"])
+	var ground_r := float(sim.data.bodies[_body]["radius_m"])
 	var gm := float(sim.data.bodies[_body]["gm"])
-	var ring: Dictionary = sim.data.places[port]["location"].get("elements", {})
-	_orbit_m = float(ring.get("a_m", _radius + 400000.0)) - _radius
-	_orbit_v = sqrt(gm / (_radius + _orbit_m))
 	_air = sim.data.bodies[_body].get("look", {}).has("atmosphere")
 	add_child(SkyKit.environment())
 	var eph = sim.ephemeris
 	var t: float = sim.state.time_s
+	# The base's own height from the world's centre: the ground for a town, higher for
+	# a city that floats (its location's radius_m). Heights in the profile are above it.
+	_radius = V.length(eph.relative(_base, _body, t))
+	var ring: Dictionary = sim.data.places[port]["location"].get("elements", {})
+	var orbit_r := float(ring.get("a_m", ground_r + 400000.0))
+	_orbit_m = orbit_r - _radius
+	_orbit_v = sqrt(gm / orbit_r)
 	if sim.data.places[port]["location"].get("type", "") == "surface":
 		var a: Array = eph.relative(port, _body, t)
 		var b: Array = eph.relative(_base, _body, t)
 		var cosang := clampf(V.dot(a, b) / (V.length(a) * V.length(b)), -1.0, 1.0)
-		_hop = hop_geometry(gm, _radius, acos(cosang))
+		_hop = hop_geometry(gm, ground_r, acos(cosang))
 	# A frame with +Y straight up from the base, the world's centre below.
 	var up := SkyKit.dir_between(eph.position(_base, t), eph.position(_body, t))
 	var to_local := _up_basis(up).inverse()
@@ -109,7 +113,7 @@ func _ready() -> void:
 	sun.look_at_from_position(Vector3.ZERO, -sun_dir, Vector3.UP if absf(sun_dir.y) < 0.99 else Vector3.RIGHT)
 	SkyKit.set_eclipse(sun_dir)
 	# The world at true size, its mesh's pole (a vertex, so exact) under the base.
-	_planet = SkyKit.body_mesh(sim.data, _body, _radius)
+	_planet = SkyKit.body_mesh(sim.data, _body, ground_r)
 	(_planet.mesh as SphereMesh).radial_segments = 256
 	(_planet.mesh as SphereMesh).rings = 128
 	_planet.basis = Basis.IDENTITY
@@ -143,6 +147,9 @@ func _build_base(place: Dictionary) -> Node3D:
 	var look: Dictionary = place.get("look", {})
 	if look.get("kind", "") == "skylight":
 		_build_skylight(n, float(look.get("skylight_m", 65.0)))
+		return n
+	if look.get("kind", "") == "aerostat":
+		_build_aerostat(n, int(look.get("envelopes", 4)), float(look.get("envelope_m", 150.0)))
 		return n
 	var count := int(look.get("domes", 5))
 	var size := float(look.get("dome_m", 70.0))
@@ -231,6 +238,51 @@ func _build_skylight(n: Node3D, width: float) -> void:
 		var shelter := Kit.box(Vector3(14.0, 4.0, 9.0), Kit.mat("grey"), Vector3(-90.0 - 22.0 * k, 2.0, -70.0 + float(h % 40)))
 		shelter.rotation.y = float(h % 100) / 100.0
 		n.add_child(shelter)
+
+
+## A city that floats: the landing deck at the origin, and round it the envelopes
+## that lift everything (breathable air, which floats in Venus's carbon dioxide), each
+## with its gondola of homes and gardens slung beneath, joined to the deck by walkways.
+func _build_aerostat(n: Node3D, count: int, size: float) -> void:
+	var deck := MeshInstance3D.new()
+	var plate := CylinderMesh.new()
+	plate.top_radius = 70.0
+	plate.bottom_radius = 64.0
+	plate.height = 6.0
+	plate.radial_segments = 48
+	deck.mesh = plate
+	deck.material_override = Kit.mat("grey")
+	deck.position = Vector3(0, -3.0, 0)
+	n.add_child(deck)
+	for k in 8:
+		var a := TAU * float(k) / 8.0
+		n.add_child(Kit.beacon(Color("ffb050"), Vector3(cos(a) * 66.0, 0.8, sin(a) * 66.0), 0.6, 1.6, float(k) / 8.0))
+	var envelope := Kit.glass(0.15)
+	envelope.albedo_color = Color(0.85, 0.82, 0.72)
+	envelope.metallic = 0.1
+	envelope.roughness = 0.3
+	var homes := StandardMaterial3D.new()
+	homes.albedo_color = Color("3d5a2a")
+	homes.emission_enabled = true
+	homes.emission = Color("ffd9a0")
+	homes.emission_energy_multiplier = 0.4
+	for k in count:
+		var h := absi(hash(_base + str(k)))
+		var a := TAU * float(k) / float(count) + float(h % 100) / 100.0 * 0.4
+		var r := size * (0.8 + 0.4 * float((h / 100) % 100) / 100.0)
+		var at := Vector3(cos(a), 0.0, sin(a)) * (size * 2.2 + 120.0)
+		var bag := Kit.sphere(r, envelope, at + Vector3(0, r * 0.9, 0))
+		bag.scale = Vector3(1.0, 0.75, 1.0)
+		n.add_child(bag)
+		# The gondola under it: homes, terraces and greenhouses, lit from within.
+		var gondola := Kit.box(Vector3(r * 1.2, 24.0, r * 0.8), homes, at + Vector3(0, -14.0, 0))
+		gondola.rotation.y = a
+		n.add_child(gondola)
+		# The walkway back to the deck.
+		var length := at.length() - 70.0 - r * 0.6
+		var walk := Kit.box(Vector3(length, 2.0, 5.0), Kit.mat("steel"), at.normalized() * (70.0 + length * 0.5) + Vector3(0, -2.0, 0))
+		walk.rotation.y = -a
+		n.add_child(walk)
 
 
 ## A lunar lander, nose to +X and engine down: a pressurised cab with its windows

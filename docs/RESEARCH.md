@@ -109,6 +109,15 @@ Plan: a curated catalog of about 30 major bodies plus a hand-picked set of named
 - **The hop from Line Foot** (0 N, 0 E): central angle 57.9 degrees, 1,755 km. The minimum-energy ballistic launch for central angle θ on a sphere of radius R and surface gravity g has speed v² = gR · 2 sin(θ/2) / (1 + sin(θ/2)) and flight-path angle (π − θ)/4. For the Moon that is 1,357 m/s at 30.5 degrees, an apex of 312 km and 31.2 minutes of flight: about 2.7 km/s of engine work for the round of launch and landing, within a lunar lander's reach (Apollo's descent and ascent stages together carried about 4.7 km/s).
 - **Simplified:** the lander's burns are drawn along the ends of the ellipse rather than as a gravity turn from the pad; the Moon's pole is the ecliptic pole (the real one is 1.5 degrees off), so Earth wobbles about 5 degrees in the lunar sky instead of 6.7, and the Moon doesn't librate in longitude.
 
+## 10. Venus: a city in the clouds
+
+- **The air** (Venus International Reference Atmosphere): about 1.07 bar and 75 °C at 50 km, 0.53 bar and 27 °C at 55 km, falling to 0.45 bar and about 17 °C at 56 km. The game's city floats at 55 km. The main cloud decks run from about 48 to 70 km, so the city sits inside a thin haze, with brighter cloud above and below.
+- **Lift:** breathable air (mean molecular mass about 29) floats in carbon dioxide (44): a cubic metre of air displaces about half its own mass again in CO2, so at 0.53 bar each cubic metre lifts roughly 0.3 kg. A city's envelopes are hundreds of metres across for that reason.
+- **Winds:** the cloud tops super-rotate, circling the planet in about four Earth days, retrograde like the planet; the city drifts with them, so a day and a night each last about two Earth days.
+- **Getting off:** low Venus orbit needs about 7.3 km/s; with gravity and drag losses from 55 km, about 8 km/s. Hence the glider's fare.
+- **What it has and lacks:** carbon and oxygen without limit in the CO2 (96.5%), nitrogen (3.5%), sulphur from the acid clouds; almost no water (about 20 parts per million), so hydrogen is the scarce thing. NASA's HAVOC study (2014) sketched airships and an eventual floating city ([coverage](https://www.blimpinfo.com/airships/nasa-study-proposes-airships-cloud-cities-for-venus-exploration/)).
+- **Simplified:** the city drifts at one steady rate at one latitude (real winds vary with latitude and time); the glider's flight is always four hours.
+
 ## Open research for later passes
 
 - Readable orbit-planning UI patterns (KSP manoeuvre nodes versus one-click "AI plot course").

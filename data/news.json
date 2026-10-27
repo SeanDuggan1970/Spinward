@@ -315,6 +315,20 @@
 			"dateline": "Marius Hills, the Moon",
 			"headline": "The Long View backs the Nave's second bulkhead, not the dome field",
 			"body": "The Commons' Long View has signed off on sealing another four kilometres of the Marius Hills tube, and turned down a developer's plan to cover the hills above it with a hundred domes. 'The tube was already there, and the rock was already doing the shielding,' its note reads. 'Use what is there. We will help anyone who wants to walk these hills; we will not help anyone pave them.' The Nave's glassblowers have asked for ceramic feed and patience, in that order."
+		},
+		{
+			"id": "venus_third_year",
+			"after_days": -9,
+			"dateline": "Aphrodite's Rest, Venus",
+			"headline": "Three years aloft over Venus",
+			"body": "Aphrodite's Rest marks three years in the clouds this week: five envelopes, eleven hundred people and four thousand laps of the planet. Its founders asked the Long View for one envelope and a deck; it gave them both on condition they make their own carbon and oxygen from the air rather than ship them in. They now export both. Water is still the thing they cannot make, and the Assembly pays the best price for it in the inner system."
+		},
+		{
+			"id": "venus_wedding",
+			"after_days": 31,
+			"dateline": "Aphrodite's Rest, Venus",
+			"headline": "First wedding over Venus draws four hundred million",
+			"body": "Two of the glider pilots were married on the deck of Aphrodite's Rest on Saturday, under a sky the colour of old brass, and four hundred million people watched on the Feed. The vows were short: nobody wanted to stand outside in an acid coat for long. The couple has asked for no presents except water."
 		}
 	],
 	"projects": {

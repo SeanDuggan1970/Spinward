@@ -90,6 +90,15 @@
 			"wear": 0.06,
 			"mismatch": 0.0,
 			"patch": "#2b2f36"
+		},
+		"Cytherean Assembly": {
+			"hull": "#e8e0cc",
+			"accent": "#d9a441",
+			"trim": "#2b2f33",
+			"foil": "#c9a24a",
+			"wear": 0.2,
+			"mismatch": 0.06,
+			"patch": "#c9bfa8"
 		}
 	},
 	"independent": {

@@ -2491,5 +2491,157 @@
 			"delicacies": 0.01
 		},
 		"recipes": []
+	},
+	"cytherea_station": {
+		"name": "Cytherea Station",
+		"operator": "Cytherean Assembly",
+		"description": "The Venus up-port, 400 km above the clouds. Below, out of sight in the haze, Aphrodite's Rest drifts round the planet every four days. The Assembly ships up carbon fibre and oxygen pulled out of Venus's air, and pays well for water: the planet has almost none, and the little hydrogen up here comes from cracking the clouds' sulphuric acid. Fuel is dear for the same reason. The shuttle down is the most expensive ride in the inner system, because coming back up takes eight kilometres a second.",
+		"location": {
+			"type": "orbit",
+			"parent": "venus",
+			"elements": {
+				"a_m": 6451800.0,
+				"e": 0.0,
+				"i_deg": 12.0,
+				"node_deg": 0.0,
+				"peri_deg": 0.0,
+				"m0_deg": 0.0
+			}
+		},
+		"station": {
+			"door": "iris",
+			"hub_radius_m": 34,
+			"hub_length_m": 190,
+			"ring_radius_m": 400,
+			"ring_tube_m": 25,
+			"spokes": 4,
+			"spin_rpm": 0.922,
+			"gravity_g": 0.38,
+			"colour": "offwhite"
+		},
+		"bay_traffic": {
+			"control": "tower",
+			"per_hour": 3
+		},
+		"services": [
+			"market",
+			"refuel"
+		],
+		"recipes": [
+			{
+				"inputs": {
+					"volatiles": 2
+				},
+				"outputs": {
+					"propellant": 1.2
+				}
+			}
+		],
+		"features": [],
+		"shuttle": {
+			"name": "the Assembly glider",
+			"body": "venus",
+			"max_t": 10,
+			"craft": "a broad lifting body with a heat shield for a belly and fat rocket stages for the climb home",
+			"stops": {
+				"aphrodites_rest": {
+					"hours": 4.0,
+					"fare": 420,
+					"fare_per_t": 260,
+					"via": "A deorbit burn, entry into the thickest air in the inner system, a long glide down through the upper haze, and down on the belly retros onto the deck of a city that is floating. Coming back up is the hard part: eight kilometres a second of rocket from a deck that bobs."
+				}
+			}
+		},
+		"market": {
+			"carbon_fibre": 8,
+			"oxygen": 12,
+			"water_ice": 40,
+			"food": 12,
+			"machine_parts": 20,
+			"electronics": 8,
+			"medical": 3,
+			"robotics": 6,
+			"delicacies": 1.0,
+			"wine_spirits": 0.6,
+			"gene_stock": 0.5,
+			"propellant": 54,
+			"volatiles": 40
+		},
+		"produces": {
+			"carbon_fibre": 0.4,
+			"oxygen": 0.6
+		},
+		"consumes": {
+			"water_ice": 2.0,
+			"food": 0.6,
+			"machine_parts": 1.0,
+			"electronics": 0.4,
+			"medical": 0.15,
+			"robotics": 0.3,
+			"delicacies": 0.05,
+			"wine_spirits": 0.03,
+			"gene_stock": 0.02,
+			"propellant": 1.5
+		}
+	},
+	"aphrodites_rest": {
+		"name": "Aphrodite's Rest",
+		"operator": "Cytherean Assembly",
+		"foot_of": "cytherea_station",
+		"description": "A city that floats. Fifty-five kilometres above Venus the air is half an atmosphere and about room temperature, and breathable air is a lifting gas in its carbon dioxide, so every envelope full of homes floats. Five of them ride the middle cloud deck, gondolas of houses and greenhouses slung beneath, walkways between, sailing round the planet every four days on the wind. Gravity is nine-tenths of Earth's: the most like home anywhere. The haze glows yellow-white above and below, the Sun is a bright smear, and the night lasts two days. Wear the acid-proof coat outside. Ships can't land here: the Assembly glider comes down from Cytherea Station.",
+		"location": {
+			"type": "surface",
+			"parent": "venus",
+			"lat_deg": 10.0,
+			"lon_deg": 0.0,
+			"day_s": -345600.0,
+			"radius_m": 6106800.0
+		},
+		"services": [
+			"market",
+			"bar"
+		],
+		"bar": {
+			"name": "the Downdraft",
+			"patrons": 60,
+			"round_cr": 11
+		},
+		"look": {
+			"kind": "aerostat",
+			"envelopes": 5,
+			"envelope_m": 160
+		},
+		"market": {
+			"carbon_fibre": 16,
+			"oxygen": 30,
+			"food": 20,
+			"collectibles": 0.5,
+			"handmade_goods": 0.8,
+			"water_ice": 40,
+			"machine_parts": 8,
+			"robotics": 4,
+			"sensors_optics": 0.8,
+			"medical": 1.6,
+			"gene_stock": 0.6,
+			"delicacies": 1.2,
+			"wine_spirits": 0.8
+		},
+		"produces": {
+			"carbon_fibre": 0.8,
+			"oxygen": 1.5,
+			"food": 1.0,
+			"collectibles": 0.02,
+			"handmade_goods": 0.04
+		},
+		"consumes": {
+			"water_ice": 2.0,
+			"machine_parts": 0.4,
+			"robotics": 0.2,
+			"sensors_optics": 0.04,
+			"medical": 0.08,
+			"gene_stock": 0.03,
+			"delicacies": 0.06,
+			"wine_spirits": 0.04
+		}
 	}
 }

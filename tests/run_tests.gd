@@ -103,6 +103,7 @@ func _initialize() -> void:
 	test_elevator_not_stranded_at_foot()
 	test_mars_shuttle()
 	test_the_nave()
+	test_venus()
 	test_shuttle_view_profile()
 	test_edge_cases()
 	test_power_budget()
@@ -2313,6 +2314,48 @@ func test_the_nave() -> void:
 	check(why.contains("Halo Depot"), "Trying to fly off, you are told your ship is at Halo Depot (%s)" % why)
 	var back := Shuttle.flight_to(d, "the_nave")
 	check(not back["down"] and back["to"] == "line_foot", "The hopper flies back to Line Foot")
+
+
+func test_venus() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var Shuttle := preload("res://sim/systems/shuttle_system.gd")
+	# The city floats 55 km up and rides the clouds round the planet every four days,
+	# the same way as the planet turns (retrograde).
+	var t0: float = s.time_s
+	var venus0: Array = sim.ephemeris.position("venus", t0)
+	var a0 := V.sub(sim.ephemeris.position("aphrodites_rest", t0), venus0)
+	check(absf(V.length(a0) - float(d.bodies["venus"]["radius_m"]) - 55000.0) < 1.0, "Aphrodite's Rest floats 55 km above Venus")
+	var a2 := V.sub(sim.ephemeris.position("aphrodites_rest", t0 + 2.0 * DAY), sim.ephemeris.position("venus", t0 + 2.0 * DAY))
+	var turned := rad_to_deg(acos(clampf(V.dot(V.normalized(a0), V.normalized(a2)), -1.0, 1.0)))
+	# Half-way round at 10 degrees north puts it 160 degrees from where it was.
+	check(absf(turned - 160.0) < 1.0, "In two days it drifts half-way round (%.1f degrees)" % turned)
+	check(d.home_port("aphrodites_rest") == "cytherea_station", "Your ship waits at Cytherea Station")
+	# Getting there: a route from Kibo Ring, flown and docked.
+	var freighter := {"hull": "deep_freighter", "modules": d.ships["deep_freighter"]["modules"].duplicate(), "cargo": {}, "fuel_t": 400.0}
+	var plan := Navigation.plan(freighter, d, sim.ephemeris, "kibo_ring", "cytherea_station", s.time_s)
+	check(plan.get("ok", false), "A route from Kibo Ring to Cytherea Station is planned (%s)" % plan.get("reason", ""))
+	s.ship["hull"] = "deep_freighter"
+	s.ship["modules"] = d.ships["deep_freighter"]["modules"].duplicate()
+	s.ship["fuel_t"] = ShipStats.fuel_capacity_t(s.ship, d)
+	s.credits = 1.0e6
+	s.location = {"status": "docked", "place": "kibo_ring"}
+	check(sim.apply({"type": "depart", "to": "cytherea_station"}) == "", "Depart Kibo Ring for Venus")
+	sim.advance_game_time(float(s.location["arrive_t"]) - s.time_s + 60.0)
+	check(s.location["status"] == "approach" and s.location["place"] == "cytherea_station", "Arrive at Cytherea Station")
+	check(sim.apply({"type": "dock"}) == "" and s.location == {"status": "docked", "place": "cytherea_station"}, "Docked at Cytherea Station")
+	# Down to the city and back on the glider.
+	s.ship["cargo"] = {}
+	check(sim.apply({"type": "take_shuttle", "to": "aphrodites_rest"}) == "", "Take the glider down")
+	sim.advance_game_time(float(s.location["arrive_t"]) - s.time_s + 1.0)
+	check(s.location == {"status": "docked", "place": "aphrodites_rest"}, "At Aphrodite's Rest")
+	check(sim.apply({"type": "buy", "good": "carbon_fibre", "tonnes": 2.0}) == "", "Buy carbon fibre made from Venus's air")
+	var up: Dictionary = Shuttle.flight_to(d, "aphrodites_rest")
+	check(not up["down"] and up["to"] == "cytherea_station", "The glider flies back up to Cytherea Station")
+	check(sim.apply({"type": "take_shuttle"}) == "", "Take the glider up")
+	sim.advance_game_time(float(s.location["arrive_t"]) - s.time_s + 1.0)
+	check(s.location == {"status": "docked", "place": "cytherea_station"}, "Back aboard at Cytherea Station")
 
 
 func test_mars_shuttle() -> void:

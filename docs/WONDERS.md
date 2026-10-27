@@ -32,7 +32,7 @@ Most wonders should start as rumours, become projects, and end as ports or set p
 ## 1. Sky worlds: castles in the air
 
 ### Cloud cities of Venus
-- **Real basis:** About 50 km above Venus the pressure is near one bar and the temperature near Earth's. Breathable air is a lifting gas in Venus's CO2, so a habitat full of air floats. NASA's HAVOC study (2014) sketched crewed airships there and a floating cloud city as the long-term goal ([coverage](https://www.blimpinfo.com/airships/nasa-study-proposes-airships-cloud-cities-for-venus-exploration/), [Vice](https://www.vice.com/en/article/please-build-a-cloud-city-over-venus)). Gravity is 0.9 g: the most Earth-like anywhere.
+- **Real basis:** Between about 50 and 55 km above Venus the pressure falls from one bar to half a bar and the temperature from 75 °C to about room temperature. Breathable air is a lifting gas in Venus's CO2, so a habitat full of air floats. NASA's HAVOC study (2014) sketched crewed airships there and a floating cloud city as the long-term goal ([coverage](https://www.blimpinfo.com/airships/nasa-study-proposes-airships-cloud-cities-for-venus-exploration/), [Vice](https://www.vice.com/en/article/please-build-a-cloud-city-over-venus)). Gravity is 0.9 g: the most Earth-like anywhere.
 - **The dream:** Sky castles for real. Towers and gardens hanging under transparent envelopes kilometres across, sailing round the planet about every four Earth days on the super-rotating winds (so a day and a night each last about two), sulphuric clouds below like an endless white sea. Walkways between envelopes; a cathedral whose nave is the gas bag.
 - **Physics:** No new physics, only hard engineering: acid-resistant fluoropolymer envelopes, and real rockets to leave. At 0.9 g, climbing from the clouds to orbit takes about 7 km/s, nearly as much as from Earth, so Venus exports little that is heavy.
 - **In game:** Opens Venus as a region (tier 2–3). Port: *Aphrodite's Rest* or similar. Exports: collectibles, "Venus light" art, sulphur chemicals. Imports: everything solid. Feed destination: the first wedding over Venus.
@@ -190,7 +190,7 @@ Chosen for reach (close to where the player already flies), variety (gravity, li
 
 1. **The Nave** (lunar lava-tube cathedral, Marius Hills). **In** (27 October 2026): a town reached by the Cooperative's hopper from Line Foot. See *The Nave* in DESIGN.md.
 2. **The Long Breath** (air bubble at L5, near the Kernel). **In** (27 October 2026): a project at the Kernel, then a port. See *The Long Breath* in DESIGN.md.
-3. **Cloud city over Venus.** Opens Venus: the most Earth-like gravity and a true sky castle. Bigger work: a new body, region and market.
+3. **Cloud city over Venus.** **In** (27 October 2026): Cytherea Station in orbit and Aphrodite's Rest below, by glider. See *Venus* in DESIGN.md.
 4. **The Long Hall** (roof over Coprates Chasma). Mars megaproject in segments, like the Selene Ring.
 5. **The Ceres megasatellite** grows behind the Concord Pair, one group's cylinder at a time.
 6. **Ice tugs and pushers** as an NPC fleet with visible icebergs, plus berg arrivals as market events.

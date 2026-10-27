@@ -171,6 +171,7 @@ The system should feel like a place where big things are being built. Each tier 
 | Orbital ring (the Selene Ring) | Lunar equator, 52 km up | 3 | **In** (project, built in arcs, then a junction port) | Shackleton output x1.6; the ring's junction smelts regolith to metal |
 | Lava-tube town (the Nave) | Marius Hills skylight, the Moon | 1 | **In** (town, by hopper from Line Foot) | Handmade goods out; ceramic feed, gene stock and water in (WONDERS.md) |
 | Air bubble (the Long Breath) | 10 km off the Kernel, L5 | 2 | **In** (project, then a port) | Carbon fibre, polymer and air into the build; a flyers' town after (WONDERS.md) |
+| Cloud city (Aphrodite's Rest) | 55 km above Venus, under Cytherea Station | 2 | **In** (port in orbit, city by glider) | Opens Venus: carbon fibre and oxygen from the air out; water in |
 | Earth–Mars cycler (Aldrin cycler) | Earth–Mars | 2 | Planned | A moving station you catch on its schedule |
 | Space farms | Kernel, Belt | 2–3 | Partly in (Kernel food) | Food chain away from Earth |
 | Lofstrom loop (launch loop) | Earth equator | 2 | Planned (backdrop) | Cheaper Earth-to-orbit freight |
@@ -1370,6 +1371,17 @@ Wonders shortlist item 2 (WONDERS.md): a bubble of air you fly in.
 - **The port** (`long_breath`, opens with the project): a non-spinning dock hub (type `cylinder`, 60 m by 120 m, `spin_rpm` 0) at the bubble's pole, 10 km from the Kernel. A small flyers' town: makes wings (handmade goods) and collectibles; wants air, water, food, bio feed and a little luxury. Bar: the Thermal. Its tender *Updraft* (fleet `breath_tenders`) commissions with it. Auntie Vell's tips cover it.
 - **Set pieces** (`set_pieces.gd` `_long_breath`): from the Kernel, the bubble grows stage by stage; from its own dock (`long_breath_dock`), the finished bubble lies straight beyond the docking face.
 - **Attract screen:** a new title shot, `long_breath`: the hero glides past the bubble, the lamp burning at its heart.
+
+## Venus: Cytherea Station and Aphrodite's Rest (Oct 2026)
+
+Wonders shortlist item 3 (WONDERS.md): a city that floats, which opens Venus.
+
+- **Cytherea Station** (`places.json` `cytherea_station`): the Venus up-port, a wheel 400 km up, run by a new operator, the **Cytherean Assembly** (pale gold livery). Market and fuel, no yard. Fuel is dear: Venus has almost no hydrogen, and the port cracks a little propellant from the clouds' sulphuric acid (a volatiles recipe).
+- **Aphrodite's Rest** (`aphrodites_rest`, `foot_of` the station): five envelopes of breathable air floating 55 km up at 10 N, where the air is half an atmosphere and about room temperature, drifting round the planet with the clouds every four days (a surface place with `radius_m` above the ground and a retrograde `day_s`). Gravity 0.9 g. Makes carbon fibre and oxygen from the CO2 air, staples, collectibles and handmade goods; wants water above all, plus parts, drones, optics, medicine, gene stock and a taste of home. Bar: the Downdraft.
+- **The glider** (`cytherea_station.shuttle`): 4 h, 420 cr + 260 cr/t, up to 10 t. The dearest ride in the inner system, because the climb back to orbit from a 0.9 g world takes about 8 km/s. The flight view (`shuttle_view.gd`) now puts the world's centre below the base's real height, so a floating city isn't drawn on the ground, and draws its envelopes, gondolas and walkways round the landing deck (`look.kind` `aerostat`).
+- **Traffic:** the Assembly's two deep freighters, *Morning Star* and *Evening Star* (`cloud_runners`), run carbon fibre and oxygen to Clarke Exchange and bring water, gene stock and delicacies back from Kibo Ring.
+- **News:** three years aloft (and the Long View's condition: make your own carbon and oxygen from the air), and the first wedding over Venus.
+- **Simplifications (RESEARCH.md §10):** the city drifts at one steady rate at one latitude; the glider's flight is always four hours.
 
 ## Milestones
 
