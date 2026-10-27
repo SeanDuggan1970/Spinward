@@ -390,3 +390,11 @@ Full write-up: [2026-10-07-economy-together.md](2026-10-07-economy-together.md).
 - Changed data: two projects (`long_hall` at Ares Ring, revealed day 40; `ceres_megasat` at Piazzi, revealed when the Concord Pair is done), the Long Hall town and its shuttle stop, carbon fibre and ceramic feed on Ares Ring's market.
 - Balance bot (5 seeds, 180 days, upgrade=1): identical, seed for seed, to the run before (mean 93,194 cr, median first upgrade day 6.6). The bot never trades at Ares Ring, so it doesn't feel the Hall's draws, and the megasatellite never starts within 180 days because the Concord Pair isn't finished by then.
 - Worth a hand-played check: whether the Long Hall's draws on Ares Ring's carbon fibre and ceramic feed (neither made at Mars) make a good long haul from Huygens, Piazzi or the Moon once it is revealed.
+
+
+## Mercury (2026-10-27)
+
+- Changed data: Perihelion Station (Mercury orbit) and Terminator (by lander, opened by the `terminator_rails` project from day 60), a new operator and the `dawn_runners` freighters (platinum to Kibo Ring; staples, compute cores and delicacies back).
+- Balance bot (5 seeds, 180 days, upgrade=1): mean 125,316 cr (93,194 before), median first upgrade day 6.9; by seed 177k, 131k, 108k, 115k, 96k.
+- **Higher, and every seed is up, so probably real.** The bot doesn't fly to Mercury; it feels the Dawnward freighters, which buy staples, compute cores and delicacies at Kibo Ring and sell platinum there, shifting the cislunar prices it trades on. Its top route is now Kibo Ring to Clarke Exchange with staples (68k over four legs), 1.26 times the next, so nothing dominates.
+- **Watch:** if more interplanetary fleets keep lifting cislunar profits, `relaxation_per_day` (the most sensitive knob, see above) or the fleets' `fill` can pull them back. No change yet.
