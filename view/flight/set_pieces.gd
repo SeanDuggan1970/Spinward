@@ -18,6 +18,8 @@
 ##   stanford_torus   the Tsiolkovsky Wheel going up beside Trojan Yards: a 1.8 km Stanford torus
 ##   long_breath      the Long Breath going up off the Kernel: a 2 km bubble of air you fly in
 ##   long_breath_dock the same bubble, finished, behind its own dock hub
+##   ice_berg         a berg of water ice pushed in from the outer Belt, parked off the
+##                    port and quarried, its pusher still bolted to its back
 ## Solid ones register colliders on the parent (meta "colliders": {spheres, tori}) so
 ## a pilot who flies into one hits it.
 extends RefCounted
@@ -59,6 +61,8 @@ static func build(parent: Node3D, features: Array, dirs: Dictionary, station: Di
 				anims.append_array(_stanford_torus(parent, dirs, float(progress.get("stanford_torus", 0.0))))
 			"long_breath":
 				anims.append_array(_long_breath(parent, Vector3(-5200.0, -1800.0, -8400.0), float(progress.get("long_breath", 0.0))))
+			"ice_berg":
+				anims.append_array(_ice_berg(parent, Vector3(2600.0, -900.0, -4200.0), 1.0, true))
 			"long_breath_dock":
 				# Its own port is the hub at the bubble's pole: the bubble lies straight
 				# beyond the docking face, as the approach looks.
@@ -892,3 +896,40 @@ static func _long_breath(parent: Node3D, centre: Vector3, p: float) -> Array:
 			sparks.append(spark)
 		anims.append({"kind": "flicker", "nodes": sparks})
 	return anims
+
+
+# --- A parked iceberg and its pusher ----------------------------------------------
+
+## A berg of water ice (about 24,000 t: some 30 m across, ice weighing 0.92 t a cubic
+## metre) at `centre`, a pusher bolted to its back and a quarry crawler on its face.
+## `firing`: the pusher's plume of steam, thrown off the berg's own ice as reaction
+## mass (it shuts down once the berg is parked; the title screen shows one under way).
+static func _ice_berg(parent: Node3D, centre: Vector3, scale: float, parked: bool, firing: bool = false) -> Array:
+	var root := Node3D.new()
+	root.position = centre
+	parent.add_child(root)
+	var r := 18.0 * scale
+	var ice := rock(r, Vector3(1.4, 0.9, 1.0), 4242, {"highland_colour": Color("dfe9f0"), "mare_colour": Color("aebfcc"), "relief": 0.8})
+	root.add_child(ice)
+	_solid_sphere(parent, centre, r * 1.3)
+	# The pusher, bolted on astern (-X): a frame, tanks, the reactor, and the nozzle
+	# that throws melted ice.
+	var steel := _mat(Color("6d7378"), 0.6, 0.4)
+	var frame := Kit.box(Vector3(4.0, 14.0, 14.0) * scale, steel, Vector3(-r * 1.45, 0, 0))
+	root.add_child(frame)
+	root.add_child(Kit.sphere(4.0 * scale, _mat(Color("c9a24a"), 0.85, 0.35), Vector3(-r * 1.45 - 6.0 * scale, 4.0 * scale, 0)))
+	root.add_child(Kit.sphere(4.0 * scale, _mat(Color("c9a24a"), 0.85, 0.35), Vector3(-r * 1.45 - 6.0 * scale, -4.0 * scale, 0)))
+	var nozzle := Kit.cone(1.2 * scale, 4.0 * scale, 8.0 * scale, _mat(Color("2b2f33"), 0.3, 0.6), Vector3(-r * 1.45 - 14.0 * scale, 0, 0), 16)
+	nozzle.rotation = Vector3(0, PI * 0.5, 0)
+	root.add_child(nozzle)
+	root.add_child(Kit.beacon(Color("ff3a2a"), Vector3(-r * 1.45, 8.0 * scale, 0), 0.6 * scale, 2.0, 0.0))
+	if firing:
+		var plume := Kit.cone(4.0 * scale, 26.0 * scale, 140.0 * scale, _haze(Color("e8f2ff"), 0.22), Vector3(-r * 1.45 - 88.0 * scale, 0, 0), 20)
+		plume.rotation = Vector3(0, PI * 0.5, 0)
+		plume.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		root.add_child(plume)
+	if parked:
+		# A quarry crawler on the face, cutting blocks, and its work lights.
+		root.add_child(Kit.box(Vector3(6.0, 3.0, 4.0) * scale, _mat(Color("d8b02a")), Vector3(r * 0.6, r * 0.8, 0)))
+		root.add_child(Kit.beacon(Color("fff4d6"), Vector3(r * 0.6, r * 0.8 + 3.0 * scale, 0), 0.8 * scale, 1.0, 0.3))
+	return []

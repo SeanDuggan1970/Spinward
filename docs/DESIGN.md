@@ -172,6 +172,7 @@ The system should feel like a place where big things are being built. Each tier 
 | Lava-tube town (the Nave) | Marius Hills skylight, the Moon | 1 | **In** (town, by hopper from Line Foot) | Handmade goods out; ceramic feed, gene stock and water in (WONDERS.md) |
 | Air bubble (the Long Breath) | 10 km off the Kernel, L5 | 2 | **In** (project, then a port) | Carbon fibre, polymer and air into the build; a flyers' town after (WONDERS.md) |
 | Cloud city (Aphrodite's Rest) | 55 km above Venus, under Cytherea Station | 2 | **In** (port in orbit, city by glider) | Opens Venus: carbon fibre and oxygen from the air out; water in |
+| Ice tugs and pushers | Outer Belt to the Kernel, Psyche and Venus | 2 | **In** (berg arrivals, set pieces) | Water prices drop when a berg is parked off a dry port |
 | Earth–Mars cycler (Aldrin cycler) | Earth–Mars | 2 | Planned | A moving station you catch on its schedule |
 | Space farms | Kernel, Belt | 2–3 | Partly in (Kernel food) | Food chain away from Earth |
 | Lofstrom loop (launch loop) | Earth equator | 2 | Planned (backdrop) | Cheaper Earth-to-orbit freight |
@@ -1382,6 +1383,24 @@ Wonders shortlist item 3 (WONDERS.md): a city that floats, which opens Venus.
 - **Traffic:** the Assembly's two deep freighters, *Morning Star* and *Evening Star* (`cloud_runners`), run carbon fibre and oxygen to Clarke Exchange and bring water, gene stock and delicacies back from Kibo Ring.
 - **News:** three years aloft (and the Long View's condition: make your own carbon and oxygen from the air), and the first wedding over Venus.
 - **Simplifications (RESEARCH.md §10):** the city drifts at one steady rate at one latitude; the glider's flight is always four hours.
+
+## Ice tugs and pushers (Oct 2026)
+
+Wonders shortlist item 6 (WONDERS.md): icebergs pushed in from the Belt for the ports that are short of water.
+
+- **The trade** (`balance.bergs`, `sim/systems/economy_system.gd` `_bergs`): bergs of water ice from the Themis family in the outer Belt, pushed for years by pushers that throw the berg's own melted ice as reaction mass, are parked off three dry ports and quarried:
+
+  | Berg | Port | Lands on the market | Berg mass | First | Then every |
+  |---|---|---|---|---|---|
+  | Slow Tide's | the Kernel (L5) | 300 t | 24,000 t | day 11 | 45 days |
+  | Meltwater's | Psyche Claims | 120 t | 9,000 t | day 23 | 50 days |
+  | Long Thirst's | Cytherea Station (Venus) | 150 t | 15,000 t | day 34 | 60 days |
+
+  Each arrival puts its tonnes on the port's market at once (never past the market's cap), so water is cheap there for a while, then the stock relaxes back. Arrivals are worked out from the clock (`berg_count`), so nothing new is saved and old saves see the schedule from their start.
+- **News:** each arrival is a notice and a comms line ("The pusher Slow Tide has parked a 24,000 t berg from the Themis family off the Kernel: 300 t of water ice on the market.").
+- **Set piece** (`set_pieces.gd` `_ice_berg`, feature `ice_berg` at the three ports): the parked berg with its pusher still bolted on astern, and a quarry crawler cutting blocks on its face.
+- **Attract screen:** a new title shot, `berg`: a berg under way in the outer Belt, its pusher throwing a plume of steam, the hero flying escort.
+- **Not yet:** pushers as NPC traffic you can meet in transit, and contracts to supply a berg crew on the way.
 
 ## Milestones
 

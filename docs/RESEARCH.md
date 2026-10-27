@@ -118,6 +118,13 @@ Plan: a curated catalog of about 30 major bodies plus a hand-picked set of named
 - **What it has and lacks:** carbon and oxygen without limit in the CO2 (96.5%), nitrogen (3.5%), sulphur from the acid clouds; almost no water (about 20 parts per million), so hydrogen is the scarce thing. NASA's HAVOC study (2014) sketched airships and an eventual floating city ([coverage](https://www.blimpinfo.com/airships/nasa-study-proposes-airships-cloud-cities-for-venus-exploration/)).
 - **Simplified:** the city drifts at one steady rate at one latitude (real winds vary with latitude and time); the glider's flight is always four hours.
 
+## 11. Icebergs from the Belt
+
+- **Where the ice is:** water ice was found on the surface of 24 Themis in 2010 (Rivkin and Emery; Campins and others), and the Themis family is the parent of several main-belt comets: ice survives under a thin dust crust in the outer Belt. Ceres holds a great deal more, but it sits at the bottom of a gravity well.
+- **Pushing it:** a pusher that melts the berg's own ice and throws it as reaction mass (a mass driver or a fusion-heated steam rocket) needs no propellant from home. With an exhaust speed of about 5 km/s, moving a berg by 5 km/s costs about 63% of its mass (the rocket equation); the berg pays for its own trip, and what arrives is about a third of what left. The game's berg masses are what arrives.
+- **Size:** water ice weighs about 0.92 t a cubic metre, so a 24,000 t berg is some 30 m across.
+- **Time:** low-thrust transfers from the outer Belt to the inner system take years. The game has many bergs in the pipeline at once and shows only arrivals.
+
 ## Open research for later passes
 
 - Readable orbit-planning UI patterns (KSP manoeuvre nodes versus one-click "AI plot course").

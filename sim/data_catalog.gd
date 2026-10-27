@@ -261,6 +261,11 @@ func validate() -> Array[String]:
 			if features_seen.has(feature):
 				problems.append("project %s: feature %s already driven by %s" % [id, feature, features_seen[feature]])
 			features_seen[feature] = id
+	for b in balance.get("bergs", {}).get("arrivals", []):
+		if not places.has(b.get("place", "")) or not places[b["place"]].get("market", {}).has(b.get("good", "")):
+			problems.append("berg %s: %s is not traded at %s" % [b.get("id", "?"), b.get("good", "?"), b.get("place", "?")])
+		if float(b.get("every_days", 0.0)) <= 0.0 or float(b.get("tonnes", 0.0)) <= 0.0:
+			problems.append("berg %s: every_days and tonnes must be positive" % b.get("id", "?"))
 	for id in brokers:
 		var b: Dictionary = brokers[id]
 		if not places.has(b.get("place", "")):

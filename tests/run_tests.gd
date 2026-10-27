@@ -68,6 +68,7 @@ func _initialize() -> void:
 	test_orbits()
 	test_economy()
 	test_frontier_goods()
+	test_bergs()
 	test_travel()
 	test_shipyard()
 	test_npcs()
@@ -264,6 +265,40 @@ func test_frontier_goods() -> void:
 	loaded.tick(1.0)
 	check(loaded.state.markets["kibo_ring"].has("delicacies"), "Old saves open the new goods' markets")
 	check(loaded.apply({"type": "buy", "good": "delicacies", "tonnes": 1}) == "", "The new goods trade in an old save")
+
+
+func test_bergs() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	s.npcs = []  # Market flows and bergs only.
+	var Economy := preload("res://sim/systems/economy_system.gd")
+	var kernel: Dictionary = {}
+	for b in d.balance["bergs"]["arrivals"]:
+		if b["id"] == "kernel_berg":
+			kernel = b
+	check(not kernel.is_empty(), "Bergs are pushed in to the Kernel")
+	check(Economy.berg_count(0.0, 10.0, 5.0) == 0 and Economy.berg_count(10.0, 10.0, 5.0) == 1 and Economy.berg_count(24.9, 10.0, 5.0) == 3, "Arrivals count on their schedule")
+	# Just before the first, then just after: the water lands on the Kernel's market.
+	var first: float = s.started_t + float(kernel["first_day"]) * DAY
+	sim.advance_game_time(first - s.time_s - 3600.0)
+	sim.take_events()
+	s.markets["kernel_l5"]["water_ice"] = 10.0
+	sim.advance_game_time(7200.0)
+	var arrived := sim.take_events().filter(func(e): return e["type"] == "berg_arrived" and e["data"]["id"] == "kernel_berg")
+	check(arrived.size() == 1, "The first berg arrives on day %d" % int(kernel["first_day"]))
+	check(float(s.markets["kernel_l5"]["water_ice"]) > 10.0 + float(kernel["tonnes"]) * 0.95, "and puts its water on the Kernel's market (%.0f t)" % float(s.markets["kernel_l5"]["water_ice"]))
+	check(not arrived.is_empty() and absf(float(arrived[0]["time_s"]) - first) < 1.0, "at the hour it was due")
+	# Never past the market's cap.
+	var cap := Market.target(d, "kernel_l5", "water_ice") * float(d.balance["economy"]["max_stock_mult"])
+	sim.advance_game_time(first + float(kernel["every_days"]) * DAY - s.time_s - 600.0)
+	sim.take_events()
+	s.markets["kernel_l5"]["water_ice"] = cap - 5.0
+	sim.advance_game_time(1200.0)
+	check(float(s.markets["kernel_l5"]["water_ice"]) <= cap + 1e-6, "A berg never floods a market past its cap")
+	var more := sim.take_events().filter(func(e): return e["type"] == "berg_arrived" and e["data"]["id"] == "kernel_berg")
+	# What fits is what the hour before it left room for: a few tonnes, not its 300.
+	check(more.size() == 1 and float(more[0]["data"]["tonnes"]) < 10.0 and absf(float(s.markets["kernel_l5"]["water_ice"]) - cap) < 1.0, "and lands only what fits (%s t), filling the market to its cap" % (str(more[0]["data"]["tonnes"]) if not more.is_empty() else "none"))
 
 
 func test_economy() -> void:

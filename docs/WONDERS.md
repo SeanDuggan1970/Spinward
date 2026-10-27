@@ -193,7 +193,7 @@ Chosen for reach (close to where the player already flies), variety (gravity, li
 3. **Cloud city over Venus.** **In** (27 October 2026): Cytherea Station in orbit and Aphrodite's Rest below, by glider. See *Venus* in DESIGN.md.
 4. **The Long Hall** (roof over Coprates Chasma). Mars megaproject in segments, like the Selene Ring.
 5. **The Ceres megasatellite** grows behind the Concord Pair, one group's cylinder at a time.
-6. **Ice tugs and pushers** as an NPC fleet with visible icebergs, plus berg arrivals as market events.
+6. **Ice tugs and pushers.** **In** (27 October 2026), as berg arrivals on the markets of the dry ports, parked bergs as set pieces and a title shot. Still to come: pushers met in transit, and supply runs to berg crews. See *Ice tugs and pushers* in DESIGN.md.
 7. **Hammerhead stations** as a new station shape for working ports.
 8. **Terminator on Mercury.** Late game, a moving port.
 

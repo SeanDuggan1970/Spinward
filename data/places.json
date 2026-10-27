@@ -574,7 +574,8 @@
 		],
 		"features": [
 			"bernal_frame",
-			"long_breath"
+			"long_breath",
+			"ice_berg"
 		]
 	},
 	"kalpana_one": {
@@ -1082,7 +1083,10 @@
 			"drift_mps": 0.08,
 			"look": "metal",
 			"note": "tailings from the smelters, drifting"
-		}
+		},
+		"features": [
+			"ice_berg"
+		]
 	},
 	"valhalla_station": {
 		"name": "Valhalla Station",
@@ -2537,7 +2541,9 @@
 				}
 			}
 		],
-		"features": [],
+		"features": [
+			"ice_berg"
+		],
 		"shuttle": {
 			"name": "the Assembly glider",
 			"body": "venus",
