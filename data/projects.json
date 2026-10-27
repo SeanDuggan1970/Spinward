@@ -1045,5 +1045,77 @@
 				"text": "A seat at every cylinder's first festival"
 			}
 		]
+	},
+	"terminator_rails": {
+		"name": "Terminator",
+		"place": "perihelion_station",
+		"description": "A city that rides rails round Mercury, keeping just ahead of the sunrise, as in Kim Stanley Robinson's 2312.",
+		"draw_t_per_day": 3.0,
+		"reveal": {
+			"after_days": 60
+		},
+		"stages": [
+			{
+				"name": "Rails across the night",
+				"needs": {
+					"refined_metals": 150,
+					"machine_parts": 60
+				}
+			},
+			{
+				"name": "The Dawn Wall",
+				"needs": {
+					"ceramic_feed": 120,
+					"carbon_fibre": 40
+				}
+			},
+			{
+				"name": "Domes and gardens",
+				"needs": {
+					"oxygen": 100,
+					"water_ice": 120,
+					"gene_stock": 3
+				}
+			},
+			{
+				"name": "Underway",
+				"needs": {
+					"robotics": 15,
+					"electronics": 20
+				}
+			}
+		],
+		"effects": {
+			"perihelion_station": {
+				"consumes_mult": 1.2,
+				"produces_mult": 1.2
+			}
+		},
+		"backer": "Dawnward Company",
+		"pitch": {
+			"why": "Because someone read 2312 at fourteen and never got over it. A city that walks round a planet at the pace of the dawn, so that every morning, for ever, you can go out and watch the Sun come up.",
+			"plan": "Lay twenty rails round Mercury at 45 south, build the Dawn Wall, the domes and the gardens on a platform that rides them, and set it moving. The Long View asked for one thing: the rails go round once, and no mine goes more than a kilometre from the rail bed.",
+			"offer": "Backers dock free at Perihelion and ride Terminator for life."
+		},
+		"perks": [
+			{
+				"min_t": 10,
+				"kind": "free_docking",
+				"place": "perihelion_station",
+				"text": "Free docking at Perihelion Station"
+			},
+			{
+				"min_t": 40,
+				"kind": "standing",
+				"operator": "Dawnward Company",
+				"value": 6,
+				"text": "The Company counts you among Terminator's builders"
+			},
+			{
+				"min_t": 90,
+				"kind": "promise",
+				"text": "A berth on Terminator, and a place at the Dawn Wall every morning"
+			}
+		]
 	}
 }

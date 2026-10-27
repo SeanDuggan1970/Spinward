@@ -196,6 +196,6 @@ Chosen for reach (close to where the player already flies), variety (gravity, li
 5. **The Ceres megasatellite.** **In** (27 October 2026): a project at Piazzi announced once the Concord Pair is done, four cylinders for four peoples. See *The Ceres megasatellite* in DESIGN.md.
 6. **Ice tugs and pushers.** **In** (27 October 2026), as berg arrivals on the markets of the dry ports, parked bergs as set pieces and a title shot. Still to come: pushers met in transit, and supply runs to berg crews. See *Ice tugs and pushers* in DESIGN.md.
 7. **Hammerhead stations.** **In** (27 October 2026): a station type, first used at Huygens Port. See *Hammerhead stations* in DESIGN.md.
-8. **Terminator on Mercury.** Late game, a moving port.
+8. **Terminator on Mercury.** **In** (27 October 2026): Perihelion Station in orbit, a project to lay the rails, then a town by lander that keeps pace with the dawn. See *Mercury* in DESIGN.md.
 
 And from the start: news and chatter about all the others as rumours, so the system is always talking about the next impossible thing.

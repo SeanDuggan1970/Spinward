@@ -176,6 +176,7 @@ The system should feel like a place where big things are being built. Each tier 
 | Hammerhead station | Huygens Port, Titan | 2 | **In** (station type) | A working port built like a long-haul ship |
 | Roofed canyon (the Long Hall) | Noctis Labyrinthus, Mars | 2–3 | **In** (project, then a town by shuttle) | Carbon fibre and ceramic feed into the build; food and the first vintage after |
 | Ceres megasatellite | 260 km from Piazzi, after the Concord Pair | 3 | **In** (project set piece) | Piazzi's flows x1.2; four new cylinders, each for a different people |
+| City on rails (Terminator) | Mercury, 45 S, behind the dawn line | 3 | **In** (port in orbit, project, then a town by lander) | Opens Mercury: sun-smelted metals out; water, food and parts in |
 | Earth–Mars cycler (Aldrin cycler) | Earth–Mars | 2 | Planned | A moving station you catch on its schedule |
 | Space farms | Kernel, Belt | 2–3 | Partly in (Kernel food) | Food chain away from Earth |
 | Lofstrom loop (launch loop) | Earth equator | 2 | Planned (backdrop) | Cheaper Earth-to-orbit freight |
@@ -1431,6 +1432,15 @@ Wonders shortlist item 5 (WONDERS.md), after Pekka Janhunen's proposal.
 - **The Long View's rule:** no cylinder bigger than its people can fill. Built from Ceres's own rock, with its nitrogen for the air.
 - **Set piece** (`set_pieces.gd` `_megasatellite`, feature `megasatellite` at Piazzi): a 60 km frame 260 km out, facing the Sun, and one cylinder (10 km long, 1 km radius) for each stage after the frame, each turning once every 66 s (0.92 g at its hull). Nothing shows until work starts.
 - **Not yet:** a port of its own; the cylinders are seen, not visited.
+
+## Mercury: Perihelion Station and Terminator (Oct 2026)
+
+Wonders shortlist item 8 (WONDERS.md), after Kim Stanley Robinson's *2312*.
+
+- **Perihelion Station** (`perihelion_station`): Mercury's up-port, in a near-polar orbit 400 km up, run by a new operator, the **Dawnward Company** (grey with orange). Ships iron, nickel and platinum smelted with free sunlight (metal powders, platinum metals) and makes propellant from polar-crater ice; wants food, air, parts, drones, ceramic feed and a little luxury. Its two freighters, *First Light* and *Long Morning* (`dawn_runners`), run platinum to Kibo Ring and bring food and electronics back.
+- **The project** (`terminator_rails`, revealed day 60): rails across the night (metal powders, machine parts), the Dawn Wall (ceramic feed, carbon fibre), domes and gardens (oxygen, water, gene stock), underway (drones, compute cores). The Long View's condition: the rails go round once, and no mine strays more than a kilometre from the rail bed.
+- **Terminator** (`terminator`, opens with the project): a city on twenty rails at 45 S, held 92 degrees round from the point under the Sun (a surface place `facing` the Sun with `lat_deg`/`lon_deg`), so it stays a few dozen kilometres into the dark behind the dawn line and goes round with it: about 2.6 km/h, once every 176-day solar day. Electric motors drive it; the novel's thermal-expansion drive is local folklore. Bar: the Dawn Wall. The Dawnward lander (`perihelion_station.shuttle`, 3 h, 300 cr + 150 cr/t) brakes all the way down on its engine (Mercury has no air), and the flight view draws the rails, the platform and its domes, and the Dawn Wall (`look.kind` `rail_city`).
+- **Simplifications:** the station's orbit is drawn as passing over the dawn line whenever a lander flies (a real near-polar orbit lines up with it only twice in each Mercury year); the city keeps an exact pace with the terminator where real rails would follow the ground.
 
 ## Milestones
 

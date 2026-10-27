@@ -480,6 +480,17 @@
 				"headline": "Six cylinders over Ceres",
 				"body": "The fourth new cylinder over Ceres spun up today, and the megasatellite now holds six, the Concord Pair among them. You can take a tram along the frame from a Venetian canal to a pine forest in twenty minutes. The monks have asked that the tram not stop at theirs after dark."
 			}
+		},
+		"terminator_rails": {
+			"announce": {
+				"dateline": "Perihelion Station, Mercury",
+				"headline": "Someone is building Terminator",
+				"body": "The Dawnward Company, a collective of four hundred engineers and one very old copy of 2312, will lay twenty rails round Mercury at 45 south and set a city moving along them at the pace of the dawn. The Long View agreed on one condition: the rails go round once, and no mine strays more than a kilometre from the rail bed. Metal powders and ceramic feed wanted at Perihelion."
+			},
+			"complete": {
+				"headline": "Terminator is underway",
+				"body": "Terminator moved for the first time this morning, at 2.6 kilometres an hour, and four hundred people walked out to the Dawn Wall to watch the Sun come up over Mercury's hills. Then they walked back, quickly. Ships can't land: the Dawnward lander flies down from Perihelion Station."
+			}
 		}
 	}
 }

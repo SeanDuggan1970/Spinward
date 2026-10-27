@@ -151,6 +151,9 @@ func _build_base(place: Dictionary) -> Node3D:
 	if look.get("kind", "") == "canyon":
 		_build_canyon(n, float(look.get("width_m", 2000.0)), float(look.get("length_m", 10000.0)), float(look.get("depth_m", 1000.0)))
 		return n
+	if look.get("kind", "") == "rail_city":
+		_build_rail_city(n)
+		return n
 	if look.get("kind", "") == "aerostat":
 		_build_aerostat(n, int(look.get("envelopes", 4)), float(look.get("envelope_m", 150.0)))
 		return n
@@ -280,6 +283,45 @@ func _build_canyon(n: Node3D, width: float, length: float, depth: float) -> void
 	fields.emission_energy_multiplier = 0.3
 	n.add_child(Kit.box(Vector3(length, 1.0, width * 0.8), fields, Vector3(start + length * 0.5, 0.5, 0.0)))
 	n.add_child(Kit.box(Vector3(length, 1.2, 60.0), Kit.mat("dark"), Vector3(start + length * 0.5, 0.6, 0.0)))
+	for k in 6:
+		n.add_child(Kit.beacon(Color("ffb050"), Vector3(-46.0 + 18.0 * k, 0.8, 50.0), 0.6, 1.6, float(k) / 6.0))
+
+
+## A city on rails (Terminator): its tracks running off both ways into the dark, the
+## long platform that rides them with its domes and gardens, and the Dawn Wall
+## standing up at its sunward end. The landing pad is beside it.
+func _build_rail_city(n: Node3D) -> void:
+	var pad := MeshInstance3D.new()
+	var disc := CylinderMesh.new()
+	disc.top_radius = 45.0
+	disc.bottom_radius = 47.0
+	disc.height = 1.0
+	disc.radial_segments = 48
+	pad.mesh = disc
+	pad.material_override = Kit.mat("grey")
+	n.add_child(pad)
+	var steel := Kit.mat("steel")
+	for k in 20:
+		var z := 140.0 + 14.0 * float(k)
+		n.add_child(Kit.box(Vector3(30000.0, 2.0, 3.0), steel, Vector3(0, 1.0, z)))
+	# The platform and its domes, lit warm from within.
+	var deck := Kit.box(Vector3(900.0, 30.0, 300.0), Kit.mat("grey"), Vector3(0, 22.0, 273.0))
+	n.add_child(deck)
+	var lit := Kit.glass(0.7)
+	for k in 5:
+		var dome := MeshInstance3D.new()
+		var hemi := SphereMesh.new()
+		hemi.radius = 70.0
+		hemi.height = 70.0
+		hemi.is_hemisphere = true
+		hemi.radial_segments = 32
+		hemi.rings = 12
+		dome.mesh = hemi
+		dome.material_override = lit
+		dome.position = Vector3(-320.0 + 160.0 * float(k), 37.0, 273.0)
+		n.add_child(dome)
+	# The Dawn Wall: the shield at the sunward end, taller than everything else.
+	n.add_child(Kit.box(Vector3(20.0, 160.0, 340.0), Kit.mat("offwhite"), Vector3(470.0, 80.0, 273.0)))
 	for k in 6:
 		n.add_child(Kit.beacon(Color("ffb050"), Vector3(-46.0 + 18.0 * k, 0.8, 50.0), 0.6, 1.6, float(k) / 6.0))
 

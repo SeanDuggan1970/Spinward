@@ -2719,5 +2719,153 @@
 			"delicacies": 0.06,
 			"wine_spirits": 0.04
 		}
+	},
+	"perihelion_station": {
+		"name": "Perihelion Station",
+		"operator": "Dawnward Company",
+		"description": "Mercury's up-port, 400 km over a world that is half furnace and half freezer. Sunlight here is six and a half times what Earth gets, so the station hides behind its own shade and its radiators are the biggest things on it. Below, the Dawnward Company's rails run round the planet in the dark just ahead of the sunrise. The station ships iron, nickel and platinum smelted with free sunlight, and water from the ice in the polar craters, where the Sun never reaches.",
+		"location": {
+			"type": "orbit",
+			"parent": "mercury",
+			"elements": {
+				"a_m": 2839700.0,
+				"e": 0.0,
+				"i_deg": 88.0,
+				"node_deg": 0.0,
+				"peri_deg": 0.0,
+				"m0_deg": 0.0
+			}
+		},
+		"station": {
+			"door": "clamshell",
+			"hub_radius_m": 30,
+			"hub_length_m": 170,
+			"ring_radius_m": 320,
+			"ring_tube_m": 20,
+			"spokes": 4,
+			"spin_rpm": 0.748,
+			"gravity_g": 0.2,
+			"colour": "grey"
+		},
+		"bay_traffic": {
+			"control": "tower",
+			"per_hour": 3
+		},
+		"services": [
+			"market",
+			"refuel"
+		],
+		"recipes": [
+			{
+				"inputs": {
+					"water_ice": 3
+				},
+				"outputs": {
+					"propellant": 2
+				}
+			}
+		],
+		"features": [],
+		"shuttle": {
+			"name": "the Dawnward lander",
+			"body": "mercury",
+			"max_t": 12,
+			"craft": "a four-legged lander with one engine and a sunshade on its back; Mercury has no air to fly through, only to fall onto",
+			"stops": {
+				"terminator": {
+					"hours": 3.0,
+					"fare": 300,
+					"fare_per_t": 150,
+					"via": "Wait for the orbit to pass over the dawn line, burn, fall, and brake all the way down on the engine onto the pad beside the moving city, timed to its pace. It walks round the planet at about 2.6 km an hour, so the pad is never quite where you left it."
+				}
+			}
+		},
+		"market": {
+			"refined_metals": 60,
+			"platinum_metals": 1.0,
+			"food": 40,
+			"oxygen": 20,
+			"machine_parts": 20,
+			"robotics": 6,
+			"electronics": 8,
+			"medical": 3,
+			"ceramic_feed": 10,
+			"carbon_fibre": 4,
+			"gene_stock": 0.5,
+			"delicacies": 1.0,
+			"water_ice": 80,
+			"propellant": 40
+		},
+		"produces": {
+			"refined_metals": 3.0,
+			"platinum_metals": 0.05
+		},
+		"consumes": {
+			"food": 2.0,
+			"oxygen": 1.0,
+			"machine_parts": 1.0,
+			"robotics": 0.3,
+			"electronics": 0.4,
+			"medical": 0.15,
+			"ceramic_feed": 0.5,
+			"carbon_fibre": 0.2,
+			"gene_stock": 0.02,
+			"delicacies": 0.05,
+			"water_ice": 1.0
+		}
+	},
+	"terminator": {
+		"name": "Terminator",
+		"operator": "Dawnward Company",
+		"foot_of": "perihelion_station",
+		"opens_with": "terminator_rails",
+		"description": "A city on rails, built because someone loved Kim Stanley Robinson's 2312. It rides twenty tracks round Mercury at 45 south, keeping pace with the slow dawn: about 2.6 km an hour, once round the planet every 176 days, always in the dark a few dozen kilometres behind the line where the Sun comes up. Electric motors drive it, fed from mirrors out in the sunlight ahead; the old story that the rails' own expansion in the heat pushes it along is local folklore, and everyone repeats it. Every morning the brave walk out to the Dawn Wall, the shield on its sunward side, to watch the Sun rise and then retreat before it catches them. Ships can't land here: the Dawnward lander comes down from Perihelion Station.",
+		"location": {
+			"type": "surface",
+			"parent": "mercury",
+			"facing": "sun",
+			"lat_deg": -45.0,
+			"lon_deg": -92.0
+		},
+		"services": [
+			"market",
+			"bar"
+		],
+		"bar": {
+			"name": "the Dawn Wall",
+			"patrons": 80,
+			"round_cr": 10
+		},
+		"look": {
+			"kind": "rail_city"
+		},
+		"market": {
+			"collectibles": 0.5,
+			"handmade_goods": 0.6,
+			"refined_metals": 10,
+			"water_ice": 20,
+			"food": 20,
+			"oxygen": 8,
+			"machine_parts": 8,
+			"medical": 2,
+			"gene_stock": 0.5,
+			"delicacies": 1.0,
+			"wine_spirits": 0.6
+		},
+		"produces": {
+			"collectibles": 0.02,
+			"handmade_goods": 0.03,
+			"refined_metals": 0.5
+		},
+		"consumes": {
+			"water_ice": 1.0,
+			"food": 1.0,
+			"oxygen": 0.4,
+			"machine_parts": 0.4,
+			"medical": 0.1,
+			"gene_stock": 0.02,
+			"delicacies": 0.05,
+			"wine_spirits": 0.03
+		}
 	}
 }

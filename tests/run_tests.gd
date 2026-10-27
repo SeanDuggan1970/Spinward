@@ -107,6 +107,7 @@ func _initialize() -> void:
 	test_venus()
 	test_long_hall()
 	test_ceres_megasat()
+	test_terminator()
 	test_shuttle_view_profile()
 	test_edge_cases()
 	test_power_budget()
@@ -2432,6 +2433,46 @@ func test_ceres_megasat() -> void:
 	s.projects["concord_pair"]["done"] = true
 	sim.advance_game_time(DAY)
 	check(s.projects["ceres_megasat"].get("revealed", false), "Then it is announced")
+
+
+func test_terminator() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	# The city keeps its place behind the dawn line, so it walks round Mercury with it:
+	# always 92 degrees round from the point under the Sun, on the night side.
+	for days in [0.0, 30.0, 61.0]:
+		var t: float = s.time_s + days * DAY
+		var mercury: Array = sim.ephemeris.position("mercury", t)
+		var city := V.normalized(V.sub(sim.ephemeris.position("terminator", t), mercury))
+		var sun := V.normalized(V.sub(sim.ephemeris.position("sun", t), mercury))
+		var angle := rad_to_deg(acos(clampf(V.dot(city, sun), -1.0, 1.0)))
+		# At 45 S and 92 degrees round, cos(angle) = cos(45) cos(92) (plus a little for
+		# the Sun's height over Mercury's equator, which is near zero).
+		check(absf(angle - rad_to_deg(acos(cos(deg_to_rad(45.0)) * cos(deg_to_rad(92.0))))) < 2.0, "On day %d Terminator is just behind the dawn line (%.1f degrees from the Sun's point)" % [int(days), angle])
+	check(d.home_port("terminator") == "perihelion_station", "Your ship waits at Perihelion Station")
+	# Walking pace at 45 S: once round in Mercury's 176-day solar day.
+	var pace := TAU * float(d.bodies["mercury"]["radius_m"]) * cos(deg_to_rad(45.0)) / (176.0 * DAY) * 3.6
+	check(absf(pace - 2.6) < 0.2, "It moves at walking pace (%.1f km/h)" % pace)
+	# The way there: a route from Kibo Ring, then the lander once the rails are done.
+	s.ship["hull"] = "deep_freighter"
+	s.ship["modules"] = d.ships["deep_freighter"]["modules"].duplicate()
+	s.ship["fuel_t"] = ShipStats.fuel_capacity_t(s.ship, d)
+	var plan := Navigation.plan(s.ship, d, sim.ephemeris, "kibo_ring", "perihelion_station", s.time_s)
+	check(plan.get("ok", false), "A deep freighter can plan a route to Mercury (%s)" % plan.get("reason", ""))
+	s.credits = 1.0e6
+	s.location = {"status": "docked", "place": "kibo_ring"}
+	check(sim.apply({"type": "depart", "to": "perihelion_station"}) == "", "Depart Kibo Ring for Mercury")
+	sim.advance_game_time(float(s.location["arrive_t"]) - s.time_s + 60.0)
+	check(s.location["status"] == "approach" and s.location["place"] == "perihelion_station", "Arrive at Perihelion Station")
+	check(sim.apply({"type": "dock"}) == "" and s.location == {"status": "docked", "place": "perihelion_station"}, "Docked at Perihelion Station")
+	s.credits = 50000.0
+	s.ship["cargo"] = {}
+	check(sim.apply({"type": "take_shuttle", "to": "terminator"}) == "Terminator is still being built", "Terminator takes nobody until it is underway")
+	s.projects["terminator_rails"]["done"] = true
+	check(sim.apply({"type": "take_shuttle", "to": "terminator"}) == "", "then the lander flies there")
+	sim.advance_game_time(float(s.location["arrive_t"]) - s.time_s + 1.0)
+	check(s.location == {"status": "docked", "place": "terminator"}, "Aboard Terminator")
 
 
 func test_mars_shuttle() -> void:

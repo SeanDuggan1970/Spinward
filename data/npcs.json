@@ -931,6 +931,43 @@
 				48,
 				120
 			]
+		},
+		"dawn_runners": {
+			"operator": "Dawnward Company",
+			"hull": "deep_freighter",
+			"behaviour": "route",
+			"count": 2,
+			"names": [
+				"First Light",
+				"Long Morning"
+			],
+			"commission_days": [
+				0,
+				100
+			],
+			"route": [
+				{
+					"at": "perihelion_station",
+					"buy": [
+						"platinum_metals"
+					],
+					"to": "kibo_ring"
+				},
+				{
+					"at": "kibo_ring",
+					"buy": [
+						"food",
+						"electronics",
+						"delicacies"
+					],
+					"to": "perihelion_station"
+				}
+			],
+			"fill": 0.4,
+			"dwell_hours": [
+				48,
+				120
+			]
 		}
 	},
 	"local_traffic": {
