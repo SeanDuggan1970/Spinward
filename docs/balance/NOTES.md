@@ -383,3 +383,10 @@ Full write-up: [2026-10-07-economy-together.md](2026-10-07-economy-together.md).
 
 - **After the trim:** pharmaceuticals drop to fifth (Kalpana One to Kibo Ring, 29k). Compute cores into Trojan Yards, whose drone works eat them, now lead from four different sources; the best single route (Clarke Exchange, 67k over seven legs) is 1.29 times the next (52k). The means differ by less than the seeds do.
 - **The bergs** don't show in the bot's routes: it doesn't buy water for the Kernel, Psyche or Venus. A berg landing drops water there for a few weeks; hand-play should check whether that makes a nice opportunistic run (lunar water to the Kernel just after a berg is a bad idea; just before, a good one).
+
+
+## The Long Hall and the Ceres megasatellite (2026-10-27)
+
+- Changed data: two projects (`long_hall` at Ares Ring, revealed day 40; `ceres_megasat` at Piazzi, revealed when the Concord Pair is done), the Long Hall town and its shuttle stop, carbon fibre and ceramic feed on Ares Ring's market.
+- Balance bot (5 seeds, 180 days, upgrade=1): identical, seed for seed, to the run before (mean 93,194 cr, median first upgrade day 6.6). The bot never trades at Ares Ring, so it doesn't feel the Hall's draws, and the megasatellite never starts within 180 days because the Concord Pair isn't finished by then.
+- Worth a hand-played check: whether the Long Hall's draws on Ares Ring's carbon fibre and ceramic feed (neither made at Mars) make a good long haul from Huygens, Piazzi or the Moon once it is revealed.
