@@ -22,7 +22,7 @@ Read `docs/DESIGN.md` first. It is the source of truth for scope, pillars and ar
 
 ## Title screen
 
-The title screen (`view/title_screen.gd`) is the game's shop window, so it must always show the current design. Build every shot from the same builders the game uses (`Models.station`, `Models.ship`, `kestrel.gd`, `satellite_model.gd`, `SetPieces`, `SkyKit`, liveries from `Livery`), never from a copy or a hand-made stand-in. When a builder changes, the title picks it up. When you add a new kind of thing to the game (a hull, a station type, a set piece), consider giving it a title shot. After a visual change to anything the title shows, re-shoot it with `-- --title=<dir>`.
+The title screen (`view/title_screen.gd`) is the game's shop window, so it must always show the current design. Build every shot from the same builders the game uses (`Models.station`, `Models.ship`, `kestrel.gd`, `satellite_model.gd`, `SetPieces`, `SkyKit`, liveries from `Livery`), never from a copy or a hand-made stand-in. When a builder changes, the title picks it up. When you add a new kind of thing to the game (a hull, a station type, a set piece), consider giving it a title shot. A design change is not finished until the attract screen reflects it: new things on show, and its words (the subtitle, the captions, the caption plate's lines) in step with the current design. After any change to what the title shows, re-shoot it with `-- --title=<dir>`.
 
 ## Exception: local flight
 

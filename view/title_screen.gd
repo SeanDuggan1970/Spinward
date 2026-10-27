@@ -57,6 +57,8 @@ var _hero_len := 30.0
 var _where := ""
 ## Overrides for the caption card's name and description (a Kestrel's pod, say).
 var _caption := {}
+## What the hero is carrying and where to, for the caption card ("" when it has no hold).
+var _hold := ""
 var _sun_dir := Vector3(-0.55, 0.35, 0.75).normalized()
 var _update: Callable
 var _spinners: Array = []
@@ -102,6 +104,7 @@ func hero_info() -> Dictionary:
 		"thrust_n": ShipStats.thrust_n(ship, data),
 		"mass_t": ShipStats.dry_mass_t(ship, data),
 		"where": _where,
+		"hold": _hold,
 		"showing": clock > 2.5 and clock < SHOT_S - 2.0,
 	}
 
@@ -122,6 +125,30 @@ func next_shot() -> void:
 
 
 # --- shared pieces ------------------------------------------------------------------
+
+## A cargo for the caption card: any good in the game, a hold's worth of bulk or a few
+## tonnes of something dear, bound for a port that wants it.
+func _pick_hold(ship: Dictionary) -> String:
+	var cap := ShipStats.cargo_capacity_t(ship, data)
+	if cap < 1.0:
+		return ""
+	var goods: Array = data.goods.keys().filter(func(g): return not String(g).begins_with("_"))
+	goods.sort()
+	var good: String = goods[_rng.randi() % goods.size()]
+	var dear := float(data.goods[good]["base_price"]) >= 4000.0
+	var tonnes := maxf(1.0, roundf(cap * (_rng.randf_range(0.05, 0.25) if dear else _rng.randf_range(0.5, 1.0))))
+	# Bound for a port that wants it (uses it, or feeds it to a works).
+	var wants := func(p: String) -> bool:
+		var place: Dictionary = data.places[p]
+		return place.get("consumes", {}).has(good) or place.get("recipes", []).any(func(r): return r["inputs"].has(good))
+	var ports: Array = data.places.keys().filter(func(p): return not data.places[p].has("foot_of") and data.places[p].has("station") and wants.call(p))
+	if ports.is_empty():
+		return ""
+	ports.sort()
+	var port: String = ports[_rng.randi() % ports.size()]
+	return "%s, %d t for %s" % [data.goods[good]["name"], int(tonnes), data.places[port]["name"]]
+
+
 
 func _ship_dict(hull: String) -> Dictionary:
 	var h: Dictionary = data.ships[hull]
@@ -158,6 +185,7 @@ func _pick_hero(hull: String = "") -> void:
 		_caption = {"name": "Kestrel lander  ·  %s pod" % String(spec["name"]).to_lower(), "description": String(spec.get("description", ""))}
 	else:
 		model = Models.ship(_ship_dict(_hero_hull), data, livery)
+	_hold = _pick_hold(_ship_dict(_hero_hull))
 	_hero = model["node"]
 	_hero_rig = model["rig"]
 	_hero_model = model
