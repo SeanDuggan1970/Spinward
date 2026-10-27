@@ -178,8 +178,14 @@ func _depart(command: Dictionary) -> String:
 		return "you don't know where that is"
 	var here: String = s.location["place"]
 	if sim().data.places.get(here, {}).has("foot_of"):
-		var home: String = sim().data.home_port(here)
-		return "your ship is at %s: %s back first" % [sim().data.places[home]["name"], "take the shuttle" if _by_shuttle(here) else "ride the ribbon"]
+		# Every leg of the way back, up the chain to the ship.
+		var legs := []
+		var at := here
+		while sim().data.places.get(at, {}).has("foot_of"):
+			var up: String = sim().data.places[at]["foot_of"]
+			legs.append("%s to %s" % ["take the shuttle" if _by_shuttle(at) else "ride the ribbon", sim().data.places[up]["name"]])
+			at = up
+		return "your ship is at %s: %s first" % [sim().data.places[at]["name"], ", then ".join(legs)]
 	if sim().data.locations[to].has("foot_of"):
 		return "ships can't land at %s: %s down from %s" % [sim().data.locations[to]["name"], "take the shuttle" if _by_shuttle(to) else "ride the elevator", sim().data.places[sim().data.locations[to]["foot_of"]]["name"]]
 	if not Perks.place_open(s, sim().data, to):

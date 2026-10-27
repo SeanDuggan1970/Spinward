@@ -147,7 +147,6 @@ func _build_base(place: Dictionary) -> Node3D:
 	var n := Node3D.new()
 	var look: Dictionary = place.get("look", {})
 	if look.get("kind", "") == "skylight":
-		_pad(n)
 		_build_skylight(n, float(look.get("skylight_m", 65.0)))
 		return n
 	if look.get("kind", "") == "canyon":
@@ -219,6 +218,7 @@ func _pad(n: Node3D) -> void:
 ## the Sun, a ring of lamps round the rim, and the low regolith-banked shelters of the
 ## surface crew. Everyone else lives below.
 func _build_skylight(n: Node3D, width: float) -> void:
+	_pad(n)
 	var at := Vector3(180.0, 0.0, 40.0)
 	var pit := MeshInstance3D.new()
 	var shaft := CylinderMesh.new()
@@ -691,8 +691,7 @@ func _update() -> void:
 	camera.look_at_from_position(cam, pos, up)
 	var left := maxf(float(_loc["arrive_t"]) - t, 0.0)
 	var to_name: String = sim.data.places[_loc["to"]]["name"]
-	var way := ("TO" if _loc["down"] else "BACK TO") if not _hop.is_empty() else ("DOWN TO" if _loc["down"] else "UP TO")
-	_title.text = "%s  ·  %s %s" % [String(_line["name"]).to_upper(), way, to_name.to_upper()]
+	_title.text = "%s  ·  %s %s" % [String(_line["name"]).to_upper(), ShuttleSystem.heading(sim.data, _loc["line"], _loc["down"]).to_upper(), to_name.to_upper()]
 	var lines := [
 		String(p["phase"]),
 		"",

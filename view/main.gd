@@ -26,6 +26,7 @@ const Bindings := preload("res://view/bindings.gd")
 const SleepOverlay := preload("res://view/sleep_overlay.gd")
 const WakeDigest := preload("res://view/wake_digest.gd")
 const SleepSystem := preload("res://sim/systems/sleep_system.gd")
+const ShuttleSystem := preload("res://sim/systems/shuttle_system.gd")
 const Spin := preload("res://sim/spin.gd")
 const COMMS_KEEP := 40
 
@@ -379,7 +380,7 @@ func _handle_events() -> void:
 				notice("On %s for %s: %s. Fare %s." % [line["name"], sim.data.places[d["to"]]["name"], UI.duration(float(d["hours"]) * 3600.0), UI.money(float(d["fare"]))], UI.AMBER)
 			"shuttle_departed":
 				var shuttle: Dictionary = sim.data.places[d["line"]]["shuttle"]
-				notice("On %s %s %s: %s. Fare %s." % [shuttle["name"], "down to" if d["down"] else "up to", sim.data.places[d["to"]]["name"], UI.duration(float(d["hours"]) * 3600.0), UI.money(float(d["fare"]))], UI.AMBER)
+				notice("On %s %s %s: %s. Fare %s." % [shuttle["name"], ShuttleSystem.heading(sim.data, d["line"], d["down"]), sim.data.places[d["to"]]["name"], UI.duration(float(d["hours"]) * 3600.0), UI.money(float(d["fare"]))], UI.AMBER)
 			"pod_fitted":
 				notice("Fitted a %s to the lander." % String(sim.data.pods["pods"][d["pod"]]["name"]).to_lower(), UI.GOOD)
 				refresh = true
@@ -463,7 +464,7 @@ func _handle_events() -> void:
 			"shuttle_arrived":
 				play_sfx("dock_clunk", -8.0)
 				if d["down"]:
-					notice("Down at %s. Your ship waits at %s." % [sim.data.places[d["place"]]["name"], sim.data.places[sim.data.home_port(d["place"])]["name"]], UI.GOOD)
+					notice("%s %s. Your ship waits at %s." % ["At" if ShuttleSystem.is_hop(sim.data, sim.data.places[d["place"]]["foot_of"]) else "Down at", sim.data.places[d["place"]]["name"], sim.data.places[sim.data.home_port(d["place"])]["name"]], UI.GOOD)
 				elif sim.data.home_port(d["place"]) != d["place"]:
 					notice("Back at %s. Your ship waits at %s." % [sim.data.places[d["place"]]["name"], sim.data.places[sim.data.home_port(d["place"])]["name"]], UI.GOOD)
 				else:

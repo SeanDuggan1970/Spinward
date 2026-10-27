@@ -44,6 +44,14 @@ static func is_hop(data, port: String) -> bool:
 	return data.places[port]["location"].get("type", "") == "surface"
 
 
+## How a flight on `port`'s line is said, lower case: "down to" and "up to" from
+## orbit, "to" and "back to" on a hop.
+static func heading(data, port: String, down: bool) -> String:
+	if is_hop(data, port):
+		return "to" if down else "back to"
+	return "down to" if down else "up to"
+
+
 ## Every flight from where you are docked: [{port, line (the shuttle: name, body, max_t),
 ## stop (that base's hours, fare, fare_per_t, via), to, down}]. From the port, one down to
 ## each base; from a base, one back up. Empty if no shuttle calls here.

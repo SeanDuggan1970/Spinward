@@ -2349,7 +2349,7 @@ func test_the_nave() -> void:
 	check(s.location == {"status": "docked", "place": "the_nave"}, "At The Nave")
 	check(sim.apply({"type": "buy", "good": "handmade_goods", "tonnes": 0.2}) == "", "Buy the glassblowers' work")
 	var why: String = sim.apply({"type": "depart", "to": "kibo_ring"})
-	check(why.contains("Halo Depot"), "Trying to fly off, you are told your ship is at Halo Depot (%s)" % why)
+	check(why.contains("Halo Depot") and why.contains("Line Foot, then ride the ribbon"), "Trying to fly off, you are told your ship is at Halo Depot and the way back to it (%s)" % why)
 	var back := Shuttle.flight_to(d, "the_nave")
 	check(not back["down"] and back["to"] == "line_foot", "The hopper flies back to Line Foot")
 

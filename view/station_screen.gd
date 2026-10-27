@@ -426,9 +426,8 @@ func _shuttle_panel(place_id: String, flight: Dictionary) -> Control:
 	var stop: Dictionary = flight["stop"]
 	var to: String = flight["to"]
 	var to_name: String = d.places[to]["name"]
-	# A hop from a town on the surface goes "to" and "back to", not down and up.
 	var hop := ShuttleSystem.is_hop(d, flight["port"])
-	var p := UI.panel("%s  ·  %s" % [String(line["name"]).to_upper(), (("to " if hop else "down to ") if flight["down"] else ("back to " if hop else "up to ")) + to_name])
+	var p := UI.panel("%s  ·  %s %s" % [String(line["name"]).to_upper(), ShuttleSystem.heading(d, flight["port"], flight["down"]), to_name])
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 16)
 	p[1].add_child(row)
@@ -453,7 +452,7 @@ func _shuttle_panel(place_id: String, flight: Dictionary) -> Control:
 	var why := ShuttleSystem.blocked(d, s, place_id, to)
 	if why != "":
 		info.add_child(UI.label(why.capitalize(), UI.WARN, 13))
-	row.add_child(UI.button("Fly down" if flight["down"] else "Fly up", send.bind({"type": "take_shuttle", "to": to}), why == ""))
+	row.add_child(UI.button(("Fly" if flight["down"] else "Fly back") if hop else ("Fly down" if flight["down"] else "Fly up"), send.bind({"type": "take_shuttle", "to": to}), why == ""))
 	return p[0]
 
 

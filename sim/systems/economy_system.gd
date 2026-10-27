@@ -35,12 +35,12 @@ func tick(_game_dt: float) -> void:
 	_open_markets()
 	# A day at a time while the player sleeps (Sim.step_s).
 	var step: float = sim().step_s()
-	var before: float = s.economy_t
 	while s.economy_t + step <= s.time_s:
 		_integrate(step / 86400.0)
+		# A berg lands in the step it arrives in, so a long sleep relaxes it with the
+		# market rather than adding it at the end.
+		_bergs(s.economy_t, s.economy_t + step)
 		s.economy_t += step
-	if s.economy_t > before:
-		_bergs(before, s.economy_t)
 
 
 ## Ice bergs parked off a port since `from` (exclusive) up to `to` (balance.bergs): each
