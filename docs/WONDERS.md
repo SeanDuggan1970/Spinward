@@ -32,14 +32,14 @@ Most wonders should start as rumours, become projects, and end as ports or set p
 
 ### Cloud cities of Venus
 - **Real basis:** About 50 km above Venus the pressure is near one bar and the temperature near Earth's. Breathable air is a lifting gas in Venus's CO2, so a habitat full of air floats. NASA's HAVOC study (2014) sketched crewed airships there and a floating cloud city as the long-term goal ([coverage](https://www.blimpinfo.com/airships/nasa-study-proposes-airships-cloud-cities-for-venus-exploration/), [Vice](https://www.vice.com/en/article/please-build-a-cloud-city-over-venus)). Gravity is 0.9 g: the most Earth-like anywhere.
-- **The dream:** Sky castles for real. Towers and gardens hanging under transparent envelopes kilometres across, sailing round the planet every few days on the super-rotating winds, sunrise every 50 hours, sulphuric clouds below like an endless white sea. Walkways between envelopes; a cathedral whose nave is the gas bag.
+- **The dream:** Sky castles for real. Towers and gardens hanging under transparent envelopes kilometres across, sailing round the planet about every four Earth days on the super-rotating winds (so a day and a night each last about two), sulphuric clouds below like an endless white sea. Walkways between envelopes; a cathedral whose nave is the gas bag.
 - **Bend:** Acid-proof envelopes and cheap ascent vehicles are taken as solved.
 - **In game:** Opens Venus as a region (tier 2–3). Port: *Aphrodite's Rest* or similar. Exports: collectibles, "Venus light" art, sulphur chemicals. Imports: everything solid. Feed destination: the first wedding over Venus.
 
 ### Titan's sky towns and human flight
 - **Real basis:** Titan has a thicker atmosphere than Earth (about 1.5 bar) and gravity of 0.14 g, so a person with strapped-on wings can fly under their own power. No pressure suit needed, only warmth and a mask.
 - **The dream:** Towns hung from cliffs and balloons over the methane seas, where everyone flies. Wing-makers are the best-paid artisans. Annual races across Kraken Mare. Orange sky, Saturn invisible behind the haze, a sunset that lasts for days.
-- **Bend:** Heat is the real problem (-180 °C); we let insulation and fusion power make it simple.
+- **Bend:** Cold is the real problem (about -180 °C); we let insulation and fusion power make it simple.
 - **In game:** Huygens Port gains a foot-of town (*Wingfall*) and sells flights to Feed crews. Imports: handmade wings, delicacies. A "First" contract: fly across Ligeia Mare.
 
 ## 2. Under the rock: cathedrals of stone
@@ -127,9 +127,9 @@ Most wonders should start as rumours, become projects, and end as ports or set p
 
 ## 8. Towers, tethers and halfway houses
 
-- **Climber hotels:** a hotel halfway up the Pavonis Line, where gravity is a third of Mars's own and the planet curves away below.
+- **Climber hotels:** a hotel a few thousand kilometres up the Pavonis Line, where you weigh a third of what you do on Mars and the planet curves away below. Higher still, near the top, you weigh almost nothing.
 - **Skyhook gardens:** hanging gardens on the counterweight of a skyhook, swinging through space.
-- **Stickney amphitheatre:** Phobos's great crater roofed as an open-air theatre with Mars filling the sky.
+- **Stickney amphitheatre:** Phobos's great crater roofed as an open-air theatre with Mars hanging huge in the sky.
 
 ## 9. Working giants: hammerheads, tugs and pushers
 
