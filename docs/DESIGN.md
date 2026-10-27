@@ -100,6 +100,21 @@ Other upgrade tracks: cargo, tanks, radiators (heat), shielding (radiation), sen
 - **Events** shift supply and demand: a solar storm grounds traffic, a new habitat opens, a comet arrives.
 - **Post-scarcity flavour:** basic goods get cheaper over the campaign as automation spreads. Profit moves to rare, distant, time-critical or skilled work. This keeps the frontier attractive and stops early routes from staying optimal.
 
+### Proposed goods for the 2060s (draft, 27 October 2026, awaiting the owner's sign-off)
+
+Owner's brief: *the goods for sale are too generic. In the future much of the shipping will be high-tech processors and storage, and 3D-printer feedstocks (metals, plastics, organics), plus luxury goods. Many pioneers will crave top-end things from Earth: space rats in godlike machines wanting a taste of home.*
+
+The current 14 goods (`data/goods.json`) are mostly raw materials and basics. The proposal is about 28, in six groups. Ids stay the same where only the name changes, so saves keep working; saves holding a removed id get a migration.
+
+- **Bulk (keep):** water ice, oxygen, propellant, regolith, volatiles, deuterium, helium-3, platinum metals, machine parts, habitat modules, medical supplies.
+- **High tech** (split from electronics): compute cores (processors and mind-grade accelerators), storage lattices (dense memory for minds, archives and the Feed), sensors and optics, drones and robotics.
+- **Printer feedstocks:** metal powders (the `refined_metals` id, renamed), polymer feed, bio feed, ceramic and glass feed, carbon fibre and graphene.
+- **Food:** staples (the `food` id, renamed: vat-grown and hydroponic, cheap everywhere), seeds and gene stock.
+- **Luxuries from Earth:** Earth delicacies (coffee, chocolate, cheese, fresh fruit), fine wine and spirits, handmade goods, keepsakes and antiques. Light and dear, worth more the further from Earth.
+- **Frontier exports to Earth:** orbital pharmaceuticals and crystals (grown in microgravity), frontier collectibles (the first Martian vintage, comet-carved art, things the Feed made famous).
+
+Markets follow the setting: Earth-orbit ports export compute and luxuries, Mars brews and grows, the Belt prints from powders, and the outer system pays most for a taste of home. Light, valuable goods could make small ships too rich, so prices and quantities are tuned with the balance bot before this ships. Contracts and news then name the new goods.
+
 ## Megastructures: the awe ladder
 
 The system should feel like a place where big things are being built. Each tier adds structures that are plausible at that point in the story, and each one does a job in the economy, not just in the sky. Inspired by Isaac Arthur's *Megastructure Compendium* (Science & Futurism with Isaac Arthur, [YouTube](https://www.youtube.com/watch?v=1xt13dn74wc)). The descriptions here are our own.
