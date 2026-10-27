@@ -174,6 +174,8 @@ The system should feel like a place where big things are being built. Each tier 
 | McKendree cylinder, Bishop ring | — | Far future | Out of scope | Lore and dreams only |
 | Dyson swarms, Matrioshka brains, stellar engines | — | Far future | Out of scope | "What the Commons dream about" |
 
+**Beyond the ladder:** [WONDERS.md](WONDERS.md) (draft) collects the dream architecture of the cap's-off era: sky castles over Venus, lava-tube cathedrals, roofed canyons, air bubbles you fly in, glass domes and tube-ways, hammerhead stations, ice tugs and pushers, and a shortlist of what to add first.
+
 Set pieces are built at true scale (kilometres) in `view/flight/set_pieces.gd`, arranged in the sky beyond each station and oriented by the real Sun, Earth and Moon directions. They are view-only; their economic role lives in the place data.
 
 ## Megaprojects: building the backyard together
