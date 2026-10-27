@@ -1179,7 +1179,7 @@
 	"huygens_port": {
 		"name": "Huygens Port",
 		"operator": "Huygens Trust",
-		"description": "High over Titan's orange haze. Below, methane seas and nitrogen air; above, Saturn and its rings. Titan's hydrocarbons crack into propellant and volatiles cheaper here than anywhere in the system.",
+		"description": "High over Titan's orange haze. Below, methane seas and nitrogen air; above, Saturn and its rings. Titan's hydrocarbons crack into propellant and volatiles cheaper here than anywhere in the system. It is built like a long-haul ship: a spinning drum for a head, where the people live and the ships dock, then a still spine more than a kilometre long carrying the tanks, out to the fusion plant and its radiators behind a shadow shield.",
 		"location": {
 			"type": "orbit",
 			"parent": "titan",
@@ -1193,13 +1193,17 @@
 			}
 		},
 		"station": {
-			"hub_radius_m": 32,
-			"hub_length_m": 180,
-			"ring_radius_m": 380,
-			"ring_tube_m": 24,
-			"spokes": 4,
-			"spin_rpm": 0.767,
+			"door": "iris",
+			"type": "hammerhead",
+			"hub_radius_m": 80,
+			"hub_length_m": 160,
+			"ring_radius_m": 0,
+			"ring_tube_m": 0,
+			"spokes": 0,
+			"spin_rpm": 1.672,
 			"gravity_g": 0.25,
+			"port_radius_m": 9,
+			"spine_m": 1200,
 			"colour": "orange"
 		},
 		"bay_traffic": {

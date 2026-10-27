@@ -539,7 +539,7 @@ func _build_touchdown() -> void:
 ## Into the bay: a ship comes up the axis folding its panels while the doors open,
 ## and glides in under the lamps.
 func _build_docking() -> void:
-	var ports := ["trojan_yards", "shackleton_port", "clarke_exchange", "hektor_reach"]
+	var ports := ["trojan_yards", "shackleton_port", "clarke_exchange", "hektor_reach", "huygens_port"]
 	var place: String = ports[_rng.randi() % ports.size()]
 	_where = "%s  ·  cleared in" % data.places[place]["name"]
 	_light(Vector3(-0.6, 0.45, 0.66), 1.5, Vector3(40, 30, 60))
@@ -547,6 +547,10 @@ func _build_docking() -> void:
 		_body("moon", 9000.0, Vector3(-6000.0, -9500.0, -16000.0))
 	elif place == "hektor_reach":
 		_body("jupiter", 9000.0, Vector3(14000.0, -3000.0, -40000.0))
+	elif place == "huygens_port":
+		# The hammerhead over Titan's haze, Saturn beyond.
+		_body("titan", 12000.0, Vector3(-4000.0, -16000.0, -22000.0))
+		_body("saturn", 6000.0, Vector3(20000.0, 7000.0, -90000.0))
 	else:
 		_body("earth", 14000.0, Vector3(9000.0, -12500.0, -19000.0), 0.004)
 	var stowed := ShipRig.stowed_radius(_hero_model)

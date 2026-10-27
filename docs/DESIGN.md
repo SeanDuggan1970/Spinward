@@ -173,6 +173,7 @@ The system should feel like a place where big things are being built. Each tier 
 | Air bubble (the Long Breath) | 10 km off the Kernel, L5 | 2 | **In** (project, then a port) | Carbon fibre, polymer and air into the build; a flyers' town after (WONDERS.md) |
 | Cloud city (Aphrodite's Rest) | 55 km above Venus, under Cytherea Station | 2 | **In** (port in orbit, city by glider) | Opens Venus: carbon fibre and oxygen from the air out; water in |
 | Ice tugs and pushers | Outer Belt to the Kernel, Psyche and Venus | 2 | **In** (berg arrivals, set pieces) | Water prices drop when a berg is parked off a dry port |
+| Hammerhead station | Huygens Port, Titan | 2 | **In** (station type) | A working port built like a long-haul ship |
 | Earth–Mars cycler (Aldrin cycler) | Earth–Mars | 2 | Planned | A moving station you catch on its schedule |
 | Space farms | Kernel, Belt | 2–3 | Partly in (Kernel food) | Food chain away from Earth |
 | Lofstrom loop (launch loop) | Earth equator | 2 | Planned (backdrop) | Cheaper Earth-to-orbit freight |
@@ -1401,6 +1402,14 @@ Wonders shortlist item 6 (WONDERS.md): icebergs pushed in from the Belt for the 
 - **Set piece** (`set_pieces.gd` `_ice_berg`, feature `ice_berg` at the three ports): the parked berg with its pusher still bolted on astern, and a quarry crawler cutting blocks on its face.
 - **Attract screen:** a new title shot, `berg`: a berg under way in the outer Belt, its pusher throwing a plume of steam, the hero flying escort.
 - **Not yet:** pushers as NPC traffic you can meet in transit, and contracts to supply a berg crew on the way.
+
+## Hammerhead stations (Oct 2026)
+
+Wonders shortlist item 7 (WONDERS.md): a working port built like a long-haul ship, people at one end and the reactor at the other.
+
+- **The type** (`station.type` `hammerhead`, `view/flight/models.gd` `_spine`): a spinning drum head with the docking port on its forward face (the settlement drum, so bays, windows and the docking face all work as before), then a still spine (`station.spine_m`, default 1,200 m) of truss and tank clusters, a shadow shield, the fusion plant and its radiator fins. The spine doesn't turn with the head, and it registers its own colliders.
+- **Huygens Port** is the first: a head 80 m in radius and 160 m long, spinning at 1.67 rpm for 0.25 g (under the roughly 2 rpm people tolerate comfortably), with a 1.2 km spine. It docks in the trial like every other port.
+- **Attract screen:** Huygens joins the title's docking shot, over Titan's haze with Saturn beyond.
 
 ## Milestones
 

@@ -194,7 +194,7 @@ Chosen for reach (close to where the player already flies), variety (gravity, li
 4. **The Long Hall** (roof over Coprates Chasma). Mars megaproject in segments, like the Selene Ring.
 5. **The Ceres megasatellite** grows behind the Concord Pair, one group's cylinder at a time.
 6. **Ice tugs and pushers.** **In** (27 October 2026), as berg arrivals on the markets of the dry ports, parked bergs as set pieces and a title shot. Still to come: pushers met in transit, and supply runs to berg crews. See *Ice tugs and pushers* in DESIGN.md.
-7. **Hammerhead stations** as a new station shape for working ports.
+7. **Hammerhead stations.** **In** (27 October 2026): a station type, first used at Huygens Port. See *Hammerhead stations* in DESIGN.md.
 8. **Terminator on Mercury.** Late game, a moving port.
 
 And from the start: news and chatter about all the others as rumours, so the system is always talking about the next impossible thing.

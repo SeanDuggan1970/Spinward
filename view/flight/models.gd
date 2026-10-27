@@ -30,7 +30,10 @@ static func ship(ship_state: Dictionary, data, livery: Dictionary = {}) -> Dicti
 ## all about the Z axis (a cylinder may carry an x, y offset, a torus a z). station.type
 ## "wheel" is a hub, spokes and ring; "stanford" a Stanford torus; "cylinder" a settlement
 ## drum with an axial docking nub on its forward cap; "bernal" a Bernal sphere and "pair"
-## a counter-rotating O'Neill pair (view/flight/habitats.gd).
+## a counter-rotating O'Neill pair (view/flight/habitats.gd); "hammerhead" a working
+## port built like a long-haul ship: a spinning drum head with the port on its face,
+## then a still spine of trusses and tanks (station.spine_m long) out to the reactor
+## and its radiators, as far from the people as the spine allows.
 static func station(geom: Dictionary, name: String = "", livery: Dictionary = {}, bays: Dictionary = {}, ship_r: float = 0.0) -> Dictionary:
 	var colour: String = geom.get("colour", "offwhite")
 	var hull_mat: Material = livery["mats"]["hull"] if not livery.is_empty() else Kit.mat(colour)
@@ -70,12 +73,14 @@ static func station(geom: Dictionary, name: String = "", livery: Dictionary = {}
 	var face_z := lh * 0.5
 	var kind: String = geom.get("type", "wheel")
 	var stencil_at := {}
-	if kind in ["cylinder", "pair"]:
+	if kind in ["cylinder", "pair", "hammerhead"]:
 		var drum := func(r: Node3D, s: Node3D) -> Dictionary:
 			return _drum(r, s, rh, lh, pr, livery, rng, hull_mat, steel)
 		var built: Dictionary = Habitats.pair(rotor, still, root, geom, livery, rng, drum) if kind == "pair" else drum.call(rotor, still)
 		colliders = built["colliders"]
 		face_z = built["face_z"]
+		if kind == "hammerhead":
+			_spine(still, colliders, -lh * 0.5 - 150.0, float(geom.get("spine_m", 1200.0)), livery, rng)
 	elif kind == "bernal":
 		var built := Habitats.bernal(rotor, still, geom, mats, livery, rng)
 		colliders = built["colliders"]
@@ -181,7 +186,7 @@ static func station(geom: Dictionary, name: String = "", livery: Dictionary = {}
 			_paint_name(rotor, name, bay_r + 3.5, bay_outer, float(bay["z_mouth"]) + 0.1, hull_c)
 		elif not stencil_at.is_empty():
 			_paint_name(rotor, name, float(stencil_at["inner"]), float(stencil_at["outer"]), float(stencil_at["z"]), hull_c)
-		elif kind in ["cylinder", "pair"]:
+		elif kind in ["cylinder", "pair", "hammerhead"]:
 			_paint_name(rotor, name, rh * 0.32, rh * 0.6, face_z - 11.4, hull_c)
 		else:
 			_paint_name(rotor, name, rh * 0.55, rh, face_z - 1.6, hull_c)
@@ -219,6 +224,42 @@ static func _paint_name(rotor: Node3D, text: String, inner: float, outer: float,
 	l.pixel_size = h / px.y
 	l.position = Vector3(0, -(top + h * 0.5), z)
 	rotor.add_child(l)
+
+
+## A hammerhead's spine, still (it doesn't turn with the head), from z_from aft along
+## -Z for `length`: a truss with tank clusters along it, a shadow shield, the fusion
+## plant, and its radiator fins edge-on to the Sun's usual side. Adds its colliders.
+static func _spine(still: Node3D, colliders: Dictionary, z_from: float, length: float, livery: Dictionary, rng: RandomNumberGenerator) -> void:
+	var mats: Dictionary = livery["mats"]
+	var w := 14.0
+	var z_end := z_from - length
+	still.add_child(Kit.truss(length, w, mats["steel"], Vector3(0, 0, z_from - length * 0.5)))
+	colliders["cylinders"].append([w * 0.75, z_end, z_from])
+	# Tank clusters: four spheres round the truss at each, propellant and water.
+	var clusters := int(length / 220.0)
+	var tank_r := 16.0
+	for i in clusters:
+		var z := z_from - 120.0 - float(i) * 200.0
+		if z - tank_r < z_end + 260.0:
+			break
+		for k in 4:
+			var a := TAU * float(k) / 4.0 + PI * 0.25
+			still.add_child(Kit.sphere(tank_r, mats["foil"] if (i + k) % 2 == 0 else mats["hull"], Vector3(cos(a), sin(a), 0.0) * (w * 0.5 + tank_r) + Vector3(0, 0, z)))
+		colliders["cylinders"].append([w * 0.5 + tank_r * 2.0, z - tank_r, z + tank_r])
+		still.add_child(Kit.torus(w * 0.5 + 1.0, 0.8, Kit.mat("yellow"), Vector3(0, 0, z + tank_r + 3.0), 24))
+	# The shadow shield: a plug of water and metal that keeps the plant's radiation
+	# off everything forward of it.
+	var shield_z := z_end + 230.0
+	still.add_child(Kit.cylinder(30.0, 12.0, mats["dark"], Vector3(0, 0, shield_z), 32))
+	colliders["cylinders"].append([30.0, shield_z - 6.0, shield_z + 6.0])
+	# The plant, then its radiators: thin panels edge-on above and below the truss.
+	still.add_child(Kit.cylinder(18.0, 60.0, mats["steel"], Vector3(0, 0, z_end + 180.0), 24))
+	var rad := Livery.paint(livery, Kit.COLOURS["dark"], {"finish": 1, "mismatch": 0.0, "panel_m": 0.6, "roughness": 0.6, "metallic": 0.3})
+	for side in [-1.0, 1.0]:
+		still.add_child(Kit.box(Vector3(0.4, 120.0, 140.0), rad, Vector3(0, side * (w * 0.5 + 60.0), z_end + 80.0)))
+	colliders["cylinders"].append([w * 0.5 + 120.0, z_end, z_end + 150.0])
+	still.add_child(Kit.beacon(Color("ff3a2a"), Vector3(0, w, z_end), 1.2, 2.0, 0.0))
+	still.add_child(Kit.beacon(Color("ff3a2a"), Vector3(0, -w, z_end), 1.2, 2.0, 0.5))
 
 
 ## A settlement drum about Z (radius rh, length lh), with an axial docking nub on its

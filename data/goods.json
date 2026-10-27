@@ -132,7 +132,7 @@
 	},
 	"orbital_pharma": {
 		"name": "Orbital pharmaceuticals",
-		"base_price": 18000,
+		"base_price": 15000,
 		"description": "Drugs and crystals grown in microgravity, purer than anything made under a sky. Earth pays well."
 	},
 	"collectibles": {
