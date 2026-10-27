@@ -351,3 +351,20 @@ Full write-up: [2026-10-07-economy-together.md](2026-10-07-economy-together.md).
 - **Insurance costs more:** premiums rose from 4–6k to 6–9k over the run, because the bot carries more valuable cargo.
 - **The bot barely touches the luxuries.** Their targets are small (a few tonnes), so a greedy single-good trader finds little volume. The widest margins at start are luxuries to the far ports (wine from Ares Ring to Valhalla, gene stock to Tharsis, both about 225% of base), which the bot doesn't reach. Worth a hand-played check: a long-haul ship with mixed small loads of luxuries may now be the best way to earn in the outer system.
 - No tuning yet. Watch for orbital pharmaceuticals becoming the one early route everyone runs.
+
+
+## The Nave, the Long Breath and Venus (2026-10-27)
+
+- Changed data: three new ports or towns (`the_nave` below Line Foot, `long_breath` opened by its project at the Kernel, `cytherea_station` in Venus orbit with `aphrodites_rest` below it), the Line Foot hopper and the Venus glider, a new project (`long_breath`), two fleets (`breath_tenders`, `cloud_runners`), carbon fibre on the Kernel's market, and the Long Breath's effect on the Kernel (flows x1.15) once built.
+- Balance bot (5 seeds, 180 days, upgrade=1):
+
+  | | Mean credits, day 180 | Median first upgrade | End credits by seed |
+  |---|---|---|---|
+  | Goods for the 2060s | 82,994 | day 6.9 | 126k, 36k, 164k, 36k, 53k |
+  | Plus the Nave and the Long Breath | 103,378 | day 6.9 | 126k, 36k, 156k, 110k, 89k |
+  | Plus Venus | 98,166 | day 6.7 | 112k, 123k, 65k, 93k, 97k |
+
+- **Within the noise.** The bot never rides an elevator or a shuttle, so it never trades at the Nave or Aphrodite's Rest, and it doesn't reach Venus in 180 days of greedy cislunar trading. What it sees is the new NPC traffic and the Kernel's carbon fibre, which shift the seeds. The spread narrowed with Venus added (65k to 123k), probably because the Assembly's freighters smooth Kibo Ring's water and delicacy prices.
+- **Worth a hand-played check:**
+  - Water to Venus. Aphrodite's Rest and Cytherea Station both consume water with nothing producing it nearby, so the price there sits at the ceiling (3x base). Against the glider's 260 cr/t and the long trip, is it worth it?
+  - Wings and art from the Long Breath, and handmade goods from the Nave. Their volumes are tiny by design (a few tonnes of target stock).
