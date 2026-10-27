@@ -885,5 +885,78 @@
 				"text": "Wings made to measure, and a place in the first race round the lamp"
 			}
 		]
+	},
+	"long_hall": {
+		"name": "The Long Hall",
+		"place": "ares_ring",
+		"description": "A roof over ten kilometres of a canyon in Noctis Labyrinthus, two kilometres wide and a kilometre deep, filled with half an atmosphere of air: the biggest room ever built, with a river down the floor and cliffs for walls.",
+		"draw_t_per_day": 3.0,
+		"reveal": {
+			"after_days": 40
+		},
+		"stages": [
+			{
+				"name": "Anchors in the rim",
+				"needs": {
+					"machine_parts": 60,
+					"robotics": 12
+				}
+			},
+			{
+				"name": "The first span",
+				"needs": {
+					"carbon_fibre": 110,
+					"ceramic_feed": 90,
+					"polymer_feed": 40
+				}
+			},
+			{
+				"name": "Sealed and filled",
+				"needs": {
+					"oxygen": 140,
+					"volatiles": 120,
+					"water_ice": 160
+				}
+			},
+			{
+				"name": "Rivers and fields",
+				"needs": {
+					"gene_stock": 3,
+					"food": 60
+				}
+			}
+		],
+		"effects": {
+			"ares_ring": {
+				"consumes_mult": 1.1,
+				"produces_mult": 1.1
+			}
+		},
+		"backer": "Mars Accord",
+		"pitch": {
+			"why": "A sky you can see, a river you can swim in, cliffs a kilometre high for walls: the first place on Mars where you can walk for an hour under open air and never see a dome.",
+			"plan": "Anchor a carbon-fibre roof into both rims of a narrow canyon, span it in sections, seal the ends, fill it with half an atmosphere and let the river run. The canyon walls do most of the work; the Long View likes that.",
+			"offer": "Backers dock free at Ares Ring and get a plot by the river in the Hall."
+		},
+		"perks": [
+			{
+				"min_t": 10,
+				"kind": "free_docking",
+				"place": "ares_ring",
+				"text": "Free docking at Ares Ring"
+			},
+			{
+				"min_t": 40,
+				"kind": "standing",
+				"operator": "Mars Accord",
+				"value": 6,
+				"text": "The Accord counts you among the Hall's builders"
+			},
+			{
+				"min_t": 90,
+				"kind": "promise",
+				"text": "A plot by the river in the Long Hall"
+			}
+		]
 	}
 }

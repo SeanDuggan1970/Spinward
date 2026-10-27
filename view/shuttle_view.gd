@@ -148,6 +148,9 @@ func _build_base(place: Dictionary) -> Node3D:
 	if look.get("kind", "") == "skylight":
 		_build_skylight(n, float(look.get("skylight_m", 65.0)))
 		return n
+	if look.get("kind", "") == "canyon":
+		_build_canyon(n, float(look.get("width_m", 2000.0)), float(look.get("length_m", 10000.0)), float(look.get("depth_m", 1000.0)))
+		return n
 	if look.get("kind", "") == "aerostat":
 		_build_aerostat(n, int(look.get("envelopes", 4)), float(look.get("envelope_m", 150.0)))
 		return n
@@ -238,6 +241,47 @@ func _build_skylight(n: Node3D, width: float) -> void:
 		var shelter := Kit.box(Vector3(14.0, 4.0, 9.0), Kit.mat("grey"), Vector3(-90.0 - 22.0 * k, 2.0, -70.0 + float(h % 40)))
 		shelter.rotation.y = float(h % 100) / 100.0
 		n.add_child(shelter)
+
+
+## A roofed canyon running off along +X from the pad outside its eastern doors: two
+## cliffs `depth` high and `width` apart, a clear roof spanning them at the rim with
+## its anchor cables, the end wall with its doors, and the river and fields below.
+func _build_canyon(n: Node3D, width: float, length: float, depth: float) -> void:
+	var pad := MeshInstance3D.new()
+	var disc := CylinderMesh.new()
+	disc.top_radius = 45.0
+	disc.bottom_radius = 47.0
+	disc.height = 1.0
+	disc.radial_segments = 48
+	pad.mesh = disc
+	pad.material_override = Kit.mat("grey")
+	n.add_child(pad)
+	var start := 400.0
+	var rock := Kit.mat("rust")
+	for side in [-1.0, 1.0]:
+		# The cliffs, and the ground beyond each rim.
+		n.add_child(Kit.box(Vector3(length + 2000.0, depth, 400.0), rock, Vector3(start + length * 0.5, depth * 0.5, side * (width * 0.5 + 200.0))))
+		# Anchor cables down into the rim, every few hundred metres.
+		for k in int(length / 500.0):
+			n.add_child(Kit.box(Vector3(6.0, 30.0, 6.0), Kit.mat("steel"), Vector3(start + 250.0 + 500.0 * k, depth + 15.0, side * (width * 0.5 + 20.0))))
+	# The roof: clear panels on a cable net, lit faintly from below.
+	var roof := Kit.box(Vector3(length, 2.0, width + 40.0), Kit.glass(0.15), Vector3(start + length * 0.5, depth, 0.0))
+	n.add_child(roof)
+	for k in int(length / 250.0) + 1:
+		n.add_child(Kit.box(Vector3(3.0, 4.0, width + 40.0), Kit.mat("dark"), Vector3(start + 250.0 * k, depth + 2.0, 0.0)))
+	# The end wall over the eastern doors, its windows lit.
+	n.add_child(Kit.box(Vector3(12.0, depth, width), Kit.mat("grey"), Vector3(start, depth * 0.5, 0.0)))
+	n.add_child(Kit.box(Vector3(14.0, 40.0, 120.0), Kit.glass(0.6), Vector3(start, 20.0, 0.0)))
+	# Inside: fields along the floor and the river down the middle.
+	var fields := StandardMaterial3D.new()
+	fields.albedo_color = Color("3d5a2a")
+	fields.emission_enabled = true
+	fields.emission = Color("b8d070")
+	fields.emission_energy_multiplier = 0.3
+	n.add_child(Kit.box(Vector3(length, 1.0, width * 0.8), fields, Vector3(start + length * 0.5, 0.5, 0.0)))
+	n.add_child(Kit.box(Vector3(length, 1.2, 60.0), Kit.mat("dark"), Vector3(start + length * 0.5, 0.6, 0.0)))
+	for k in 6:
+		n.add_child(Kit.beacon(Color("ffb050"), Vector3(-46.0 + 18.0 * k, 0.8, 50.0), 0.6, 1.6, float(k) / 6.0))
 
 
 ## A city that floats: the landing deck at the origin, and round it the envelopes

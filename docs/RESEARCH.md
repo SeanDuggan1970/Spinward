@@ -125,6 +125,13 @@ Plan: a curated catalog of about 30 major bodies plus a hand-picked set of named
 - **Size:** water ice weighs about 0.92 t a cubic metre, so a 24,000 t berg is some 30 m across.
 - **Time:** low-thrust transfers from the outer Belt to the inner system take years. The game has many bergs in the pipeline at once and shows only arrivals.
 
+## 12. A roof over a canyon
+
+- **Noctis Labyrinthus:** the maze of fault canyons at the western head of Valles Marineris, around 7 S, 100 W, on the Tharsis bulge. Its canyons are a few kilometres wide and up to several kilometres deep, much narrower than the main chasms (Coprates is about 60–100 km across).
+- **Roof tension:** for a long roof spanning a canyon, the membrane tension per metre of length is the pressure difference times the roof's radius of curvature (T = p·R). At half a bar (50 kPa), R of 1 to 2 km gives 50 to 100 MN/m. Carbon fibre working at about 2 GPa needs 2.5 to 5 cm. The roof pushes up and must be anchored; Mars's gravity (0.38 g) holds down only about 1 kN/m² of a 25 cm-thick ceramic-and-fibre roof, against 50 kN/m² of air.
+- **Air:** a hall 10 km × 2 km × 1 km holds about 2×10^10 m³; at half a bar that is about 12 million tonnes of air, nitrogen and argon from Mars's own atmosphere plus oxygen from its water and CO2.
+- **Simplified:** the flight view draws the roof flat at the rim; the real one would bulge up between them.
+
 ## Open research for later passes
 
 - Readable orbit-planning UI patterns (KSP manoeuvre nodes versus one-click "AI plot course").

@@ -68,10 +68,11 @@ Most wonders should start as rumours, become projects, and end as ports or set p
 - **The dream:** Forests in craters. On the Moon, trees grow tall and spindly in low gravity: imagine a redwood forest 200 m high under a glass sky, with Earth rising over the rim. Tent towns: tension membranes held up by air pressure, not frames.
 - **In game:** Many small ports and set pieces. Tharsis Domes and Jezero already start this on Mars.
 
-### The Long Hall: a roof over Valles Marineris
-- **Real basis:** Valles Marineris is 4,000 km long and up to 7 km deep. Roofing a short section between canyon walls is the same idea as a crater dome, scaled up. (No serious study covers it; this is our dream.)
-- **The dream:** A transparent roof over a stretch of Coprates Chasma, the walls kilometres high on either side, waterfalls down the cliffs, a river along the floor, mist in the mornings. The biggest room ever built.
-- **In game:** A Mars megaproject (tier 3), built in segments like the Selene Ring. Huge demand for ceramic feed, carbon fibre and robotics. A port when the first segment holds air.
+### The Long Hall: a roof over a canyon
+- **Real basis:** Valles Marineris is 4,000 km long and up to 7 km deep. Roofing a stretch between canyon walls is the same idea as a crater dome, scaled up. (No serious study covers it; this is our dream.)
+- **Physics:** the main chasms are 60 to 100 km wide, and a roof that wide would have to hold down an absurd force of air. A pressurised roof's tension is the pressure times its curve radius: at half a bar, a roof bulging up between rims 2 km apart carries 50 to 100 MN per metre, a few centimetres of carbon fibre. So the Hall roofs a narrow canyon in Noctis Labyrinthus, the maze at Valles Marineris's head, where canyons are a few kilometres wide and about one deep. The roof pushes up and is anchored deep in both rims; Mars's gravity hardly helps.
+- **The dream:** A clear roof over ten kilometres of canyon, the cliffs for walls, a river along the floor from a melted ice lens, vineyards on the sunny cliff, mist in the mornings. The biggest room ever built.
+- **In game:** **In** (27 October 2026) as a project at Ares Ring that opens a town by shuttle. See *The Long Hall* in DESIGN.md.
 
 ### Glass-floored wheels
 - **The dream:** A spin habitat whose floor is partly window: stand on the rim and look down past your feet at the stars wheeling by. A bad idea for radiation, a wonderful idea for a honeymoon.
@@ -191,7 +192,7 @@ Chosen for reach (close to where the player already flies), variety (gravity, li
 1. **The Nave** (lunar lava-tube cathedral, Marius Hills). **In** (27 October 2026): a town reached by the Cooperative's hopper from Line Foot. See *The Nave* in DESIGN.md.
 2. **The Long Breath** (air bubble at L5, near the Kernel). **In** (27 October 2026): a project at the Kernel, then a port. See *The Long Breath* in DESIGN.md.
 3. **Cloud city over Venus.** **In** (27 October 2026): Cytherea Station in orbit and Aphrodite's Rest below, by glider. See *Venus* in DESIGN.md.
-4. **The Long Hall** (roof over Coprates Chasma). Mars megaproject in segments, like the Selene Ring.
+4. **The Long Hall** (roof over a canyon in Noctis Labyrinthus). **In** (27 October 2026): a project at Ares Ring, then a town by shuttle.
 5. **The Ceres megasatellite** grows behind the Concord Pair, one group's cylinder at a time.
 6. **Ice tugs and pushers.** **In** (27 October 2026), as berg arrivals on the markets of the dry ports, parked bergs as set pieces and a title shot. Still to come: pushers met in transit, and supply runs to berg crews. See *Ice tugs and pushers* in DESIGN.md.
 7. **Hammerhead stations.** **In** (27 October 2026): a station type, first used at Huygens Port. See *Hammerhead stations* in DESIGN.md.

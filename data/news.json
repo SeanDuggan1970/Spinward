@@ -458,6 +458,17 @@
 				"headline": "First breath: the Long Breath opens",
 				"body": "The Long Breath held its first full day of air today, and six hundred people jumped off the spindle at once. Nobody fell, because there is nowhere to fall to. Visitors welcome; wings for hire at the dock."
 			}
+		},
+		"long_hall": {
+			"announce": {
+				"dateline": "Ares Ring",
+				"headline": "A roof over a canyon: the Long Hall begins",
+				"body": "The Mars Accord will roof ten kilometres of a narrow canyon in Noctis Labyrinthus and fill it with air: two kilometres wide, a kilometre deep, cliffs for walls. The Long View backed it on one condition, that it stay narrow. An earlier plan to roof Coprates Chasma, a hundred kilometres across, was turned down: 'the roof would have to hold down a mountain range's worth of air pressure, for a view nobody could see across'. Carbon fibre and ceramic feed wanted at Ares Ring."
+			},
+			"complete": {
+				"headline": "Air in the Long Hall",
+				"body": "The Long Hall held its full half-atmosphere for a week, and this morning the Accord opened its eastern doors. Children ran the first kilometre without helmets. The river reaches the far end tomorrow. Shuttles from Ares Ring land outside the doors."
+			}
 		}
 	}
 }

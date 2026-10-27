@@ -105,6 +105,7 @@ func _initialize() -> void:
 	test_mars_shuttle()
 	test_the_nave()
 	test_venus()
+	test_long_hall()
 	test_shuttle_view_profile()
 	test_edge_cases()
 	test_power_budget()
@@ -2391,6 +2392,29 @@ func test_venus() -> void:
 	check(sim.apply({"type": "take_shuttle"}) == "", "Take the glider up")
 	sim.advance_game_time(float(s.location["arrive_t"]) - s.time_s + 1.0)
 	check(s.location == {"status": "docked", "place": "cytherea_station"}, "Back aboard at Cytherea Station")
+
+
+func test_long_hall() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var Shuttle := preload("res://sim/systems/shuttle_system.gd")
+	check(d.places["long_hall"]["foot_of"] == "ares_ring" and d.places["long_hall"]["opens_with"] == "long_hall", "The Long Hall is a town below Ares Ring, opened by its project")
+	check(d.places["ares_ring"]["shuttle"]["stops"].has("long_hall"), "The Accord shuttle flies to it")
+	# A narrow canyon, so the roof can hold: at half a bar a roof bulging up between rims
+	# 2 km apart carries 50 to 100 MN a metre (pressure times its curve radius, 1 to 2 km),
+	# a few centimetres of carbon fibre (docs/WONDERS.md).
+	check(float(d.places["long_hall"]["look"]["width_m"]) <= 3000.0, "It roofs a narrow canyon, not a hundred-kilometre chasm")
+	_dock_at(sim, "ares_ring")
+	s.credits = 50000.0
+	s.ship["cargo"] = {}
+	check(sim.apply({"type": "take_shuttle", "to": "long_hall"}) == "The Long Hall is still being built", "The Long Hall takes nobody until it is built")
+	s.projects["long_hall"]["done"] = true
+	check(sim.apply({"type": "take_shuttle", "to": "long_hall"}) == "", "and then the shuttle flies there")
+	sim.advance_game_time(float(s.location["arrive_t"]) - s.time_s + 1.0)
+	check(s.location == {"status": "docked", "place": "long_hall"}, "In the Long Hall")
+	check(sim.apply({"type": "buy", "good": "wine_spirits", "tonnes": 0.1}) == "", "Buy the first Martian vintage")
+	check(Shuttle.flight_to(d, "long_hall")["to"] == "ares_ring", "The shuttle flies back up to Ares Ring")
 
 
 func test_mars_shuttle() -> void:

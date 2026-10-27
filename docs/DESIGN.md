@@ -174,6 +174,7 @@ The system should feel like a place where big things are being built. Each tier 
 | Cloud city (Aphrodite's Rest) | 55 km above Venus, under Cytherea Station | 2 | **In** (port in orbit, city by glider) | Opens Venus: carbon fibre and oxygen from the air out; water in |
 | Ice tugs and pushers | Outer Belt to the Kernel, Psyche and Venus | 2 | **In** (berg arrivals, set pieces) | Water prices drop when a berg is parked off a dry port |
 | Hammerhead station | Huygens Port, Titan | 2 | **In** (station type) | A working port built like a long-haul ship |
+| Roofed canyon (the Long Hall) | Noctis Labyrinthus, Mars | 2–3 | **In** (project, then a town by shuttle) | Carbon fibre and ceramic feed into the build; food and the first vintage after |
 | Earth–Mars cycler (Aldrin cycler) | Earth–Mars | 2 | Planned | A moving station you catch on its schedule |
 | Space farms | Kernel, Belt | 2–3 | Partly in (Kernel food) | Food chain away from Earth |
 | Lofstrom loop (launch loop) | Earth equator | 2 | Planned (backdrop) | Cheaper Earth-to-orbit freight |
@@ -1410,6 +1411,16 @@ Wonders shortlist item 7 (WONDERS.md): a working port built like a long-haul shi
 - **The type** (`station.type` `hammerhead`, `view/flight/models.gd` `_spine`): a spinning drum head with the docking port on its forward face (the settlement drum, so bays, windows and the docking face all work as before), then a still spine (`station.spine_m`, default 1,200 m) of truss and tank clusters, a shadow shield, the fusion plant and its radiator fins. The spine doesn't turn with the head, and it registers its own colliders.
 - **Huygens Port** is the first: a head 80 m in radius and 160 m long, spinning at 1.67 rpm for 0.25 g (under the roughly 2 rpm people tolerate comfortably), with a 1.2 km spine. It docks in the trial like every other port.
 - **Attract screen:** Huygens joins the title's docking shot, over Titan's haze with Saturn beyond.
+
+## The Long Hall (Oct 2026)
+
+Wonders shortlist item 4 (WONDERS.md): a roof over a canyon.
+
+- **The project** (`projects.json` `long_hall`, at Ares Ring, revealed on day 40): anchors in the rim (machine parts, drones), the first span (carbon fibre, ceramic feed, polymer), sealed and filled (oxygen, volatiles, water), rivers and fields (gene stock, staples). Ares Ring now stocks carbon fibre and ceramic feed for it. When done, Ares Ring's flows rise by a tenth.
+- **The Long View:** backed it on one condition, that it stay narrow. An earlier plan to roof Coprates Chasma, a hundred kilometres across, was turned down (the news says so).
+- **The town** (`long_hall`, `foot_of` Ares Ring, opens with the project): ten kilometres of a canyon in Noctis Labyrinthus (7 S, 101 W), two kilometres wide and one deep, under a clear roof at half an atmosphere. A river, fields, orchards and the first Martian vineyard. Makes staples, wine, handmade goods and collectibles; wants water, parts, drones, medicine, polymer, storage and a little Earth food. Bar: the Echo. The Accord shuttle lands outside its eastern doors (3 h, 210 cr + 110 cr/t).
+- **Flight view:** `look.kind` `canyon`: the pad outside the end wall and doors, the cliffs, the anchored roof on its cable net, and the fields and river inside.
+- **Physics:** RESEARCH.md §12 and WONDERS.md: the roof's tension is pressure times curve radius, so it bulges up between the rims and is anchored down; only a narrow canyon keeps it to a few centimetres of carbon fibre.
 
 ## Milestones
 

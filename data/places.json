@@ -776,7 +776,9 @@
 			"gene_stock": 1.0,
 			"delicacies": 2,
 			"keepsakes": 0.5,
-			"storage_lattices": 3
+			"storage_lattices": 3,
+			"carbon_fibre": 10,
+			"ceramic_feed": 10
 		},
 		"produces": {
 			"deuterium": 0.3,
@@ -857,6 +859,12 @@
 					"fare": 160,
 					"fare_per_t": 100,
 					"via": "Straight down onto the plateau below the ring, between the volcanoes, to the pad beside the big dome."
+				},
+				"long_hall": {
+					"hours": 3.0,
+					"fare": 210,
+					"fare_per_t": 110,
+					"via": "Down over Tharsis and into the maze of Noctis Labyrinthus, between canyon walls a kilometre high, onto the pad outside the Hall's eastern doors."
 				}
 			}
 		}
@@ -1917,6 +1925,63 @@
 		"look": {
 			"domes": 4,
 			"dome_m": 160
+		}
+	},
+	"long_hall": {
+		"name": "The Long Hall",
+		"operator": "Mars Accord",
+		"foot_of": "ares_ring",
+		"opens_with": "long_hall",
+		"description": "Ten kilometres of a canyon in Noctis Labyrinthus under a clear roof: two kilometres wide, a kilometre deep, with half an atmosphere of air inside. The cliffs are the walls. A river runs down the floor from a melted ice lens at the western end, fields and orchards line it, and the first Martian vineyard climbs the south-facing cliff. The roof pushes up with the force of the air under it and is anchored deep in both rims; inspectors walk its cables every week. Ships can't land here: Accord shuttles fly down from Ares Ring to the pad outside the eastern doors.",
+		"location": {
+			"type": "surface",
+			"parent": "mars",
+			"lat_deg": -7.0,
+			"lon_deg": -101.0,
+			"day_s": 88642.0
+		},
+		"services": [
+			"market",
+			"bar"
+		],
+		"bar": {
+			"name": "the Echo",
+			"patrons": 70,
+			"round_cr": 8
+		},
+		"look": {
+			"kind": "canyon",
+			"width_m": 2000,
+			"length_m": 10000,
+			"depth_m": 1000
+		},
+		"market": {
+			"food": 60,
+			"wine_spirits": 0.6,
+			"handmade_goods": 0.8,
+			"collectibles": 0.5,
+			"water_ice": 40,
+			"machine_parts": 12,
+			"robotics": 4,
+			"medical": 3,
+			"polymer_feed": 6,
+			"storage_lattices": 1.0,
+			"delicacies": 0.8
+		},
+		"produces": {
+			"food": 3.0,
+			"wine_spirits": 0.03,
+			"handmade_goods": 0.04,
+			"collectibles": 0.02
+		},
+		"consumes": {
+			"water_ice": 2.0,
+			"machine_parts": 0.6,
+			"robotics": 0.2,
+			"medical": 0.15,
+			"polymer_feed": 0.3,
+			"storage_lattices": 0.05,
+			"delicacies": 0.04
 		}
 	},
 	"tsiolkovsky_wheel": {
