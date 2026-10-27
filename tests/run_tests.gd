@@ -3076,6 +3076,7 @@ const NEW_PLACES := {
 	"island_one": {"from": "kernel_l5", "fleet": "island_haulers"},
 	"kalpana_two": {"from": "kalpana_one", "fleet": "kalpana_two_ferries"},
 	"concord_pair": {"from": "piazzi_station", "fleet": "concord_tenders"},
+	"long_breath": {"from": "kernel_l5", "fleet": "breath_tenders"},
 	"selene_ring": {"from": "shackleton_port", "fleet": "ring_tankers"},
 }
 
@@ -3119,7 +3120,7 @@ func test_new_habitat_places() -> void:
 		strays.append_array(sim.take_events().filter(func(e): return e["type"] == "npc_departed" and e["data"]["to"] in closed))
 	check(strays.is_empty(), "No ship heads for a closed place (%d did)" % strays.size())
 	for npc in s.npcs:
-		check(not (npc["fleet"] in ["island_haulers", "kalpana_two_ferries", "concord_tenders", "ring_tankers"]) or not NpcSystem.in_service(npc, s.time_s) or npc["trips"] == 0, "%s waits for its project" % npc["name"])
+		check(not (npc["fleet"] in ["island_haulers", "kalpana_two_ferries", "concord_tenders", "ring_tankers", "breath_tenders"]) or not NpcSystem.in_service(npc, s.time_s) or npc["trips"] == 0, "%s waits for its project" % npc["name"])
 	# Finish every project: the places open, news says so, and traffic starts.
 	for id in NEW_PLACES:
 		s.projects[id]["done"] = true

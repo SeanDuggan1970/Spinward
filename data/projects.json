@@ -809,5 +809,81 @@
 				"produces_mult": 1.6
 			}
 		}
+	},
+	"long_breath": {
+		"name": "The Long Breath",
+		"place": "kernel_l5",
+		"description": "A clear sphere two kilometres across, filled with half an atmosphere of oxygen-rich air and never spun: inside there is no down, and people fly. A flying club of six hundred asked for it; the Kernel Settlers are building it.",
+		"draw_t_per_day": 3.0,
+		"reveal": {
+			"after_days": 20
+		},
+		"stages": [
+			{
+				"name": "Spindle and lamp",
+				"needs": {
+					"refined_metals": 50,
+					"machine_parts": 30,
+					"robotics": 8
+				}
+			},
+			{
+				"name": "Shell spun",
+				"needs": {
+					"carbon_fibre": 80,
+					"polymer_feed": 60,
+					"ceramic_feed": 40
+				}
+			},
+			{
+				"name": "First breath",
+				"needs": {
+					"oxygen": 160,
+					"volatiles": 140,
+					"water_ice": 120
+				}
+			},
+			{
+				"name": "Gardens adrift",
+				"needs": {
+					"bio_feed": 60,
+					"gene_stock": 2,
+					"food": 40
+				}
+			}
+		],
+		"effects": {
+			"kernel_l5": {
+				"consumes_mult": 1.15,
+				"produces_mult": 1.15
+			}
+		},
+		"feature": "long_breath",
+		"backer": "Kernel Settlers",
+		"pitch": {
+			"why": "People have dreamed of flying under their own power since Icarus. In a big enough room with no gravity and good air, anyone can, with a pair of fabric wings.",
+			"plan": "A spindle and a lamp for a sun, then a carbon-fibre shell a centimetre thick spun round them, then two and a half million tonnes of air, then gardens and water globes set adrift. The Long View signed it off: it makes no new land, takes only air and fibre, and can be let down and recycled if it ever has to be.",
+			"offer": "Backers dock free at the Long Breath, and the club will fit you with wings for life."
+		},
+		"perks": [
+			{
+				"min_t": 10,
+				"kind": "free_docking",
+				"place": "long_breath",
+				"text": "Free docking at the Long Breath"
+			},
+			{
+				"min_t": 40,
+				"kind": "standing",
+				"operator": "Kernel Settlers",
+				"value": 6,
+				"text": "The settlers count you among the Breath's builders"
+			},
+			{
+				"min_t": 80,
+				"kind": "promise",
+				"text": "Wings made to measure, and a place in the first race round the lamp"
+			}
+		]
 	}
 }

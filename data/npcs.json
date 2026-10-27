@@ -852,6 +852,42 @@
 				300,
 				800
 			]
+		},
+		"breath_tenders": {
+			"operator": "Kernel Settlers",
+			"hull": "drone_freighter",
+			"behaviour": "route",
+			"count": 1,
+			"names": [
+				"Updraft"
+			],
+			"commission_project": "long_breath",
+			"commission_days": [
+				0
+			],
+			"route": [
+				{
+					"at": "kernel_l5",
+					"buy": [
+						"oxygen",
+						"food",
+						"bio_feed"
+					],
+					"to": "long_breath"
+				},
+				{
+					"at": "long_breath",
+					"buy": [
+						"handmade_goods"
+					],
+					"to": "kernel_l5"
+				}
+			],
+			"fill": 0.8,
+			"dwell_hours": [
+				8,
+				20
+			]
 		}
 	},
 	"local_traffic": {

@@ -533,7 +533,8 @@
 			"handmade_goods": 0.6,
 			"delicacies": 1.6,
 			"robotics": 6,
-			"bio_feed": 30
+			"bio_feed": 30,
+			"carbon_fibre": 10
 		},
 		"produces": {
 			"orbital_pharma": 0.08
@@ -572,7 +573,8 @@
 			}
 		],
 		"features": [
-			"bernal_frame"
+			"bernal_frame",
+			"long_breath"
 		]
 	},
 	"kalpana_one": {
@@ -2062,6 +2064,83 @@
 			"gene_stock": 0.04,
 			"polymer_feed": 0.6,
 			"ceramic_feed": 0.5
+		},
+		"recipes": []
+	},
+	"long_breath": {
+		"name": "The Long Breath",
+		"operator": "Kernel Settlers",
+		"opens_with": "long_breath",
+		"description": "A clear sphere two kilometres across off the Kernel, full of air and never spun, so nothing inside has any weight. Six hundred flyers live in hammock villages tied to the spindle, tend gardens and water globes drifting round the lamp at the centre, and race on fabric wings. The air is half an atmosphere, rich in oxygen; the shell's tension holds it in, not gravity. Everyone spends an hour a day in the spinning gym at the dock, for their bones. The dock doesn't spin either: tie down your cargo.",
+		"location": {
+			"type": "lagrange",
+			"system": [
+				"earth",
+				"moon"
+			],
+			"point": "L5",
+			"offset_km": [
+				-5.2,
+				-1.8,
+				-7.3
+			]
+		},
+		"station": {
+			"door": "iris",
+			"type": "cylinder",
+			"hub_radius_m": 60,
+			"hub_length_m": 120,
+			"ring_radius_m": 0,
+			"ring_tube_m": 0,
+			"spokes": 0,
+			"spin_rpm": 0.0,
+			"gravity_g": 0.0,
+			"port_radius_m": 9,
+			"colour": "offwhite"
+		},
+		"bay_traffic": {
+			"control": "open",
+			"per_hour": 3
+		},
+		"services": [
+			"market",
+			"bar"
+		],
+		"bar": {
+			"name": "the Thermal",
+			"patrons": 40,
+			"round_cr": 9
+		},
+		"features": [
+			"long_breath_dock"
+		],
+		"market": {
+			"handmade_goods": 1.2,
+			"collectibles": 0.5,
+			"oxygen": 20,
+			"water_ice": 20,
+			"food": 30,
+			"bio_feed": 8,
+			"polymer_feed": 6,
+			"carbon_fibre": 2,
+			"medical": 1.6,
+			"delicacies": 1.2,
+			"wine_spirits": 0.8
+		},
+		"produces": {
+			"handmade_goods": 0.06,
+			"collectibles": 0.02
+		},
+		"consumes": {
+			"oxygen": 1.0,
+			"water_ice": 1.0,
+			"food": 1.5,
+			"bio_feed": 0.4,
+			"polymer_feed": 0.3,
+			"carbon_fibre": 0.1,
+			"medical": 0.08,
+			"delicacies": 0.06,
+			"wine_spirits": 0.04
 		},
 		"recipes": []
 	},

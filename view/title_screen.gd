@@ -13,6 +13,7 @@
 ##   docking       a ship folding its panels as it noses into a station's bay, the
 ##                 doors opening for it
 ##   release       a satellite let go over Earth, unfolding its wings as it drifts clear
+##   long_breath   gliding past the Long Breath at L5, the bubble of air people fly in
 ## Bodies wear what is on them (plumes, elevators), as the system will be.
 ## Each shot flies a random hull in a real fleet's livery (the ships you will meet),
 ## with its caption. View-only: the sim is not ticking while this is up.
@@ -33,7 +34,7 @@ const UI := preload("res://view/ui/ui_kit.gd")
 const Bay := preload("res://view/flight/bay.gd")
 const SatModel := preload("res://view/flight/satellite_model.gd")
 
-const SHOTS := ["earth_orbit", "jovian", "saturn", "lunar", "mars", "belt", "enceladus", "sail", "touchdown", "docking", "release"]
+const SHOTS := ["earth_orbit", "jovian", "saturn", "lunar", "mars", "belt", "enceladus", "sail", "touchdown", "docking", "release", "long_breath"]
 const SHOT_S := 18.0
 const FADE_S := 0.8
 
@@ -336,6 +337,22 @@ func _build_saturn() -> void:
 		_fly(pos, Vector3(-1.0, 0.02, -0.1), true, dt)
 		camera.position = Vector3(0.0, 8.0, 0.0)
 		camera.look_at(pos.lerp(Vector3(0, -20, -400), 0.25), Vector3.UP)
+
+
+## Off the Kernel at L5: the hero glides past the Long Breath, the lamp burning at its
+## heart and the gardens adrift round it, Earth and the Moon far off.
+func _build_long_breath() -> void:
+	_where = "L5  ·  the Long Breath"
+	_light(Vector3(-0.5, 0.45, 0.7), 1.4, Vector3(-40, 30, 50))
+	_body("earth", 9000.0, Vector3(-30000.0, -12000.0, -160000.0), 0.004)
+	_body("moon", 2400.0, Vector3(42000.0, 8000.0, -150000.0))
+	_anims = SetPieces._long_breath(_stage, Vector3(-500.0, 120.0, -3300.0), 1.0)
+	_update = func(dt: float) -> void:
+		var f := clock / SHOT_S
+		var pos := Vector3(lerpf(220.0, -280.0, f), 18.0 + 6.0 * sin(f * PI), lerpf(-140.0, -230.0, f))
+		_fly(pos, Vector3(-1.0, 0.03, -0.18), false, dt)
+		camera.position = Vector3(30.0, 10.0, 40.0)
+		camera.look_at(pos.lerp(Vector3(-500.0, 120.0, -3300.0), 0.2), Vector3.UP)
 
 
 ## A low run over the Moon's craters; Earth hangs on the horizon ahead.

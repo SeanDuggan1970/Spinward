@@ -169,6 +169,8 @@ The system should feel like a place where big things are being built. Each tier 
 | Solar sail freighters | Clarke to Mars | 2 | **In** (project builds the fleet) | Propellant-free bulk freight, slowly |
 | Stanford torus (the Tsiolkovsky Wheel) | L4, 12 km from Trojan Yards | 2 | **In** (project, then a port) | A town of 10,000; a big food market |
 | Orbital ring (the Selene Ring) | Lunar equator, 52 km up | 3 | **In** (project, built in arcs, then a junction port) | Shackleton output x1.6; the ring's junction smelts regolith to metal |
+| Lava-tube town (the Nave) | Marius Hills skylight, the Moon | 1 | **In** (town, by hopper from Line Foot) | Handmade goods out; ceramic feed, gene stock and water in (WONDERS.md) |
+| Air bubble (the Long Breath) | 10 km off the Kernel, L5 | 2 | **In** (project, then a port) | Carbon fibre, polymer and air into the build; a flyers' town after (WONDERS.md) |
 | Earth–Mars cycler (Aldrin cycler) | Earth–Mars | 2 | Planned | A moving station you catch on its schedule |
 | Space farms | Kernel, Belt | 2–3 | Partly in (Kernel food) | Food chain away from Earth |
 | Lofstrom loop (launch loop) | Earth equator | 2 | Planned (backdrop) | Cheaper Earth-to-orbit freight |
@@ -1357,6 +1359,17 @@ Owner's direction (2026-10-27): start building the wonders shortlist with the Na
 - **News:** first light in the Nave (backdated), and the Long View backing a second bulkhead while turning down a hundred-dome field above it ("use what is there").
 - **Attract screen:** the caption plate's hold line can now be bound for towns below ports, the Nave among them.
 - **Simplifications (RESEARCH.md §9):** the hopper's flight is always the same hour; the Moon's pole is taken as the ecliptic pole (1.5 degrees off), so Earth's wobble in the lunar sky is about 5 degrees, not the real 6.7, and there is no libration in longitude.
+
+## The Long Breath (Oct 2026)
+
+Wonders shortlist item 2 (WONDERS.md): a bubble of air you fly in.
+
+- **The project** (`projects.json` `long_breath`, at the Kernel, revealed on day 20): a spindle and lamp (metal powders, machine parts, drones), the shell (carbon fibre, polymer, ceramic and glass feed), first breath (oxygen, volatiles, water ice), gardens adrift (bio feed, gene stock, staples). Backers dock free at the Long Breath and are promised wings and a place in the first race round the lamp. The Kernel now stocks carbon fibre for it.
+- **The Long View's note:** it makes no new land, takes only air and fibre, and can be let down again. This is the steering hand saying yes.
+- **The physics** (WONDERS.md §4): a sphere 1 km in radius at half an atmosphere, oxygen-rich; about 2.5 million tonnes of air held in by about 25 kN/m of shell tension, roughly a centimetre of carbon fibre. No spin, so no down; residents keep their bones in a spinning gym at the dock.
+- **The port** (`long_breath`, opens with the project): a non-spinning dock hub (type `cylinder`, 60 m by 120 m, `spin_rpm` 0) at the bubble's pole, 10 km from the Kernel. A small flyers' town: makes wings (handmade goods) and collectibles; wants air, water, food, bio feed and a little luxury. Bar: the Thermal. Its tender *Updraft* (fleet `breath_tenders`) commissions with it. Auntie Vell's tips cover it.
+- **Set pieces** (`set_pieces.gd` `_long_breath`): from the Kernel, the bubble grows stage by stage; from its own dock (`long_breath_dock`), the finished bubble lies straight beyond the docking face.
+- **Attract screen:** a new title shot, `long_breath`: the hero glides past the bubble, the lamp burning at its heart.
 
 ## Milestones
 

@@ -44,7 +44,7 @@
 			"reliability": 0.75,
 			"noise": 0.1,
 			"price": 150,
-			"coverage": ["kernel_l5", "island_one", "trojan_yards", "tsiolkovsky_wheel", "farside_array", "halo_depot"],
+			"coverage": ["kernel_l5", "island_one", "long_breath", "trojan_yards", "tsiolkovsky_wheel", "farside_array", "halo_depot"],
 			"short": ["\"The Yards folk were in last night moaning about {good}. {place}'s paying {price}, they said.\"", "\"Between us? {place} is short of {good}. {price} a tonne. Eat something, you look thin.\""],
 			"glut": ["\"{place} has more {good} than it knows what to do with. You'd get it for {price}.\""]
 		}

@@ -433,6 +433,17 @@
 				"headline": "The Moon has a ring",
 				"body": "The last tether of the Selene Ring reached the ground at Mare Smythii this morning. The Moon is now, officially, a ringed world, and the ring's junction is open to visitors. Earth's night side can see it as a thin bright line."
 			}
+		},
+		"long_breath": {
+			"announce": {
+				"dateline": "L5",
+				"headline": "The Long View backs a bubble to fly in",
+				"body": "A flying club of six hundred has won the Commons' Long View round to a clear sphere two kilometres across off the Kernel, full of air and never spun, so that anyone inside can fly on fabric wings. 'It makes no new land, it takes only air and fibre, and it can be let down again,' the Long View's note reads. 'We cannot think of a better use for two and a half million tonnes of air.' The Kernel Settlers are building it, and want carbon fibre."
+			},
+			"complete": {
+				"headline": "First breath: the Long Breath opens",
+				"body": "The Long Breath held its first full day of air today, and six hundred people jumped off the spindle at once. Nobody fell, because there is nowhere to fall to. Visitors welcome; wings for hire at the dock."
+			}
 		}
 	}
 }

@@ -16,6 +16,8 @@
 ##   starshade        Valhalla's flower-shaped starshade, lined up with a distant telescope
 ##   sail_yard        Clarke Exchange's sail yard, and the Lightfoot sails once it is built
 ##   stanford_torus   the Tsiolkovsky Wheel going up beside Trojan Yards: a 1.8 km Stanford torus
+##   long_breath      the Long Breath going up off the Kernel: a 2 km bubble of air you fly in
+##   long_breath_dock the same bubble, finished, behind its own dock hub
 ## Solid ones register colliders on the parent (meta "colliders": {spheres, tori}) so
 ## a pilot who flies into one hits it.
 extends RefCounted
@@ -55,6 +57,13 @@ static func build(parent: Node3D, features: Array, dirs: Dictionary, station: Di
 				anims.append_array(_sail_yard(parent, dirs, float(progress.get("sail_yard", 0.0))))
 			"stanford_torus":
 				anims.append_array(_stanford_torus(parent, dirs, float(progress.get("stanford_torus", 0.0))))
+			"long_breath":
+				anims.append_array(_long_breath(parent, Vector3(-5200.0, -1800.0, -8400.0), float(progress.get("long_breath", 0.0))))
+			"long_breath_dock":
+				# Its own port is the hub at the bubble's pole: the bubble lies straight
+				# beyond the docking face, as the approach looks.
+				var hub_l := float(station.get("hub_length", 120.0))
+				anims.append_array(_long_breath(parent, Vector3(0.0, 0.0, -hub_l * 0.5 - LONG_BREATH_R - 20.0), 1.0))
 	return anims
 
 
@@ -806,3 +815,80 @@ static func _stanford_torus(parent: Node3D, dirs: Dictionary, p: float) -> Array
 	_solid_sphere(parent, centre, 70.0)
 	return anims
 
+
+# --- The Long Breath, a bubble of air you fly in -------------------------------------
+
+## The bubble's radius (m). At half an atmosphere it holds about 2.5 million tonnes of
+## air, held in by the shell's tension, not by gravity (docs/WONDERS.md).
+const LONG_BREATH_R := 1000.0
+
+
+## The Long Breath at `centre`, built as far as `p` (0..1 over project long_breath's
+## four stages: the spindle and its lamp, the shell, first breath, gardens adrift).
+## It doesn't spin: inside there is no down, and people fly. The spindle runs along Z,
+## pole to pole, through the lamp at the centre that is its sun.
+static func _long_breath(parent: Node3D, centre: Vector3, p: float) -> Array:
+	var r := LONG_BREATH_R
+	var root := Node3D.new()
+	root.position = centre
+	parent.add_child(root)
+	var spindle_f := clampf(0.3 + p / 0.25 * 0.7, 0.3, 1.0)
+	var shell_f := clampf((p - 0.25) / 0.25, 0.0, 1.0)
+	var aired := p >= 0.5
+	var planted := clampf((p - 0.75) / 0.25, 0.0, 1.0)
+	var done := p >= 1.0
+	var carbon := _lit(Color("3a3f45"), 0.2, 0.4, 0.4)
+	# The spindle, pole to pole along Z, and the lamp at its middle.
+	root.add_child(Kit.cylinder(6.0, 2.0 * r * spindle_f, carbon, Vector3.ZERO, 12))
+	var lamp_r := 30.0 if aired else 14.0
+	root.add_child(Kit.sphere(lamp_r, Kit.glow(Color("fff1d0"), 8.0 if aired else 2.0)))
+	# The shell's frame: meridians through both poles (on Z), then latitude hoops.
+	# Kit tori lie in the XY plane (axis Z); back at the mesh's own orientation (axis
+	# Y) a hoop lies in XZ, through both poles, and a holder turned about Z fans them.
+	var meridians := int(round(12.0 * shell_f))
+	for k in meridians:
+		var holder := Node3D.new()
+		holder.rotation = Vector3(0.0, 0.0, PI * float(k) / 12.0)
+		var hoop := Kit.torus(r, 3.0, carbon, Vector3.ZERO, 96)
+		hoop.rotation = Vector3.ZERO
+		holder.add_child(hoop)
+		root.add_child(holder)
+	if shell_f >= 1.0:
+		for lat in [-0.7, -0.35, 0.0, 0.35, 0.7]:
+			root.add_child(Kit.torus(r * sqrt(1.0 - lat * lat), 2.5, carbon, Vector3(0, 0, lat * r), 96))
+	# The film itself: clear, so you see the lamp and the gardens through it, with a
+	# faint sheen once it holds air.
+	if shell_f > 0.0:
+		_solid_sphere(parent, centre, r)
+		var film := Kit.sphere(r, _haze(Color("cfe6ff"), 0.05 + 0.05 * shell_f))
+		film.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		root.add_child(film)
+	if aired:
+		var air := Kit.sphere(r * 0.985, _haze(Color("a8d4ff"), 0.07))
+		air.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		root.add_child(air)
+	# Gardens and water globes adrift round the lamp, and the hammock villages tethered
+	# to the spindle. A fixed seed: the same bubble every visit.
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 1995
+	var garden := _lit(Color("5f8f3e"), 0.5, 0.0, 1.0)
+	var water := _lit(Color("4f86b8"), 0.3, 0.6, 0.1)
+	for i in int(round(36.0 * planted)):
+		var d := Vector3(rng.randf_range(-1, 1), rng.randf_range(-1, 1), rng.randf_range(-1, 1)).normalized()
+		var at := d * rng.randf_range(r * 0.25, r * 0.75)
+		var size := rng.randf_range(12.0, 45.0)
+		root.add_child(Kit.sphere(size, garden if i % 3 else water, at))
+	for i in int(round(10.0 * planted)):
+		var z := rng.randf_range(-r * 0.7, r * 0.7)
+		root.add_child(Kit.box(Vector3(60.0, 8.0, 30.0), _lit(Color("d9c7a0"), 0.6, 0.0, 0.9), Vector3(rng.randf_range(-20.0, 20.0), 20.0, z)))
+	var anims := []
+	if not done:
+		var sparks := []
+		for i in 24:
+			var d := Vector3(rng.randf_range(-1, 1), rng.randf_range(-1, 1), rng.randf_range(-1, 1)).normalized()
+			var spark := Kit.sphere(6.0, Kit.glow(Color("cfe8ff"), 6.0), d * r * (1.0 if shell_f > 0.0 else 0.1))
+			spark.set_meta("seed", rng.randf())
+			root.add_child(spark)
+			sparks.append(spark)
+		anims.append({"kind": "flicker", "nodes": sparks})
+	return anims

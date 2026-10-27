@@ -189,7 +189,7 @@ These belong in the sky full of homesteads in *The cap's off*: beacons, chatter,
 Chosen for reach (close to where the player already flies), variety (gravity, light and air answered differently each time), and economy (each wants the new goods):
 
 1. **The Nave** (lunar lava-tube cathedral, Marius Hills). **In** (27 October 2026): a town reached by the Cooperative's hopper from Line Foot. See *The Nave* in DESIGN.md.
-2. **The Long Breath** (air bubble at L5, near the Kernel). Tier 2 project, then a port. A showcase for flying people and for Firsts and the Feed.
+2. **The Long Breath** (air bubble at L5, near the Kernel). **In** (27 October 2026): a project at the Kernel, then a port. See *The Long Breath* in DESIGN.md.
 3. **Cloud city over Venus.** Opens Venus: the most Earth-like gravity and a true sky castle. Bigger work: a new body, region and market.
 4. **The Long Hall** (roof over Coprates Chasma). Mars megaproject in segments, like the Selene Ring.
 5. **The Ceres megasatellite** grows behind the Concord Pair, one group's cylinder at a time.
