@@ -3747,22 +3747,28 @@ func test_wear_accrual() -> void:
 
 
 func test_wear_faults() -> void:
-	var run := func() -> Sim:
+	# Read the events as the game does, every few days: over months the busy system
+	# makes more than the sim holds unread (Sim.MAX_PENDING_EVENTS).
+	var warnings := []
+	var run := func(keep: bool) -> Sim:
 		var sim := fresh()
 		Condition.set_condition(sim.state.ship, "drive.0", 0.1)
 		Condition.set_condition(sim.state.ship, "radiator.0", 0.1)
 		sim.apply({"type": "set_time_scale", "scale": 1.0})
-		sim.advance_game_time(120.0 * DAY)
+		for _i in 12:
+			sim.advance_game_time(10.0 * DAY)
+			var seen := sim.take_events().filter(func(e): return e["type"] == "module_fault" or e["type"] == "condition_low")
+			if keep:
+				warnings.append_array(seen)
 		return sim
-	var a: Sim = run.call()
-	var b: Sim = run.call()
+	var a: Sim = run.call(true)
+	var b: Sim = run.call(false)
 	var faults: Dictionary = a.state.ship["faults"]
 	check(not faults.is_empty(), "A worn-out module throws small faults over months")
 	for slot in faults:
 		check(float(faults[slot]["loss"]) > 0.0 and float(faults[slot]["loss"]) <= float(a.data.ship_economy["faults"]["cap"]) + 1e-9, "A fault is a few percent, capped (%s %.3f)" % [slot, float(faults[slot]["loss"])])
 	check(a.state.ship["faults"] == b.state.ship["faults"] and a.state.rng_state == b.state.rng_state, "Faults are deterministic for a seed")
 	check(a.state.ship.get("damage", {}).is_empty() and a.state.ship["hull"] == "mule", "A fault is never damage and never a lost ship")
-	var warnings := a.take_events().filter(func(e): return e["type"] == "module_fault" or e["type"] == "condition_low")
 	check(not warnings.is_empty(), "Faults and low condition raise warnings")
 	# A healthy ship has none.
 	var good := fresh()
