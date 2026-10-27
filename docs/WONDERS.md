@@ -193,7 +193,7 @@ Chosen for reach (close to where the player already flies), variety (gravity, li
 2. **The Long Breath** (air bubble at L5, near the Kernel). **In** (27 October 2026): a project at the Kernel, then a port. See *The Long Breath* in DESIGN.md.
 3. **Cloud city over Venus.** **In** (27 October 2026): Cytherea Station in orbit and Aphrodite's Rest below, by glider. See *Venus* in DESIGN.md.
 4. **The Long Hall** (roof over a canyon in Noctis Labyrinthus). **In** (27 October 2026): a project at Ares Ring, then a town by shuttle.
-5. **The Ceres megasatellite** grows behind the Concord Pair, one group's cylinder at a time.
+5. **The Ceres megasatellite.** **In** (27 October 2026): a project at Piazzi announced once the Concord Pair is done, four cylinders for four peoples. See *The Ceres megasatellite* in DESIGN.md.
 6. **Ice tugs and pushers.** **In** (27 October 2026), as berg arrivals on the markets of the dry ports, parked bergs as set pieces and a title shot. Still to come: pushers met in transit, and supply runs to berg crews. See *Ice tugs and pushers* in DESIGN.md.
 7. **Hammerhead stations.** **In** (27 October 2026): a station type, first used at Huygens Port. See *Hammerhead stations* in DESIGN.md.
 8. **Terminator on Mercury.** Late game, a moving port.

@@ -175,6 +175,7 @@ The system should feel like a place where big things are being built. Each tier 
 | Ice tugs and pushers | Outer Belt to the Kernel, Psyche and Venus | 2 | **In** (berg arrivals, set pieces) | Water prices drop when a berg is parked off a dry port |
 | Hammerhead station | Huygens Port, Titan | 2 | **In** (station type) | A working port built like a long-haul ship |
 | Roofed canyon (the Long Hall) | Noctis Labyrinthus, Mars | 2–3 | **In** (project, then a town by shuttle) | Carbon fibre and ceramic feed into the build; food and the first vintage after |
+| Ceres megasatellite | 260 km from Piazzi, after the Concord Pair | 3 | **In** (project set piece) | Piazzi's flows x1.2; four new cylinders, each for a different people |
 | Earth–Mars cycler (Aldrin cycler) | Earth–Mars | 2 | Planned | A moving station you catch on its schedule |
 | Space farms | Kernel, Belt | 2–3 | Partly in (Kernel food) | Food chain away from Earth |
 | Lofstrom loop (launch loop) | Earth equator | 2 | Planned (backdrop) | Cheaper Earth-to-orbit freight |
@@ -1421,6 +1422,15 @@ Wonders shortlist item 4 (WONDERS.md): a roof over a canyon.
 - **The town** (`long_hall`, `foot_of` Ares Ring, opens with the project): ten kilometres of a canyon in Noctis Labyrinthus (7 S, 101 W), two kilometres wide and one deep, under a clear roof at half an atmosphere. A river, fields, orchards and the first Martian vineyard. Makes staples, wine, handmade goods and collectibles; wants water, parts, drones, medicine, polymer, storage and a little Earth food. Bar: the Echo. The Accord shuttle lands outside its eastern doors (3 h, 210 cr + 110 cr/t).
 - **Flight view:** `look.kind` `canyon`: the pad outside the end wall and doors, the cliffs, the anchored roof on its cable net, and the fields and river inside.
 - **Physics:** RESEARCH.md §12 and WONDERS.md: the roof's tension is pressure times curve radius, so it bulges up between the rims and is anchored down; only a narrow canyon keeps it to a few centimetres of carbon fibre.
+
+## The Ceres megasatellite (Oct 2026)
+
+Wonders shortlist item 5 (WONDERS.md), after Pekka Janhunen's proposal.
+
+- **The project** (`projects.json` `ceres_megasat`, at Piazzi Station): announced only when the Concord Pair is finished (`reveal.after_stage`). Five stages: the frame and its slag shield, then four cylinders, each for a different people: a canal town (a Venetian quarter), a pine forest, a desert monastery and an all-night quarter. Backed by the Belt Assembly; when done, Piazzi's flows rise by a fifth.
+- **The Long View's rule:** no cylinder bigger than its people can fill. Built from Ceres's own rock, with its nitrogen for the air.
+- **Set piece** (`set_pieces.gd` `_megasatellite`, feature `megasatellite` at Piazzi): a 60 km frame 260 km out, facing the Sun, and one cylinder (10 km long, 1 km radius) for each stage after the frame, each turning once every 66 s (0.92 g at its hull). Nothing shows until work starts.
+- **Not yet:** a port of its own; the cylinders are seen, not visited.
 
 ## Milestones
 

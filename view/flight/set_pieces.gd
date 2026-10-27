@@ -18,6 +18,7 @@
 ##   stanford_torus   the Tsiolkovsky Wheel going up beside Trojan Yards: a 1.8 km Stanford torus
 ##   long_breath      the Long Breath going up off the Kernel: a 2 km bubble of air you fly in
 ##   long_breath_dock the same bubble, finished, behind its own dock hub
+##   megasatellite    the Ceres megasatellite: a 60 km frame filling with 10 km cylinders
 ##   ice_berg         a berg of water ice pushed in from the outer Belt, parked off the
 ##                    port and quarried, its pusher still bolted to its back
 ## Solid ones register colliders on the parent (meta "colliders": {spheres, tori}) so
@@ -61,6 +62,8 @@ static func build(parent: Node3D, features: Array, dirs: Dictionary, station: Di
 				anims.append_array(_stanford_torus(parent, dirs, float(progress.get("stanford_torus", 0.0))))
 			"long_breath":
 				anims.append_array(_long_breath(parent, Vector3(-5200.0, -1800.0, -8400.0), float(progress.get("long_breath", 0.0))))
+			"megasatellite":
+				anims.append_array(_megasatellite(parent, dirs, float(progress.get("megasatellite", 0.0))))
 			"ice_berg":
 				anims.append_array(_ice_berg(parent, Vector3(2600.0, -900.0, -4200.0), 1.0, true))
 			"long_breath_dock":
@@ -933,3 +936,53 @@ static func _ice_berg(parent: Node3D, centre: Vector3, scale: float, parked: boo
 		root.add_child(Kit.box(Vector3(6.0, 3.0, 4.0) * scale, _mat(Color("d8b02a")), Vector3(r * 0.6, r * 0.8, 0)))
 		root.add_child(Kit.beacon(Color("fff4d6"), Vector3(r * 0.6, r * 0.8 + 3.0 * scale, 0), 0.8 * scale, 1.0, 0.3))
 	return []
+
+
+# --- The Ceres megasatellite -------------------------------------------------------
+
+## The megasatellite (project ceres_megasat, after Janhunen): a frame 60 km across,
+## turned to face the Sun, with cylinders 10 km long and 1 km in radius set side by
+## side across it, one more for each stage after the frame. Each spins once every 66 s
+## (0.92 g at its hull) about its own axis, which lies in the frame's plane.
+static func _megasatellite(parent: Node3D, dirs: Dictionary, p: float) -> Array:
+	# Nothing until work starts: it is announced only once the Concord Pair is done.
+	if p <= 0.0:
+		return []
+	var sun: Vector3 = dirs.get("sun", Vector3.UP)
+	var avoid: Vector3 = dirs.get("ceres", Vector3.DOWN).normalized()
+	var d := Vector3(0.55, 0.2, -1.0).normalized()
+	if d.angle_to(avoid) < deg_to_rad(60.0):
+		d = Vector3(-0.55, 0.25, -1.0).normalized()
+	var root := _facing(sun, d * 260000.0)
+	parent.add_child(root)
+	var frame := _lit(Color("8c9196"), 0.25, 0.6, 0.5)
+	var skin := _lit(Color("d9d4c7"), 0.12, 0.2, 0.8)
+	var glow := Kit.glow(Color("cfe4c0"), 1.0)
+	var stages := 5
+	var built := int(floor(p * float(stages) + 1e-6))
+	# The frame: a rim, spokes and a cross-beam for each slot, from the first stage on.
+	var frame_f := clampf(0.2 + p * float(stages) * 0.8, 0.2, 1.0)
+	root.add_child(Kit.torus(30000.0, 300.0, frame, Vector3.ZERO, 192))
+	for k in int(round(8.0 * frame_f)):
+		var holder := Node3D.new()
+		holder.rotation.z = TAU * float(k) / 8.0
+		holder.add_child(Kit.box(Vector3(30000.0, 200.0, 200.0), frame, Vector3(15000.0, 0, 0)))
+		root.add_child(holder)
+	var anims := []
+	var rate := TAU / 66.0
+	for i in maxi(built - 1, 0):
+		# Side by side across the frame, axes along its Y.
+		var holder := Node3D.new()
+		holder.position = Vector3(-9000.0 + 6000.0 * float(i), 0.0, 0.0)
+		holder.rotation = Vector3(PI * 0.5, 0.0, 0.0)
+		root.add_child(holder)
+		var rotor := Node3D.new()
+		holder.add_child(rotor)
+		rotor.add_child(Kit.cylinder(1000.0, 10000.0, skin, Vector3.ZERO, 32))
+		for w in 3:
+			var stripe := Node3D.new()
+			stripe.rotation.z = TAU * float(w) / 3.0
+			stripe.add_child(Kit.box(Vector3(30.0, 260.0, 9200.0), glow, Vector3(1001.0, 0, 0)))
+			rotor.add_child(stripe)
+		anims.append({"kind": "spin", "node": rotor, "rate": rate})
+	return anims

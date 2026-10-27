@@ -106,6 +106,7 @@ func _initialize() -> void:
 	test_the_nave()
 	test_venus()
 	test_long_hall()
+	test_ceres_megasat()
 	test_shuttle_view_profile()
 	test_edge_cases()
 	test_power_budget()
@@ -2415,6 +2416,22 @@ func test_long_hall() -> void:
 	check(s.location == {"status": "docked", "place": "long_hall"}, "In the Long Hall")
 	check(sim.apply({"type": "buy", "good": "wine_spirits", "tonnes": 0.1}) == "", "Buy the first Martian vintage")
 	check(Shuttle.flight_to(d, "long_hall")["to"] == "ares_ring", "The shuttle flies back up to Ares Ring")
+
+
+func test_ceres_megasat() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var p: Dictionary = d.projects["ceres_megasat"]
+	check(p["place"] == "piazzi_station" and p["stages"].size() == 5, "The megasatellite is built at Piazzi in five stages: the frame, then four cylinders")
+	# Each cylinder is Janhunen's: 1 km in radius, a turn every 66 s, about 0.92 g.
+	var g := pow(TAU / 66.0, 2.0) * 1000.0 / 9.80665
+	check(absf(g - 0.92) < 0.01, "A turn every 66 s gives 0.92 g at 1 km (%.3f)" % g)
+	sim.advance_game_time(30.0 * DAY)
+	check(not s.projects["ceres_megasat"].get("revealed", false), "Nobody talks about it until the Concord Pair is done")
+	s.projects["concord_pair"]["done"] = true
+	sim.advance_game_time(DAY)
+	check(s.projects["ceres_megasat"].get("revealed", false), "Then it is announced")
 
 
 func test_mars_shuttle() -> void:

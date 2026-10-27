@@ -958,5 +958,92 @@
 				"text": "A plot by the river in the Long Hall"
 			}
 		]
+	},
+	"ceres_megasat": {
+		"name": "The Ceres Megasatellite",
+		"place": "piazzi_station",
+		"description": "A frame sixty kilometres across in orbit over Ceres, to hold cylinders ten kilometres long and a kilometre in radius, each spinning once a minute for nine-tenths of a g, each built for a different people. The Concord Pair was the first two; these are the next four.",
+		"draw_t_per_day": 4.0,
+		"reveal": {
+			"after_stage": [
+				"concord_pair",
+				4
+			]
+		},
+		"stages": [
+			{
+				"name": "The frame and its slag shield",
+				"needs": {
+					"refined_metals": 120,
+					"machine_parts": 40,
+					"robotics": 10
+				}
+			},
+			{
+				"name": "The canal town (a Venetian quarter, for a family from Venice)",
+				"needs": {
+					"water_ice": 200,
+					"carbon_fibre": 60,
+					"polymer_feed": 40
+				}
+			},
+			{
+				"name": "The pine forest (for the Norrland settlers)",
+				"needs": {
+					"volatiles": 120,
+					"oxygen": 100,
+					"gene_stock": 4
+				}
+			},
+			{
+				"name": "The desert monastery (for the Order of the Long Silence)",
+				"needs": {
+					"refined_metals": 60,
+					"sensors_optics": 4,
+					"medical": 8
+				}
+			},
+			{
+				"name": "The all-night quarter (for everyone who wants one)",
+				"needs": {
+					"electronics": 20,
+					"wine_spirits": 2,
+					"delicacies": 2
+				}
+			}
+		],
+		"effects": {
+			"piazzi_station": {
+				"consumes_mult": 1.2,
+				"produces_mult": 1.2
+			}
+		},
+		"feature": "megasatellite",
+		"backer": "Belt Assembly",
+		"pitch": {
+			"why": "Not one habitat but a city of them, each cylinder its own country: a canal town, a pine forest, a desert monastery, a quarter that never sleeps. Pekka Janhunen drew it in the 2020s; we are building it.",
+			"plan": "A frame of Ceres's own rock with its slag for shielding, then one cylinder at a time, each chosen by the people who will live in it. Ceres has the nitrogen for the air. The Long View signed it off with one rule: no cylinder bigger than its people can fill.",
+			"offer": "Backers dock free at Piazzi and are welcome in every cylinder's first festival."
+		},
+		"perks": [
+			{
+				"min_t": 15,
+				"kind": "free_docking",
+				"place": "piazzi_station",
+				"text": "Free docking at Piazzi Station"
+			},
+			{
+				"min_t": 60,
+				"kind": "standing",
+				"operator": "Belt Assembly",
+				"value": 6,
+				"text": "The Assembly counts you among the megasatellite's builders"
+			},
+			{
+				"min_t": 150,
+				"kind": "promise",
+				"text": "A seat at every cylinder's first festival"
+			}
+		]
 	}
 }

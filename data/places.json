@@ -977,7 +977,8 @@
 			"passenger_berths"
 		],
 		"features": [
-			"oneill_pair"
+			"oneill_pair",
+			"megasatellite"
 		],
 		"elevator": {
 			"name": "the Piazzi Stalk",

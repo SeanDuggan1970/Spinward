@@ -469,6 +469,17 @@
 				"headline": "Air in the Long Hall",
 				"body": "The Long Hall held its full half-atmosphere for a week, and this morning the Accord opened its eastern doors. Children ran the first kilometre without helmets. The river reaches the far end tomorrow. Shuttles from Ares Ring land outside the doors."
 			}
+		},
+		"ceres_megasat": {
+			"announce": {
+				"dateline": "Piazzi Station",
+				"headline": "Four more cylinders for Ceres",
+				"body": "With the Concord Pair turning, the Belt Assembly will build the frame of a megasatellite over Ceres, sixty kilometres across, and hang four new cylinders in it: a canal town, a pine forest, a desert monastery and an all-night quarter, each chosen by the people who will live there. The Long View's one rule: no cylinder bigger than its people can fill. Metal powders, water and carbon fibre wanted at Piazzi."
+			},
+			"complete": {
+				"headline": "Six cylinders over Ceres",
+				"body": "The fourth new cylinder over Ceres spun up today, and the megasatellite now holds six, the Concord Pair among them. You can take a tram along the frame from a Venetian canal to a pine forest in twenty minutes. The monks have asked that the tram not stop at theirs after dark."
+			}
 		}
 	}
 }
