@@ -63,6 +63,36 @@ The tropes are fine: cults, survivalists, tribes and corporate dynasties all fit
 - Specific beats generic. "A Quaker meeting in a grain silo at L5" beats "a religious colony".
 - Nothing we imagine will match what a released imagination will actually do. Keep adding, keep it surprising, and don't let it settle into a few repeated jokes.
 
+## Who you are: a Third for the Sky (draft, 27 October 2026)
+
+Owner's brief: *how does our character end up in space with a ship? A lottery, begged and borrowed, in hock to a bank? Or does your country have a scheme to encourage families to have more children, "two for the Earth and a third for the sky"? You're expected to go. Your community votes and invests in you and gives you a goal: earn enough to start or support an off-world extension of your country, "our extended place in space", while avoiding the mistakes of the past that left colonies feeling they had no political power. The minds (at least those that don't dislike humans) would want to help create healthy elbow room for all and enable flourishing. Space doesn't lack for space or resources, especially with so much AI to help marshal the atoms.*
+
+**The scheme.** Your country, like many in the 2060s, has a birth-rate problem and a frontier on its doorstep. Its answer was a promise to families: *two for the Earth, and a third for the sky.* Have a third child, and the country backs that child's chance to go out. Nobody is made to go. Plenty of Thirds stay home and are glad they did. But everyone knows the tradition, the town turns out for the send-offs, and you said yes.
+
+**Your Sending.** You don't go alone and you don't go in debt to a bank. Your home community holds a Sending: it hears the Thirds who want to go, votes on whom to back, and pools a fund. It bought *Second Wind*, a tired Mule with good bones, and the first tank of propellant. In return you carry the town's **Charter**:
+- **The goal:** earn and build enough to found the town's **Extension**, its own place in space. That is the campaign's Build Home pillar. The cylinder in the rock (see *Your base*) is not just your house. It is your community's second home, and you are its founder.
+- **The stake:** the town's fund is a share in the Extension, not a loan. There are no repayments and no interest, and losing a ship never puts you in debt to them. They hope for a dividend one day, and pride in the meantime.
+- **The tie:** letters from home, the town watching your progress on the Feed, and votes on the Extension's big choices (where to build, what to grow, who comes next).
+
+**The co-pilot.** Your mind volunteered. Most Sendings advertise for a partner as well as a pilot, and the minds who answer are the ones who want to see people flourish. Your co-pilot is a co-founder of the Extension, not a tool aboard your ship, with its own reasons for going and its own say.
+
+**Not a colony.** The Charter is written against the mistakes of history: places that sent people out, took what they made, and gave them no voice. An Extension is a full part of its country from day one:
+- **Seats and votes.** Its people are citizens with votes at home, and its council sits in the home parliament as an equal.
+- **Its own atoms.** What the settlers dig, grow and build belongs to them. The home country can't tax away the Extension's future.
+- **The right to leave, and to go their own way.** Anyone may leave. The Extension itself may later choose independence by its own vote, peacefully, and the Charter says so in advance.
+- **Minds as co-founders.** The minds who help build it have the same standing as the people who live in it.
+
+**Why the minds help.** Most minds want what the Commons calls *elbow room for all*: enough space and atoms for everyone, human and mind, to grow without crowding anyone else. Space has no shortage of either, and a mind can marshal a million tonnes of rock while a human sleeps. What it can't do alone is want a particular town in a particular rock with a particular view. Helping people want things, and get them, is how many minds choose to spend their freedom. The minds who dislike humans (see *Minds as persons*) are the exception that makes this a choice, not a given.
+
+**In the game (proposed):**
+- **Start:** a short opening from the Sending (your town's name, the vote, the hand-over of *Second Wind*), then Kibo Ring as now.
+- **The Charter** as the campaign's goal track, with milestones from first profit to first stage of the Extension, and letters and news from home at each.
+- **Home's voice:** the town's messages on comms, reacting to what you do: proud, worried, teasing, and sometimes asking a favour.
+- **Votes:** at big Extension choices, the town (and your co-pilot) weigh in. You decide, but they remember.
+- **Later options:** other ways out (a lottery winner, a bank loan, a runaway) as alternative starts, each with a different relationship to money and home.
+
+**Open questions:** whether your home country is real, fictional or player-chosen; your name and the town's; and whether the Sending is a national scheme or many local traditions.
+
 ## Pillars
 
 1. **Trade → Explore → Build Home.** Each stage funds and motivates the next. The base is the ultimate goal and the biggest money sink.
@@ -1323,7 +1353,7 @@ Drive acceleration and fuel per tier. Price band width and elasticity per good. 
 
 ## Open questions
 
-- Player identity: a custom name and portrait? A fixed backstory?
+- Player identity: a custom name and portrait? The backstory direction is drafted in *Who you are: a Third for the Sky*.
 - How much should the co-pilot speak? Writing and voice budget.
 - Should a ship be lost permanently? Leaning to "insurance + setback", not permadeath.
 - ~~Art direction~~: decided. Workmanlike modular hardware, see "Art direction".
