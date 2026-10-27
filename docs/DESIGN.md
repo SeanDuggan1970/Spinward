@@ -20,6 +20,49 @@ Minds are artificial persons with individual histories and values. The Commons i
 
 The full writing guide and proposed **Continuity Accord** are in [MINDS.md](MINDS.md). It distinguishes Continuance, Forking and Genesis, protects offspring against their creators, and develops optional disputes and mortal Minds. These are lore proposals, not implemented legal or reproduction systems. Hardware radix remains undecided. The Lacuna’s response to humans is an observed preference and a mystery, not evidence against Mind personhood.
 
+## The cap's off: the feel of the setting (draft, 27 October 2026)
+
+Owner's brief: *once AI and space travel arrive, the solar system will be packed with ships. People will spill out to try things: groups wanting space, dreamers, artists, survivalists, companies, the religious, tribes, cults. Every science-fiction trope will be speed-run by humanity and AI. Earth is a shaken bottle of fizzy pop with the cap suddenly flying off: new horizons, freedoms, a wild frontier. People feel like Renaissance figures who know, or think they know, nearly everything, with minds as partners to go and take the solar system and beyond. It should feel crazily freeing.*
+
+**The mood.** The 2060s are not a careful colonial programme. They are a release of pressure. Automation made the basics cheap, fusion made the distances short, and minds made almost anything learnable in an afternoon. Suddenly billions of people can ask "what would I do if I could do anything?", and a great many of them are trying the answer at once. The big factions (the Compact, the Cooperative, the Commons, the Assembly, the Freeholders) are the riverbanks. The water is everyone else.
+
+**Who is out there.** A long tail of small groups under the big factions, each chasing its own idea of a good life. Most are a few dozen people and their minds. Some last a season.
+- **Dreamers and firsts:** anyone who wants to be the first to do something, anywhere. First wedding at a Lagrange point, first choir in Saturn's shadow, first person to walk round Phobos.
+- **Artists:** sculptors carving whole rocks, light artists painting with mirrors, composers recording the creak of a station's ring.
+- **Faiths and orders:** monasteries on hollowed asteroids, pilgrims to the far side of the Moon, new religions that began on a forum last spring.
+- **Tribes and families:** clans re-founding themselves round a ring, homesteaders on a comet, a village that moved off Earth together.
+- **Survivalists and refuseniks:** people who trust no one, or no mind but one, living on the edge of the shipping lanes and still answering a distress call.
+- **Start-ups and schemes:** three people and forty drones mining ice, a brewery on Mars, a hotel that is mostly a window.
+- **Minds on their own errands:** the Commons' factions, and single minds with odd and private projects of their own.
+- **The quietly mad:** a nation of one declared on a 200 m rock, a group launching for Proxima on a sail and a prayer.
+
+The tropes are fine: cults, survivalists, tribes and corporate dynasties all fit. They follow the pillars. They are eccentric, stubborn, overconfident or in over their heads, not villains. The frontier's real danger is still space itself.
+
+**The work that is still human.** Machines do almost all the labour, but people are still needed, and paid, for the parts that need a person:
+- **Second Opinion:** an engineer a robot calls in when its own models disagree. Often the job is to look, listen, and say "no, that's fine" or "no, stop".
+- **Percussive Maintenance:** knowing exactly where to kick a machine, and how hard. Half folklore, half the only fix that works out here.
+- **Taster:** the first person to taste the first beer brewed on Mars, the first bread from a new ring's wheat, the water from a fresh ice claim. Somebody has to say it's good.
+- **Witness:** a human present when something happens for the first time, so it counts. Records, claims and ceremonies want a person in the room.
+- **First:** the person who does it first, because someone wants it done and seen. Sponsors pay for firsts.
+- **Feed:** creators streaming the frontier to the billions back home. Earth still watches. A yoga class on top of Olympus Mons in pressure skin suits will find an audience of hundreds of millions.
+- **Courier, Ferry, Hauler:** the player's own trade. Some things still go with a person: the heirloom, the seed vault, the bride, the organ for the cathedral on Ceres.
+- **Mediator:** someone both sides trust when a commune and a mining start-up both claim the same rock.
+- **Midwife, Medic, Celebrant:** being there for births, injuries, weddings and funerals, which nobody wants to hand to a machine.
+
+**How it shows in the game.** Mostly data and writing, not new rules:
+- **Groups** (`data/groups.json`, proposed): each with a name, a one-line creed, a livery, a home and a faction it leans toward. Their ships fill the traffic, the scanner and the docking queues.
+- **News:** keep the civic milestones, but most headlines should be small and strange, a constant stream of people trying things.
+- **Contracts:** clients from the crowd, with jobs from the list above. Haul a pipe organ to Ceres, witness a claim, taste a vintage, fly a Feed crew to Olympus Mons for the sunrise.
+- **Comms chatter:** crews (usually a person and a mind) mid-argument, mid-scheme or mid-dream, sometimes in trouble and asking for help.
+- **A sky full of homesteads:** small claims and beacons all over the transit view and the map, so the system feels inhabited, not a handful of ports.
+
+**Writing guide.**
+- Freedom first. People are out here because they finally can be, and the game is glad they are.
+- Funny and warm before grim. Absurd ambition is treated with affection, not mockery.
+- Partnership. Most crews are human and mind together, arguing as equals.
+- Specific beats generic. "A Quaker meeting in a grain silo at L5" beats "a religious colony".
+- Nothing we imagine will match what a released imagination will actually do. Keep adding, keep it surprising, and don't let it settle into a few repeated jokes.
+
 ## Pillars
 
 1. **Trade → Explore → Build Home.** Each stage funds and motivates the next. The base is the ultimate goal and the biggest money sink.
