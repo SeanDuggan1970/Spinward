@@ -333,3 +333,21 @@ Full write-up: [2026-10-07-economy-together.md](2026-10-07-economy-together.md).
 - New data: four Mars bases in `places.json` (Jezero, Candor Terraces, Hellas Deep, Tharsis Domes, all `foot_of` Ares Ring) with their own markets, `ares_ring.shuttle` (fares 160 to 260 cr a seat plus 100 to 130 cr/t, 20 t limit, 2.5 to 5 h), and two badges.
 - Balance bot re-run (5 seeds, 180 days, upgrade=1): identical, seed for seed, mean 105,630 cr, median first upgrade day 10.7. The bot never takes the shuttle, so it doesn't see the bases' markets.
 - Worth a hand-played check: the per-tonne fare (100 to 130 cr/t) is small beside food (600 cr base) and medical (5,000 cr), so shuttling high-value goods down to a base short of them may pay well. That's intended as a small side trade; raise `fare_per_t` if it turns into the best route at Mars.
+
+
+## Goods for the 2060s (2026-10-27)
+
+- Changed data: `goods.json` goes from 14 goods to 28 (high tech, printer feedstocks, gene stock, Earth luxuries, frontier exports), with flows at every place in `places.json`. Each new good's target stock is 20 days of its flow. `electronics`, `refined_metals` and `food` keep their ids as Compute cores, Metal powders and Staples.
+- Balance bot (5 seeds, 180 days, upgrade=1), before and after:
+
+  | | Mean credits, day 180 | Median first upgrade | End credits by seed | Trips |
+  |---|---|---|---|---|
+  | Before (main) | 105,630 | day 10.7 | 134k, 80k, 139k, 24k, 151k | 56–59 |
+  | After | 82,994 | day 6.9 | 126k, 36k, 164k, 36k, 53k | 63–67 |
+
+- **The start is faster and steadier.** The first upgrade comes on day 6.7–6.9 in four seeds out of five (15.0 in the fifth), against 5.9–37.2 before. Day one has more good trades near Earth.
+- **The mean is lower, but within the noise.** Seeds vary by a factor of five either way, so 83k against 106k over five seeds is not a clear change. More seeds would settle it.
+- **Routes are far more varied.** Seed 1 used 35 route-and-good pairs. The top earners are compute cores into Trojan Yards (its drone works eat them), orbital pharmaceuticals from the Kernel and Kalpana One to Clarke Exchange and Kibo Ring, and storage lattices from Kalpana One. No route dominates: the best repeated one (Kalpana One to Clarke, pharmaceuticals) made 31k over three legs.
+- **Insurance costs more:** premiums rose from 4–6k to 6–9k over the run, because the bot carries more valuable cargo.
+- **The bot barely touches the luxuries.** Their targets are small (a few tonnes), so a greedy single-good trader finds little volume. The widest margins at start are luxuries to the far ports (wine from Ares Ring to Valhalla, gene stock to Tharsis, both about 225% of base), which the bot doesn't reach. Worth a hand-played check: a long-haul ship with mixed small loads of luxuries may now be the best way to earn in the outer system.
+- No tuning yet. Watch for orbital pharmaceuticals becoming the one early route everyone runs.
