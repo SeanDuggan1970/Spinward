@@ -2,7 +2,8 @@
 ## by the contract system (station boards, approaches) and the tip system (rumoured
 ## jobs), so neither has to call the other.
 ##
-## An offer: {id, kind, client (operator), issued_at (place), pickup (place or ""),
+## An offer: {id, kind, client (operator, or a cap's-off group's name), group (its id,
+## when a group is the client), issued_at (place), pickup (place or ""),
 ## to, item, mass_t, passengers, reward, window_s (time allowed from taking the job;
 ## deadline_t is set when it is taken), expires_t (offer leaves the board), min_rep,
 ## rep, channel ("board" | "approach" | "rumour"),
@@ -180,6 +181,16 @@ static func make_offer(data, eph, state, rng: RandomNumberGenerator, place: Stri
 			mass = snappedf(rng.randf_range(float(hm[0]), float(hm[1])), 0.001)
 			item = hand_items[pick - items.size()]
 			hand = true
+	# A cap's-off group that calls this port home may be the client, with its own freight
+	# or people (data/groups.json asks, contracts.json groups).
+	var group := {}
+	var gcfg: Dictionary = data.contracts.get("groups", {})
+	if channel == "board" and not hand and kind in gcfg.get("kinds", []) and not data.groups_at(place).is_empty() and rng.randf() < float(gcfg.get("chance", 0.0)):
+		var here: Array = data.groups_at(place)
+		group = here[rng.randi() % here.size()]
+		var asks: Array = group["asks"]["people" if heads > 0 else "freight"]
+		item = asks[rng.randi() % asks.size()]
+		client = group["name"]
 	var urgency := 1.0 + float(spec["urgency"]) * maxf(0.0, float(slack_range[1]) - slack)
 	# Work that had to go long-haul pays like it.
 	if long_haul and spec.get("range", "local") != "long_haul":
@@ -216,7 +227,10 @@ static func make_offer(data, eph, state, rng: RandomNumberGenerator, place: Stri
 		offer["watcher"] = watcher
 	if spec.has("craft"):
 		offer["craft"] = (spec["craft"] as Array).duplicate()
+	if not group.is_empty():
+		offer["group"] = group["id"]
 	# Some clients pay part of it in kind (data/favours.json); the cash part drops to match.
-	if not spec.get("covert", false):
+	# Groups pay in cash.
+	if not spec.get("covert", false) and group.is_empty():
 		Favours.maybe_in_kind(data, rng, offer)
 	return offer

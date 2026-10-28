@@ -468,12 +468,18 @@ func validate() -> Array[String]:
 			problems.append("group %s: needs ships, a creed and a headline" % id)
 		if ops.has(g.get("name", "")):
 			problems.append("group %s: shares a name with an operator" % id)
+		for key in ["freight", "people"]:
+			if g.get("asks", {}).get(key, []).is_empty():
+				problems.append("group %s: asks needs %s" % [id, key])
 		var v: Dictionary = g.get("voyage", {})
 		if not v.is_empty():
 			if v.get("route", []).size() < 2 or v["route"][0] != g.get("home", ""):
 				problems.append("group %s: a voyage starts at home and goes somewhere" % id)
 			if v.get("lines", []).is_empty():
 				problems.append("group %s: a voyage needs its comms lines" % id)
+	for k in contracts.get("groups", {}).get("kinds", []):
+		if not contracts["kinds"].has(k) or float(contracts["kinds"][k].get("min_rep", 0.0)) > 0.0:
+			problems.append("contracts groups: %s is not a kind a new client can offer" % k)
 	# News: stories name real places, beats and projects.
 	var beat_ids: Array = story.get("beats", []).map(func(b): return b.get("id", ""))
 	var story_ids := {}

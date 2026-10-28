@@ -409,6 +409,11 @@
 			"Your co-pilot flags a private channel request. Encrypted, polite, and well paid."
 		]
 	},
+	"groups": {
+		"_note": "The cap's-off groups (data/groups.json) hire too: at a port some group calls home, this share of the board's package and passenger jobs are a group's, with its own freight or people (asks). Standing goes to the group. Groups pay in cash, never in kind.",
+		"chance": 0.35,
+		"kinds": ["package", "passenger"]
+	},
 	"rumour": {
 		"chance": 0.35,
 		"pay_mult": 1.5,

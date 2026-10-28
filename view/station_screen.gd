@@ -266,8 +266,11 @@ func _market_tab(place_id: String) -> Control:
 	var here_groups: Array = d.groups_at(place_id)
 	if not here_groups.is_empty():
 		var gp := UI.panel("WHO'S HERE")
+		gp[1].add_child(UI.label("They hire pilots too: look for their names on the Contracts board.", UI.DIM, 12))
 		for g in here_groups:
-			gp[1].add_child(UI.label(g["name"], Color(g["colours"]["accent"]).lerp(UI.TEXT, 0.4), 14))
+			var standing := Contracts.rep_of(s, g["name"])
+			var title: String = g["name"] + ("  ·  %s" % Contracts.tier(d, standing) if absf(standing) >= 1.0 else "")
+			gp[1].add_child(UI.label(title, Color(g["colours"]["accent"]).lerp(UI.TEXT, 0.4), 14))
 			gp[1].add_child(UI.label(g["creed"], UI.DIM, 12))
 		parts[1].add_child(gp[0])
 	return parts[0]
