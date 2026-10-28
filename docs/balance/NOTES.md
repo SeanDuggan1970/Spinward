@@ -403,3 +403,17 @@ Full write-up: [2026-10-07-economy-together.md](2026-10-07-economy-together.md).
 - Balance bot (5 seeds, 180 days, upgrade=1): mean 125,316 cr (93,194 before), median first upgrade day 6.9; by seed 177k, 131k, 108k, 115k, 96k.
 - **Higher, and every seed is up, so probably real.** The bot doesn't fly to Mercury; it feels the Dawnward freighters, which buy staples, compute cores and delicacies at Kibo Ring and sell platinum there, shifting the cislunar prices it trades on. Its top route is now Kibo Ring to Clarke Exchange with staples (68k over four legs), 1.26 times the next, so nothing dominates.
 - **Watch:** if more interplanetary fleets keep lifting cislunar profits, `relaxation_per_day` (the most sensitive knob, see above) or the fleets' `fill` can pull them back. No change yet.
+
+
+## The cap's-off groups on the lanes (2026-10-28)
+
+- Changed data: twelve groups fly one ship each between home and somewhere their creed points (`data/groups.json` voyages, made into NPC fleets with no freight). The long hauls set out over the first eight weeks. Group ships fuel from their own stores (`own_fuel`), off the markets.
+- Balance bot (180 days, upgrade=1), 20 seeds:
+
+  | | Mean, seeds 1–5 | Mean, seeds 6–20 | Mean, all 20 |
+  |---|---|---|---|
+  | main (before) | 128,299 | 114,925 | 118,268 |
+  | With the group ships | 92,432 | 115,460 | 109,703 |
+
+- **No real change.** Seeds 1–5 alone looked like a 28% fall, but seeds 6–20 match to within 1%. A check with a single group ship at Saturn (never near the bot's markets) moved single seeds by up to 60k (seed 5: 96k to 42k; seed 3: 59k to 117k). One extra ship reshuffles the shared NPC random stream, so a five-seed mean wanders by about 20k. **Use 20 seeds (`seeds=15 seed0=6` on top of the usual 5) when judging a change that adds NPCs.**
+- The first run, with the group ships buying propellant like any fleet, was 84,108 on seeds 1–5. It was taken in the same noisy window, but fuelling them off-market keeps them out of the economy in any case.

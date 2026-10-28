@@ -136,7 +136,7 @@ func _load_groups(file: Dictionary) -> void:
 			legs.append({"at": v["route"][i], "to": v["route"][(i + 1) % v["route"].size()]})
 		var fleet := {"operator": g["name"], "hull": v["hull"], "behaviour": "shuttle", "count": 1, "names": [g["ships"][0]],
 			"route": legs, "dwell_hours": file.get("voyage_dwell_hours", [48, 140]), "group": id, "lines": v.get("lines", []),
-			"commission_days": [float(v.get("commission_day", 0.0))]}
+			"commission_days": [float(v.get("commission_day", 0.0))], "own_fuel": true}
 		if v.get("sail", false):
 			fleet["sail"] = true
 			fleet["sail_days"] = v["sail_days"]
