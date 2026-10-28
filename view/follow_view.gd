@@ -333,10 +333,6 @@ func _update_world(dt: float) -> void:
 		if near and not _stations.has(place):
 			var geom: Dictionary = sim.data.places[place]["station"]
 			var st := Models.station(geom, sim.data.places[place]["name"], Livery.for_station(sim.data, place), sim.data.balance["bays"], _stowed_r)
-			# The approach corridor's lights are for pilots coming in, not for the camera.
-			for c in st["node"].get_children():
-				if c is MeshInstance3D:
-					c.visible = false
 			add_child(st["node"])
 			_stations[place] = {"model": st, "rate": float(geom["spin_rpm"]) * TAU / 60.0}
 			# Leaving through a bay we fit: the undock plays out (balance.undock).

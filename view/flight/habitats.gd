@@ -11,8 +11,9 @@
 ##   sunlight in. A frame joins the two sterns. Ships dock on the lead cylinder's axis.
 ##
 ## Each builder dresses `rotor` (and `still`, the despun parts) and returns
-## {face_z, colliders: {cylinders, tori}, stencil: {px, y, z}}. Collider cylinders may
-## carry an x, y offset ([r, z0, z1, x, y]) and tori a z ([R, r, z]).
+## {face_z, colliders: {cylinders, tori}, stencil: {inner, outer, z}} (the band of the
+## docking face the name is painted on). Collider cylinders may carry an x, y offset
+## ([r, z0, z1, x, y]) and tori a z ([R, r, z]).
 extends RefCounted
 
 const Kit := preload("res://view/flight/kit.gd")
@@ -143,7 +144,7 @@ static func bernal(rotor: Node3D, still: Node3D, geom: Dictionary, mats: Diction
 		colliders["cylinders"].append([sqrt(maxf(r * r - edge * edge, 0.0)) + 1.0, z0, z1])
 	# Despun beyond the spindle: radiators, arrays and the comm farm.
 	StationDetail.despun(still, -r - spindle + 10.0, 160.0, r * 0.9, 7.0, livery, rng)
-	return {"face_z": hz + 2.0, "colliders": colliders, "stencil": {"px": hr * 0.3 / 96.0, "y": -hr * 0.72, "z": hz + 0.4}}
+	return {"face_z": hz + 2.0, "colliders": colliders, "stencil": {"inner": hr * 0.55, "outer": hr, "z": hz + 0.4}}
 
 
 # --- An O'Neill pair ----------------------------------------------------------------

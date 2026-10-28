@@ -4,8 +4,8 @@
 ##
 ## Technique, as you would teach a new pilot:
 ##   1. Turn the nose to point straight down the station's axis (-Z).
-##   2. Strafe to null your sideways offset from the axis, so you sit on the
-##      amber corridor lights.
+##   2. Strafe to null your sideways offset from the axis, so you sit square in
+##      front of the bay doors.
 ##   3. Close along the axis at a speed that falls with range: quick far out,
 ##      under 1 m/s for the last 20 m.
 ##   4. Let spin match roll you with the port, so the slot is keyed at capture.

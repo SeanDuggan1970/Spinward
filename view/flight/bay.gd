@@ -91,10 +91,11 @@ static func build(rotor: Node3D, r: float, outer: float, z_back: float, depth: f
 	rotor.add_child(doors)
 	bay["node"] = doors
 	_doors(bay, doors, mats)
-	# Warning lamps that turn while the doors move.
+	# Warning lamps that turn while the doors move, just outside the door tracks (the
+	# station's name is painted on the face below them: view/flight/models.gd).
 	var warn := []
 	for s in [-1.0, 1.0]:
-		var w := Kit.beacon(Color("ffb030"), Vector3(0, s * (r + (outer - r) * 0.5), z_mouth + 0.3), 0.7)
+		var w := Kit.beacon(Color("ffb030"), Vector3(0, s * (r + 3.0), z_mouth + 0.3), 0.7)
 		w.set_meta("no_merge", true)
 		w.visible = false
 		rotor.add_child(w)

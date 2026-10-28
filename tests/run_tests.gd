@@ -138,6 +138,7 @@ func _initialize() -> void:
 	test_panel_fold()
 	test_radiator_layouts()
 	test_docking_bays()
+	test_dev_shortcuts()
 	test_satellite_missions()
 	test_secret_work()
 	test_undock_timing()
@@ -3340,6 +3341,43 @@ func test_hitchhikers() -> void:
 	var other: String = "halo_depot" if h2["to"] != "halo_depot" else "kernel_l5"
 	_dock_at(wait2, other)
 	check(wait2.state.ship["hikers"].size() == 1, "A hitchhiker stays aboard at ports that are not their stop")
+	# A teacher set down at their stop earns goodwill with its operator; one carried
+	# elsewhere (out of patience) earns none.
+	var good := fresh()
+	good.state.ship["modules"]["cargo.1"] = "passenger_berths"
+	good.state.ship["passengers"] = 1
+	good.state.ship["hikers"] = [{"name": "Test Teacher", "trade": "teacher", "to": "halo_depot", "from": "kibo_ring", "fare": 0.0, "gift": "", "boarded_t": 0.0, "mid_sent": true, "lines": {"board": "", "mid": "", "leave": ""}}]
+	var halo_op := String(good.data.places["halo_depot"]["operator"])
+	var rep0 := float(good.state.reputation.get(halo_op, 0.0))
+	_dock_at(good, "halo_depot")
+	var teach_rep := float(good.data.favours["hitchhikers"]["trades"]["teacher"]["goodwill_rep"])
+	check(good.state.ship["hikers"].is_empty() and teach_rep > 0.0 and absf(float(good.state.reputation.get(halo_op, 0.0)) - rep0 - teach_rep) < 1e-9, "A teacher brought to their stop earns goodwill with %s" % halo_op)
+	# Tourists pay from their own fare range.
+	var tour := fresh()
+	tour.data.favours["hitchhikers"]["trades"] = {"tourist": tour.data.favours["hitchhikers"]["trades"]["tourist"]}
+	var tfares: Array = tour.data.favours["hitchhikers"]["trades"]["tourist"]["fare_cr"]
+	var trng := RandomNumberGenerator.new()
+	trng.seed = 7
+	var all_in := true
+	for i in 20:
+		var th := Favours.make_hiker(tour.data, tour.state, trng, "kibo_ring")
+		all_in = all_in and th["trade"] == "tourist" and float(th["fare"]) >= float(tfares[0]) - 25.0 and float(th["fare"]) <= float(tfares[1]) + 25.0
+	check(all_in, "A tourist's fare comes from the tourist fare range")
+	# Kindness: the people at a port sometimes do something nice for whoever brought
+	# them help. Every form leaves a voucher or cash, and a line with nothing unfilled.
+	var kin := fresh()
+	kin.data.favours["kindness"]["chance"]["hitchhiker"] = 1.0
+	var krng := RandomNumberGenerator.new()
+	krng.seed = 11
+	var forms_ok := true
+	for i in 30:
+		var v0: int = kin.state.favours["vouchers"].size()
+		var c0: float = kin.state.credits
+		var line := Favours.kindness(kin.state, kin.data, krng, "halo_depot", "a string quartet", "hitchhiker")
+		forms_ok = forms_ok and line != "" and not line.contains("{") and (kin.state.favours["vouchers"].size() == v0 + 1 or kin.state.credits > c0)
+	check(forms_ok, "A kindness always leaves a voucher or cash and a filled-in line")
+	kin.data.favours["kindness"]["chance"]["hitchhiker"] = 0.0
+	check(Favours.kindness(kin.state, kin.data, krng, "halo_depot", "a poet", "hitchhiker") == "", "and with no chance, nothing happens")
 	# Waiting hitchhikers give up, and the galley holds only so many.
 	var wait3 := fresh()
 	wait3.data.favours["hitchhikers"]["chance"] = 1.0
@@ -4677,6 +4715,13 @@ func _radiators_edge_on(rig: Dictionary, root: Node3D, sun: Vector3) -> bool:
 		if absf((xf.basis * Vector3.UP).normalized().dot(sun)) > 0.02:
 			return false
 	return true
+func test_dev_shortcuts() -> void:
+	var sim := Sim.new()
+	sim.new_game(1)
+	check(sim.apply({"type": "dev_place", "place": "halo_depot"}) == "" and sim.state.location == {"status": "docked", "place": "halo_depot"}, "--start docks at the named port")
+	check(sim.apply({"type": "dev_place", "place": "halo_depot", "approach": true}) == "" and sim.state.location["status"] == "approach", "--start=<place>:approach puts the ship on the approach")
+	check(sim.apply({"type": "dev_place", "place": "nowhere"}) != "", "--start rejects an unknown place")
+	check(sim.apply({"type": "dev_credits", "credits": 5.0e6}) == "" and is_equal_approx(sim.state.credits, 5.0e6), "--credits sets the balance")
 
 
 func test_docking_bays() -> void:
@@ -4704,6 +4749,18 @@ func test_docking_bays() -> void:
 	# Too big for the bay: berth on a collar on the shut doors.
 	var big: Dictionary = Models.station(geom, "Kibo Ring", {}, d.balance["bays"], 400.0)
 	check(not big["bay"]["fits"] and float(big["port_z"]) > float(big["bay"]["z_mouth"]), "A ship too big for the bay berths on the doors")
+	# The name is painted on the bay's face below the doors, inside its rim, and nothing
+	# hangs in space off the docking axis.
+	var painted: Label3D = null
+	for c in st["rotor"].get_children():
+		if c is Label3D:
+			painted = c
+	check(painted != null and painted.shaded and absf(painted.position.z - mouth) < 0.5, "The station's name is painted on the bay's face")
+	if painted != null:
+		var px := ThemeDB.fallback_font.get_string_size(painted.text, HORIZONTAL_ALIGNMENT_LEFT, -1, painted.font_size) * painted.pixel_size
+		var corner := Vector2(px.x * 0.5, -painted.position.y + px.y * 0.5)
+		check(-painted.position.y - px.y * 0.5 > float(bay["r"]) and corner.length() < float(bay["outer"]), "The painted name fits between the doors and the face's rim")
+	check(st["node"].get_children().all(func(c): return not c is MeshInstance3D), "No lights float in space on the approach")
 	for n in [plain["node"], st["node"], big["node"]]:
 		n.free()
 

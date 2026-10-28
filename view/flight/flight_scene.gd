@@ -1105,7 +1105,7 @@ func guidance() -> Dictionary:
 	elif not bay_ready() and nose.z - float(station["bay"]["z_mouth"]) < BAY_HOLD_M + 20.0:
 		text = "Hold short of the bay: the doors are opening."
 	elif readout["align"] > float(tune_dock["max_angle_deg"]):
-		text = "Turn to face straight down the station's axis (nose along the amber lights)."
+		text = "Turn to face straight down the station's axis, nose to the bay doors."
 	elif Vector2(nose.x, nose.y).length() > maxf(1.5, along * 0.08):
 		var parts := []
 		if absf(offset_local.x) > 0.5:

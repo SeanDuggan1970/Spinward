@@ -151,7 +151,35 @@ func _ready() -> void:
 		if a.begins_with("--tour="):
 			_tour.call_deferred(a.trim_prefix("--tour="))
 			return
+	if _dev_start(args):
+		return
 	show_title()
+
+
+## Straight into a new game, skipping the title, for trying a feature without playing
+## up to it: --start=<place> docks there (on site at a site), --start=<place>:approach
+## puts the ship on its final approach, and --credits=<n> sets the balance.
+## Returns false when neither flag is given.
+func _dev_start(args: PackedStringArray) -> bool:
+	var commands := []
+	for a in args:
+		if a.begins_with("--start="):
+			var parts := a.trim_prefix("--start=").split(":")
+			commands.append({"type": "dev_place", "place": parts[0], "approach": parts.size() > 1 and parts[1] == "approach"})
+		elif a.begins_with("--credits="):
+			commands.append({"type": "dev_credits", "credits": a.trim_prefix("--credits=").to_float()})
+	if commands.is_empty():
+		return false
+	_bar.visible = true
+	_ticker.visible = true
+	for c in commands:
+		var error := sim.apply(c)
+		if error != "":
+			push_warning("%s: %s (places: %s)" % [c["type"], error, ", ".join(sim.data.locations.keys())])
+			notice("%s: %s" % [c["type"], error], UI.HAZARD)
+	_mode = ""
+	_sync_mode.call_deferred()
+	return true
 
 
 ## The attract screen. The game shell's own UI is hidden and the sim is held.
@@ -475,6 +503,12 @@ func _handle_events() -> void:
 			"favour_granted":
 				notice(d["text"], UI.GOOD)
 				refresh = true
+			"kindness":
+				notice(d["text"], UI.GOOD)
+				comms.append("%s  %s" % [_clock(e["time_s"]), d["text"]])
+				if comms.size() > COMMS_KEEP:
+					comms.pop_front()
+				refresh = true
 			"voucher_expired":
 				notice("A voucher from %s has expired." % d["operator"], UI.WARN)
 				refresh = true
@@ -487,7 +521,8 @@ func _handle_events() -> void:
 			"hitchhiker_boarded", "hitchhiker_line", "hitchhiker_helped", "hitchhiker_left":
 				var hline: String = d["text"]
 				if e["type"] == "hitchhiker_left":
-					hline += "  (%s%s)" % ["fare %s" % UI.money(float(d["fare"])) if float(d["fare"]) > 0.0 else "no fare", ", fitted a tune: %s" % sim.data.favours["tunes"][d["tune"]]["name"] if d["tune"] != "" else ""]
+					hline += "  (%s%s%s)" % ["fare %s" % UI.money(float(d["fare"])) if float(d["fare"]) > 0.0 else "no fare", ", fitted a tune: %s" % sim.data.favours["tunes"][d["tune"]]["name"] if d["tune"] != "" else "",
+						", goodwill with %s" % sim.data.places[d["place"]].get("operator", "the port") if float(d.get("goodwill", 0.0)) > 0.0 else ""]
 				notice(hline, UI.GOOD if e["type"] != "hitchhiker_line" else UI.TEXT)
 				comms.append("%s  %s" % [_clock(e["time_s"]), hline])
 				if comms.size() > COMMS_KEEP:
