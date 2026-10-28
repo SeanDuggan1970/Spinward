@@ -107,7 +107,7 @@ You fly from the cockpit. The dashboard has the classic Elite 3D scanner: an ell
 3. Close in (W) at the advised speed, which falls as you get near. Brake with S or X.
 4. Leave spin match on and it keys the slot for you.
 
-A clean approach from 600 m takes about three minutes. The docking computer (15,000 cr at Kibo Ring or Trojan Yards, then press K) flies it for you, and the tug (T) always comes, on credit if you're broke. In the Market tab, "keep a reserve" makes Buy max leave money for the tug and a full tank.
+Your co-pilot flies every approach and docks by default, on the outside cameras so you can watch: press K to take the controls (and again to hand them back), C to change the view, or turn it off on the controls page (F1). A clean approach from 600 m takes about three minutes; a docking computer (15,000 cr at Kibo Ring or Trojan Yards) lets the co-pilot come in faster. The tug (T) always comes, on credit if you're broke. In the Market tab, "keep a reserve" makes Buy max leave money for the tug and a full tank.
 
 To dock, bring the ship's nose to the port slowly (under 1.5 m/s). Keep the nose on the axis (within 15°) and key the slot (roll within 20°). The port lights turn green when all three are right.
 

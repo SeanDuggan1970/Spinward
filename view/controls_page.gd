@@ -4,6 +4,7 @@
 extends CanvasLayer
 
 const UI := preload("res://view/ui/ui_kit.gd")
+const FlightPrefs := preload("res://view/flight/flight_prefs.gd")
 
 ## Ignore stick and trigger movement for this long after a cell is picked, so the push that
 ## moved the highlight to it does not bind itself.
@@ -105,6 +106,13 @@ func _ready() -> void:
 	how.autowrap_mode = TextServer.AUTOWRAP_WORD
 	how.custom_minimum_size = Vector2(200, 0)
 	column.add_child(how)
+	# Who flies the approach: the co-pilot unless you'd rather (view/flight/flight_prefs.gd).
+	var fly := CheckButton.new()
+	fly.text = "The co-pilot flies every approach and docks, with the outside cameras on (K hands you the controls any time)"
+	fly.button_pressed = FlightPrefs.copilot_docks(settings_path)
+	fly.focus_mode = Control.FOCUS_NONE
+	fly.toggled.connect(func(on): FlightPrefs.set_copilot_docks(on, settings_path))
+	column.add_child(fly)
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED

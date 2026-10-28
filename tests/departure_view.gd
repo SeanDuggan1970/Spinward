@@ -60,6 +60,14 @@ func _run() -> void:
 			if elapsed < exit.opening_s:
 				check(is_equal_approx(exit.gap(elapsed), exit.start_gap), place + " holds position while doors open")
 		check(exit.opening_s >= float(sim.data.balance["undock"]["doors_at_s"]) + float(sim.data.balance["bays"]["door_s"]), place + " waits for fully open doors before backing out")
+		# Backing out on the thrusters: puffs blowing toward the nose.
+		view._undock_jet_t = 0.0
+		sim.state.time_s = t0 + exit.opening_s + 2.0
+		view._update_world(1.0 / 60.0)
+		var fwd: Vector3 = view.global_basis.inverse() * (view._ship.global_basis * Vector3.FORWARD)
+		var puffs: Array = view._jets._puffs
+		check(not puffs.is_empty() and puffs.all(func(p): return (p["dir"] as Vector3).dot(fwd) > 0.9), place + " backs out on its thrusters, blowing toward the nose (%d)" % puffs.size())
+		check(not puffs.is_empty() and float(puffs[0]["size"]) >= 0.8, place + " thruster puffs sized to the ship")
 		await capture(view, place + "-backing-out")
 		sim.state.time_s = t0 + exit.clear_after_s
 		view._update_world(1.0 / 60.0)

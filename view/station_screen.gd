@@ -1198,6 +1198,8 @@ func _module_stats(m: Dictionary) -> String:
 		bits.append("%d berths" % int(m["berths"]))
 	if m.get("lander", false):
 		bits.append("surface landings")
+	if m.get("docking_computer", false):
+		bits.append("co-pilot docks faster")
 	if m.get("survey", false):
 		bits.append("surveys")
 	if m.get("mining", false):

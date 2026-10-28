@@ -29,6 +29,7 @@ const ProjectSystem := preload("res://sim/systems/project_system.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
 const Bay := preload("res://view/flight/bay.gd")
 const Undock := preload("res://view/flight/undock.gd")
+const RcsJets := preload("res://view/flight/rcs_jets.gd")
 const Pattern := preload("res://view/flight/pattern.gd")
 
 const SKY_DISTANCE := 60000.0
@@ -37,10 +38,8 @@ const SKY_DISTANCE := 60000.0
 const FLIP_ANGLE := 1.05
 ## Coasting, start round for the next burn this many real seconds earlier than the turn needs.
 const TURN_MARGIN_S := 1.0
-## Thruster plumes: how long each lasts (real seconds); a held turn's trim pulses come
-## no closer than RCS_TRIM_S (more under time compression); at most RCS_MAX_JETS fire
-## together.
-const PUFF_S := 0.35
+## Thruster plumes (rcs_jets.gd): a held turn's trim pulses come no closer than
+## RCS_TRIM_S (more under time compression); at most RCS_MAX_JETS fire together.
 const RCS_TRIM_S := 1.6
 const RCS_MAX_JETS := 4
 ## Hands off this long (real seconds) and the director takes the camera.
@@ -94,9 +93,9 @@ var _real_time_scale := 1000.0
 var _drive_mps2 := 0.03
 ## This trip's burns: [start game time, end game time, view direction at the start].
 var _burns: Array = []
-var _puffs: Array = []
-var _jet_mat: ShaderMaterial
-var _flash_mat: StandardMaterial3D
+## Thruster plumes, and how big this ship's are.
+var _jets
+var _jet_size := 1.0
 ## The last thruster demand (ship axes) and when it fired (real seconds).
 var _rcs_dir := Vector3.ZERO
 var _rcs_t := -10.0
@@ -166,6 +165,8 @@ func _ready() -> void:
 	_pivot = Vector3(0, 0, _nose_z + _length * 0.5)
 	_stowed_r = ShipRig.stowed_radius(model)
 	add_child(_ship)
+	_jets = RcsJets.new(self, RCS_MAX_JETS * 3)
+	_jet_size = RcsJets.size_for(_length)
 	_dist = _length * 2.4
 	camera = Camera3D.new()
 	camera.fov = 50.0
@@ -444,7 +445,7 @@ func _update_world(dt: float) -> void:
 		_ship.basis = _departure.axis_basis(facing, t)
 	if dt > 0.0:
 		_rcs_puffs((_omega - omega_was) / (dt * speedup), dt)
-		if undocking:
+		if undocking or backing_out:
 			_undock_jets(elapsed, dt)
 	# The drive lights once the nose is round to the thrust, and stays lit until it
 	# falls well behind (twice as far), so it doesn't flicker under high compression.
@@ -633,9 +634,9 @@ func _burn_end(t: float) -> float:
 ## fire as a turn starts and as it stops (alpha: the ship's angular acceleration, a
 ## world vector), not continuously: a held turn gets an occasional trim pulse, and
 ## under time compression fewer still.
-func _rcs_puffs(alpha: Vector3, dt: float) -> void:
+func _rcs_puffs(alpha: Vector3, _dt: float) -> void:
 	var clock := Time.get_ticks_msec() / 1000.0
-	_age_jets(clock)
+	_jets.update()
 	if alpha.length() < _turn_accel * 0.3:
 		_rcs_dir = Vector3.ZERO
 		return
@@ -647,110 +648,35 @@ func _rcs_puffs(alpha: Vector3, dt: float) -> void:
 		return
 	_rcs_dir = local
 	_rcs_t = clock
-	var fired := 0
-	for j in _rig.get("rcs", []):
-		var quad: Node3D = j["node"]
-		if not is_instance_valid(quad):
-			continue
-		var out: Vector3 = j["outward"]
-		var lever := _ship.to_local(quad.global_position) - _pivot
-		# A jet pushes against where it points, so its torque is lever x -out.
-		var torque := lever.cross(-out)
-		if torque.length() < 1e-3 or torque.normalized().dot(local) < 0.4:
-			continue
-		_jet(quad.global_position + _ship.basis * out * 0.3, _ship.basis * out, 1.0)
-		fired += 1
-		if fired >= RCS_MAX_JETS:
-			break
+	_jets.turn(_rig, _ship, _pivot, alpha, _jet_size, RCS_MAX_JETS)
 
 
-## Thrusters while backing out of a bay: pulses pushing the ship astern (exhaust
-## toward the nose) as it gathers way, then roll jets braking its spin once clear.
+## Thrusters while backing out of a port: steady pulses pushing the ship astern
+## (exhaust toward the nose) as it gathers way, then, out of a bay, roll jets braking
+## its spin once clear.
 func _undock_jets(elapsed: float, _dt: float) -> void:
 	var cfg: Dictionary = sim.data.balance["undock"]
 	var clock := Time.get_ticks_msec() / 1000.0
 	if clock < _undock_jet_t:
 		return
-	var quads: Array = _rig.get("rcs", [])
-	if quads.is_empty():
+	if Undock.pushing(_departure.motion, elapsed):
+		_undock_jet_t = clock + randf_range(0.3, 0.5)
+		_jets.push(_rig, _ship, _pivot, _length, _ship.basis * Vector3.BACK, _jet_size, RCS_MAX_JETS)
+		return
+	if _undock.is_empty():
 		return
 	var clear := float(_undock["clear_t"])
-	if Undock.pushing(_departure.motion, elapsed):
-		_undock_jet_t = clock + randf_range(0.9, 1.4)
-		for j in quads:
-			var quad: Node3D = j["node"]
-			if is_instance_valid(quad) and _ship.to_local(quad.global_position).z < _pivot.z:
-				_jet(quad.global_position, _ship.basis * Vector3.FORWARD, 0.8)
-	elif elapsed > clear and Undock.roll_share(cfg, elapsed, clear) > 0.05:
-		_undock_jet_t = clock + randf_range(0.8, 1.2)
+	if elapsed > clear and Undock.roll_share(cfg, elapsed, clear) > 0.05:
+		_undock_jet_t = clock + randf_range(0.6, 0.9)
 		# Against the roll: each jet fires along the turn's tangent at its quad.
-		for j in quads:
+		for j in _rig.get("rcs", []):
 			var quad: Node3D = j["node"]
 			if not is_instance_valid(quad):
 				continue
 			var p := _ship.to_local(quad.global_position)
 			var tangent := Vector3(-p.y, p.x, 0.0)
 			if tangent.length() > 0.3:
-				_jet(quad.global_position, _ship.basis * tangent.normalized() * signf(float(_undock["rate"])), 0.8)
-
-
-## One plume from `at` along `dir` (world), `size` about 1 for a working quad.
-func _jet(at: Vector3, dir: Vector3, size: float) -> void:
-	if _puffs.size() >= RCS_MAX_JETS * 3:
-		return
-	if _jet_mat == null:
-		_jet_mat = ShaderMaterial.new()
-		_jet_mat.shader = load("res://view/shaders/rcs_plume.gdshader")
-		_flash_mat = Kit.glow(Color(1.0, 0.95, 0.85), 2.0)
-	var mesh := CylinderMesh.new()
-	mesh.top_radius = 0.03 * size
-	mesh.bottom_radius = 0.38 * size
-	mesh.height = 1.0
-	mesh.radial_segments = 16
-	mesh.rings = 1
-	mesh.cap_top = false
-	mesh.cap_bottom = false
-	var cone := MeshInstance3D.new()
-	cone.mesh = mesh
-	cone.material_override = _jet_mat
-	cone.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(cone)
-	var flash := Kit.sphere(0.09 * size, _flash_mat, at)
-	flash.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(flash)
-	var d := dir.normalized()
-	_puffs.append({"node": cone, "flash": flash, "born": Time.get_ticks_msec() / 1000.0, "at": at, "dir": d, "size": size})
-	_place_jet(_puffs[-1], 0.0)
-
-
-func _place_jet(p: Dictionary, u: float) -> void:
-	var node: MeshInstance3D = p["node"]
-	var d: Vector3 = p["dir"]
-	# The cone's narrow top at the nozzle, flaring out along d; it lengthens as the
-	# gas leaves and thins away.
-	var length := float(p["size"]) * (0.6 + 1.6 * minf(u * 3.0, 1.0))
-	var y := -d
-	var x := y.cross(Vector3.UP if absf(y.y) < 0.95 else Vector3.RIGHT).normalized()
-	var z := x.cross(y)
-	node.basis = Basis(x, y, z) * Basis.from_scale(Vector3(1.0 + u, length, 1.0 + u))
-	node.position = (p["at"] as Vector3) + d * length * 0.5
-	node.set_instance_shader_parameter("fade", clampf(u, 0.0, 1.0))
-	var flash: MeshInstance3D = p["flash"]
-	flash.visible = u < 0.25
-	flash.transparency = clampf(u * 4.0, 0.0, 1.0)
-
-
-func _age_jets(clock: float) -> void:
-	for k in range(_puffs.size() - 1, -1, -1):
-		var p: Dictionary = _puffs[k]
-		var age := clock - float(p["born"])
-		if age > PUFF_S or not is_instance_valid(p["node"]):
-			for key in ["node", "flash"]:
-				if is_instance_valid(p[key]):
-					p[key].queue_free()
-			_puffs.remove_at(k)
-			continue
-		_place_jet(p, age / PUFF_S)
+				_jets.fire(quad.global_position, _ship.basis * tangent.normalized() * signf(float(_undock["rate"])), _jet_size)
 
 
 ## How far the ship is from a port's docking face tau seconds after leaving it (or
