@@ -111,6 +111,7 @@ func _initialize() -> void:
 	test_berg_resupply()
 	test_berg_sites()
 	test_groups()
+	test_group_voyages()
 	test_shuttle_view_profile()
 	test_edge_cases()
 	test_power_budget()
@@ -187,7 +188,8 @@ func test_clock_and_commands() -> void:
 	check(sim.state.time_s == before, "Paused clock does not move")
 	check(sim.state.command_count == 2, "Only accepted commands are counted")
 	# (Someone at the dock may ask for a ride meanwhile: that is a favour event, not a clock one.)
-	var types := sim.take_events().map(func(e): return e["type"]).filter(func(t): return not t.begins_with("hitchhiker"))
+	# (Ships come and go meanwhile: traffic events, not clock ones.)
+	var types := sim.take_events().map(func(e): return e["type"]).filter(func(t): return not t.begins_with("hitchhiker") and not t.begins_with("npc_"))
 	check(types == ["rejected", "rejected", "time_scale_changed", "paused_changed"], "Events emitted for the view")
 	check(sim.take_events().is_empty(), "Events drain once")
 
@@ -2504,6 +2506,44 @@ func test_groups() -> void:
 	s.projects["hektor_reach"]["done"] = true
 	sim.advance_game_time(3600.0)
 	check("group_dark_lanes" in s.news["posted"] and "group_garden_mind" in s.news["posted"], "Once Hektor Reach is open, its groups make the news")
+
+
+## Groups that travel fly one ship each on the lanes: no freight, their own words on
+## the comms as they leave, their own colours on the map.
+func test_group_voyages() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var Comms := preload("res://view/comms.gd")
+	var fleets: Array = d.npcs["fleets"].keys().filter(func(f): return d.npcs["fleets"][f].has("group"))
+	check(fleets.size() == d.groups.values().filter(func(g): return g.has("voyage")).size() and fleets.size() >= 10, "Each travelling group has a fleet (%d)" % fleets.size())
+	var ships: Array = s.npcs.filter(func(n): return d.npcs["fleets"][n["fleet"]].has("group"))
+	check(ships.size() == fleets.size(), "One ship each (%d)" % ships.size())
+	for n in ships:
+		var g: Dictionary = d.groups[d.npcs["fleets"][n["fleet"]]["group"]]
+		check(n["name"] == g["ships"][0] and n["location"].get("place", "") == g["home"], "%s starts at home at %s" % [n["name"], g["home"]])
+	var late: Array = ships.filter(func(n): return float(d.groups[d.npcs["fleets"][n["fleet"]]["group"]]["voyage"].get("commission_day", 0.0)) > 0.0)
+	check(late.size() >= 3, "The long hauls set out over the first weeks (%d)" % late.size())
+	sim.state.time_scale = 1.0e4
+	var left := {}
+	var said_own := true
+	var carried := false
+	for _k in 40:
+		sim.advance_game_time(DAY)
+		for e in sim.take_events():
+			if e["type"] != "npc_departed" or not String(e["data"]["npc"]).begins_with("group_"):
+				continue
+			left[e["data"]["npc"]] = true
+			carried = carried or not e["data"]["cargo"].is_empty()
+			var npc: Dictionary = s.npcs.filter(func(n): return n["id"] == e["data"]["npc"])[0]
+			var line: String = Comms.line(sim, e)
+			said_own = said_own and line.contains(npc["name"]) and not line.contains("{")
+	var due: int = fleets.filter(func(f): return float(d.npcs["fleets"][f]["commission_days"][0]) < 30.0).size()
+	check(left.size() >= due - 1, "In forty days nearly every group ship due by then has set out (%d of %d)" % [left.size(), due])
+	var commissioned: Array = s.news["items"].filter(func(i): return i["kind"] == "fleet" and String(i.get("npc", "")).begins_with("group_"))
+	check(commissioned.size() >= 3 and String(commissioned[0]["headline"]).contains(" commissions the "), "The long hauls' launches make the news (%d)" % commissioned.size())
+	check(not carried, "Group ships carry people, not freight")
+	check(said_own, "Each says its own piece on the comms as it leaves")
 
 
 func test_berg_sites() -> void:

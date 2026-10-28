@@ -124,6 +124,26 @@ func _load_groups(file: Dictionary) -> void:
 		if builder != "":
 			story["after_project"] = builder
 		news["stories"].append(story)
+	# Groups that travel: one ship each, on the lanes like any fleet, carrying people
+	# and no freight.
+	for id in groups:
+		var g: Dictionary = groups[id]
+		if not g.has("voyage"):
+			continue
+		var v: Dictionary = g["voyage"]
+		var legs: Array = []
+		for i in v["route"].size():
+			legs.append({"at": v["route"][i], "to": v["route"][(i + 1) % v["route"].size()]})
+		var fleet := {"operator": g["name"], "hull": v["hull"], "behaviour": "shuttle", "count": 1, "names": [g["ships"][0]],
+			"route": legs, "dwell_hours": file.get("voyage_dwell_hours", [48, 140]), "group": id, "lines": v.get("lines", []),
+			"commission_days": [float(v.get("commission_day", 0.0))]}
+		if v.get("sail", false):
+			fleet["sail"] = true
+			fleet["sail_days"] = v["sail_days"]
+		var builder: String = places.get(g["home"], {}).get("opens_with", "")
+		if builder != "":
+			fleet["commission_project"] = builder
+		npcs["fleets"]["group_" + id] = fleet
 
 
 ## Groups that call this place home, in file order.
@@ -448,6 +468,12 @@ func validate() -> Array[String]:
 			problems.append("group %s: needs ships, a creed and a headline" % id)
 		if ops.has(g.get("name", "")):
 			problems.append("group %s: shares a name with an operator" % id)
+		var v: Dictionary = g.get("voyage", {})
+		if not v.is_empty():
+			if v.get("route", []).size() < 2 or v["route"][0] != g.get("home", ""):
+				problems.append("group %s: a voyage starts at home and goes somewhere" % id)
+			if v.get("lines", []).is_empty():
+				problems.append("group %s: a voyage needs its comms lines" % id)
 	# News: stories name real places, beats and projects.
 	var beat_ids: Array = story.get("beats", []).map(func(b): return b.get("id", ""))
 	var story_ids := {}
@@ -494,7 +520,7 @@ func validate() -> Array[String]:
 	for id in npcs.get("fleets", {}):
 		flown[npcs["fleets"][id].get("operator", "")] = "fleet " + id
 	for op in flown:
-		if op != "Independent" and not operators.has(op):
+		if op != "Independent" and not operators.has(op) and group_named(op).is_empty():
 			problems.append("%s: operator %s has no livery" % [flown[op], op])
 	var schemes: Array = operators.values() + liveries.get("independent", {}).get("palette", [])
 	if liveries.has("player"):
