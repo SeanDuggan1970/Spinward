@@ -336,6 +336,20 @@
 			"dateline": "Aboard the Slow Tide, inbound from the Belt",
 			"headline": "Berg crew asks: anyone passing with oranges?",
 			"body": "The five aboard the pusher Slow Tide, sixteen months into pushing a berg of Themis ice toward the Kernel, have put out a call: fresh food, medicine and spare parts, paid on delivery, plus as much berg ice as your hold will take home. 'We can't stop, and we can't turn round,' says their engineer, Ama Owusu. 'But we can match speeds with anyone who can find us, and we will cook.'"
+		},
+		{
+			"id": "long_thirst_supplies",
+			"after_days": 14,
+			"dateline": "Aboard the Long Thirst, inbound for Venus",
+			"headline": "The longest berg run wants visitors",
+			"body": "The Long Thirst is seven months into pushing a berg of Themis ice in toward Venus, and its crew of four (and a cat) would welcome anyone who can match their course with food and medicine. The Cytherean Assembly pays for the supplies; the crew pays in ice."
+		},
+		{
+			"id": "meltwater_supplies",
+			"after_days": 26,
+			"dateline": "Aboard the Meltwater, in the Belt",
+			"headline": "Two years pushing ice across the Belt",
+			"body": "The three aboard the Meltwater, pushing a small berg from the Themis family to Psyche, say the hardest part is not the work but the quiet. They are asking for parts, medicine and news, in roughly that order, and will trade ice for all three."
 		}
 	],
 	"projects": {

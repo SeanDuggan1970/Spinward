@@ -1405,7 +1405,15 @@ Wonders shortlist item 6 (WONDERS.md): icebergs pushed in from the Belt for the 
 - **Set piece** (`set_pieces.gd` `_ice_berg`, feature `ice_berg` at the three ports): the parked berg with its pusher still bolted on astern, and a quarry crawler cutting blocks on its face.
 - **Attract screen:** a new title shot, `berg`: a berg under way in the outer Belt, its pusher throwing a plume of steam, the hero flying escort.
 - **Supply runs** (owner's choice, 28 October 2026): the berg *Slow Tide* is a site in solar orbit (`sites.json` `slow_tide_berg`), on its way in from the Belt: about 2.2 AU from the Sun at the start, closer each month. Fly out with 3 t of staples, 0.3 t of medicine and 1 t of machine parts and its crew takes them (`takes`, out of the hold with their cost basis), pays 12,000 cr and 2 standing with the Belt Assembly, and fills your hold with 3 to 6 t of its ice. They want it again every 60 days (`every_days`: a standing job, remembered in `state.sites.last`). A long-haul ship can plan the trip; the news carries the crew's call for supplies.
-- **Not yet:** pushers as NPC traffic you can meet in transit.
+- **Meeting the pushers** (owner's choice, 28 October 2026): in space you don't pass another ship by chance; you meet one by matching its course. Three pushers can be met, each a berg site in solar orbit with its crew and a supply run:
+
+  | Pusher | Bound for | Path | At the start | Crew wants | Pays |
+  |---|---|---|---|---|---|
+  | *Slow Tide* | the Kernel | Themis (3.1 AU) to Earth's orbit, e 0.51 | 2.21 AU | staples, medicine, machine parts | 12,000 cr, Belt Assembly |
+  | *Long Thirst* | Venus | Themis to Venus's orbit, e 0.63 | 2.40 AU | staples, medicine, delicacies | 14,000 cr, Cytherean Assembly |
+  | *Meltwater* | Psyche Claims | across the Belt, Themis to Psyche, e 0.03 | 3.08 AU | machine parts, medicine, delicacies | 16,000 cr, Belt Assembly |
+
+  On site (`view/site_view.gd`, kind `berg`) the berg is a few hundred metres off, its pusher still firing a plume of its own melted ice, the crew's cabin and spin drum on the pusher's frame. Each crew's call for supplies is in the news.
 
 ## Hammerhead stations (Oct 2026)
 

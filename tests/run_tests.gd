@@ -109,6 +109,7 @@ func _initialize() -> void:
 	test_ceres_megasat()
 	test_terminator()
 	test_berg_resupply()
+	test_berg_sites()
 	test_shuttle_view_profile()
 	test_edge_cases()
 	test_power_budget()
@@ -2474,6 +2475,28 @@ func test_terminator() -> void:
 	check(sim.apply({"type": "take_shuttle", "to": "terminator"}) == "", "then the lander flies there")
 	sim.advance_game_time(float(s.location["arrive_t"]) - s.time_s + 1.0)
 	check(s.location == {"status": "docked", "place": "terminator"}, "Aboard Terminator")
+
+
+func test_berg_sites() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var Sites := preload("res://sim/systems/site_system.gd")
+	var bergs: Array = d.sites.keys().filter(func(k): return d.sites[k].get("kind", "") == "berg")
+	check(bergs.size() == 3, "Three pushers to meet: the Slow Tide, the Long Thirst and the Meltwater (%d)" % bergs.size())
+	s.ship["hull"] = "deep_freighter"
+	s.ship["modules"] = d.ships["deep_freighter"]["modules"].duplicate()
+	s.ship["fuel_t"] = ShipStats.fuel_capacity_t(s.ship, d)
+	var au := 1.495978707e11
+	for id in bergs:
+		var site: Dictionary = d.sites[id]
+		var act: Dictionary = site["activities"].get("resupply", {})
+		check(site["location"]["parent"] == "sun" and Sites.knows(s, id), "%s is in solar orbit and on the map" % id)
+		check(not act.get("takes", {}).is_empty() and float(act.get("every_days", 0.0)) > 0.0 and float(act.get("credits", 0.0)) > 0.0, "%s's crew wants supplies, pays, and wants them again" % id)
+		var r := V.length(sim.ephemeris.relative(id, "sun", s.time_s)) / au
+		check(r > 1.5 and r < 3.5, "%s is out in the Belt or on its way in (%.2f AU)" % [id, r])
+		var plan := Navigation.plan(s.ship, d, sim.ephemeris, "kibo_ring", id, s.time_s)
+		check(plan.get("ok", false), "A deep freighter can plan a route to %s (%s)" % [id, plan.get("reason", "")])
 
 
 func test_berg_resupply() -> void:
