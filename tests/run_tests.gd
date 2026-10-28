@@ -112,6 +112,7 @@ func _initialize() -> void:
 	test_berg_sites()
 	test_groups()
 	test_group_voyages()
+	test_group_clients()
 	test_shuttle_view_profile()
 	test_edge_cases()
 	test_power_budget()
@@ -2544,6 +2545,45 @@ func test_group_voyages() -> void:
 	check(commissioned.size() >= 3 and String(commissioned[0]["headline"]).contains(" commissions the "), "The long hauls' launches make the news (%d)" % commissioned.size())
 	check(not carried, "Group ships carry people, not freight")
 	check(said_own, "Each says its own piece on the comms as it leaves")
+
+
+## The groups hire pilots: some of the courier work at their home port is theirs, with
+## their own freight or people, paid in cash; standing goes to the group.
+func test_group_clients() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var names: Array = d.groups_at("kibo_ring").map(func(g): return g["name"])
+	var theirs := []
+	var others := 0
+	for _i in 40:
+		for o in s.contracts["board"].get("kibo_ring", []):
+			if o.has("group"):
+				theirs.append(o)
+			elif o["kind"] in ["package", "passenger"] and not o.get("hand", false):
+				others += 1
+		s.contracts["board"]["kibo_ring"] = []
+		s.contracts["next_t"]["kibo_ring"] = 0.0
+		sim.advance_game_time(60.0)
+	check(theirs.size() >= 5 and others >= theirs.size(), "Some of Kibo Ring's courier work is the groups' (%d of %d)" % [theirs.size(), theirs.size() + others])
+	var fits := theirs.all(func(o):
+		var g: Dictionary = d.groups[o["group"]]
+		var asks: Array = g["asks"]["people" if int(o["passengers"]) > 0 else "freight"]
+		return o["client"] == g["name"] and o["client"] in names and o["item"] in asks and not o.has("in_kind"))
+	check(fits, "Each is a Kibo Ring group's own work, paid in cash")
+	var job: Dictionary = {}
+	for o in theirs:
+		if int(o["passengers"]) == 0:
+			job = o
+			break
+	check(not job.is_empty(), "A group has freight to send")
+	if job.is_empty():
+		return
+	s.contracts["board"]["kibo_ring"] = [job]
+	var compact := Contracts.rep_of(s, "Terran Compact")
+	check(sim.apply({"type": "accept_contract", "id": job["id"]}) == "", "Take the %s's job" % job["client"])
+	_dock_at(sim, job["to"])
+	check(Contracts.rep_of(s, job["client"]) > 0.0 and is_equal_approx(Contracts.rep_of(s, "Terran Compact"), compact), "Delivered: standing with %s, not the port's operator" % job["client"])
 
 
 func test_berg_sites() -> void:

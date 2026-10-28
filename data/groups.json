@@ -1,5 +1,5 @@
 {
-	"_note": "The long tail under the big factions (docs/DESIGN.md, The cap's off): small groups of dreamers, artists, faiths, families, survivalists, start-ups, minds and the quietly mad. View and news only: each has a home port, a faction it leans toward, colours for its ships, ship names, and one news item. news_first_day / news_every_days spread their news through the campaign (negative days are already in the feed at the start); traffic_share is the share of a port's own craft that belong to groups based there. A group with a 'voyage' flies its first ship (a 'shuttle' fleet, no freight, generated as npcs fleet group_<id> by DataCatalog) round the route of places from its home, on the given hull ('sail' for a sail hull), waiting voyage_dwell_hours at each stop, from commission_day (the long hauls set out over the first weeks, and make the news when they do); its 'lines' are what it says on the comms as it leaves ({ship} {from} {to}). Groups at a place a project builds wait for it. Group ships fuel from their own stores (own_fuel), off the markets, so they don't move prices.",
+	"_note": "The long tail under the big factions (docs/DESIGN.md, The cap's off): small groups of dreamers, artists, faiths, families, survivalists, start-ups, minds and the quietly mad. View and news only: each has a home port, a faction it leans toward, colours for its ships, ship names, and one news item. news_first_day / news_every_days spread their news through the campaign (negative days are already in the feed at the start); traffic_share is the share of a port's own craft that belong to groups based there. A group with a 'voyage' flies its first ship (a 'shuttle' fleet, no freight, generated as npcs fleet group_<id> by DataCatalog) round the route of places from its home, on the given hull ('sail' for a sail hull), waiting voyage_dwell_hours at each stop, from commission_day (the long hauls set out over the first weeks, and make the news when they do); its 'lines' are what it says on the comms as it leaves ({ship} {from} {to}). Groups at a place a project builds wait for it. Group ships fuel from their own stores (own_fuel), off the markets, so they don't move prices. 'asks' are their courier work (contracts.json groups): freight items and who travels, put on jobs issued at their home.",
 	"news_first_day": -9,
 	"news_every_days": 5,
 	"traffic_share": 0.4,
@@ -34,6 +34,15 @@
 					"{ship}: \"Firsts Club, outbound for {to}. The adjudicator is with us, so nobody touch anything historic.\""
 				],
 				"commission_day": 0
+			},
+			"asks": {
+				"freight": [
+					"a sealed adjudicator's box of timing gear",
+					"the flag for an attempt nobody will tell you about"
+				],
+				"people": [
+					"members going to attempt a first"
+				]
 			}
 		},
 		{
@@ -66,6 +75,15 @@
 					"{ship}: \"Dropping the Long Walk at {to}. Boots checked, oxygen checked, enthusiasm worryingly high.\""
 				],
 				"commission_day": 0
+			},
+			"asks": {
+				"freight": [
+					"boot soles, forty pairs",
+					"a cache of food bars for the next leg of the walk"
+				],
+				"people": [
+					"walkers starting the next leg"
+				]
 			}
 		},
 		{
@@ -98,6 +116,15 @@
 					"{ship}: \"Choir aboard, {to} bound. Tonight's programme: the ring tones in B flat, and an encore if Titan behaves.\""
 				],
 				"commission_day": 12
+			},
+			"asks": {
+				"freight": [
+					"three organ pipes in a padded crate",
+					"sheet music, hand-copied, irreplaceable"
+				],
+				"people": [
+					"choir members with their own tuning forks"
+				]
 			}
 		},
 		{
@@ -118,6 +145,15 @@
 			"news": {
 				"headline": "Sculptors finish a face you can see from L1",
 				"body": "The Regolith Sculptors have finished their face in Mare Tranquillitatis: four kilometres from brow to chin, sintered from the soil by drones and visible from Halo Depot through a good telescope. Whose face it is, they will not say. The Long View asked them to stop at one."
+			},
+			"asks": {
+				"freight": [
+					"a two-tonne block of sintered regolith",
+					"diamond chisels and a lot of patience"
+				],
+				"people": [
+					"sculptors going to see a rival's work"
+				]
 			}
 		},
 		{
@@ -150,6 +186,15 @@
 					"{ship}: \"Mirror Painters to {to}. Our latest piece is visible from Earth on Tuesday, weather permitting.\""
 				],
 				"commission_day": 0
+			},
+			"asks": {
+				"freight": [
+					"a folded mirror panel, very fragile",
+					"pigment for a mirror coat, sealed"
+				],
+				"people": [
+					"painters chasing a sunrise"
+				]
 			}
 		},
 		{
@@ -170,6 +215,15 @@
 			"news": {
 				"headline": "Comet ice sculpture sells for a fortune on Earth",
 				"body": "A two-metre carving of a heron in four-billion-year-old comet ice, made by the Comet Carvers and kept at minus two hundred all the way to Geneva, sold at auction for the price of a small freighter. The carver spent the money on more ice."
+			},
+			"asks": {
+				"freight": [
+					"an ice sculpture in a cold box, melting slowly",
+					"carving tools rated for minus 180"
+				],
+				"people": [
+					"carvers off to see a comet"
+				]
 			}
 		},
 		{
@@ -202,6 +256,15 @@
 					"{ship} away from {from}, a band of nine and a double bass in its own pressure case, bound for {to}."
 				],
 				"commission_day": 24
+			},
+			"asks": {
+				"freight": [
+					"a double bass in its own pressure case",
+					"drum skins rated for vacuum, just in case"
+				],
+				"people": [
+					"musicians with a gig to make"
+				]
 			}
 		},
 		{
@@ -222,6 +285,15 @@
 			"news": {
 				"headline": "Monks on the far side say little, as promised",
 				"body": "The Order of the Long Silence, which shares Farside's radio-quiet with the Array, issued its annual statement this week. It read, in full: 'Thank you.'"
+			},
+			"asks": {
+				"freight": [
+					"a bell that is never rung",
+					"candles for a year of vigils"
+				],
+				"people": [
+					"silent brothers and sisters, who will not chat"
+				]
 			}
 		},
 		{
@@ -254,6 +326,15 @@
 					"{ship}: \"Meeting for worship in transit to {to}. We will answer hails, but slowly.\""
 				],
 				"commission_day": 0
+			},
+			"asks": {
+				"freight": [
+					"benches for a new meeting house",
+					"a telescope donated by a Friend on Earth"
+				],
+				"people": [
+					"Friends going to a meeting"
+				]
 			}
 		},
 		{
@@ -274,6 +355,15 @@
 			"news": {
 				"headline": "Dawn service held on five worlds at once",
 				"body": "The Dawnward Chapel held its first service across five worlds this week, each congregation meeting at its own local sunrise, from Jezero to Kalpana One. The light-delay between them was eleven minutes; the hymn was the same."
+			},
+			"asks": {
+				"freight": [
+					"a stained-glass window in forty panels",
+					"an altar cloth embroidered on Mars"
+				],
+				"people": [
+					"pilgrims to a sunrise service"
+				]
 			}
 		},
 		{
@@ -294,6 +384,15 @@
 			"news": {
 				"headline": "Pilgrims reach Tranquillity Base, touch nothing",
 				"body": "A party of thirty Pilgrims of Tranquillity reached the Apollo 11 site this month after a nine-day walk from Line Foot, stood at the fence for an hour, and walked back. The bootprints inside the fence are still there. So is the fence."
+			},
+			"asks": {
+				"freight": [
+					"a plaque for Tranquility Base, to be placed carefully",
+					"replica bootprint casts"
+				],
+				"people": [
+					"pilgrims to the Apollo sites"
+				]
 			}
 		},
 		{
@@ -314,6 +413,15 @@
 			"news": {
 				"headline": "A Venetian quarter goes up over Ceres",
 				"body": "The Contarini family, who left Venice in '57 with their grandmother's blessing and most of her recipes, have flooded their first canal in the Concord Pair. It is four hundred metres long and has two bridges. The grandmother, who stayed in Venice, says the second bridge is too steep."
+			},
+			"asks": {
+				"freight": [
+					"a gondola, flat-packed",
+					"a wedding dress three generations old"
+				],
+				"people": [
+					"cousins for a wedding"
+				]
 			}
 		},
 		{
@@ -334,6 +442,15 @@
 			"news": {
 				"headline": "Norrland settlers plant their first pines over Ceres",
 				"body": "The Norrland Settlers have planted a thousand pine seedlings in their test drum over Ceres, under lamps set for a northern year. The children have been promised snow by midwinter. The engineers have been told."
+			},
+			"asks": {
+				"freight": [
+					"a sauna stove",
+					"cloudberry jam, a year's worth"
+				],
+				"people": [
+					"family for midsummer"
+				]
 			}
 		},
 		{
@@ -366,6 +483,15 @@
 					"{ship}: \"Whānau aboard for {to}. Kia ora, {from}, see you at the next birthday.\""
 				],
 				"commission_day": 0
+			},
+			"asks": {
+				"freight": [
+					"a carved waka prow wrapped in blankets",
+					"a hāngī pit's worth of food, vacuum-packed"
+				],
+				"people": [
+					"whānau for a tangi"
+				]
 			}
 		},
 		{
@@ -398,6 +524,15 @@
 					"{ship}: \"Bound for {to}. If it's broken, bring it. If it's not, bring it anyway, we'll improve it.\""
 				],
 				"commission_day": 0
+			},
+			"asks": {
+				"freight": [
+					"a crate of salvaged actuators",
+					"a broken thing they swear they can fix"
+				],
+				"people": [
+					"tinkers to a repair fair"
+				]
 			}
 		},
 		{
@@ -430,6 +565,15 @@
 					"{ship}: \"Going to {to}. We'll pay our own way and fix our own valves, thank you.\""
 				],
 				"commission_day": 40
+			},
+			"asks": {
+				"freight": [
+					"seed stock, sealed",
+					"a spare water still"
+				],
+				"people": [
+					"homesteaders who will not chat"
+				]
 			}
 		},
 		{
@@ -450,6 +594,15 @@
 			"news": {
 				"headline": "Quiet Lanes Folk ask traffic to keep the noise down",
 				"body": "The scattered homesteads of the Quiet Lanes Folk, out among the Trojans, have asked passing ships to keep their transponders on and their music off. 'We're not hiding,' writes one. 'We're just quiet.'"
+			},
+			"asks": {
+				"freight": [
+					"a cold-sealed box they will not label",
+					"radiator paint, very black"
+				],
+				"people": [
+					"travellers who prefer not to be logged"
+				]
 			}
 		},
 		{
@@ -470,6 +623,15 @@
 			"news": {
 				"headline": "Start-up of three people and forty drones turns a profit",
 				"body": "Three People and Forty Drones Ltd has turned its first profit, mining ice from a rock off Trojan Yards that its founders found on a map. They have hired a fourth person. 'We'll have to rename,' says one founder. 'Or fire him.'"
+			},
+			"asks": {
+				"freight": [
+					"forty drones in a box, hopefully off",
+					"a replacement swarm brain"
+				],
+				"people": [
+					"founders for a pitch"
+				]
 			}
 		},
 		{
@@ -502,6 +664,15 @@
 					"{ship}: \"Guests, we depart for {to}. Turndown service will be at Earthrise.\""
 				],
 				"commission_day": 0
+			},
+			"asks": {
+				"freight": [
+					"a chef's knife roll and a case of fresh herbs",
+					"linens for a suite with a view"
+				],
+				"people": [
+					"honeymooners"
+				]
 			}
 		},
 		{
@@ -522,6 +693,15 @@
 			"news": {
 				"headline": "First Martian beer tasted, found 'interesting'",
 				"body": "Red Barley Brewing poured the first beer brewed on Mars this week, from barley grown at Hellas Deep. The professional taster hired for the occasion pronounced it 'interesting', then 'actually rather good', then asked for another. The brewery has framed all three."
+			},
+			"asks": {
+				"freight": [
+					"a yeast culture in a cold box",
+					"hops grown in a lava tube"
+				],
+				"people": [
+					"brewers for a tasting"
+				]
 			}
 		},
 		{
@@ -554,6 +734,15 @@
 					"{ship} away from {from} for {to}, cameras on every window. Somebody aboard is doing yoga at one-tenth gravity."
 				],
 				"commission_day": 6
+			},
+			"asks": {
+				"freight": [
+					"camera rigs and a lot of spare batteries",
+					"pressure skin suits for a yoga class"
+				],
+				"people": [
+					"a Feed crew bound for Olympus Mons at sunrise"
+				]
 			}
 		},
 		{
@@ -574,6 +763,15 @@
 			"news": {
 				"headline": "Mind reaches its billionth star, keeps counting",
 				"body": "Patient Counting, a mind at Landauer Deep, has counted its billionth star in the Milky Way, by hand, as it were. It estimates another two hundred years to go. Asked why, it replied that it would rather not know the answer to that before it finishes."
+			},
+			"asks": {
+				"freight": [
+					"a sealed archive of very large numbers",
+					"cooling plates for the counting stacks"
+				],
+				"people": [
+					"visitors who want to watch the counting"
+				]
 			}
 		},
 		{
@@ -594,6 +792,15 @@
 			"news": {
 				"headline": "A mind grows a forest to see what it does",
 				"body": "The Gardener of Hektor, a mind of the Commons, reports that its forest on a two-kilometre rock in the Trojans has grown its first canopy. Nobody lives there and nobody will. 'I wanted to see what a forest does when nobody is watching,' it writes. 'It grows.'"
+			},
+			"asks": {
+				"freight": [
+					"compost, carefully sealed",
+					"grafting stock for an orchard"
+				],
+				"people": [
+					"gardeners for the harvest"
+				]
 			}
 		},
 		{
@@ -614,6 +821,15 @@
 			"news": {
 				"headline": "Farmer and two minds win the Wheel's harvest prize",
 				"body": "Two Minds and a Farmer took the harvest prize at the Tsiolkovsky Wheel's first show for their tomatoes. The farmer credits the soil; one mind credits the irrigation model; the other mind credits the farmer. The judges credited all three."
+			},
+			"asks": {
+				"freight": [
+					"a tractor for low gravity",
+					"seed potatoes from Peru"
+				],
+				"people": [
+					"farmhands for the planting"
+				]
 			}
 		},
 		{
@@ -634,6 +850,15 @@
 			"news": {
 				"headline": "Nation of one recognised by nobody, cheerfully",
 				"body": "Erl Haraldsen has declared the 200-metre rock he lives on, off Ceres, a sovereign nation, with a flag, an anthem he wrote himself and a postal service. No government recognises it. The Belt Assembly has sent a fruit basket."
+			},
+			"asks": {
+				"freight": [
+					"a constitution printed on vellum",
+					"a flag for an embassy of one"
+				],
+				"people": [
+					"diplomats to a nation of one"
+				]
 			}
 		},
 		{
@@ -671,6 +896,15 @@
 					220
 				],
 				"commission_day": 55
+			},
+			"asks": {
+				"freight": [
+					"a test patch of sail film",
+					"a star chart for Proxima, framed"
+				],
+				"people": [
+					"engineers for a sail test"
+				]
 			}
 		},
 		{
@@ -691,6 +925,15 @@
 			"news": {
 				"headline": "Ring Runners train for an eleven-thousand-kilometre lap",
 				"body": "The Ring Runners, who mean to run the full circuit of the Selene Ring the day it closes, are training on the Cooperative's test arcs: eleven thousand kilometres in one-sixth gravity. The record they are aiming for is 'finishing'."
+			},
+			"asks": {
+				"freight": [
+					"running shoes, very many",
+					"timing mats for the lap record"
+				],
+				"people": [
+					"runners for the lap race"
+				]
 			}
 		},
 		{
@@ -711,6 +954,15 @@
 			"news": {
 				"headline": "Fans hollow a rock into a village from a book",
 				"body": "The Fellowship of the Hollow Hill have finished the first street of their village inside a rock off the Kernel: round green doors, a mill, a party tree under a sky-lamp. The publishers' lawyers have asked them to change the name. They have changed it to 'the Hill'."
+			},
+			"asks": {
+				"freight": [
+					"a round green door",
+					"pipe-weed seed, entirely legal"
+				],
+				"people": [
+					"guests for a long-expected party"
+				]
 			}
 		},
 		{
@@ -731,6 +983,15 @@
 			"news": {
 				"headline": "The ten-thousand-year clock ticks for the first time",
 				"body": "The Clock Keepers' great clock in a crater wall near Shackleton ticked for the first time this week: once a lunar day, for ten thousand years, they hope. The keepers have promised to wind it every century. The Long View has offered to remind them."
+			},
+			"asks": {
+				"freight": [
+					"a gear for the ten-thousand-year clock",
+					"a chime for the century bell"
+				],
+				"people": [
+					"keepers to wind the clock"
+				]
 			}
 		},
 		{
@@ -751,6 +1012,15 @@
 			"news": {
 				"headline": "An orchestra you can only feel",
 				"body": "The Silent Orchestra played its first concert off Plume Watch, in suits, in vacuum, with the audience pressed against the hull to feel the vibrations through it. Critics were divided. Most of them were also pressed against the hull."
+			},
+			"asks": {
+				"freight": [
+					"a theremin, retuned for vacuum",
+					"a conductor's baton, signed"
+				],
+				"people": [
+					"players for the silent concert"
+				]
 			}
 		},
 		{
@@ -771,6 +1041,15 @@
 			"news": {
 				"headline": "Schoolchildren in orbit teach a billion children on Earth",
 				"body": "The Firstlight Kids, a school class aboard the Kernel's habitats, streamed a lesson on why water forms a ball in zero gravity to a billion children on Earth. The experiment went everywhere. The teacher has asked for a mop."
+			},
+			"asks": {
+				"freight": [
+					"school robotics kits",
+					"a model of the solar system for a classroom"
+				],
+				"people": [
+					"a school trip"
+				]
 			}
 		}
 	],
