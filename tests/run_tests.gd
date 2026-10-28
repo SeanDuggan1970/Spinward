@@ -3341,6 +3341,43 @@ func test_hitchhikers() -> void:
 	var other: String = "halo_depot" if h2["to"] != "halo_depot" else "kernel_l5"
 	_dock_at(wait2, other)
 	check(wait2.state.ship["hikers"].size() == 1, "A hitchhiker stays aboard at ports that are not their stop")
+	# A teacher set down at their stop earns goodwill with its operator; one carried
+	# elsewhere (out of patience) earns none.
+	var good := fresh()
+	good.state.ship["modules"]["cargo.1"] = "passenger_berths"
+	good.state.ship["passengers"] = 1
+	good.state.ship["hikers"] = [{"name": "Test Teacher", "trade": "teacher", "to": "halo_depot", "from": "kibo_ring", "fare": 0.0, "gift": "", "boarded_t": 0.0, "mid_sent": true, "lines": {"board": "", "mid": "", "leave": ""}}]
+	var halo_op := String(good.data.places["halo_depot"]["operator"])
+	var rep0 := float(good.state.reputation.get(halo_op, 0.0))
+	_dock_at(good, "halo_depot")
+	var teach_rep := float(good.data.favours["hitchhikers"]["trades"]["teacher"]["goodwill_rep"])
+	check(good.state.ship["hikers"].is_empty() and teach_rep > 0.0 and absf(float(good.state.reputation.get(halo_op, 0.0)) - rep0 - teach_rep) < 1e-9, "A teacher brought to their stop earns goodwill with %s" % halo_op)
+	# Tourists pay from their own fare range.
+	var tour := fresh()
+	tour.data.favours["hitchhikers"]["trades"] = {"tourist": tour.data.favours["hitchhikers"]["trades"]["tourist"]}
+	var tfares: Array = tour.data.favours["hitchhikers"]["trades"]["tourist"]["fare_cr"]
+	var trng := RandomNumberGenerator.new()
+	trng.seed = 7
+	var all_in := true
+	for i in 20:
+		var th := Favours.make_hiker(tour.data, tour.state, trng, "kibo_ring")
+		all_in = all_in and th["trade"] == "tourist" and float(th["fare"]) >= float(tfares[0]) - 25.0 and float(th["fare"]) <= float(tfares[1]) + 25.0
+	check(all_in, "A tourist's fare comes from the tourist fare range")
+	# Kindness: the people at a port sometimes do something nice for whoever brought
+	# them help. Every form leaves a voucher or cash, and a line with nothing unfilled.
+	var kin := fresh()
+	kin.data.favours["kindness"]["chance"]["hitchhiker"] = 1.0
+	var krng := RandomNumberGenerator.new()
+	krng.seed = 11
+	var forms_ok := true
+	for i in 30:
+		var v0: int = kin.state.favours["vouchers"].size()
+		var c0: float = kin.state.credits
+		var line := Favours.kindness(kin.state, kin.data, krng, "halo_depot", "a string quartet", "hitchhiker")
+		forms_ok = forms_ok and line != "" and not line.contains("{") and (kin.state.favours["vouchers"].size() == v0 + 1 or kin.state.credits > c0)
+	check(forms_ok, "A kindness always leaves a voucher or cash and a filled-in line")
+	kin.data.favours["kindness"]["chance"]["hitchhiker"] = 0.0
+	check(Favours.kindness(kin.state, kin.data, krng, "halo_depot", "a poet", "hitchhiker") == "", "and with no chance, nothing happens")
 	# Waiting hitchhikers give up, and the galley holds only so many.
 	var wait3 := fresh()
 	wait3.data.favours["hitchhikers"]["chance"] = 1.0

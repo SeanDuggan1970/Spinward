@@ -909,7 +909,12 @@
 		],
 		"shuttle_depart": [
 			"Shuttle {ship} away from {from}, two dozen souls for {to}.",
-			"{ship}: \"Next stop {to}. Please keep your hands inside the pressure hull.\""
+			"{ship}: \"Next stop {to}. Please keep your hands inside the pressure hull.\"",
+			"{ship} away from {from} for {to}: two teachers, a surgeon, a string quartet and a family of five.",
+			"{from} traffic: {ship} clear for {to}. Aboard, a dance troupe, three aeroponics growers and a great many seedlings.",
+			"{ship}: \"Full cabin for {to} today. Nurses for the new clinic, a poet, and a school trip that will not stop singing.\"",
+			"{ship} bound for {to} with tourists at every window and a botanist guarding a box of bees.",
+			"{ship}: \"Doctors, a choir and somebody's grandmother, all for {to}. Settle in, everyone.\""
 		],
 		"empty_depart": [
 			"{ship} ({operator}) repositioning empty to {to}.",

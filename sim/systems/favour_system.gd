@@ -9,12 +9,16 @@
 ## free berth (the same berths contract passengers use), pay a small fare on arrival, and
 ## help by trade while aboard: an engineer mends small damage in flight, a navigator
 ## trims the propellant a burn takes, a pilot talks the tug fee down, a cook stretches
-## life support, and a tinkerer may leave an engine tune. Their effects are read where
-## they apply (ShipStats.crew_*, Favours.route_fuel, Favours.dock_mult); this system
-## boards them, mends, speaks, and sets them down.
+## life support, and a tinkerer may leave an engine tune. Others are simply going
+## somewhere to help the expansion grow (doctors, nurses, teachers, scientists,
+## aeroponics growers, artists, musicians, poets) and the operator of their stop
+## remembers who brought them (goodwill_rep); tourists pay more for the view. Their
+## effects are read where they apply (ShipStats.crew_*, Favours.route_fuel,
+## Favours.dock_mult); this system boards them, mends, speaks, and sets them down.
 extends "res://sim/systems/system.gd"
 
 const Badges := preload("res://sim/badges.gd")
+const Contracts := preload("res://sim/contracts.gd")
 const Favours := preload("res://sim/favours.gd")
 const Fitness := preload("res://sim/fitness.gd")
 const ShipStats := preload("res://sim/ship_stats.gd")
@@ -138,10 +142,25 @@ func _set_down(place: String) -> void:
 		s.credits += fare
 		if refused:
 			sim().emit("hitchhiker_refused", {"name": h["name"], "place": place, "text": "%s is not cleared through here: the ship has no valid Warrant of Fitness." % h["name"]})
+		# Carried to their stop, the people the port was waiting for (doctors, teachers,
+		# growers, artists) are remembered by its operator.
+		var goodwill := 0.0
+		if not refused and h["to"] == place:
+			goodwill = float(data.favours["hitchhikers"]["trades"].get(h["trade"], {}).get("goodwill_rep", 0.0))
+			if goodwill > 0.0:
+				var op := Contracts.client_of(data, place)
+				s.reputation[op] = float(s.reputation.get(op, 0.0)) + goodwill
+		# and sometimes the people there do something kind for the pilot who brought them.
+		var kind := {"text": ""}
+		if goodwill > 0.0:
+			var who := "%s the %s" % [h["name"], String(data.favours["hitchhikers"]["trades"][h["trade"]]["label"])]
+			_with_rng(func(): kind["text"] = Favours.kindness(s, data, _rng, place, who, "hitchhiker"))
 		var tune := ""
 		if not refused and h["gift"] != "" and Favours.install_tune(s.ship, data, h["gift"], "%s, a tinkerer you gave a ride" % h["name"], s.time_s) == "":
 			tune = h["gift"]
-		sim().emit("hitchhiker_left", {"name": h["name"], "trade": h["trade"], "place": place, "text": h["lines"]["leave"], "fare": fare, "tune": tune})
+		sim().emit("hitchhiker_left", {"name": h["name"], "trade": h["trade"], "place": place, "text": h["lines"]["leave"], "fare": fare, "tune": tune, "goodwill": goodwill})
+		if kind["text"] != "":
+			sim().emit("kindness", {"place": place, "who": h["name"], "text": kind["text"]})
 
 
 func _maybe_hiker(place: String) -> void:
