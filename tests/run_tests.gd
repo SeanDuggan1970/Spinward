@@ -108,6 +108,7 @@ func _initialize() -> void:
 	test_long_hall()
 	test_ceres_megasat()
 	test_terminator()
+	test_berg_resupply()
 	test_shuttle_view_profile()
 	test_edge_cases()
 	test_power_budget()
@@ -2473,6 +2474,57 @@ func test_terminator() -> void:
 	check(sim.apply({"type": "take_shuttle", "to": "terminator"}) == "", "then the lander flies there")
 	sim.advance_game_time(float(s.location["arrive_t"]) - s.time_s + 1.0)
 	check(s.location == {"status": "docked", "place": "terminator"}, "Aboard Terminator")
+
+
+func test_berg_resupply() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var Sites := preload("res://sim/systems/site_system.gd")
+	var site: Dictionary = d.sites["slow_tide_berg"]
+	var act: Dictionary = site["activities"]["resupply"]
+	# Where it is: on its way in from the outer Belt, about 2.2 AU from the Sun at the
+	# start and nearer the Sun as the months go by.
+	var au := 1.495978707e11
+	var r0 := V.length(sim.ephemeris.relative("slow_tide_berg", "sun", s.time_s)) / au
+	var r1 := V.length(sim.ephemeris.relative("slow_tide_berg", "sun", s.time_s + 120.0 * DAY)) / au
+	check(absf(r0 - 2.21) < 0.1 and r1 < r0, "The berg is coming in from the Belt (%.2f AU, then %.2f AU)" % [r0, r1])
+	check(Sites.knows(s, "slow_tide_berg"), "Its crew is on the map from the start")
+	# Getting there takes a long-haul ship: plan it, fly it, arrive on site.
+	s.ship["hull"] = "deep_freighter"
+	s.ship["modules"] = d.ships["deep_freighter"]["modules"].duplicate()
+	s.ship["fuel_t"] = ShipStats.fuel_capacity_t(s.ship, d)
+	var plan := Navigation.plan(s.ship, d, sim.ephemeris, "kibo_ring", "slow_tide_berg", s.time_s)
+	check(plan.get("ok", false), "A deep freighter can plan a route out to the berg (%s)" % plan.get("reason", ""))
+	s.credits = 1.0e6
+	s.location = {"status": "docked", "place": "kibo_ring"}
+	check(sim.apply({"type": "depart", "to": "slow_tide_berg"}) == "", "Depart Kibo Ring for the berg")
+	sim.advance_game_time(float(s.location["arrive_t"]) - s.time_s + 60.0)
+	check(s.location == {"status": "on_site", "place": "slow_tide_berg"}, "Arrive alongside the berg (%s)" % str(s.location))
+	# On site with nothing for them: refused, and nothing taken.
+	s.ship["cargo"] = {}
+	s.ship["cargo_paid"] = {}
+	check(Sites.blocked(s, d, "slow_tide_berg", "resupply").begins_with("needs"), "Arriving empty-handed, there is nothing to hand over")
+	# With the supplies aboard: handed over, paid, and some ice back.
+	s.ship["cargo"] = {"food": 5.0, "medical": 0.3, "machine_parts": 1.0}
+	s.ship["cargo_paid"] = {"food": 3000.0, "medical": 1500.0, "machine_parts": 1200.0}
+	var credits := s.credits
+	check(sim.apply({"type": "site_work", "activity": "resupply"}) == "", "Hand the crew their supplies")
+	check(is_equal_approx(float(s.ship["cargo"]["food"]), 2.0) and not s.ship["cargo"].has("medical") and not s.ship["cargo"].has("machine_parts"), "Their supplies leave the hold; the rest stays")
+	check(is_equal_approx(float(s.ship["cargo_paid"]["food"]), 1200.0) and not s.ship["cargo_paid"].has("medical"), "and so does what they cost you")
+	sim.advance_game_time(float(act["days"]) * DAY + 3600.0)
+	check(s.credits > credits + float(act["credits"]) * 0.99, "The crew pays on the spot")
+	check(float(s.ship["cargo"].get("water_ice", 0.0)) >= 3.0, "and tops up your hold with their ice (%.1f t)" % float(s.ship["cargo"].get("water_ice", 0.0)))
+	# A standing job: not again straight away, then again after its days.
+	s.ship["cargo"]["food"] = 5.0
+	s.ship["cargo"]["medical"] = 0.3
+	s.ship["cargo"]["machine_parts"] = 1.0
+	check(Sites.blocked(s, d, "slow_tide_berg", "resupply").begins_with("done for now"), "Not wanted again yet")
+	sim.advance_game_time(float(act["every_days"]) * DAY)
+	check(Sites.blocked(s, d, "slow_tide_berg", "resupply") == "", "Wanted again after %d days" % int(act["every_days"]))
+	# Saved and loaded, it remembers when you last came.
+	var loaded := SaveIO.from_text(SaveIO.to_text(s))
+	check(loaded.sites.get("last", {}).get("slow_tide_berg", {}).has("resupply"), "Saves remember the last supply run")
 
 
 func test_mars_shuttle() -> void:

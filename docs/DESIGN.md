@@ -1404,7 +1404,8 @@ Wonders shortlist item 6 (WONDERS.md): icebergs pushed in from the Belt for the 
 - **News:** each arrival is a notice and a comms line ("The pusher Slow Tide has parked a 24,000 t berg from the Themis family off the Kernel: 300 t of water ice on the market.").
 - **Set piece** (`set_pieces.gd` `_ice_berg`, feature `ice_berg` at the three ports): the parked berg with its pusher still bolted on astern, and a quarry crawler cutting blocks on its face.
 - **Attract screen:** a new title shot, `berg`: a berg under way in the outer Belt, its pusher throwing a plume of steam, the hero flying escort.
-- **Not yet:** pushers as NPC traffic you can meet in transit, and contracts to supply a berg crew on the way.
+- **Supply runs** (owner's choice, 28 October 2026): the berg *Slow Tide* is a site in solar orbit (`sites.json` `slow_tide_berg`), on its way in from the Belt: about 2.2 AU from the Sun at the start, closer each month. Fly out with 3 t of staples, 0.3 t of medicine and 1 t of machine parts and its crew takes them (`takes`, out of the hold with their cost basis), pays 12,000 cr and 2 standing with the Belt Assembly, and fills your hold with 3 to 6 t of its ice. They want it again every 60 days (`every_days`: a standing job, remembered in `state.sites.last`). A long-haul ship can plan the trip; the news carries the crew's call for supplies.
+- **Not yet:** pushers as NPC traffic you can meet in transit.
 
 ## Hammerhead stations (Oct 2026)
 

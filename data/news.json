@@ -329,6 +329,13 @@
 			"dateline": "Aphrodite's Rest, Venus",
 			"headline": "First wedding over Venus draws four hundred million",
 			"body": "Two of the glider pilots were married on the deck of Aphrodite's Rest on Saturday, under a sky the colour of old brass, and four hundred million people watched on the Feed. The vows were short: nobody wanted to stand outside in an acid coat for long. The couple has asked for no presents except water."
+		},
+		{
+			"id": "slow_tide_supplies",
+			"after_days": 5,
+			"dateline": "Aboard the Slow Tide, inbound from the Belt",
+			"headline": "Berg crew asks: anyone passing with oranges?",
+			"body": "The five aboard the pusher Slow Tide, sixteen months into pushing a berg of Themis ice toward the Kernel, have put out a call: fresh food, medicine and spare parts, paid on delivery, plus as much berg ice as your hold will take home. 'We can't stop, and we can't turn round,' says their engineer, Ama Owusu. 'But we can match speeds with anyone who can find us, and we will cook.'"
 		}
 	],
 	"projects": {

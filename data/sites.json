@@ -603,5 +603,48 @@
 				"text": "Half a day holding station over the crater. Someone left a small plaque in orbit: a list of the DART team, and under it, 'We could, so we did.'"
 			}
 		}
+	},
+	"slow_tide_berg": {
+		"name": "Berg in transit: the Slow Tide",
+		"kind": "berg",
+		"visibility": "known",
+		"description": "A berg of water ice the size of a cathedral, pushed in from the Themis family by the pusher Slow Tide and bound for the Kernel. Its crew of five live in a cabin bolted to the pusher's frame, a year and a half out from the Belt, and they melt and throw a little of their own berg every hour to keep it coming. They can't stop for shopping. Anyone who flies out with fresh food, medicine and spare parts is the most welcome person in the system, and they pay, and they top up your hold from the berg.",
+		"location": {
+			"type": "orbit",
+			"parent": "sun",
+			"elements": {
+				"a_m": 306675634935.0,
+				"e": 0.51,
+				"i_deg": 1.5,
+				"node_deg": 80.0,
+				"peri_deg": 20.0,
+				"m0_deg": 348.5239
+			}
+		},
+		"activities": {
+			"resupply": {
+				"name": "Bring the crew their supplies",
+				"needs": [],
+				"takes": {
+					"food": 3.0,
+					"medical": 0.3,
+					"machine_parts": 1.0
+				},
+				"every_days": 60,
+				"days": 0.5,
+				"risk": 0.0,
+				"credits": 12000,
+				"rep": {
+					"Belt Assembly": 2
+				},
+				"yields": {
+					"water_ice": [
+						3,
+						6
+					]
+				},
+				"text": "Half a day matched with the berg, passing crates across on a line. They cook you the first fresh meal they've had in four months, and send you off with a few tonnes of ice chipped from the berg."
+			}
+		}
 	}
 }

@@ -551,7 +551,14 @@ func _site_tab(site_id: String) -> Control:
 			bits.append("needs " + ", ".join(needs.map(func(n): return {"survey": "a survey pod", "lander": "a lander", "mining": "a mining rig"}.get(n, n))))
 		if act.get("in_coma", false):
 			bits.append("inside the coma: dust wears every module")
+		if act.has("every_days"):
+			bits.append("wanted again every %d days" % int(act["every_days"]))
 		p[1].add_child(UI.label("  ·  ".join(bits), UI.DIM, 13))
+		var takes := []
+		for good in act.get("takes", {}):
+			takes.append("%s %s t" % [String(d.goods[good]["name"]).to_lower(), String.num(float(act["takes"][good]), 1)])
+		if not takes.is_empty():
+			p[1].add_child(UI.label("Bring: " + ", ".join(takes) + " (handed over from your hold)", UI.TEXT, 13))
 		var gains := []
 		for good in act.get("yields", {}):
 			var r: Array = act["yields"][good]

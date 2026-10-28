@@ -124,6 +124,7 @@ Plan: a curated catalog of about 30 major bodies plus a hand-picked set of named
 - **Pushing it:** a pusher that melts the berg's own ice and throws it as reaction mass (a mass driver or a fusion-heated steam rocket) needs no propellant from home. With an exhaust speed of about 5 km/s, moving a berg by 5 km/s costs about 63% of its mass (the rocket equation); the berg pays for its own trip, and what arrives is about a third of what left. The game's berg masses are what arrives.
 - **Size:** water ice weighs about 0.92 t a cubic metre, so a 24,000 t berg is some 30 m across.
 - **Time:** low-thrust transfers from the outer Belt to the inner system take years. The game has many bergs in the pipeline at once and shows only arrivals.
+- **The Slow Tide's path:** drawn as a coasting transfer ellipse from the Themis family (about 3.1 AU) to Earth's orbit: semi-major axis 2.05 AU, eccentricity 0.51, period 2.94 years, so about a year and a half in. At the game's start (mean anomaly 290 degrees) it is 2.21 AU from the Sun, 208 days from perihelion. A real pushed berg follows a slow powered spiral, not a coast; and this one, once past perihelion, coasts back out rather than being parked, which the game doesn't model yet.
 
 ## 12. A roof over a canyon
 

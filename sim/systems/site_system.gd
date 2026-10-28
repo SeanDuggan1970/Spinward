@@ -73,8 +73,17 @@ static func blocked(state, data, site: String, activity: String, eph = null) -> 
 	var act: Dictionary = data.sites[site]["activities"].get(activity, {})
 	if act.is_empty():
 		return "nothing like that to do here"
-	if activity in state.sites.get("worked", {}).get(site, []) or (data.sites[site].get("once", false) and not state.sites.get("worked", {}).get(site, []).is_empty()):
+	if act.has("every_days"):
+		# A standing job (a crew to supply): again once enough days have passed.
+		var last := float(state.sites.get("last", {}).get(site, {}).get(activity, -INF))
+		var again := last + float(act["every_days"]) * DAY
+		if state.time_s < again:
+			return "done for now: needed again in %d days" % int(ceil((again - state.time_s) / DAY))
+	elif activity in state.sites.get("worked", {}).get(site, []) or (data.sites[site].get("once", false) and not state.sites.get("worked", {}).get(site, []).is_empty()):
 		return "already done"
+	for good in act.get("takes", {}):
+		if float(state.ship["cargo"].get(good, 0.0)) < float(act["takes"][good]) - 1e-9:
+			return "needs %s t of %s aboard" % [String.num(float(act["takes"][good]), 1), String(data.goods[good]["name"]).to_lower()]
 	for need in act.get("needs", []):
 		if not can(state.ship, data, need):
 			return "needs a %s" % {"survey": "survey pod", "lander": "lander", "mining": "mining rig"}.get(need, need)
@@ -96,6 +105,15 @@ func _start_work(command: Dictionary) -> String:
 	if why != "":
 		return why
 	var act: Dictionary = data.sites[site]["activities"][activity]
+	# What the job takes comes out of the hold as the work starts, its cost basis with it.
+	for good in act.get("takes", {}):
+		var held := float(s.ship["cargo"][good])
+		var t := float(act["takes"][good])
+		s.ship["cargo_paid"][good] = float(s.ship["cargo_paid"].get(good, 0.0)) * (1.0 - t / held)
+		s.ship["cargo"][good] = held - t
+		if s.ship["cargo"][good] <= 1e-9:
+			s.ship["cargo"].erase(good)
+			s.ship["cargo_paid"].erase(good)
 	s.sites["work"] = {"site": site, "activity": activity, "start_t": s.time_s, "end_t": s.time_s + float(act["days"]) * DAY}
 	if act.has("comet"):
 		s.sites["work"]["comet_activity"] = Comet.activity(data, sim().ephemeris, data.sites[site]["location"]["parent"], s.time_s)
@@ -147,6 +165,12 @@ func _finish(work: Dictionary) -> void:
 	var worked: Array = s.sites["worked"].get(site, [])
 	worked.append(activity)
 	s.sites["worked"][site] = worked
+	if act.has("every_days"):
+		var last: Dictionary = s.sites.get("last", {})
+		var here: Dictionary = last.get(site, {})
+		here[activity] = s.time_s
+		last[site] = here
+		s.sites["last"] = last
 	s.sites["work"] = {}
 	s.stats["site_jobs"] = int(s.stats.get("site_jobs", 0)) + 1
 	sim().emit("site_work_done", {"site": site, "activity": activity, "went_wrong": went_wrong, "got": got, "lost_t": lost, "credits": credits, "dust_wear": dust_wear})

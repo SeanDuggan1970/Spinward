@@ -312,6 +312,11 @@ func validate() -> Array[String]:
 			for good in act.get("yields", {}):
 				if not goods.has(good):
 					problems.append("site %s: activity %s yields unknown good %s" % [id, act_id, good])
+			for good in act.get("takes", {}):
+				if not goods.has(good) or float(act["takes"][good]) <= 0.0:
+					problems.append("site %s: activity %s takes unknown good %s, or none of it" % [id, act_id, good])
+			if act.has("every_days") and float(act["every_days"]) <= 0.0:
+				problems.append("site %s: activity %s every_days must be positive" % [id, act_id])
 			# Comet work: only at a comet, and only "quiet" or "active".
 			if act.has("comet") or act.get("in_coma", false):
 				if not bodies.get(where.get("parent", ""), {}).has("activity"):
