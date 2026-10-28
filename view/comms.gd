@@ -39,6 +39,9 @@ static func line(sim, event: Dictionary) -> String:
 	else:
 		to = sim.data.places[d["place"]]["name"]
 	var options: Array = chatter[key]
+	# A travelling group says its own piece as it leaves.
+	if event["type"] == "npc_departed" and not fleet.get("lines", []).is_empty():
+		options = fleet["lines"]
 	var template: String = options[absi(hash(str(d["npc"]) + str(event["time_s"]))) % options.size()]
 	return template.format({"ship": npc["name"], "operator": fleet["operator"], "from": from, "to": to, "cargo": cargo, "alt": alt})
 

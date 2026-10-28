@@ -1,5 +1,5 @@
 {
-	"_note": "The long tail under the big factions (docs/DESIGN.md, The cap's off): small groups of dreamers, artists, faiths, families, survivalists, start-ups, minds and the quietly mad. View and news only: each has a home port, a faction it leans toward, colours for its ships, ship names, and one news item. news_first_day / news_every_days spread their news through the campaign (negative days are already in the feed at the start); traffic_share is the share of a port's own craft that belong to groups based there.",
+	"_note": "The long tail under the big factions (docs/DESIGN.md, The cap's off): small groups of dreamers, artists, faiths, families, survivalists, start-ups, minds and the quietly mad. View and news only: each has a home port, a faction it leans toward, colours for its ships, ship names, and one news item. news_first_day / news_every_days spread their news through the campaign (negative days are already in the feed at the start); traffic_share is the share of a port's own craft that belong to groups based there. A group with a 'voyage' flies its first ship (a 'shuttle' fleet, no freight, generated as npcs fleet group_<id> by DataCatalog) round the route of places from its home, on the given hull ('sail' for a sail hull), waiting voyage_dwell_hours at each stop, from commission_day (the long hauls set out over the first weeks, and make the news when they do); its 'lines' are what it says on the comms as it leaves ({ship} {from} {to}). Groups at a place a project builds wait for it. Group ships fuel from their own stores (own_fuel), off the markets, so they don't move prices.",
 	"news_first_day": -9,
 	"news_every_days": 5,
 	"traffic_share": 0.4,
@@ -22,6 +22,18 @@
 			"news": {
 				"headline": "Firsts Club logs its four hundredth first",
 				"body": "The Firsts Club at Kibo Ring has ratified its four hundredth first: the first game of chess played by post between L4 and L5, which took eleven days and ended in a draw. Its rules committee rejected 'first to sneeze in lunar orbit' as unverifiable."
+			},
+			"voyage": {
+				"hull": "courier",
+				"route": [
+					"kibo_ring",
+					"shackleton_port"
+				],
+				"lines": [
+					"{ship} (Firsts Club) away from {from} for {to}. Aboard: a member hoping to be the first to play the bagpipes in lunar orbit.",
+					"{ship}: \"Firsts Club, outbound for {to}. The adjudicator is with us, so nobody touch anything historic.\""
+				],
+				"commission_day": 0
 			}
 		},
 		{
@@ -42,6 +54,18 @@
 			"news": {
 				"headline": "Long Walkers pass the halfway point round the Moon",
 				"body": "Six walkers who set out from Shackleton eight months ago, in suits and on foot, passed the halfway point round the Moon this week at Mare Smythii. Their support rover carries the oxygen; they carry a harmonica. 'The view does not get old,' says their leader. 'The suit does.'"
+			},
+			"voyage": {
+				"hull": "kestrel",
+				"route": [
+					"shackleton_port",
+					"farside_array"
+				],
+				"lines": [
+					"{ship} away from {from} with six walkers for {to}. They will walk back. It will take them a year.",
+					"{ship}: \"Dropping the Long Walk at {to}. Boots checked, oxygen checked, enthusiasm worryingly high.\""
+				],
+				"commission_day": 0
 			}
 		},
 		{
@@ -62,6 +86,18 @@
 			"news": {
 				"headline": "A choir records in Saturn's shadow",
 				"body": "Forty singers of the Shadow Choir recorded a requiem this week in a pressurised hall off Huygens Port, timed to the hour Saturn's rings cut the sunlight. The Feed counted ninety million listeners. The acoustics, the conductor admits, were 'mostly the hall'."
+			},
+			"voyage": {
+				"hull": "deep_freighter",
+				"route": [
+					"huygens_port",
+					"valhalla_station"
+				],
+				"lines": [
+					"{ship} (Sky Choir) away for {to}. Forty voices and a pipe organ in the hold, tuned to Saturn's rings.",
+					"{ship}: \"Choir aboard, {to} bound. Tonight's programme: the ring tones in B flat, and an encore if Titan behaves.\""
+				],
+				"commission_day": 12
 			}
 		},
 		{
@@ -102,6 +138,18 @@
 			"news": {
 				"headline": "Mirror Painters asked to keep it to one evening a year",
 				"body": "After a winter of glowing spirals over the Pacific, the Mirror Painters of Clarke Exchange have agreed with astronomers and the Long View to paint the night sky one evening a year. This year's picture, a heron, was seen from Fiji to Hokkaido."
+			},
+			"voyage": {
+				"hull": "courier",
+				"route": [
+					"clarke_exchange",
+					"kibo_ring"
+				],
+				"lines": [
+					"{ship} away from {from} for {to}. Look back at Clarke as it leaves: the mirrors are spelling something.",
+					"{ship}: \"Mirror Painters to {to}. Our latest piece is visible from Earth on Tuesday, weather permitting.\""
+				],
+				"commission_day": 0
 			}
 		},
 		{
@@ -142,6 +190,18 @@
 			"news": {
 				"headline": "Jazz band banned from playing in a Mars dome at night",
 				"body": "Rust and Brass, the touring jazz band of the Mars domes, have been asked not to play after midnight in Jezero after the dome's air handlers started resonating with the double bass. The band has written a tune about it."
+			},
+			"voyage": {
+				"hull": "deep_freighter",
+				"route": [
+					"ares_ring",
+					"piazzi_station"
+				],
+				"lines": [
+					"{ship}: \"Rust Jazz on tour! Next stop {to}. Bring something to bang on.\"",
+					"{ship} away from {from}, a band of nine and a double bass in its own pressure case, bound for {to}."
+				],
+				"commission_day": 24
 			}
 		},
 		{
@@ -182,6 +242,18 @@
 			"news": {
 				"headline": "A Quaker meeting in a grain silo at L5",
 				"body": "The Starwatch Meeting has held its thousandth meeting for worship in the old grain silo at the Kernel, with a window cut in its side so the Milky Way turns past. Anyone may come. Most people, they report, stay longer than they meant to."
+			},
+			"voyage": {
+				"hull": "shuttle",
+				"route": [
+					"kernel_l5",
+					"kibo_ring"
+				],
+				"lines": [
+					"{ship} away from {from} for {to}. The Starwatch Friends ask for a quiet channel. They will be listening.",
+					"{ship}: \"Meeting for worship in transit to {to}. We will answer hails, but slowly.\""
+				],
+				"commission_day": 0
 			}
 		},
 		{
@@ -282,6 +354,18 @@
 			"news": {
 				"headline": "A marae in orbit celebrates Matariki",
 				"body": "Ngāti Rangi ki te Rangi celebrated Matariki at their marae on Kalpana One this week, the first held in orbit, with a hāngī cooked in a pressure oven and the Pleiades in the window. The kaumātua says the stars are in the same place. 'We are the ones who moved.'"
+			},
+			"voyage": {
+				"hull": "courier",
+				"route": [
+					"kalpana_one",
+					"kibo_ring"
+				],
+				"lines": [
+					"{ship} away from {from} for {to}: three generations of Ngāta going to a wedding, and a hāngī pit packed in vacuum foil.",
+					"{ship}: \"Whānau aboard for {to}. Kia ora, {from}, see you at the next birthday.\""
+				],
+				"commission_day": 0
 			}
 		},
 		{
@@ -302,6 +386,18 @@
 			"news": {
 				"headline": "Tinkers fix the Yards' oldest crane, again",
 				"body": "The Tinkers, a clan of fixers who have lived aboard their ships since the '40s, stopped at Trojan Yards this week and fixed the Yards' oldest crane for the eleventh time. They were paid in parts, gossip and a long lunch, which they say is the correct rate."
+			},
+			"voyage": {
+				"hull": "drone_freighter",
+				"route": [
+					"trojan_yards",
+					"kernel_l5"
+				],
+				"lines": [
+					"{ship} (Tinkers) away for {to}. Mending done on the way, by appointment, in exchange for anything interesting.",
+					"{ship}: \"Bound for {to}. If it's broken, bring it. If it's not, bring it anyway, we'll improve it.\""
+				],
+				"commission_day": 0
 			}
 		},
 		{
@@ -322,6 +418,18 @@
 			"news": {
 				"headline": "Holdfast answers a distress call, declines thanks",
 				"body": "The Holdfast homestead off Psyche, which keeps its own counsel and its own mind, was first to reach a drive-failed ore tug this week and towed it in. Asked for comment, Holdfast said they had done what anyone would, and would like to be left alone now, please."
+			},
+			"voyage": {
+				"hull": "deep_freighter",
+				"route": [
+					"psyche_claims",
+					"piazzi_station"
+				],
+				"lines": [
+					"{ship} (Hold Fast) away for {to}. They want nothing, they say, but they will trade for seeds.",
+					"{ship}: \"Going to {to}. We'll pay our own way and fix our own valves, thank you.\""
+				],
+				"commission_day": 40
 			}
 		},
 		{
@@ -382,6 +490,18 @@
 			"news": {
 				"headline": "Hotel that is mostly a window opens over Earth",
 				"body": "The Window Hotel opened this week off Kibo Ring: twelve rooms, one of which is a floor of glass looking straight down at Earth. It is booked for three years. The management asks guests not to bring telescopes; there is, they point out, a planet."
+			},
+			"voyage": {
+				"hull": "shuttle",
+				"route": [
+					"kibo_ring",
+					"kernel_l5"
+				],
+				"lines": [
+					"{ship} (Hotel Window) away for {to} with honeymooners at every window and a pastry chef at the controls' elbow.",
+					"{ship}: \"Guests, we depart for {to}. Turndown service will be at Earthrise.\""
+				],
+				"commission_day": 0
 			}
 		},
 		{
@@ -422,6 +542,18 @@
 			"news": {
 				"headline": "Yoga on Olympus Mons draws three hundred million",
 				"body": "Summit Feed's sunrise yoga class on the summit of Olympus Mons, in pressure skin suits twenty-two kilometres above the Martian datum, drew three hundred million viewers. Two participants fell over. The comments were kind."
+			},
+			"voyage": {
+				"hull": "deep_freighter",
+				"route": [
+					"ares_ring",
+					"kibo_ring"
+				],
+				"lines": [
+					"{ship}: \"Feed Olympus here, streaming live from the burn to {to}! Say hi to two hundred million viewers.\"",
+					"{ship} away from {from} for {to}, cameras on every window. Somebody aboard is doing yoga at one-tenth gravity."
+				],
+				"commission_day": 6
 			}
 		},
 		{
@@ -522,6 +654,23 @@
 			"news": {
 				"headline": "Proxima Society unveils its sail, its budget and its prayer",
 				"body": "The Proxima Society showed off the first square kilometre of the sail it means to send to Proxima Centauri, crewed, within the decade. Its budget is a tenth of what the experts say it needs. Its chair says the rest is 'a matter of faith and cheap graphene'."
+			},
+			"voyage": {
+				"hull": "sail_freighter",
+				"route": [
+					"clarke_exchange",
+					"ares_ring"
+				],
+				"sail": true,
+				"lines": [
+					"{ship} unfurls for {to}: a test sail for a ship that will, they say, one day go to Proxima.",
+					"{ship}: \"Proxima Sail Society, practice run to {to}. Only four point two light years to go after this.\""
+				],
+				"sail_days": [
+					160,
+					220
+				],
+				"commission_day": 55
 			}
 		},
 		{
@@ -624,5 +773,9 @@
 				"body": "The Firstlight Kids, a school class aboard the Kernel's habitats, streamed a lesson on why water forms a ball in zero gravity to a billion children on Earth. The experiment went everywhere. The teacher has asked for a mop."
 			}
 		}
+	],
+	"voyage_dwell_hours": [
+		48,
+		140
 	]
 }

@@ -1,5 +1,5 @@
 {
-	"_note": "NPC fleets. behaviour: 'trader' (chooses among the best few trades it can see), 'route' (fixed legs, buys listed goods), 'shuttle' (fixed legs, no freight). NPCs trade from the same markets as the player but never draw a stock below reserve_fraction of target. dwell_hours is a [min, max] range for time spent docked. 'commission_days' (one per ship) staggers when each ship enters service, in days from the start, so long-haul traffic builds up as the game goes on; until then a ship is fitting out and out of sight.",
+	"_note": "NPC fleets. behaviour: 'trader' (chooses among the best few trades it can see), 'route' (fixed legs, buys listed goods), 'shuttle' (fixed legs, no freight). NPCs trade from the same markets as the player but never draw a stock below reserve_fraction of target. dwell_hours is a [min, max] range for time spent docked. A fleet with own_fuel fills its tanks from its own stores, not the market (the groups' ships, made from data/groups.json). 'commission_days' (one per ship) staggers when each ship enters service, in days from the start, so long-haul traffic builds up as the game goes on; until then a ship is fitting out and out of sight.",
 	"reserve_fraction": 0.25,
 	"trader_choice_pool": 3,
 	"trader_min_margin": 0.05,

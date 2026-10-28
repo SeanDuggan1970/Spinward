@@ -167,9 +167,12 @@ func _arrive(npc: Dictionary, t: float) -> void:
 	npc["ship"]["cargo"] = {}
 	npc["location"] = {"status": "docked", "place": place}
 	npc["trips"] += 1
-	# Top up from the local propellant stock where there is one.
+	# Top up from the local propellant stock where there is one. A fleet with its own
+	# fuel (the cap's-off groups, data/groups.json) fills from its own stores instead.
 	var data = sim().data
-	if "refuel" in data.places[place].get("services", []):
+	if _fleet(npc).get("own_fuel", false):
+		npc["ship"]["fuel_t"] = ShipStats.fuel_capacity_t(npc["ship"], data)
+	elif "refuel" in data.places[place].get("services", []):
 		var need := ShipStats.fuel_capacity_t(npc["ship"], data) - float(npc["ship"]["fuel_t"])
 		var take := minf(need, _available(place, "propellant"))
 		s.markets[place]["propellant"] -= take

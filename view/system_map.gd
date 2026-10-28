@@ -65,7 +65,10 @@ func _process(_dt: float) -> void:
 
 
 static func fleet_colour(sim_, npc: Dictionary) -> Color:
-	return FLEET_COLOURS.get(sim_.data.npcs["fleets"][npc["fleet"]]["operator"], UI.DIM)
+	var fleet: Dictionary = sim_.data.npcs["fleets"][npc["fleet"]]
+	if fleet.has("group"):
+		return Color(sim_.data.groups[fleet["group"]]["colours"]["accent"]).lerp(UI.TEXT, 0.3)
+	return FLEET_COLOURS.get(fleet["operator"], UI.DIM)
 
 
 func _draw() -> void:
