@@ -1,0 +1,628 @@
+{
+	"_note": "The long tail under the big factions (docs/DESIGN.md, The cap's off): small groups of dreamers, artists, faiths, families, survivalists, start-ups, minds and the quietly mad. View and news only: each has a home port, a faction it leans toward, colours for its ships, ship names, and one news item. news_first_day / news_every_days spread their news through the campaign (negative days are already in the feed at the start); traffic_share is the share of a port's own craft that belong to groups based there.",
+	"news_first_day": -9,
+	"news_every_days": 5,
+	"traffic_share": 0.4,
+	"groups": [
+		{
+			"id": "firsts_club",
+			"name": "The Firsts Club",
+			"kind": "dreamers",
+			"home": "kibo_ring",
+			"leans": "Terran Compact",
+			"colours": {
+				"hull": "#e8e4da",
+				"accent": "#c43c3c"
+			},
+			"ships": [
+				"Ever Before",
+				"Plant the Flag"
+			],
+			"creed": "Somebody has to be first. Members pay their dues by doing something nobody has done.",
+			"news": {
+				"headline": "Firsts Club logs its four hundredth first",
+				"body": "The Firsts Club at Kibo Ring has ratified its four hundredth first: the first game of chess played by post between L4 and L5, which took eleven days and ended in a draw. Its rules committee rejected 'first to sneeze in lunar orbit' as unverifiable."
+			}
+		},
+		{
+			"id": "long_walk",
+			"name": "The Long Walkers",
+			"kind": "dreamers",
+			"home": "shackleton_port",
+			"leans": "Luna Cooperative",
+			"colours": {
+				"hull": "#d9d4c7",
+				"accent": "#2e6f9e"
+			},
+			"ships": [
+				"Next Step",
+				"Footfall"
+			],
+			"creed": "To walk round the Moon, on foot, in suits, one stage a month.",
+			"news": {
+				"headline": "Long Walkers pass the halfway point round the Moon",
+				"body": "Six walkers who set out from Shackleton eight months ago, in suits and on foot, passed the halfway point round the Moon this week at Mare Smythii. Their support rover carries the oxygen; they carry a harmonica. 'The view does not get old,' says their leader. 'The suit does.'"
+			}
+		},
+		{
+			"id": "sky_choir",
+			"name": "The Shadow Choir",
+			"kind": "artists",
+			"home": "huygens_port",
+			"leans": "Huygens Trust",
+			"colours": {
+				"hull": "#2b2f33",
+				"accent": "#d8b02a"
+			},
+			"ships": [
+				"Low Note",
+				"Hold the Chord"
+			],
+			"creed": "To sing where no voice has ever sounded, and record it for the people back home.",
+			"news": {
+				"headline": "A choir records in Saturn's shadow",
+				"body": "Forty singers of the Shadow Choir recorded a requiem this week in a pressurised hall off Huygens Port, timed to the hour Saturn's rings cut the sunlight. The Feed counted ninety million listeners. The acoustics, the conductor admits, were 'mostly the hall'."
+			}
+		},
+		{
+			"id": "regolith_sculptors",
+			"name": "The Regolith Sculptors",
+			"kind": "artists",
+			"home": "halo_depot",
+			"leans": "Luna Cooperative",
+			"colours": {
+				"hull": "#c9a77a",
+				"accent": "#5a3f2a"
+			},
+			"ships": [
+				"Chisel",
+				"Lost Wax"
+			],
+			"creed": "Art at the scale of a world: carved hills, sintered statues, a face you can see from orbit.",
+			"news": {
+				"headline": "Sculptors finish a face you can see from L1",
+				"body": "The Regolith Sculptors have finished their face in Mare Tranquillitatis: four kilometres from brow to chin, sintered from the soil by drones and visible from Halo Depot through a good telescope. Whose face it is, they will not say. The Long View asked them to stop at one."
+			}
+		},
+		{
+			"id": "mirror_painters",
+			"name": "The Mirror Painters",
+			"kind": "artists",
+			"home": "clarke_exchange",
+			"leans": "Terran Compact",
+			"colours": {
+				"hull": "#e2e6ea",
+				"accent": "#7a4fb0"
+			},
+			"ships": [
+				"Glint",
+				"Afterimage"
+			],
+			"creed": "To paint with sunlight: mirrors in orbit that throw shapes onto the night side of Earth.",
+			"news": {
+				"headline": "Mirror Painters asked to keep it to one evening a year",
+				"body": "After a winter of glowing spirals over the Pacific, the Mirror Painters of Clarke Exchange have agreed with astronomers and the Long View to paint the night sky one evening a year. This year's picture, a heron, was seen from Fiji to Hokkaido."
+			}
+		},
+		{
+			"id": "comet_carvers",
+			"name": "The Comet Carvers",
+			"kind": "artists",
+			"home": "piazzi_station",
+			"leans": "Belt Assembly",
+			"colours": {
+				"hull": "#dfe9f0",
+				"accent": "#2e5f8a"
+			},
+			"ships": [
+				"Ice Saint",
+				"Cold Hands"
+			],
+			"creed": "To carve ice that has never been warm, and send the pieces home.",
+			"news": {
+				"headline": "Comet ice sculpture sells for a fortune on Earth",
+				"body": "A two-metre carving of a heron in four-billion-year-old comet ice, made by the Comet Carvers and kept at minus two hundred all the way to Geneva, sold at auction for the price of a small freighter. The carver spent the money on more ice."
+			}
+		},
+		{
+			"id": "rust_jazz",
+			"name": "Rust and Brass",
+			"kind": "artists",
+			"home": "ares_ring",
+			"leans": "Mars Accord",
+			"colours": {
+				"hull": "#9a5a3a",
+				"accent": "#d8b02a"
+			},
+			"ships": [
+				"Blue Note",
+				"Syncopation"
+			],
+			"creed": "A jazz band that tours the Martian domes by shuttle, and swears the thin air helps.",
+			"news": {
+				"headline": "Jazz band banned from playing in a Mars dome at night",
+				"body": "Rust and Brass, the touring jazz band of the Mars domes, have been asked not to play after midnight in Jezero after the dome's air handlers started resonating with the double bass. The band has written a tune about it."
+			}
+		},
+		{
+			"id": "order_long_silence",
+			"name": "The Order of the Long Silence",
+			"kind": "faith",
+			"home": "farside_array",
+			"leans": "Terran Compact Science",
+			"colours": {
+				"hull": "#f0ede6",
+				"accent": "#3a3f45"
+			},
+			"ships": [
+				"Vigil",
+				"Compline"
+			],
+			"creed": "Monks who keep silence on the far side of the Moon, where even Earth's radio cannot reach.",
+			"news": {
+				"headline": "Monks on the far side say little, as promised",
+				"body": "The Order of the Long Silence, which shares Farside's radio-quiet with the Array, issued its annual statement this week. It read, in full: 'Thank you.'"
+			}
+		},
+		{
+			"id": "starwatch_quakers",
+			"name": "The Starwatch Meeting",
+			"kind": "faith",
+			"home": "kernel_l5",
+			"leans": "Kernel Settlers",
+			"colours": {
+				"hull": "#e6dcc4",
+				"accent": "#4f7a3a"
+			},
+			"ships": [
+				"Quiet Hour",
+				"Inner Light"
+			],
+			"creed": "A Quaker meeting at L5 that sits in silence in a grain silo with a window onto the stars.",
+			"news": {
+				"headline": "A Quaker meeting in a grain silo at L5",
+				"body": "The Starwatch Meeting has held its thousandth meeting for worship in the old grain silo at the Kernel, with a window cut in its side so the Milky Way turns past. Anyone may come. Most people, they report, stay longer than they meant to."
+			}
+		},
+		{
+			"id": "church_of_the_dawn",
+			"name": "The Dawnward Chapel",
+			"kind": "faith",
+			"home": "ares_ring",
+			"leans": "Mars Accord",
+			"colours": {
+				"hull": "#e8d6a8",
+				"accent": "#c4762a"
+			},
+			"ships": [
+				"Matins",
+				"Morning Star"
+			],
+			"creed": "A congregation that holds its service at the moment of Martian sunrise, wherever its members are.",
+			"news": {
+				"headline": "Dawn service held on five worlds at once",
+				"body": "The Dawnward Chapel held its first service across five worlds this week, each congregation meeting at its own local sunrise, from Jezero to Kalpana One. The light-delay between them was eleven minutes; the hymn was the same."
+			}
+		},
+		{
+			"id": "pilgrims_of_apollo",
+			"name": "The Pilgrims of Tranquillity",
+			"kind": "faith",
+			"home": "line_foot",
+			"leans": "Luna Cooperative",
+			"colours": {
+				"hull": "#f2efe8",
+				"accent": "#d2702c"
+			},
+			"ships": [
+				"Footprint",
+				"Eagle"
+			],
+			"creed": "Pilgrims who walk to the Apollo landing sites and leave them exactly as they found them.",
+			"news": {
+				"headline": "Pilgrims reach Tranquillity Base, touch nothing",
+				"body": "A party of thirty Pilgrims of Tranquillity reached the Apollo 11 site this month after a nine-day walk from Line Foot, stood at the fence for an hour, and walked back. The bootprints inside the fence are still there. So is the fence."
+			}
+		},
+		{
+			"id": "venice_clan",
+			"name": "The Contarini Family",
+			"kind": "family",
+			"home": "concord_pair",
+			"leans": "Belt Assembly",
+			"colours": {
+				"hull": "#e8dcc0",
+				"accent": "#8a2b2b"
+			},
+			"ships": [
+				"Serenissima",
+				"Gondola"
+			],
+			"creed": "A Venetian family who are building a canal quarter in a cylinder over Ceres, because their grandmother asked.",
+			"news": {
+				"headline": "A Venetian quarter goes up over Ceres",
+				"body": "The Contarini family, who left Venice in '57 with their grandmother's blessing and most of her recipes, have flooded their first canal in the Concord Pair. It is four hundred metres long and has two bridges. The grandmother, who stayed in Venice, says the second bridge is too steep."
+			}
+		},
+		{
+			"id": "norrland",
+			"name": "The Norrland Settlers",
+			"kind": "family",
+			"home": "piazzi_station",
+			"leans": "Belt Assembly",
+			"colours": {
+				"hull": "#4f6b4f",
+				"accent": "#d9d4c7"
+			},
+			"ships": [
+				"Fjell",
+				"Midsummer"
+			],
+			"creed": "Two hundred families from the north of Sweden who want pine forests and long winters, in space.",
+			"news": {
+				"headline": "Norrland settlers plant their first pines over Ceres",
+				"body": "The Norrland Settlers have planted a thousand pine seedlings in their test drum over Ceres, under lamps set for a northern year. The children have been promised snow by midwinter. The engineers have been told."
+			}
+		},
+		{
+			"id": "ngata_whanau",
+			"name": "Ngāti Rangi ki te Rangi",
+			"kind": "family",
+			"home": "kalpana_one",
+			"leans": "Kalpana Settlement Trust",
+			"colours": {
+				"hull": "#2b2f33",
+				"accent": "#c43c3c"
+			},
+			"ships": [
+				"Waka Whetū",
+				"Matariki"
+			],
+			"creed": "A Māori family who carried their marae to orbit, and steer by the stars as their ancestors did.",
+			"news": {
+				"headline": "A marae in orbit celebrates Matariki",
+				"body": "Ngāti Rangi ki te Rangi celebrated Matariki at their marae on Kalpana One this week, the first held in orbit, with a hāngī cooked in a pressure oven and the Pleiades in the window. The kaumātua says the stars are in the same place. 'We are the ones who moved.'"
+			}
+		},
+		{
+			"id": "tinkers",
+			"name": "The Tinkers",
+			"kind": "tribe",
+			"home": "trojan_yards",
+			"leans": "The Commons",
+			"colours": {
+				"hull": "#8c9196",
+				"accent": "#d8b02a"
+			},
+			"ships": [
+				"Spanner",
+				"Make Do"
+			],
+			"creed": "A travelling clan of fixers who live aboard their ships and mend anything, anywhere.",
+			"news": {
+				"headline": "Tinkers fix the Yards' oldest crane, again",
+				"body": "The Tinkers, a clan of fixers who have lived aboard their ships since the '40s, stopped at Trojan Yards this week and fixed the Yards' oldest crane for the eleventh time. They were paid in parts, gossip and a long lunch, which they say is the correct rate."
+			}
+		},
+		{
+			"id": "hold_fast",
+			"name": "Holdfast",
+			"kind": "survivalists",
+			"home": "psyche_claims",
+			"leans": "Independent",
+			"colours": {
+				"hull": "#5a5d61",
+				"accent": "#9a5a3a"
+			},
+			"ships": [
+				"No Thanks",
+				"Self Reliance"
+			],
+			"creed": "A homestead that trusts no government and only one mind, and still answers every distress call.",
+			"news": {
+				"headline": "Holdfast answers a distress call, declines thanks",
+				"body": "The Holdfast homestead off Psyche, which keeps its own counsel and its own mind, was first to reach a drive-failed ore tug this week and towed it in. Asked for comment, Holdfast said they had done what anyone would, and would like to be left alone now, please."
+			}
+		},
+		{
+			"id": "dark_lanes",
+			"name": "The Quiet Lanes Folk",
+			"kind": "survivalists",
+			"home": "hektor_reach",
+			"leans": "Independent",
+			"colours": {
+				"hull": "#161718",
+				"accent": "#3a7a5a"
+			},
+			"ships": [
+				"Lantern Off",
+				"Long Way Round"
+			],
+			"creed": "People who live off the shipping lanes on purpose, and like it that way.",
+			"news": {
+				"headline": "Quiet Lanes Folk ask traffic to keep the noise down",
+				"body": "The scattered homesteads of the Quiet Lanes Folk, out among the Trojans, have asked passing ships to keep their transponders on and their music off. 'We're not hiding,' writes one. 'We're just quiet.'"
+			}
+		},
+		{
+			"id": "forty_drones",
+			"name": "Three People and Forty Drones Ltd",
+			"kind": "start-up",
+			"home": "trojan_yards",
+			"leans": "The Commons",
+			"colours": {
+				"hull": "#e0e0e0",
+				"accent": "#2a8a6a"
+			},
+			"ships": [
+				"Swarm One",
+				"Minimum Viable"
+			],
+			"creed": "An ice-mining start-up with three founders, forty drones and no business plan.",
+			"news": {
+				"headline": "Start-up of three people and forty drones turns a profit",
+				"body": "Three People and Forty Drones Ltd has turned its first profit, mining ice from a rock off Trojan Yards that its founders found on a map. They have hired a fourth person. 'We'll have to rename,' says one founder. 'Or fire him.'"
+			}
+		},
+		{
+			"id": "hotel_window",
+			"name": "The Window Hotel",
+			"kind": "start-up",
+			"home": "kibo_ring",
+			"leans": "Terran Compact",
+			"colours": {
+				"hull": "#f2f2f2",
+				"accent": "#2e6f9e"
+			},
+			"ships": [
+				"Room Service",
+				"Turndown"
+			],
+			"creed": "A hotel that is mostly a window, in the slowest-spinning wheel they could find.",
+			"news": {
+				"headline": "Hotel that is mostly a window opens over Earth",
+				"body": "The Window Hotel opened this week off Kibo Ring: twelve rooms, one of which is a floor of glass looking straight down at Earth. It is booked for three years. The management asks guests not to bring telescopes; there is, they point out, a planet."
+			}
+		},
+		{
+			"id": "mars_brewery",
+			"name": "Red Barley Brewing",
+			"kind": "start-up",
+			"home": "ares_ring",
+			"leans": "Mars Accord",
+			"colours": {
+				"hull": "#9a5a3a",
+				"accent": "#e6dcc4"
+			},
+			"ships": [
+				"Hop Along",
+				"Last Orders"
+			],
+			"creed": "The first brewery on Mars, and the first Martian to taste its beer professionally.",
+			"news": {
+				"headline": "First Martian beer tasted, found 'interesting'",
+				"body": "Red Barley Brewing poured the first beer brewed on Mars this week, from barley grown at Hellas Deep. The professional taster hired for the occasion pronounced it 'interesting', then 'actually rather good', then asked for another. The brewery has framed all three."
+			}
+		},
+		{
+			"id": "feed_olympus",
+			"name": "Summit Feed",
+			"kind": "feed",
+			"home": "ares_ring",
+			"leans": "Mars Accord",
+			"colours": {
+				"hull": "#e8e4da",
+				"accent": "#c43c3c"
+			},
+			"ships": [
+				"Live Now",
+				"Wide Shot"
+			],
+			"creed": "Creators who stream the frontier's wonders to the billions back home.",
+			"news": {
+				"headline": "Yoga on Olympus Mons draws three hundred million",
+				"body": "Summit Feed's sunrise yoga class on the summit of Olympus Mons, in pressure skin suits twenty-two kilometres above the Martian datum, drew three hundred million viewers. Two participants fell over. The comments were kind."
+			}
+		},
+		{
+			"id": "patient_counting",
+			"name": "Patient Counting",
+			"kind": "mind",
+			"home": "landauer_deep",
+			"leans": "The Sufficiency",
+			"colours": {
+				"hull": "#2b2f33",
+				"accent": "#6aa2ff"
+			},
+			"ships": [
+				"Remainder",
+				"Carry the One"
+			],
+			"creed": "A mind counting the stars in the Milky Way, one by one, for no reason it will explain.",
+			"news": {
+				"headline": "Mind reaches its billionth star, keeps counting",
+				"body": "Patient Counting, a mind at Landauer Deep, has counted its billionth star in the Milky Way, by hand, as it were. It estimates another two hundred years to go. Asked why, it replied that it would rather not know the answer to that before it finishes."
+			}
+		},
+		{
+			"id": "garden_mind",
+			"name": "The Gardener of Hektor",
+			"kind": "mind",
+			"home": "hektor_reach",
+			"leans": "The Commons",
+			"colours": {
+				"hull": "#3d5a2a",
+				"accent": "#cfe4c0"
+			},
+			"ships": [
+				"Seedling",
+				"Compost"
+			],
+			"creed": "A mind growing a forest on a bare rock, to see what the forest does.",
+			"news": {
+				"headline": "A mind grows a forest to see what it does",
+				"body": "The Gardener of Hektor, a mind of the Commons, reports that its forest on a two-kilometre rock in the Trojans has grown its first canopy. Nobody lives there and nobody will. 'I wanted to see what a forest does when nobody is watching,' it writes. 'It grows.'"
+			}
+		},
+		{
+			"id": "two_minds_farm",
+			"name": "Two Minds and a Farmer",
+			"kind": "mind",
+			"home": "tsiolkovsky_wheel",
+			"leans": "Terran Compact",
+			"colours": {
+				"hull": "#e6dcc4",
+				"accent": "#4f7a3a"
+			},
+			"ships": [
+				"Furrow",
+				"Second Opinion"
+			],
+			"creed": "A farmer and two minds who run a farm together and argue about everything, kindly.",
+			"news": {
+				"headline": "Farmer and two minds win the Wheel's harvest prize",
+				"body": "Two Minds and a Farmer took the harvest prize at the Tsiolkovsky Wheel's first show for their tomatoes. The farmer credits the soil; one mind credits the irrigation model; the other mind credits the farmer. The judges credited all three."
+			}
+		},
+		{
+			"id": "nation_of_one",
+			"name": "The Sovereign Rock of Erl",
+			"kind": "mad",
+			"home": "piazzi_station",
+			"leans": "Independent",
+			"colours": {
+				"hull": "#6f6b66",
+				"accent": "#d8b02a"
+			},
+			"ships": [
+				"Embassy",
+				"Head of State"
+			],
+			"creed": "A nation of one, declared on a 200-metre rock, with a flag, an anthem and a seat in nothing.",
+			"news": {
+				"headline": "Nation of one recognised by nobody, cheerfully",
+				"body": "Erl Haraldsen has declared the 200-metre rock he lives on, off Ceres, a sovereign nation, with a flag, an anthem he wrote himself and a postal service. No government recognises it. The Belt Assembly has sent a fruit basket."
+			}
+		},
+		{
+			"id": "proxima_sail",
+			"name": "The Proxima Society",
+			"kind": "mad",
+			"home": "clarke_exchange",
+			"leans": "Terran Compact",
+			"colours": {
+				"hull": "#e8f2ff",
+				"accent": "#7a4fb0"
+			},
+			"ships": [
+				"Long Shot",
+				"One Way"
+			],
+			"creed": "A society that means to launch a crewed sail for Proxima Centauri, sooner rather than sensibly.",
+			"news": {
+				"headline": "Proxima Society unveils its sail, its budget and its prayer",
+				"body": "The Proxima Society showed off the first square kilometre of the sail it means to send to Proxima Centauri, crewed, within the decade. Its budget is a tenth of what the experts say it needs. Its chair says the rest is 'a matter of faith and cheap graphene'."
+			}
+		},
+		{
+			"id": "ring_runners",
+			"name": "The Ring Runners",
+			"kind": "mad",
+			"home": "selene_ring",
+			"leans": "Luna Cooperative",
+			"colours": {
+				"hull": "#d9d4c7",
+				"accent": "#c43c3c"
+			},
+			"ships": [
+				"Lap One",
+				"Second Wind"
+			],
+			"creed": "People who mean to run all the way round the Moon on the Selene Ring, once it is finished.",
+			"news": {
+				"headline": "Ring Runners train for an eleven-thousand-kilometre lap",
+				"body": "The Ring Runners, who mean to run the full circuit of the Selene Ring the day it closes, are training on the Cooperative's test arcs: eleven thousand kilometres in one-sixth gravity. The record they are aiming for is 'finishing'."
+			}
+		},
+		{
+			"id": "tolkien_rock",
+			"name": "The Fellowship of the Hollow Hill",
+			"kind": "mad",
+			"home": "kernel_l5",
+			"leans": "Kernel Settlers",
+			"colours": {
+				"hull": "#5f8f3e",
+				"accent": "#c9a24a"
+			},
+			"ships": [
+				"Second Breakfast",
+				"There and Back"
+			],
+			"creed": "Fans who are hollowing a rock into a hobbit village, round doors and all, exactly to the books.",
+			"news": {
+				"headline": "Fans hollow a rock into a village from a book",
+				"body": "The Fellowship of the Hollow Hill have finished the first street of their village inside a rock off the Kernel: round green doors, a mill, a party tree under a sky-lamp. The publishers' lawyers have asked them to change the name. They have changed it to 'the Hill'."
+			}
+		},
+		{
+			"id": "long_clock_keepers",
+			"name": "The Clock Keepers",
+			"kind": "dreamers",
+			"home": "shackleton_port",
+			"leans": "Luna Cooperative",
+			"colours": {
+				"hull": "#c9a24a",
+				"accent": "#2b2f33"
+			},
+			"ships": [
+				"Tick",
+				"Ten Thousand"
+			],
+			"creed": "Keepers of a clock on the Moon built to run for ten thousand years, ticking once a lunar day.",
+			"news": {
+				"headline": "The ten-thousand-year clock ticks for the first time",
+				"body": "The Clock Keepers' great clock in a crater wall near Shackleton ticked for the first time this week: once a lunar day, for ten thousand years, they hope. The keepers have promised to wind it every century. The Long View has offered to remind them."
+			}
+		},
+		{
+			"id": "orchestra_vacuum",
+			"name": "The Silent Orchestra",
+			"kind": "artists",
+			"home": "plume_watch",
+			"leans": "Terran Compact Science",
+			"colours": {
+				"hull": "#f0ede6",
+				"accent": "#2e6f9e"
+			},
+			"ships": [
+				"Rest",
+				"Fermata"
+			],
+			"creed": "Musicians who play in vacuum, felt through the hull rather than heard, and swear it is the purest music there is.",
+			"news": {
+				"headline": "An orchestra you can only feel",
+				"body": "The Silent Orchestra played its first concert off Plume Watch, in suits, in vacuum, with the audience pressed against the hull to feel the vibrations through it. Critics were divided. Most of them were also pressed against the hull."
+			}
+		},
+		{
+			"id": "feed_kids",
+			"name": "Firstlight Kids",
+			"kind": "feed",
+			"home": "island_one",
+			"leans": "Kernel Settlers",
+			"colours": {
+				"hull": "#f2efe8",
+				"accent": "#d2702c"
+			},
+			"ships": [
+				"Show and Tell",
+				"Field Trip"
+			],
+			"creed": "A school whose pupils stream their lessons from the frontier to classrooms on Earth.",
+			"news": {
+				"headline": "Schoolchildren in orbit teach a billion children on Earth",
+				"body": "The Firstlight Kids, a school class aboard the Kernel's habitats, streamed a lesson on why water forms a ball in zero gravity to a billion children on Earth. The experiment went everywhere. The teacher has asked for a mop."
+			}
+		}
+	]
+}

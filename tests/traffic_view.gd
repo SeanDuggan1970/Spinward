@@ -99,8 +99,33 @@ func _run() -> void:
 	check(float(c["cleared_t"]) >= float(c["m"]["end"]) - 0.01, "Piazzi Station: we take the bay once the %s is through" % cname)
 	check(c["docked"] and c["flight"].hits == 0 and c["flight"].bumps == 0, "Piazzi Station: then we dock, touching nothing")
 	_queue_without_collisions()
+	_group_craft()
 	print("%d checks, %d failures (traffic view)" % [checks, failures])
 	quit(1 if failures > 0 else 0)
+
+
+## Some of a port's own craft belong to the cap's-off groups that call it home, flying
+## their colours; none at a port no group calls home.
+func _group_craft() -> void:
+	var sim := Sim.new()
+	sim.new_game(42)
+	var d = sim.data
+	var Livery := preload("res://view/flight/livery.gd")
+	var home: Array = d.groups_at("kibo_ring").map(func(g): return g["name"])
+	var theirs := 0
+	var fit := true
+	for k in 400:
+		var w := Pattern.who(sim, "kibo_ring", {"local": k})
+		if w["operator"] in home:
+			theirs += 1
+			var g: Dictionary = d.group_named(w["operator"])
+			fit = fit and w["name"] in g["ships"] and Livery.for_ship(d, w["operator"], w["name"])["hull"] == Color(g["colours"]["hull"])
+	var share := float(theirs) / 400.0
+	check(absf(share - float(d.groups_meta["traffic_share"])) < 0.1, "Kibo Ring: about %.0f%% of its craft are the groups' (%.0f%%)" % [100.0 * float(d.groups_meta["traffic_share"]), 100.0 * share])
+	check(fit, "Kibo Ring: a group's craft carries one of its names and its colours")
+	var bare: String = d.places.keys().filter(func(p): return d.places[p].has("station") and d.groups_at(p).is_empty())[0]
+	var none := range(100).all(func(k): return Pattern.who(sim, bare, {"local": k})["operator"] == d.places[bare].get("operator", ""))
+	check(none, "%s: no group calls it home, so all its craft are the port's" % bare)
 
 
 ## A busy spell at Kibo Ring: two long-haul ships due at once, one leaving just before

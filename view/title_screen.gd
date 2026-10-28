@@ -178,6 +178,13 @@ func _pick_hero(hull: String = "") -> void:
 		var fleet_names: Array = fleet["names"]
 		livery = Livery.for_ship(data, fleet["operator"], fleet_names[_rng.randi() % fleet_names.size()])
 	_caption = {}
+	# A port's small craft: now and then one of a cap's-off group's, in its colours, with
+	# its creed on the card.
+	if not data.groups.is_empty() and _hero_hull in data.npcs["local_traffic"]["hulls"] and _rng.randf() < 0.35:
+		var g: Dictionary = data.groups.values()[_rng.randi() % data.groups.size()]
+		var craft: String = g["ships"][_rng.randi() % g["ships"].size()]
+		livery = Livery.for_ship(data, g["name"], craft)
+		_caption = {"name": "%s  ·  %s" % [data.ships[_hero_hull]["name"], g["name"]], "description": "The %s. %s" % [craft, g["creed"]]}
 	var ship := _ship_dict(_hero_hull)
 	var model: Dictionary
 	if _hero_hull == "kestrel" and data.pods.has("pods"):
