@@ -939,6 +939,8 @@ func _smoke() -> void:
 	# Hands-off approach: aligned, creeping in at 0.8 m/s, co-pilot spin match on.
 	# Proves the docking rules can be met by real flight, not just by the command.
 	var flight: FlightScene = _screen
+	# Flown by hand here: the co-pilot's own flying is the docking trial's to prove.
+	flight.computer = false
 	# The bay is ours (traffic control is tested in tests/traffic_view.gd; the clock
 	# doesn't run here).
 	if not flight.tc.is_empty():
