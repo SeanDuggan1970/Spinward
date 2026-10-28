@@ -788,7 +788,7 @@ func _outside_camera(dt: float) -> void:
 	var up := B.y
 	var side := B.x
 	var bay: Dictionary = station.get("bay", {})
-	var close := readout.get("range", INF) < maxf(L * 2.5, 120.0) or not _capture.is_empty()
+	var close: bool = float(readout.get("range", INF)) < maxf(L * 2.5, 120.0) or not _capture.is_empty()
 	_shot_clock += dt
 	if shot == "" or (_shot_clock > OUTSIDE_SHOT_S and not shot in ["bay", "port"]) or (close and not shot in ["bay", "port"]):
 		_shot_clock = 0.0
