@@ -21,9 +21,9 @@
 		"description": "Lunar soil. Bulk feedstock for smelters and radiation berms."
 	},
 	"refined_metals": {
-		"name": "Refined metals",
+		"name": "Metal powders",
 		"base_price": 350,
-		"description": "Iron, aluminium and titanium smelted from regolith."
+		"description": "Print-grade iron, aluminium and titanium powder, smelted from regolith. What most printers out here eat."
 	},
 	"helium3": {
 		"name": "Helium-3",
@@ -31,14 +31,14 @@
 		"description": "Fusion fuel skimmed from lunar soil. Light, rare and very valuable on Earth."
 	},
 	"electronics": {
-		"name": "Electronics",
+		"name": "Compute cores",
 		"base_price": 3000,
-		"description": "Chips and control boards. Still mostly made on Earth."
+		"description": "Processors and mind-grade accelerators. A few tonnes run a town; most still come up the skyhooks from Earth."
 	},
 	"food": {
-		"name": "Food",
+		"name": "Staples",
 		"base_price": 600,
-		"description": "Shelf-stable rations and fresh produce."
+		"description": "Vat-grown protein, hydroponic greens, flour and rice. Cheap, filling, made almost everywhere."
 	},
 	"medical": {
 		"name": "Medical supplies",
@@ -69,5 +69,75 @@
 		"name": "Platinum metals",
 		"base_price": 22000,
 		"description": "Platinum, iridium, osmium. Catalysts and electrodes; a metal asteroid has more of them than all Earth's mines."
+	},
+	"storage_lattices": {
+		"name": "Storage lattices",
+		"base_price": 2600,
+		"description": "Dense crystal memory. Minds, archives and the Feed's endless footage all need more of it."
+	},
+	"sensors_optics": {
+		"name": "Sensors and optics",
+		"base_price": 4500,
+		"description": "Cameras, spectrometers and transparent-ceramic lenses for every survey, claim and telescope."
+	},
+	"robotics": {
+		"name": "Drones and robotics",
+		"base_price": 1800,
+		"description": "Diggers, welders and handlers: the forty pairs of hands behind every three-person start-up."
+	},
+	"polymer_feed": {
+		"name": "Polymer feed",
+		"base_price": 420,
+		"description": "Plastics and resins in spools and pellets, cracked from volatiles."
+	},
+	"bio_feed": {
+		"name": "Bio feed",
+		"base_price": 380,
+		"description": "Culture media and organics for vat food, medicines and printed tissue."
+	},
+	"ceramic_feed": {
+		"name": "Ceramic and glass feed",
+		"base_price": 220,
+		"description": "Silicates sintered from regolith, for windows, insulators and pressure vessels."
+	},
+	"carbon_fibre": {
+		"name": "Carbon fibre and graphene",
+		"base_price": 1400,
+		"description": "Spun carbon for trusses, tethers and hulls. Titan and the carbon-rich rocks make the best."
+	},
+	"gene_stock": {
+		"name": "Seeds and gene stock",
+		"base_price": 9000,
+		"description": "Seed banks, embryos and tailored strains for new crops on new worlds. Biology is still being explored, and every farm wants the latest."
+	},
+	"delicacies": {
+		"name": "Earth delicacies",
+		"base_price": 4000,
+		"description": "Real coffee, chocolate, cheese and fresh fruit. Nothing grown in a vat tastes quite like home."
+	},
+	"wine_spirits": {
+		"name": "Fine wine and spirits",
+		"base_price": 7000,
+		"description": "Old vintages, single malts and good beer from Earth, plus the odd bold Martian bottle."
+	},
+	"handmade_goods": {
+		"name": "Handmade goods",
+		"base_price": 12000,
+		"description": "Clothes, instruments and furniture that a person made with their hands. Out here that is a luxury."
+	},
+	"keepsakes": {
+		"name": "Keepsakes and antiques",
+		"base_price": 20000,
+		"description": "Heirlooms, old books, a grandmother's clock: a piece of home to set on a shelf in the dark."
+	},
+	"orbital_pharma": {
+		"name": "Orbital pharmaceuticals",
+		"base_price": 15000,
+		"description": "Drugs and crystals grown in microgravity, purer than anything made under a sky. Earth pays well."
+	},
+	"collectibles": {
+		"name": "Frontier collectibles",
+		"base_price": 26000,
+		"description": "The first Martian vintage, art carved from comet ice, things the Feed made famous. Earth collects them."
 	}
 }

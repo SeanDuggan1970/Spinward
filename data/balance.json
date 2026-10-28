@@ -35,6 +35,14 @@
 		"emergency_rescue_t": 1.0,
 		"warmup_days": 60
 	},
+	"bergs": {
+		"_note": "Ice pushed in from the icy outer Belt (the Themis family) by tugs and pushers on journeys of years (sim/systems/economy_system.gd). Each arrival is a berg of berg_t tonnes parked off its port and quarried: tonnes of it reach the port's market at once (up to the market's cap), then the stock relaxes back as usual. Arrivals come every every_days from first_day after the start, worked out from the clock, so nothing extra is saved.",
+		"arrivals": [
+			{"id": "kernel_berg", "place": "kernel_l5", "good": "water_ice", "tonnes": 300, "berg_t": 24000, "first_day": 11, "every_days": 45, "from": "the Themis family", "tug": "the pusher Slow Tide"},
+			{"id": "psyche_berg", "place": "psyche_claims", "good": "water_ice", "tonnes": 120, "berg_t": 9000, "first_day": 23, "every_days": 50, "from": "the Themis family", "tug": "the pusher Meltwater"},
+			{"id": "venus_berg", "place": "cytherea_station", "good": "water_ice", "tonnes": 150, "berg_t": 15000, "first_day": 34, "every_days": 60, "from": "the Themis family", "tug": "the pusher Long Thirst"}
+		]
+	},
 	"travel": {
 		"_note": "Brachistochrone at current mass and thrust, plus fixed overheads for undock/capture. Gravity wells and orbital velocity are deliberately ignored: the co-pilot 'handles it'.",
 		"overhead_hours": 3.0,

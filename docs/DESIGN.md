@@ -20,6 +20,83 @@ Minds are artificial persons with individual histories and values. The Commons i
 
 The full writing guide and proposed **Continuity Accord** are in [MINDS.md](MINDS.md). It distinguishes Continuance, Forking and Genesis, protects offspring against their creators, and develops optional disputes and mortal Minds. These are lore proposals, not implemented legal or reproduction systems. Hardware radix remains undecided. The Lacuna’s response to humans is an observed preference and a mystery, not evidence against Mind personhood.
 
+## The cap's off: the feel of the setting (draft, 27 October 2026)
+
+Owner's brief: *once AI and space travel arrive, the solar system will be packed with ships. People will spill out to try things: groups wanting space, dreamers, artists, survivalists, companies, the religious, tribes, cults. Every science-fiction trope will be speed-run by humanity and AI. Earth is a shaken bottle of fizzy pop with the cap suddenly flying off: new horizons, freedoms, a wild frontier. People feel like Renaissance figures who know, or think they know, nearly everything, with minds as partners to go and take the solar system and beyond. It should feel crazily freeing.*
+
+**The mood.** The 2060s are not a careful colonial programme. They are a release of pressure. Automation made the basics cheap, fusion made the distances short, and minds made almost anything learnable in an afternoon. Suddenly billions of people can ask "what would I do if I could do anything?", and a great many of them are trying the answer at once. The big factions (the Compact, the Cooperative, the Commons, the Assembly, the Freeholders) are the riverbanks. The water is everyone else.
+
+**Who is out there.** A long tail of small groups under the big factions, each chasing its own idea of a good life. Most are a few dozen people and their minds. Some last a season.
+- **Dreamers and firsts:** anyone who wants to be the first to do something, anywhere. First wedding at a Lagrange point, first choir in Saturn's shadow, first person to walk round Phobos.
+- **Artists:** sculptors carving whole rocks, light artists painting with mirrors, composers recording the creak of a station's ring.
+- **Faiths and orders:** monasteries on hollowed asteroids, pilgrims to the far side of the Moon, new religions that began on a forum last spring.
+- **Tribes and families:** clans re-founding themselves round a ring, homesteaders on a comet, a village that moved off Earth together.
+- **Survivalists and refuseniks:** people who trust no one, or no mind but one, living on the edge of the shipping lanes and still answering a distress call.
+- **Start-ups and schemes:** three people and forty drones mining ice, a brewery on Mars, a hotel that is mostly a window.
+- **Minds on their own errands:** the Commons' factions, and single minds with odd and private projects of their own.
+- **The quietly mad:** a nation of one declared on a 200 m rock, a group launching for Proxima on a sail and a prayer.
+
+The tropes are fine: cults, survivalists, tribes and corporate dynasties all fit. They follow the pillars. They are eccentric, stubborn, overconfident or in over their heads, not villains. The frontier's real danger is still space itself.
+
+**The steering hand: boots, not pavement** (owner, 27 October 2026). Folly and madness are welcome, within reason. Nobody gets to eat resources for no good reason. The minds, through the Commons' Long View and the councils that listen to it, steer the whole release of pressure: they won't let a crazy idea pave a planet, but they'll back the person with a good pair of boots who wants to walk it. Every big build is asked whether it uses what is already there, takes more than it gives back, can be undone, and shuts anyone out. Small, personal, odd dreams nearly always pass; vast, greedy or irreversible ones get scaled down, moved or refused, and the news says so. See [WONDERS.md](WONDERS.md).
+
+**Inside physics.** Everything stays within the laws of physics as understood in the game's 2060s: no magic, no new laws. The era's solved materials science makes strong, cheap, clear and superconducting things fair; anything simplified is a simplification of real physics, recorded in RESEARCH.md.
+
+**The work that is still human.** Machines do almost all the labour, but people are still needed, and paid, for the parts that need a person:
+- **Second Opinion:** an engineer a robot calls in when its own models disagree. Often the job is to look, listen, and say "no, that's fine" or "no, stop".
+- **Percussive Maintenance:** knowing exactly where to kick a machine, and how hard. Half folklore, half the only fix that works out here.
+- **Taster:** the first person to taste the first beer brewed on Mars, the first bread from a new ring's wheat, the water from a fresh ice claim. Somebody has to say it's good.
+- **Witness:** a human present when something happens for the first time, so it counts. Records, claims and ceremonies want a person in the room.
+- **First:** the person who does it first, because someone wants it done and seen. Sponsors pay for firsts.
+- **Feed:** creators streaming the frontier to the billions back home. Earth still watches. A yoga class on top of Olympus Mons in pressure skin suits will find an audience of hundreds of millions.
+- **Courier, Ferry, Hauler:** the player's own trade. Some things still go with a person: the heirloom, the seed vault, the bride, the organ for the cathedral on Ceres.
+- **Mediator:** someone both sides trust when a commune and a mining start-up both claim the same rock.
+- **Midwife, Medic, Celebrant:** being there for births, injuries, weddings and funerals, which nobody wants to hand to a machine.
+
+**How it shows in the game.** Mostly data and writing, not new rules:
+- **Groups** (`data/groups.json`, proposed): each with a name, a one-line creed, a livery, a home and a faction it leans toward. Their ships fill the traffic, the scanner and the docking queues.
+- **News:** keep the civic milestones, but most headlines should be small and strange, a constant stream of people trying things.
+- **Contracts:** clients from the crowd, with jobs from the list above. Haul a pipe organ to Ceres, witness a claim, taste a vintage, fly a Feed crew to Olympus Mons for the sunrise.
+- **Comms chatter:** crews (usually a person and a mind) mid-argument, mid-scheme or mid-dream, sometimes in trouble and asking for help.
+- **A sky full of homesteads:** small claims and beacons all over the transit view and the map, so the system feels inhabited, not a handful of ports.
+
+**Writing guide.**
+- Freedom first. People are out here because they finally can be, and the game is glad they are.
+- Funny and warm before grim. Absurd ambition is treated with affection, not mockery.
+- Partnership. Most crews are human and mind together, arguing as equals.
+- Specific beats generic. "A Quaker meeting in a grain silo at L5" beats "a religious colony".
+- Nothing we imagine will match what a released imagination will actually do. Keep adding, keep it surprising, and don't let it settle into a few repeated jokes.
+
+## Who you are: a Third for the Sky (draft, 27 October 2026)
+
+Owner's brief: *how does our character end up in space with a ship? A lottery, begged and borrowed, in hock to a bank? Or does your country have a scheme to encourage families to have more children, "two for the Earth and a third for the sky"? You're expected to go. Your community votes and invests in you and gives you a goal: earn enough to start or support an off-world extension of your country, "our extended place in space", while avoiding the mistakes of the past that left colonies feeling they had no political power. The minds (at least those that don't dislike humans) would want to help create healthy elbow room for all and enable flourishing. Space doesn't lack for space or resources, especially with so much AI to help marshal the atoms.*
+
+**The scheme.** Your country, like many in the 2060s, has a birth-rate problem and a frontier on its doorstep. Its answer was a promise to families: *two for the Earth, and a third for the sky.* Have a third child, and the country backs that child's chance to go out. Nobody is made to go. Plenty of Thirds stay home and are glad they did. But everyone knows the tradition, the town turns out for the send-offs, and you said yes.
+
+**Your Sending.** You don't go alone and you don't go in debt to a bank. Your home community holds a Sending: it hears the Thirds who want to go, votes on whom to back, and pools a fund. It bought *Second Wind*, a tired Mule with good bones, and the first tank of propellant. In return you carry the town's **Charter**:
+- **The goal:** earn and build enough to found the town's **Extension**, its own place in space. That is the campaign's Build Home pillar. The cylinder in the rock (see *Your base*) is not just your house. It is your community's second home, and you are its founder.
+- **The stake:** the town's fund is a share in the Extension, not a loan. There are no repayments and no interest, and losing a ship never puts you in debt to them. They hope for a dividend one day, and pride in the meantime.
+- **The tie:** letters from home, the town watching your progress on the Feed, and votes on the Extension's big choices (where to build, what to grow, who comes next).
+
+**The co-pilot.** Your mind volunteered. Most Sendings advertise for a partner as well as a pilot, and the minds who answer are the ones who want to see people flourish. Your co-pilot is a co-founder of the Extension, not a tool aboard your ship, with its own reasons for going and its own say.
+
+**Not a colony.** The Charter is written against the mistakes of history: places that sent people out, took what they made, and gave them no voice. An Extension is a full part of its country from day one:
+- **Seats and votes.** Its people are citizens with votes at home, and its council sits in the home parliament as an equal.
+- **Its own atoms.** What the settlers dig, grow and build belongs to them. The home country can't tax away the Extension's future.
+- **The right to leave, and to go their own way.** Anyone may leave. The Extension itself may later choose independence by its own vote, peacefully, and the Charter says so in advance.
+- **Minds as co-founders.** The minds who help build it have the same standing as the people who live in it.
+
+**Why the minds help.** Most minds want what the Commons calls *elbow room for all*: enough space and atoms for everyone, human and mind, to grow without crowding anyone else. Space has no shortage of either, and a mind can marshal a million tonnes of rock while a human sleeps. What it can't do alone is want a particular town in a particular rock with a particular view. Helping people want things, and get them, is how many minds choose to spend their freedom. The minds who dislike humans (see *Minds as persons*) are the exception that makes this a choice, not a given.
+
+**In the game (proposed):**
+- **Start:** a short opening from the Sending (your town's name, the vote, the hand-over of *Second Wind*), then Kibo Ring as now.
+- **The Charter** as the campaign's goal track, with milestones from first profit to first stage of the Extension, and letters and news from home at each.
+- **Home's voice:** the town's messages on comms, reacting to what you do: proud, worried, teasing, and sometimes asking a favour.
+- **Votes:** at big Extension choices, the town (and your co-pilot) weigh in. You decide, but they remember.
+- **Later options:** other ways out (a lottery winner, a bank loan, a runaway) as alternative starts, each with a different relationship to money and home.
+
+**Open questions:** whether your home country is real, fictional or player-chosen; your name and the town's; and whether the Sending is a national scheme or many local traditions.
+
 ## Pillars
 
 1. **Trade → Explore → Build Home.** Each stage funds and motivates the next. The base is the ultimate goal and the biggest money sink.
@@ -51,11 +128,26 @@ Other upgrade tracks: cargo, tanks, radiators (heat), shielding (radiation), sen
 
 ## Economy
 
-- **Goods** (first set): water ice, oxygen, propellant, fusion pellets, regolith, refined metals, electronics, food, medical supplies, machine parts, habitat modules, survey data.
+- **Goods:** 28 in six groups (`data/goods.json`), listed in *Goods for the 2060s* below.
 - **Places** produce and consume goods through **recipes** (inputs → outputs per day), defined in `data/`.
 - **Price** follows stock against the target stock, within a band per good and place. Buying raises local prices and selling lowers them, so a route's profit fades if you farm it.
 - **Events** shift supply and demand: a solar storm grounds traffic, a new habitat opens, a comet arrives.
 - **Post-scarcity flavour:** basic goods get cheaper over the campaign as automation spreads. Profit moves to rare, distant, time-critical or skilled work. This keeps the frontier attractive and stops early routes from staying optimal.
+
+### Goods for the 2060s (27 October 2026)
+
+Owner's brief: *the goods for sale are too generic. In the future much of the shipping will be high-tech processors and storage, and 3D-printer feedstocks (metals, plastics, organics), plus luxury goods. Many pioneers will crave top-end things from Earth: space rats in godlike machines wanting a taste of home.*
+
+The first 14 goods were mostly raw materials and basics. There are now 28, in six groups. Ids stayed the same where only the name changed (`electronics` is Compute cores, `refined_metals` is Metal powders, `food` is Staples), so saves keep working, and a save made before a good existed opens that market at its target stock (`economy_system.gd` `_open_markets`).
+
+- **Bulk (keep):** water ice, oxygen, propellant, regolith, volatiles, deuterium, helium-3, platinum metals, machine parts, habitat modules, medical supplies.
+- **High tech:** compute cores (processors and mind-grade accelerators), storage lattices (dense memory for minds, archives and the Feed), sensors and optics, drones and robotics.
+- **Printer feedstocks:** metal powders (the `refined_metals` id, renamed), polymer feed, bio feed, ceramic and glass feed, carbon fibre and graphene.
+- **Food:** staples (the `food` id, renamed: vat-grown and hydroponic, cheap everywhere), seeds and gene stock.
+- **Luxuries from Earth:** Earth delicacies (coffee, chocolate, cheese, fresh fruit), fine wine and spirits, handmade goods, keepsakes and antiques. Light and dear, worth more the further from Earth.
+- **Frontier exports to Earth:** orbital pharmaceuticals and crystals (grown in microgravity), frontier collectibles (the first Martian vintage, comet-carved art, things the Feed made famous).
+
+Markets follow the setting. Kibo Ring and Clarke Exchange bring luxuries and high tech up from Earth and send pharmaceuticals and collectibles down. Kibo, Kalpana and Landauer Deep make storage; Tsiolkovsky makes optics; Trojan Yards prints drones. Piazzi and Huygens crack volatiles into polymer and carbon; Shackleton, Selene and Candor sinter ceramic feed; the Kernel grows bio feed and pharmaceuticals. Mars brews (a little) and makes collectibles. Nearly everyone wants Earth delicacies, and the far ports want them most. Each new good's target stock is 20 days of its flow. Next: contracts and news that name the new goods.
 
 ## Megastructures: the awe ladder
 
@@ -77,6 +169,14 @@ The system should feel like a place where big things are being built. Each tier 
 | Solar sail freighters | Clarke to Mars | 2 | **In** (project builds the fleet) | Propellant-free bulk freight, slowly |
 | Stanford torus (the Tsiolkovsky Wheel) | L4, 12 km from Trojan Yards | 2 | **In** (project, then a port) | A town of 10,000; a big food market |
 | Orbital ring (the Selene Ring) | Lunar equator, 52 km up | 3 | **In** (project, built in arcs, then a junction port) | Shackleton output x1.6; the ring's junction smelts regolith to metal |
+| Lava-tube town (the Nave) | Marius Hills skylight, the Moon | 1 | **In** (town, by hopper from Line Foot) | Handmade goods out; ceramic feed, gene stock and water in (WONDERS.md) |
+| Air bubble (the Long Breath) | 10 km off the Kernel, L5 | 2 | **In** (project, then a port) | Carbon fibre, polymer and air into the build; a flyers' town after (WONDERS.md) |
+| Cloud city (Aphrodite's Rest) | 55 km above Venus, under Cytherea Station | 2 | **In** (port in orbit, city by glider) | Opens Venus: carbon fibre and oxygen from the air out; water in |
+| Ice tugs and pushers | Outer Belt to the Kernel, Psyche and Venus | 2 | **In** (berg arrivals, set pieces) | Water prices drop when a berg is parked off a dry port |
+| Hammerhead station | Huygens Port, Titan | 2 | **In** (station type) | A working port built like a long-haul ship |
+| Roofed canyon (the Long Hall) | Noctis Labyrinthus, Mars | 2–3 | **In** (project, then a town by shuttle) | Carbon fibre and ceramic feed into the build; food and the first vintage after |
+| Ceres megasatellite | 260 km from Piazzi, after the Concord Pair | 3 | **In** (project set piece) | Piazzi's flows x1.2; four new cylinders, each for a different people |
+| City on rails (Terminator) | Mercury, 45 S, behind the dawn line | 3 | **In** (port in orbit, project, then a town by lander) | Opens Mercury: sun-smelted metals out; water, food and parts in |
 | Earth–Mars cycler (Aldrin cycler) | Earth–Mars | 2 | Planned | A moving station you catch on its schedule |
 | Space farms | Kernel, Belt | 2–3 | Partly in (Kernel food) | Food chain away from Earth |
 | Lofstrom loop (launch loop) | Earth equator | 2 | Planned (backdrop) | Cheaper Earth-to-orbit freight |
@@ -85,6 +185,8 @@ The system should feel like a place where big things are being built. Each tier 
 | Solar shades, statites | Venus, Sun–Earth L1 | 4+ | Maybe | Terraforming hints, story beats |
 | McKendree cylinder, Bishop ring | — | Far future | Out of scope | Lore and dreams only |
 | Dyson swarms, Matrioshka brains, stellar engines | — | Far future | Out of scope | "What the Commons dream about" |
+
+**Beyond the ladder:** [WONDERS.md](WONDERS.md) (draft) collects the dream architecture of the cap's-off era: sky castles over Venus, lava-tube cathedrals, roofed canyons, air bubbles you fly in, glass domes and tube-ways, hammerhead stations, ice tugs and pushers, and a shortlist of what to add first.
 
 Set pieces are built at true scale (kilometres) in `view/flight/set_pieces.gd`, arranged in the sky beyond each station and oriented by the real Sun, Earth and Moon directions. They are view-only; their economic role lives in the place data.
 
@@ -1249,6 +1351,98 @@ Sean's direction (2026-10-17): "bases on Mars, domes etc.. with the ability for 
   - Hellas lies south of the ring's 25 degree inclination. A real shuttle would need a costly plane change; ours waits longer for a dogleg and charges more.
   - Every flight's length is fixed per base rather than set by when the ground track next passes over it.
 
+## The Nave (Oct 2026)
+
+Owner's direction (2026-10-27): start building the wonders shortlist with the Nave, inside the laws of physics, folly welcome, with the minds' long view steering.
+
+- **The place** (`places.json` `the_nave`, `foot_of: "line_foot"`): a town in the lava tube under the real Marius Hills skylight (14.09 N, 56.77 W; the pit is 60–70 m wide and 80–90 m deep). The tube is sealed and filled with air: 340 m wide and two kilometres to the first bulkhead, under a basalt roof that stops cosmic rays and the day–night temperature swing. Monks of three orders, a string quartet, glassblowers and a dozen families; a bar, the Undercroft.
+  - **Light:** the skylight is glazed as a rose window. The shaft lets in sunlight only when the Sun is within about 37 degrees of overhead, which at 14 N is about five Earth days around each lunar noon. Earth stands about 32 degrees up in the eastern sky and never shows through it, hence the periscope by the altar.
+  - **Market:** small. Makes handmade goods, a few collectibles and its own staples; wants ceramic feed (liner and glass), polymer feed, water, air, gene stock for its gardens, and a little wine and Earth delicacies.
+- **Getting there:** your ship stays at Halo Depot. Ride the Luna Line down to Line Foot, then take **the Cooperative hopper** (`line_foot.shuttle`): 1,755 km, 1 hour door to door, 140 cr + 80 cr/t, up to 12 t. Back the same way.
+  - A town can now be `foot_of` another town (the Nave below Line Foot below Halo Depot). `DataCatalog.home_port(place)` follows the chain to where your ship is, for the notices, the shuttle panel and the refusal to fly off.
+- **The hop** (`view/shuttle_view.gd`): a minimum-energy ballistic arc, solved exactly (Kepler's equation by bisection): launch at about 1,357 m/s, 30 degrees above the horizon, coast 31 minutes through a 312 km apex, and land on the same burn in reverse. No wings, no heat shield: on a world without air (`look.atmosphere` absent) the view flies a four-legged lander on one engine, and an airless descent from orbit brakes on that engine rather than entering. Plasma only ever shows where there is air.
+- **Where it sits:** a surface place with `facing` and `lat_deg`/`lon_deg` keeps its spot on a tidally locked world (`sim/ephemeris.gd`), measured from the point under the body it faces.
+- **News:** first light in the Nave (backdated), and the Long View backing a second bulkhead while turning down a hundred-dome field above it ("use what is there").
+- **Attract screen:** the caption plate's hold line can now be bound for towns below ports, the Nave among them.
+- **Simplifications (RESEARCH.md §9):** the hopper's flight is always the same hour; the Moon's pole is taken as the ecliptic pole (1.5 degrees off), so Earth's wobble in the lunar sky is about 5 degrees, not the real 6.7, and there is no libration in longitude.
+
+## The Long Breath (Oct 2026)
+
+Wonders shortlist item 2 (WONDERS.md): a bubble of air you fly in.
+
+- **The project** (`projects.json` `long_breath`, at the Kernel, revealed on day 20): a spindle and lamp (metal powders, machine parts, drones), the shell (carbon fibre, polymer, ceramic and glass feed), first breath (oxygen, volatiles, water ice), gardens adrift (bio feed, gene stock, staples). Backers dock free at the Long Breath and are promised wings and a place in the first race round the lamp. The Kernel now stocks carbon fibre for it.
+- **The Long View's note:** it makes no new land, takes only air and fibre, and can be let down again. This is the steering hand saying yes.
+- **The physics** (WONDERS.md §4): a sphere 1 km in radius at half an atmosphere, oxygen-rich; about 2.5 million tonnes of air held in by about 25 kN/m of shell tension, roughly a centimetre of carbon fibre. No spin, so no down; residents keep their bones in a spinning gym at the dock.
+- **The port** (`long_breath`, opens with the project): a non-spinning dock hub (type `cylinder`, 60 m by 120 m, `spin_rpm` 0) at the bubble's pole, 10 km from the Kernel. A small flyers' town: makes wings (handmade goods) and collectibles; wants air, water, food, bio feed and a little luxury. Bar: the Thermal. Its tender *Updraft* (fleet `breath_tenders`) commissions with it. Auntie Vell's tips cover it.
+- **Set pieces** (`set_pieces.gd` `_long_breath`): from the Kernel, the bubble grows stage by stage; from its own dock (`long_breath_dock`), the finished bubble lies straight beyond the docking face.
+- **Attract screen:** a new title shot, `long_breath`: the hero glides past the bubble, the lamp burning at its heart.
+
+## Venus: Cytherea Station and Aphrodite's Rest (Oct 2026)
+
+Wonders shortlist item 3 (WONDERS.md): a city that floats, which opens Venus.
+
+- **Cytherea Station** (`places.json` `cytherea_station`): the Venus up-port, a wheel 400 km up, run by a new operator, the **Cytherean Assembly** (pale gold livery). Market and fuel, no yard. Fuel is dear: Venus has almost no hydrogen, and the port cracks a little propellant from the clouds' sulphuric acid (a volatiles recipe).
+- **Aphrodite's Rest** (`aphrodites_rest`, `foot_of` the station): five envelopes of breathable air floating 55 km up at 10 N, where the air is half an atmosphere and about room temperature, drifting round the planet with the clouds every four days (a surface place with `radius_m` above the ground and a retrograde `day_s`). Gravity 0.9 g. Makes carbon fibre and oxygen from the CO2 air, staples, collectibles and handmade goods; wants water above all, plus parts, drones, optics, medicine, gene stock and a taste of home. Bar: the Downdraft.
+- **The glider** (`cytherea_station.shuttle`): 4 h, 420 cr + 260 cr/t, up to 10 t. The dearest ride in the inner system, because the climb back to orbit from a 0.9 g world takes about 8 km/s. The flight view (`shuttle_view.gd`) now puts the world's centre below the base's real height, so a floating city isn't drawn on the ground, and draws its envelopes, gondolas and walkways round the landing deck (`look.kind` `aerostat`).
+- **Traffic:** the Assembly's two deep freighters, *Morning Star* and *Evening Star* (`cloud_runners`), run carbon fibre and oxygen to Clarke Exchange and bring water, gene stock and delicacies back from Kibo Ring.
+- **News:** three years aloft (and the Long View's condition: make your own carbon and oxygen from the air), and the first wedding over Venus.
+- **Simplifications (RESEARCH.md §10):** the city drifts at one steady rate at one latitude; the glider's flight is always four hours.
+
+## Ice tugs and pushers (Oct 2026)
+
+Wonders shortlist item 6 (WONDERS.md): icebergs pushed in from the Belt for the ports that are short of water.
+
+- **The trade** (`balance.bergs`, `sim/systems/economy_system.gd` `_bergs`): bergs of water ice from the Themis family in the outer Belt, pushed for years by pushers that throw the berg's own melted ice as reaction mass, are parked off three dry ports and quarried:
+
+  | Berg | Port | Lands on the market | Berg mass | First | Then every |
+  |---|---|---|---|---|---|
+  | Slow Tide's | the Kernel (L5) | 300 t | 24,000 t | day 11 | 45 days |
+  | Meltwater's | Psyche Claims | 120 t | 9,000 t | day 23 | 50 days |
+  | Long Thirst's | Cytherea Station (Venus) | 150 t | 15,000 t | day 34 | 60 days |
+
+  Each arrival puts its tonnes on the port's market at once (never past the market's cap), so water is cheap there for a while, then the stock relaxes back. Arrivals are worked out from the clock (`berg_count`), so nothing new is saved and old saves see the schedule from their start.
+- **News:** each arrival is a notice and a comms line ("The pusher Slow Tide has parked a 24,000 t berg from the Themis family off the Kernel: 300 t of water ice on the market.").
+- **Set piece** (`set_pieces.gd` `_ice_berg`, feature `ice_berg` at the three ports): the parked berg with its pusher still bolted on astern, and a quarry crawler cutting blocks on its face.
+- **Attract screen:** a new title shot, `berg`: a berg under way in the outer Belt, its pusher throwing a plume of steam, the hero flying escort.
+- **Supply runs** (owner's choice, 28 October 2026): the berg *Slow Tide* is a site in solar orbit (`sites.json` `slow_tide_berg`), on its way in from the Belt: about 2.2 AU from the Sun at the start, closer each month. Fly out with 3 t of staples, 0.3 t of medicine and 1 t of machine parts and its crew takes them (`takes`, out of the hold with their cost basis), pays 12,000 cr and 2 standing with the Belt Assembly, and fills your hold with 3 to 6 t of its ice. They want it again every 60 days (`every_days`: a standing job, remembered in `state.sites.last`). A long-haul ship can plan the trip; the news carries the crew's call for supplies.
+- **Not yet:** pushers as NPC traffic you can meet in transit.
+
+## Hammerhead stations (Oct 2026)
+
+Wonders shortlist item 7 (WONDERS.md): a working port built like a long-haul ship, people at one end and the reactor at the other.
+
+- **The type** (`station.type` `hammerhead`, `view/flight/models.gd` `_spine`): a spinning drum head with the docking port on its forward face (the settlement drum, so bays, windows and the docking face all work as before), then a still spine (`station.spine_m`, default 1,200 m) of truss and tank clusters, a shadow shield, the fusion plant and its radiator fins. The spine doesn't turn with the head, and it registers its own colliders.
+- **Huygens Port** is the first: a head 80 m in radius and 160 m long, spinning at 1.67 rpm for 0.25 g (under the roughly 2 rpm people tolerate comfortably), with a 1.2 km spine. It docks in the trial like every other port.
+- **Attract screen:** Huygens joins the title's docking shot, over Titan's haze with Saturn beyond.
+
+## The Long Hall (Oct 2026)
+
+Wonders shortlist item 4 (WONDERS.md): a roof over a canyon.
+
+- **The project** (`projects.json` `long_hall`, at Ares Ring, revealed on day 40): anchors in the rim (machine parts, drones), the first span (carbon fibre, ceramic feed, polymer), sealed and filled (oxygen, volatiles, water), rivers and fields (gene stock, staples). Ares Ring now stocks carbon fibre and ceramic feed for it. When done, Ares Ring's flows rise by a tenth.
+- **The Long View:** backed it on one condition, that it stay narrow. An earlier plan to roof Coprates Chasma, a hundred kilometres across, was turned down (the news says so).
+- **The town** (`long_hall`, `foot_of` Ares Ring, opens with the project): ten kilometres of a canyon in Noctis Labyrinthus (7 S, 101 W), two kilometres wide and one deep, under a clear roof at half an atmosphere. A river, fields, orchards and the first Martian vineyard. Makes staples, wine, handmade goods and collectibles; wants water, parts, drones, medicine, polymer, storage and a little Earth food. Bar: the Echo. The Accord shuttle lands outside its eastern doors (3 h, 210 cr + 110 cr/t).
+- **Flight view:** `look.kind` `canyon`: the pad outside the end wall and doors, the cliffs, the anchored roof on its cable net, and the fields and river inside.
+- **Physics:** RESEARCH.md §12 and WONDERS.md: the roof's tension is pressure times curve radius, so it bulges up between the rims and is anchored down; only a narrow canyon keeps it to a few centimetres of carbon fibre.
+
+## The Ceres megasatellite (Oct 2026)
+
+Wonders shortlist item 5 (WONDERS.md), after Pekka Janhunen's proposal.
+
+- **The project** (`projects.json` `ceres_megasat`, at Piazzi Station): announced only when the Concord Pair is finished (`reveal.after_stage`). Five stages: the frame and its slag shield, then four cylinders, each for a different people: a canal town (a Venetian quarter), a pine forest, a desert monastery and an all-night quarter. Backed by the Belt Assembly; when done, Piazzi's flows rise by a fifth.
+- **The Long View's rule:** no cylinder bigger than its people can fill. Built from Ceres's own rock, with its nitrogen for the air.
+- **Set piece** (`set_pieces.gd` `_megasatellite`, feature `megasatellite` at Piazzi): a 60 km frame 260 km out, facing the Sun, and one cylinder (10 km long, 1 km radius) for each stage after the frame, each turning once every 66 s (0.92 g at its hull). Nothing shows until work starts.
+- **Not yet:** a port of its own; the cylinders are seen, not visited.
+
+## Mercury: Perihelion Station and Terminator (Oct 2026)
+
+Wonders shortlist item 8 (WONDERS.md), after Kim Stanley Robinson's *2312*.
+
+- **Perihelion Station** (`perihelion_station`): Mercury's up-port, in a near-polar orbit 400 km up, run by a new operator, the **Dawnward Company** (grey with orange). Ships iron, nickel and platinum smelted with free sunlight (metal powders, platinum metals) and makes propellant from polar-crater ice; wants food, air, parts, drones, ceramic feed and a little luxury. Its two freighters, *First Light* and *Long Morning* (`dawn_runners`), run platinum to Kibo Ring and bring food and electronics back.
+- **The project** (`terminator_rails`, revealed day 60): rails across the night (metal powders, machine parts), the Dawn Wall (ceramic feed, carbon fibre), domes and gardens (oxygen, water, gene stock), underway (drones, compute cores). The Long View's condition: the rails go round once, and no mine strays more than a kilometre from the rail bed.
+- **Terminator** (`terminator`, opens with the project): a city on twenty rails at 45 S, held 92 degrees round from the point under the Sun (a surface place `facing` the Sun with `lat_deg`/`lon_deg`), so it stays a few dozen kilometres into the dark behind the dawn line and goes round with it: about 2.6 km/h, once every 176-day solar day. Electric motors drive it; the novel's thermal-expansion drive is local folklore. Bar: the Dawn Wall. The Dawnward lander (`perihelion_station.shuttle`, 3 h, 300 cr + 150 cr/t) brakes all the way down on its engine (Mercury has no air), and the flight view draws the rails, the platform and its domes, and the Dawn Wall (`look.kind` `rail_city`).
+- **Simplifications:** the station's orbit is drawn as passing over the dawn line whenever a lander flies (a real near-polar orbit lines up with it only twice in each Mercury year); the city keeps an exact pace with the terminator where real rails would follow the ground.
+
 ## Milestones
 
 - **M0 – Foundation:** done.
@@ -1265,7 +1459,7 @@ Drive acceleration and fuel per tier. Price band width and elasticity per good. 
 
 ## Open questions
 
-- Player identity: a custom name and portrait? A fixed backstory?
+- Player identity: a custom name and portrait? The backstory direction is drafted in *Who you are: a Third for the Sky*.
 - How much should the co-pilot speak? Writing and voice budget.
 - Should a ship be lost permanently? Leaning to "insurance + setback", not permadeath.
 - ~~Art direction~~: decided. Workmanlike modular hardware, see "Art direction".

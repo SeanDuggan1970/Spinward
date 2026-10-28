@@ -101,6 +101,38 @@ Plan: a curated catalog of about 30 major bodies plus a hand-picked set of named
 
 **Bent for play** (`sim/comet.gd`): activity follows sunlight (1/r^2) with a hard onset at 3 AU, where real comets vary a great deal, outburst and switch jets on with the local dawn. The coma is a sphere of fixed radius for its activity. The orbit ignores the push of outgassing (non-gravitational forces), which moves Halley's perihelion date by a few days per orbit; the baked orbit is fitted to Horizons in 2061 and 2063, so the error over the decade is small.
 
+## 9. The Nave: a lava tube at Marius Hills
+
+- **The skylight:** the Marius Hills Hole, found by Kaguya in 2009 and imaged by LRO: nearly circular, 60–70 m across, 80–90 m deep, at about 14.1 N, 303.2 E ([JAXA](https://www.isas.jaxa.jp/e/forefront/2010/haruyama/02.shtml)). Beam theory gives the tube a maximum width of about 370 m, and GRAIL gravity data suggest tubes in the region could be kilometres wide; ESA counts hundreds of such pits ([ESA](https://www.esa.int/ESA_Multimedia/Images/2020/10/Skylight_on_the_Moon)). The game takes 340 m.
+- **Sunlight down the shaft:** a 65 m opening over an 85 m drop admits light from within atan(65/85), about 37 degrees, of overhead. At 14 N the noon Sun passes 14 degrees from overhead, and is within 37 degrees for an hour angle of about ±35 degrees: some 5.7 Earth days of each 29.5-day lunar day.
+- **Earth's place:** from 14.1 N, 56.8 W, the sub-Earth point is 57.9 degrees away, so Earth stands about 32 degrees above the eastern horizon, too low ever to be seen up the shaft.
+- **The hop from Line Foot** (0 N, 0 E): central angle 57.9 degrees, 1,755 km. The minimum-energy ballistic launch for central angle θ on a sphere of radius R and surface gravity g has speed v² = gR · 2 sin(θ/2) / (1 + sin(θ/2)) and flight-path angle (π − θ)/4. For the Moon that is 1,357 m/s at 30.5 degrees, an apex of 312 km and 31.2 minutes of flight: about 2.7 km/s of engine work for the round of launch and landing, within a lunar lander's reach (Apollo's descent and ascent stages together carried about 4.7 km/s).
+- **Simplified:** the lander's burns are drawn along the ends of the ellipse rather than as a gravity turn from the pad; the Moon's pole is the ecliptic pole (the real one is 1.5 degrees off), so Earth wobbles about 5 degrees in the lunar sky instead of 6.7, and the Moon doesn't librate in longitude.
+
+## 10. Venus: a city in the clouds
+
+- **The air** (Venus International Reference Atmosphere): about 1.07 bar and 75 °C at 50 km, 0.53 bar and 27 °C at 55 km, falling to 0.45 bar and about 17 °C at 56 km. The game's city floats at 55 km. The main cloud decks run from about 48 to 70 km, so the city sits inside a thin haze, with brighter cloud above and below.
+- **Lift:** breathable air (mean molecular mass about 29) floats in carbon dioxide (44): a cubic metre of air displaces about half its own mass again in CO2, so at 0.53 bar each cubic metre lifts roughly 0.3 kg. A city's envelopes are hundreds of metres across for that reason.
+- **Winds:** the cloud tops super-rotate, circling the planet in about four Earth days, retrograde like the planet; the city drifts with them, so a day and a night each last about two Earth days.
+- **Getting off:** low Venus orbit needs about 7.3 km/s; with gravity and drag losses from 55 km, about 8 km/s. Hence the glider's fare.
+- **What it has and lacks:** carbon and oxygen without limit in the CO2 (96.5%), nitrogen (3.5%), sulphur from the acid clouds; almost no water (about 20 parts per million), so hydrogen is the scarce thing. NASA's HAVOC study (2014) sketched airships and an eventual floating city ([coverage](https://www.blimpinfo.com/airships/nasa-study-proposes-airships-cloud-cities-for-venus-exploration/)).
+- **Simplified:** the city drifts at one steady rate at one latitude (real winds vary with latitude and time); the glider's flight is always four hours.
+
+## 11. Icebergs from the Belt
+
+- **Where the ice is:** water ice was found on the surface of 24 Themis in 2010 (Rivkin and Emery; Campins and others), and the Themis family is the parent of several main-belt comets: ice survives under a thin dust crust in the outer Belt. Ceres holds a great deal more, but it sits at the bottom of a gravity well.
+- **Pushing it:** a pusher that melts the berg's own ice and throws it as reaction mass (a mass driver or a fusion-heated steam rocket) needs no propellant from home. With an exhaust speed of about 5 km/s, moving a berg by 5 km/s costs about 63% of its mass (the rocket equation); the berg pays for its own trip, and what arrives is about a third of what left. The game's berg masses are what arrives.
+- **Size:** water ice weighs about 0.92 t a cubic metre, so a 24,000 t berg is some 30 m across.
+- **Time:** low-thrust transfers from the outer Belt to the inner system take years. The game has many bergs in the pipeline at once and shows only arrivals.
+- **The Slow Tide's path:** drawn as a coasting transfer ellipse from the Themis family (about 3.1 AU) to Earth's orbit: semi-major axis 2.05 AU, eccentricity 0.51, period 2.94 years, so about a year and a half in. At the game's start (mean anomaly 290 degrees) it is 2.21 AU from the Sun, 208 days from perihelion. A real pushed berg follows a slow powered spiral, not a coast; and this one, once past perihelion, coasts back out rather than being parked, which the game doesn't model yet.
+
+## 12. A roof over a canyon
+
+- **Noctis Labyrinthus:** the maze of fault canyons at the western head of Valles Marineris, around 7 S, 100 W, on the Tharsis bulge. Its canyons are a few kilometres wide and up to several kilometres deep, much narrower than the main chasms (Coprates is about 60–100 km across).
+- **Roof tension:** for a long roof spanning a canyon, the membrane tension per metre of length is the pressure difference times the roof's radius of curvature (T = p·R). At half a bar (50 kPa), R of 1 to 2 km gives 50 to 100 MN/m. Carbon fibre working at about 2 GPa needs 2.5 to 5 cm. The roof pushes up and must be anchored; Mars's gravity (0.38 g) holds down only about 2 kN/m² of a 25 cm-thick ceramic-and-fibre roof (about 500 kg/m²), against 50 kN/m² of air.
+- **Air:** a hall 10 km × 2 km × 1 km holds about 2×10^10 m³; at half a bar that is about 12 million tonnes of air, nitrogen and argon from Mars's own atmosphere plus oxygen from its water and CO2.
+- **Simplified:** the flight view draws the roof flat at the rim; the real one would bulge up between them.
+
 ## Open research for later passes
 
 - Readable orbit-planning UI patterns (KSP manoeuvre nodes versus one-click "AI plot course").

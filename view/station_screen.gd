@@ -426,7 +426,8 @@ func _shuttle_panel(place_id: String, flight: Dictionary) -> Control:
 	var stop: Dictionary = flight["stop"]
 	var to: String = flight["to"]
 	var to_name: String = d.places[to]["name"]
-	var p := UI.panel("%s  ·  %s" % [String(line["name"]).to_upper(), ("down to " if flight["down"] else "up to ") + to_name])
+	var hop := ShuttleSystem.is_hop(d, flight["port"])
+	var p := UI.panel("%s  ·  %s %s" % [String(line["name"]).to_upper(), ShuttleSystem.heading(d, flight["port"], flight["down"]), to_name])
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 16)
 	p[1].add_child(row)
@@ -438,19 +439,20 @@ func _shuttle_panel(place_id: String, flight: Dictionary) -> Control:
 		town.autowrap_mode = TextServer.AUTOWRAP_WORD
 		town.custom_minimum_size = Vector2(200, 0)
 		info.add_child(town)
-		var via := UI.label(String(stop.get("via", "")) + " Your ship stays docked here; your hold flies with you in the shuttle's bay.", UI.TEXT, 12)
+		var ship_at: String = d.home_port(place_id)
+		var via := UI.label(String(stop.get("via", "")) + (" Your ship stays docked here" if ship_at == place_id else " Your ship waits at %s" % d.places[ship_at]["name"]) + "; your hold flies with you in the shuttle's bay.", UI.TEXT, 12)
 		via.autowrap_mode = TextServer.AUTOWRAP_WORD
 		via.custom_minimum_size = Vector2(200, 0)
 		info.add_child(via)
 	else:
-		info.add_child(UI.label("Your ship is docked at %s. Your hold flies with you." % to_name, UI.TEXT, 13))
+		info.add_child(UI.label("Your ship is docked at %s. Your hold flies with you." % d.places[d.home_port(to)]["name"], UI.TEXT, 13))
 	var fare := ShuttleSystem.fare(d, s, place_id, to)
 	info.add_child(UI.label("%s flight   ·   fare %s (a seat, and %d cr a tonne for the %.1f t you carry, up to %d t)" % [
 		UI.duration(float(stop["hours"]) * 3600.0), UI.money(fare), int(stop["fare_per_t"]), ShipStats.cargo_t(s.ship), int(line.get("max_t", 0))]))
 	var why := ShuttleSystem.blocked(d, s, place_id, to)
 	if why != "":
 		info.add_child(UI.label(why.capitalize(), UI.WARN, 13))
-	row.add_child(UI.button("Fly down" if flight["down"] else "Fly up", send.bind({"type": "take_shuttle", "to": to}), why == ""))
+	row.add_child(UI.button(("Fly" if flight["down"] else "Fly back") if hop else ("Fly down" if flight["down"] else "Fly up"), send.bind({"type": "take_shuttle", "to": to}), why == ""))
 	return p[0]
 
 
@@ -549,7 +551,14 @@ func _site_tab(site_id: String) -> Control:
 			bits.append("needs " + ", ".join(needs.map(func(n): return {"survey": "a survey pod", "lander": "a lander", "mining": "a mining rig"}.get(n, n))))
 		if act.get("in_coma", false):
 			bits.append("inside the coma: dust wears every module")
+		if act.has("every_days"):
+			bits.append("wanted again every %d days" % int(act["every_days"]))
 		p[1].add_child(UI.label("  ·  ".join(bits), UI.DIM, 13))
+		var takes := []
+		for good in act.get("takes", {}):
+			takes.append("%s %s t" % [String(d.goods[good]["name"]).to_lower(), String.num(float(act["takes"][good]), 1)])
+		if not takes.is_empty():
+			p[1].add_child(UI.label("Bring: " + ", ".join(takes) + " (handed over from your hold)", UI.TEXT, 13))
 		var gains := []
 		for good in act.get("yields", {}):
 			var r: Array = act["yields"][good]

@@ -60,13 +60,31 @@
 			"propellant": 160,
 			"deuterium": 4,
 			"platinum_metals": 2,
-			"volatiles": 60
+			"volatiles": 60,
+			"storage_lattices": 24,
+			"sensors_optics": 10,
+			"robotics": 20,
+			"delicacies": 12,
+			"wine_spirits": 8,
+			"handmade_goods": 3,
+			"keepsakes": 1.2,
+			"gene_stock": 2,
+			"orbital_pharma": 1.6,
+			"collectibles": 0.8
 		},
 		"produces": {
 			"electronics": 3,
 			"medical": 0.6,
 			"food": 8,
-			"machine_parts": 4
+			"machine_parts": 4,
+			"storage_lattices": 1.2,
+			"sensors_optics": 0.5,
+			"robotics": 1.0,
+			"delicacies": 0.6,
+			"wine_spirits": 0.4,
+			"handmade_goods": 0.15,
+			"keepsakes": 0.06,
+			"gene_stock": 0.1
 		},
 		"consumes": {
 			"helium3": 0.05,
@@ -75,7 +93,9 @@
 			"propellant": 8,
 			"deuterium": 0.15,
 			"platinum_metals": 0.03,
-			"volatiles": 2
+			"volatiles": 2,
+			"orbital_pharma": 0.08,
+			"collectibles": 0.04
 		},
 		"recipes": [],
 		"features": [
@@ -125,17 +145,33 @@
 			"food": 60,
 			"oxygen": 40,
 			"propellant": 80,
-			"refined_metals": 30
+			"refined_metals": 30,
+			"delicacies": 8,
+			"wine_spirits": 6,
+			"handmade_goods": 2,
+			"keepsakes": 1.0,
+			"orbital_pharma": 2,
+			"collectibles": 1.0,
+			"carbon_fibre": 10,
+			"storage_lattices": 6
 		},
 		"produces": {
-			"refined_metals": 1.5
+			"refined_metals": 1.5,
+			"delicacies": 0.4,
+			"wine_spirits": 0.3,
+			"handmade_goods": 0.1,
+			"keepsakes": 0.05
 		},
 		"consumes": {
 			"electronics": 0.8,
 			"machine_parts": 2,
 			"food": 3,
 			"oxygen": 2,
-			"propellant": 4
+			"propellant": 4,
+			"orbital_pharma": 0.1,
+			"collectibles": 0.05,
+			"carbon_fibre": 0.5,
+			"storage_lattices": 0.3
 		},
 		"recipes": [],
 		"features": [
@@ -182,14 +218,18 @@
 			"regolith": 300,
 			"refined_metals": 25,
 			"electronics": 8,
-			"machine_parts": 25
+			"machine_parts": 25,
+			"delicacies": 0.6,
+			"robotics": 4
 		},
 		"produces": {
 			"regolith": 15,
 			"water_ice": 6
 		},
 		"consumes": {
-			"food": 1
+			"food": 1,
+			"delicacies": 0.03,
+			"robotics": 0.2
 		},
 		"recipes": [
 			{
@@ -268,7 +308,12 @@
 			"food": 60,
 			"medical": 4,
 			"machine_parts": 40,
-			"electronics": 10
+			"electronics": 10,
+			"robotics": 8,
+			"delicacies": 1.2,
+			"wine_spirits": 0.6,
+			"sensors_optics": 1.0,
+			"ceramic_feed": 60
 		},
 		"produces": {
 			"water_ice": 25,
@@ -279,7 +324,11 @@
 			"food": 3,
 			"medical": 0.2,
 			"machine_parts": 2,
-			"electronics": 0.5
+			"electronics": 0.5,
+			"robotics": 0.4,
+			"delicacies": 0.06,
+			"wine_spirits": 0.03,
+			"sensors_optics": 0.05
 		},
 		"recipes": [
 			{
@@ -288,6 +337,14 @@
 				},
 				"outputs": {
 					"propellant": 2
+				}
+			},
+			{
+				"inputs": {
+					"regolith": 10
+				},
+				"outputs": {
+					"ceramic_feed": 3
 				}
 			}
 		],
@@ -355,7 +412,12 @@
 			"oxygen": 40,
 			"propellant": 60,
 			"platinum_metals": 1,
-			"volatiles": 40
+			"volatiles": 40,
+			"carbon_fibre": 12,
+			"ceramic_feed": 20,
+			"sensors_optics": 1.0,
+			"polymer_feed": 12,
+			"robotics": 30
 		},
 		"produces": {},
 		"consumes": {
@@ -363,7 +425,10 @@
 			"oxygen": 2,
 			"propellant": 3,
 			"platinum_metals": 0.02,
-			"volatiles": 1.5
+			"volatiles": 1.5,
+			"carbon_fibre": 0.6,
+			"ceramic_feed": 1.0,
+			"sensors_optics": 0.05
 		},
 		"recipes": [
 			{
@@ -390,6 +455,16 @@
 				},
 				"outputs": {
 					"habitat_modules": 2
+				}
+			},
+			{
+				"inputs": {
+					"refined_metals": 2,
+					"electronics": 0.3,
+					"polymer_feed": 0.6
+				},
+				"outputs": {
+					"robotics": 1.5
 				}
 			}
 		],
@@ -450,16 +525,33 @@
 			"oxygen": 40,
 			"refined_metals": 30,
 			"machine_parts": 30,
-			"volatiles": 50
+			"volatiles": 50,
+			"orbital_pharma": 1.6,
+			"polymer_feed": 20,
+			"ceramic_feed": 16,
+			"gene_stock": 0.8,
+			"handmade_goods": 0.6,
+			"delicacies": 1.6,
+			"robotics": 6,
+			"bio_feed": 30,
+			"carbon_fibre": 10
 		},
-		"produces": {},
+		"produces": {
+			"orbital_pharma": 0.08
+		},
 		"consumes": {
 			"habitat_modules": 2.5,
 			"food": 4,
 			"medical": 0.3,
 			"water_ice": 6,
 			"oxygen": 2,
-			"volatiles": 2
+			"volatiles": 2,
+			"polymer_feed": 1.0,
+			"ceramic_feed": 0.8,
+			"gene_stock": 0.04,
+			"handmade_goods": 0.03,
+			"delicacies": 0.08,
+			"robotics": 0.3
 		},
 		"recipes": [
 			{
@@ -469,10 +561,21 @@
 				"outputs": {
 					"food": 3
 				}
+			},
+			{
+				"inputs": {
+					"food": 1,
+					"water_ice": 1
+				},
+				"outputs": {
+					"bio_feed": 1.5
+				}
 			}
 		],
 		"features": [
-			"bernal_frame"
+			"bernal_frame",
+			"long_breath",
+			"ice_berg"
 		]
 	},
 	"kalpana_one": {
@@ -521,11 +624,20 @@
 			"machine_parts": 40,
 			"electronics": 20,
 			"habitat_modules": 20,
-			"propellant": 50
+			"propellant": 50,
+			"storage_lattices": 8,
+			"handmade_goods": 1.2,
+			"orbital_pharma": 0.8,
+			"delicacies": 2,
+			"wine_spirits": 1.0,
+			"bio_feed": 8
 		},
 		"produces": {
 			"electronics": 1.0,
-			"medical": 0.3
+			"medical": 0.3,
+			"storage_lattices": 0.4,
+			"handmade_goods": 0.06,
+			"orbital_pharma": 0.04
 		},
 		"consumes": {
 			"food": 5,
@@ -533,7 +645,10 @@
 			"oxygen": 3,
 			"machine_parts": 1,
 			"habitat_modules": 0.6,
-			"propellant": 2
+			"propellant": 2,
+			"delicacies": 0.1,
+			"wine_spirits": 0.05,
+			"bio_feed": 0.4
 		},
 		"recipes": [],
 		"features": [
@@ -578,7 +693,10 @@
 			"machine_parts": 30,
 			"food": 30,
 			"medical": 4,
-			"oxygen": 30
+			"oxygen": 30,
+			"sensors_optics": 2,
+			"storage_lattices": 5,
+			"delicacies": 0.5
 		},
 		"produces": {},
 		"consumes": {
@@ -586,7 +704,10 @@
 			"machine_parts": 1.2,
 			"food": 1.5,
 			"medical": 0.1,
-			"oxygen": 1.2
+			"oxygen": 1.2,
+			"sensors_optics": 0.12,
+			"storage_lattices": 0.25,
+			"delicacies": 0.02
 		},
 		"recipes": []
 	},
@@ -648,19 +769,35 @@
 			"habitat_modules": 20,
 			"propellant": 200,
 			"oxygen": 80,
-			"volatiles": 40
+			"volatiles": 40,
+			"wine_spirits": 1.0,
+			"robotics": 12,
+			"polymer_feed": 16,
+			"gene_stock": 1.0,
+			"delicacies": 2,
+			"keepsakes": 0.5,
+			"storage_lattices": 3,
+			"carbon_fibre": 10,
+			"ceramic_feed": 10
 		},
 		"produces": {
 			"deuterium": 0.3,
 			"food": 4,
-			"water_ice": 6
+			"water_ice": 6,
+			"wine_spirits": 0.05
 		},
 		"consumes": {
 			"machine_parts": 3,
 			"electronics": 0.8,
 			"medical": 0.4,
 			"habitat_modules": 1.5,
-			"oxygen": 2
+			"oxygen": 2,
+			"robotics": 0.6,
+			"polymer_feed": 0.8,
+			"gene_stock": 0.05,
+			"delicacies": 0.1,
+			"keepsakes": 0.01,
+			"storage_lattices": 0.15
 		},
 		"recipes": [
 			{
@@ -722,6 +859,12 @@
 					"fare": 160,
 					"fare_per_t": 100,
 					"via": "Straight down onto the plateau below the ring, between the volcanoes, to the pad beside the big dome."
+				},
+				"long_hall": {
+					"hours": 3.0,
+					"fare": 210,
+					"fare_per_t": 110,
+					"via": "Down over Tharsis and into the maze of Noctis Labyrinthus, between canyon walls a kilometre high, onto the pad outside the Hall's eastern doors."
 				}
 			}
 		}
@@ -772,7 +915,14 @@
 			"machine_parts": 40,
 			"oxygen": 60,
 			"refined_metals": 120,
-			"platinum_metals": 2
+			"platinum_metals": 2,
+			"robotics": 10,
+			"sensors_optics": 1.2,
+			"delicacies": 1.6,
+			"wine_spirits": 0.8,
+			"gene_stock": 0.6,
+			"polymer_feed": 40,
+			"carbon_fibre": 6
 		},
 		"produces": {
 			"water_ice": 20,
@@ -784,7 +934,12 @@
 			"electronics": 0.6,
 			"machine_parts": 2,
 			"refined_metals": 2.0,
-			"platinum_metals": 0.01
+			"platinum_metals": 0.01,
+			"robotics": 0.5,
+			"sensors_optics": 0.06,
+			"delicacies": 0.08,
+			"wine_spirits": 0.04,
+			"gene_stock": 0.03
 		},
 		"recipes": [
 			{
@@ -802,6 +957,15 @@
 				"outputs": {
 					"oxygen": 1
 				}
+			},
+			{
+				"inputs": {
+					"volatiles": 4
+				},
+				"outputs": {
+					"polymer_feed": 2,
+					"carbon_fibre": 0.3
+				}
 			}
 		],
 		"shipyard_stock": [
@@ -813,7 +977,8 @@
 			"passenger_berths"
 		],
 		"features": [
-			"oneill_pair"
+			"oneill_pair",
+			"megasatellite"
 		],
 		"elevator": {
 			"name": "the Piazzi Stalk",
@@ -890,7 +1055,12 @@
 			"oxygen": 40,
 			"machine_parts": 30,
 			"medical": 3,
-			"water_ice": 60
+			"water_ice": 60,
+			"robotics": 12,
+			"delicacies": 1.0,
+			"wine_spirits": 0.8,
+			"sensors_optics": 0.8,
+			"ceramic_feed": 8
 		},
 		"produces": {
 			"refined_metals": 10,
@@ -901,7 +1071,12 @@
 			"oxygen": 2,
 			"machine_parts": 2.5,
 			"medical": 0.2,
-			"water_ice": 3
+			"water_ice": 3,
+			"robotics": 0.6,
+			"delicacies": 0.05,
+			"wine_spirits": 0.04,
+			"sensors_optics": 0.04,
+			"ceramic_feed": 0.4
 		},
 		"recipes": [],
 		"hazards": {
@@ -917,7 +1092,10 @@
 			"drift_mps": 0.08,
 			"look": "metal",
 			"note": "tailings from the smelters, drifting"
-		}
+		},
+		"features": [
+			"ice_berg"
+		]
 	},
 	"valhalla_station": {
 		"name": "Valhalla Station",
@@ -962,7 +1140,13 @@
 			"machine_parts": 60,
 			"oxygen": 80,
 			"refined_metals": 60,
-			"habitat_modules": 15
+			"habitat_modules": 15,
+			"sensors_optics": 2,
+			"storage_lattices": 4,
+			"delicacies": 1.6,
+			"wine_spirits": 1.0,
+			"keepsakes": 0.5,
+			"handmade_goods": 0.5
 		},
 		"produces": {
 			"water_ice": 18
@@ -971,7 +1155,13 @@
 			"food": 4,
 			"medical": 0.5,
 			"electronics": 1.2,
-			"machine_parts": 3
+			"machine_parts": 3,
+			"sensors_optics": 0.1,
+			"storage_lattices": 0.2,
+			"delicacies": 0.08,
+			"wine_spirits": 0.05,
+			"keepsakes": 0.01,
+			"handmade_goods": 0.02
 		},
 		"recipes": [
 			{
@@ -998,7 +1188,7 @@
 	"huygens_port": {
 		"name": "Huygens Port",
 		"operator": "Huygens Trust",
-		"description": "High over Titan's orange haze. Below, methane seas and nitrogen air; above, Saturn and its rings. Titan's hydrocarbons crack into propellant and volatiles cheaper here than anywhere in the system.",
+		"description": "High over Titan's orange haze. Below, methane seas and nitrogen air; above, Saturn and its rings. Titan's hydrocarbons crack into propellant and volatiles cheaper here than anywhere in the system. It is built like a long-haul ship: a spinning drum for a head, where the people live and the ships dock, then a still spine more than a kilometre long carrying the tanks, out to the fusion plant and its radiators behind a shadow shield.",
 		"location": {
 			"type": "orbit",
 			"parent": "titan",
@@ -1012,13 +1202,17 @@
 			}
 		},
 		"station": {
-			"hub_radius_m": 32,
-			"hub_length_m": 180,
-			"ring_radius_m": 380,
-			"ring_tube_m": 24,
-			"spokes": 4,
-			"spin_rpm": 0.767,
+			"door": "iris",
+			"type": "hammerhead",
+			"hub_radius_m": 80,
+			"hub_length_m": 160,
+			"ring_radius_m": 0,
+			"ring_tube_m": 0,
+			"spokes": 0,
+			"spin_rpm": 1.672,
 			"gravity_g": 0.25,
+			"port_radius_m": 9,
+			"spine_m": 1200,
 			"colour": "orange"
 		},
 		"bay_traffic": {
@@ -1036,7 +1230,14 @@
 			"medical": 6,
 			"electronics": 15,
 			"machine_parts": 50,
-			"habitat_modules": 10
+			"habitat_modules": 10,
+			"robotics": 8,
+			"delicacies": 1.4,
+			"wine_spirits": 1.0,
+			"gene_stock": 0.5,
+			"keepsakes": 0.5,
+			"polymer_feed": 50,
+			"carbon_fibre": 12
 		},
 		"produces": {
 			"volatiles": 12,
@@ -1047,9 +1248,24 @@
 			"medical": 0.4,
 			"electronics": 1.0,
 			"machine_parts": 2.5,
-			"habitat_modules": 0.5
+			"habitat_modules": 0.5,
+			"robotics": 0.4,
+			"delicacies": 0.07,
+			"wine_spirits": 0.05,
+			"gene_stock": 0.02,
+			"keepsakes": 0.01
 		},
-		"recipes": []
+		"recipes": [
+			{
+				"inputs": {
+					"volatiles": 4
+				},
+				"outputs": {
+					"polymer_feed": 2.5,
+					"carbon_fibre": 0.6
+				}
+			}
+		]
 	},
 	"plume_watch": {
 		"name": "Plume Watch",
@@ -1089,15 +1305,24 @@
 			"medical": 3,
 			"electronics": 8,
 			"machine_parts": 15,
-			"oxygen": 20
+			"oxygen": 20,
+			"collectibles": 0.5,
+			"sensors_optics": 1.2,
+			"delicacies": 0.6,
+			"storage_lattices": 1.6
 		},
-		"produces": {},
+		"produces": {
+			"collectibles": 0.01
+		},
 		"consumes": {
 			"food": 1,
 			"medical": 0.1,
 			"electronics": 0.4,
 			"machine_parts": 0.6,
-			"oxygen": 0.8
+			"oxygen": 0.8,
+			"sensors_optics": 0.06,
+			"delicacies": 0.03,
+			"storage_lattices": 0.08
 		},
 		"recipes": []
 	},
@@ -1157,7 +1382,12 @@
 			"medical": 5,
 			"machine_parts": 40,
 			"electronics": 10,
-			"volatiles": 80
+			"volatiles": 80,
+			"robotics": 8,
+			"delicacies": 1.0,
+			"wine_spirits": 0.6,
+			"handmade_goods": 0.5,
+			"sensors_optics": 0.6
 		},
 		"produces": {
 			"refined_metals": 4,
@@ -1168,7 +1398,12 @@
 			"medical": 0.3,
 			"machine_parts": 2,
 			"electronics": 0.6,
-			"water_ice": 3
+			"water_ice": 3,
+			"robotics": 0.4,
+			"delicacies": 0.05,
+			"wine_spirits": 0.03,
+			"handmade_goods": 0.02,
+			"sensors_optics": 0.03
 		},
 		"recipes": [
 			{
@@ -1250,13 +1485,19 @@
 			"platinum_metals": 4,
 			"volatiles": 50,
 			"refined_metals": 80,
-			"food": 10
+			"food": 10,
+			"storage_lattices": 20,
+			"orbital_pharma": 0.6,
+			"sensors_optics": 1.6,
+			"ceramic_feed": 10
 		},
 		"produces": {
 			"electronics": 2.5,
 			"machine_parts": 2.0,
 			"propellant": 6.0,
-			"water_ice": 4.0
+			"water_ice": 4.0,
+			"storage_lattices": 1.0,
+			"orbital_pharma": 0.03
 		},
 		"consumes": {
 			"deuterium": 0.12,
@@ -1264,7 +1505,9 @@
 			"platinum_metals": 0.05,
 			"volatiles": 1.5,
 			"refined_metals": 2.0,
-			"food": 0.2
+			"food": 0.2,
+			"sensors_optics": 0.08,
+			"ceramic_feed": 0.5
 		},
 		"recipes": [],
 		"features": [
@@ -1276,7 +1519,7 @@
 		"name": "Line Foot",
 		"operator": "Luna Cooperative",
 		"foot_of": "halo_depot",
-		"description": "Where the Luna Line touches down, in Sinus Medii at the centre of the Moon's near side, with Earth hanging overhead and never moving. Regolith trains, a foundry, a hostel for climber crews and a bar that claims the best view in the system. Ships can't land here: you come down the ribbon.",
+		"description": "Where the Luna Line touches down, in Sinus Medii at the centre of the Moon's near side, with Earth hanging overhead and never moving. Regolith trains, a foundry, a hostel for climber crews and a bar that claims the best view in the system. Ships can't land here: you come down the ribbon. The Cooperative's hopper flies on from here to the Marius Hills.",
 		"location": {
 			"type": "surface",
 			"parent": "moon",
@@ -1295,7 +1538,9 @@
 			"food": 30,
 			"machine_parts": 20,
 			"medical": 3,
-			"electronics": 6
+			"electronics": 6,
+			"robotics": 3,
+			"delicacies": 0.5
 		},
 		"produces": {
 			"regolith": 20.0,
@@ -1308,13 +1553,87 @@
 			"machine_parts": 0.6,
 			"medical": 0.08,
 			"electronics": 0.2,
-			"water_ice": 1.0
+			"water_ice": 1.0,
+			"robotics": 0.15,
+			"delicacies": 0.02
 		},
 		"recipes": [],
 		"bar": {
 			"name": "the Earthrise",
 			"patrons": 30,
 			"round_cr": 9
+		},
+		"shuttle": {
+			"name": "the Cooperative hopper",
+			"body": "moon",
+			"max_t": 12,
+			"craft": "a squat four-legged lander with a pressurised cab for ten, a cargo cradle and one throttleable engine. No wings, no heat shield: on the Moon there is nothing to fly on, only to fall through",
+			"stops": {
+				"the_nave": {
+					"hours": 1.0,
+					"fare": 140,
+					"fare_per_t": 80,
+					"via": "Straight up off the pad and over onto a ballistic arc: 1,360 m/s on the engine, half an hour falling 300 km above the maria, then the same burn again to set down beside the skylight. 1,750 km in under an hour."
+				}
+			}
+		}
+	},
+	"the_nave": {
+		"name": "The Nave",
+		"operator": "Luna Cooperative",
+		"foot_of": "line_foot",
+		"description": "A lava tube under the Marius Hills, sealed and filled with air: 340 m wide, two kilometres to the first bulkhead, under a roof of basalt thick enough to stop cosmic rays and the fortnight-long swing from boiling to frozen outside. Three orders of monks, a string quartet, glassblowers and a dozen families live along it, and in one-sixth gravity its columns are as thin as reeds. The skylight is glazed as a rose window. For about five days around each lunar noon the Sun stands high enough to shine straight down it, and a shaft of light walks across the floor. Earth never shows through it (outside it hangs a third of the way up the eastern sky, never moving), so there is a periscope by the altar for anyone homesick. Ships can't land here: the Cooperative's hopper flies from Line Foot.",
+		"location": {
+			"type": "surface",
+			"parent": "moon",
+			"facing": "earth",
+			"lat_deg": 14.09,
+			"lon_deg": -56.77
+		},
+		"services": [
+			"market",
+			"bar"
+		],
+		"bar": {
+			"name": "the Undercroft",
+			"patrons": 25,
+			"round_cr": 10
+		},
+		"look": {
+			"kind": "skylight",
+			"skylight_m": 65
+		},
+		"market": {
+			"food": 12,
+			"handmade_goods": 1.0,
+			"collectibles": 0.5,
+			"water_ice": 20,
+			"oxygen": 10,
+			"ceramic_feed": 8,
+			"polymer_feed": 4,
+			"machine_parts": 4,
+			"robotics": 2,
+			"medical": 1.0,
+			"gene_stock": 0.6,
+			"delicacies": 0.6,
+			"wine_spirits": 0.6
+		},
+		"produces": {
+			"food": 0.6,
+			"handmade_goods": 0.05,
+			"collectibles": 0.01
+		},
+		"consumes": {
+			"water_ice": 1.0,
+			"oxygen": 0.5,
+			"ceramic_feed": 0.4,
+			"polymer_feed": 0.2,
+			"machine_parts": 0.2,
+			"robotics": 0.1,
+			"medical": 0.05,
+			"gene_stock": 0.03,
+			"delicacies": 0.03,
+			"wine_spirits": 0.03
 		}
 	},
 	"stalk_foot": {
@@ -1340,7 +1659,10 @@
 			"medical": 4,
 			"electronics": 6,
 			"machine_parts": 25,
-			"habitat_modules": 10
+			"habitat_modules": 10,
+			"robotics": 3,
+			"delicacies": 0.6,
+			"polymer_feed": 6
 		},
 		"produces": {
 			"water_ice": 15.0,
@@ -1352,7 +1674,10 @@
 			"medical": 0.1,
 			"electronics": 0.2,
 			"machine_parts": 0.5,
-			"habitat_modules": 0.2
+			"habitat_modules": 0.2,
+			"robotics": 0.15,
+			"delicacies": 0.03,
+			"polymer_feed": 0.3
 		},
 		"recipes": []
 	},
@@ -1380,19 +1705,27 @@
 			"machine_parts": 20,
 			"electronics": 8,
 			"medical": 4,
-			"habitat_modules": 15
+			"habitat_modules": 15,
+			"collectibles": 0.5,
+			"robotics": 4,
+			"gene_stock": 0.5,
+			"delicacies": 0.6
 		},
 		"produces": {
 			"food": 4.0,
 			"deuterium": 0.15,
 			"water_ice": 6.0,
-			"volatiles": 2.0
+			"volatiles": 2.0,
+			"collectibles": 0.01
 		},
 		"consumes": {
 			"machine_parts": 1.0,
 			"electronics": 0.4,
 			"medical": 0.15,
-			"habitat_modules": 0.3
+			"habitat_modules": 0.3,
+			"robotics": 0.2,
+			"gene_stock": 0.02,
+			"delicacies": 0.03
 		},
 		"recipes": []
 	},
@@ -1420,19 +1753,27 @@
 			"machine_parts": 15,
 			"electronics": 6,
 			"medical": 4,
-			"habitat_modules": 10
+			"habitat_modules": 10,
+			"collectibles": 0.5,
+			"gene_stock": 0.5,
+			"polymer_feed": 6,
+			"delicacies": 0.6
 		},
 		"produces": {
 			"food": 3.0,
 			"water_ice": 4.0,
 			"oxygen": 1.5,
-			"volatiles": 1.5
+			"volatiles": 1.5,
+			"collectibles": 0.015
 		},
 		"consumes": {
 			"machine_parts": 0.8,
 			"electronics": 0.3,
 			"medical": 0.2,
-			"habitat_modules": 0.4
+			"habitat_modules": 0.4,
+			"gene_stock": 0.02,
+			"polymer_feed": 0.3,
+			"delicacies": 0.03
 		},
 		"recipes": [],
 		"bar": {
@@ -1468,19 +1809,25 @@
 			"machine_parts": 15,
 			"medical": 3,
 			"electronics": 5,
-			"habitat_modules": 8
+			"habitat_modules": 8,
+			"ceramic_feed": 30,
+			"robotics": 4,
+			"delicacies": 0.5
 		},
 		"produces": {
 			"water_ice": 5.0,
 			"refined_metals": 1.5,
-			"regolith": 6.0
+			"regolith": 6.0,
+			"ceramic_feed": 1.5
 		},
 		"consumes": {
 			"food": 2.0,
 			"machine_parts": 0.8,
 			"medical": 0.2,
 			"electronics": 0.2,
-			"habitat_modules": 0.3
+			"habitat_modules": 0.3,
+			"robotics": 0.2,
+			"delicacies": 0.02
 		},
 		"recipes": [],
 		"look": {
@@ -1509,17 +1856,23 @@
 			"water_ice": 40,
 			"machine_parts": 12,
 			"electronics": 5,
-			"medical": 3
+			"medical": 3,
+			"wine_spirits": 1.2,
+			"gene_stock": 0.5,
+			"bio_feed": 6
 		},
 		"produces": {
 			"food": 5.0,
-			"oxygen": 2.0
+			"oxygen": 2.0,
+			"wine_spirits": 0.06
 		},
 		"consumes": {
 			"water_ice": 2.0,
 			"machine_parts": 0.6,
 			"electronics": 0.2,
-			"medical": 0.15
+			"medical": 0.15,
+			"gene_stock": 0.02,
+			"bio_feed": 0.3
 		},
 		"recipes": [],
 		"look": {
@@ -1548,23 +1901,88 @@
 			"water_ice": 60,
 			"machine_parts": 10,
 			"electronics": 4,
-			"medical": 2
+			"medical": 2,
+			"wine_spirits": 0.8,
+			"gene_stock": 0.6,
+			"bio_feed": 8,
+			"polymer_feed": 4
 		},
 		"produces": {
 			"food": 8.0,
-			"oxygen": 3.0
+			"oxygen": 3.0,
+			"wine_spirits": 0.04
 		},
 		"consumes": {
 			"water_ice": 3.0,
 			"machine_parts": 0.5,
 			"electronics": 0.2,
-			"medical": 0.1
+			"medical": 0.1,
+			"gene_stock": 0.03,
+			"bio_feed": 0.4,
+			"polymer_feed": 0.2
 		},
 		"recipes": [],
 		"opens_with": "ares_greenhouses",
 		"look": {
 			"domes": 4,
 			"dome_m": 160
+		}
+	},
+	"long_hall": {
+		"name": "The Long Hall",
+		"operator": "Mars Accord",
+		"foot_of": "ares_ring",
+		"opens_with": "long_hall",
+		"description": "Ten kilometres of a canyon in Noctis Labyrinthus under a clear roof: two kilometres wide, a kilometre deep, with half an atmosphere of air inside. The cliffs are the walls. A river runs down the floor from a melted ice lens at the western end, fields and orchards line it, and the first Martian vineyard climbs the south-facing cliff. The roof pushes up with the force of the air under it and is anchored deep in both rims; inspectors walk its cables every week. Ships can't land here: Accord shuttles fly down from Ares Ring to the pad outside the eastern doors.",
+		"location": {
+			"type": "surface",
+			"parent": "mars",
+			"lat_deg": -7.0,
+			"lon_deg": -101.0,
+			"day_s": 88642.0
+		},
+		"services": [
+			"market",
+			"bar"
+		],
+		"bar": {
+			"name": "the Echo",
+			"patrons": 70,
+			"round_cr": 8
+		},
+		"look": {
+			"kind": "canyon",
+			"width_m": 2000,
+			"length_m": 10000,
+			"depth_m": 1000
+		},
+		"market": {
+			"food": 60,
+			"wine_spirits": 0.6,
+			"handmade_goods": 0.8,
+			"collectibles": 0.5,
+			"water_ice": 40,
+			"machine_parts": 12,
+			"robotics": 4,
+			"medical": 3,
+			"polymer_feed": 6,
+			"storage_lattices": 1.0,
+			"delicacies": 0.8
+		},
+		"produces": {
+			"food": 3.0,
+			"wine_spirits": 0.03,
+			"handmade_goods": 0.04,
+			"collectibles": 0.02
+		},
+		"consumes": {
+			"water_ice": 2.0,
+			"machine_parts": 0.6,
+			"robotics": 0.2,
+			"medical": 0.15,
+			"polymer_feed": 0.3,
+			"storage_lattices": 0.05,
+			"delicacies": 0.04
 		}
 	},
 	"tsiolkovsky_wheel": {
@@ -1614,19 +2032,31 @@
 			"oxygen": 100,
 			"machine_parts": 40,
 			"habitat_modules": 20,
-			"propellant": 80
+			"propellant": 80,
+			"sensors_optics": 4,
+			"handmade_goods": 0.8,
+			"delicacies": 2,
+			"wine_spirits": 1.0,
+			"collectibles": 0.5,
+			"bio_feed": 6
 		},
 		"produces": {
 			"food": 6.0,
 			"electronics": 1.0,
-			"medical": 0.3
+			"medical": 0.3,
+			"sensors_optics": 0.2,
+			"handmade_goods": 0.04
 		},
 		"consumes": {
 			"water_ice": 6.0,
 			"oxygen": 3.0,
 			"machine_parts": 1.0,
 			"habitat_modules": 0.3,
-			"propellant": 2.0
+			"propellant": 2.0,
+			"delicacies": 0.1,
+			"wine_spirits": 0.05,
+			"collectibles": 0.02,
+			"bio_feed": 0.3
 		},
 		"recipes": []
 	},
@@ -1677,11 +2107,21 @@
 			"habitat_modules": 25,
 			"electronics": 12,
 			"medical": 8,
-			"refined_metals": 20
+			"refined_metals": 20,
+			"handmade_goods": 1.0,
+			"orbital_pharma": 0.6,
+			"delicacies": 2,
+			"wine_spirits": 1.2,
+			"keepsakes": 0.5,
+			"gene_stock": 0.8,
+			"polymer_feed": 12,
+			"ceramic_feed": 10
 		},
 		"produces": {
 			"food": 9.0,
-			"oxygen": 1.5
+			"oxygen": 1.5,
+			"handmade_goods": 0.05,
+			"orbital_pharma": 0.03
 		},
 		"consumes": {
 			"water_ice": 4.0,
@@ -1691,7 +2131,90 @@
 			"electronics": 0.3,
 			"medical": 0.25,
 			"refined_metals": 0.5,
-			"food": 3.0
+			"food": 3.0,
+			"delicacies": 0.1,
+			"wine_spirits": 0.06,
+			"keepsakes": 0.02,
+			"gene_stock": 0.04,
+			"polymer_feed": 0.6,
+			"ceramic_feed": 0.5
+		},
+		"recipes": []
+	},
+	"long_breath": {
+		"name": "The Long Breath",
+		"operator": "Kernel Settlers",
+		"opens_with": "long_breath",
+		"description": "A clear sphere two kilometres across off the Kernel, full of air and never spun, so nothing inside has any weight. Six hundred flyers live in hammock villages tied to the spindle, tend gardens and water globes drifting round the lamp at the centre, and race on fabric wings. The air is half an atmosphere, rich in oxygen; the shell's tension holds it in, not gravity. Everyone spends an hour a day in the spinning gym at the dock, for their bones. The dock doesn't spin either: tie down your cargo.",
+		"location": {
+			"type": "lagrange",
+			"system": [
+				"earth",
+				"moon"
+			],
+			"point": "L5",
+			"offset_km": [
+				-5.2,
+				-1.8,
+				-7.3
+			]
+		},
+		"station": {
+			"door": "iris",
+			"type": "cylinder",
+			"hub_radius_m": 60,
+			"hub_length_m": 120,
+			"ring_radius_m": 0,
+			"ring_tube_m": 0,
+			"spokes": 0,
+			"spin_rpm": 0.0,
+			"gravity_g": 0.0,
+			"port_radius_m": 9,
+			"colour": "offwhite"
+		},
+		"bay_traffic": {
+			"control": "open",
+			"per_hour": 3
+		},
+		"services": [
+			"market",
+			"bar"
+		],
+		"bar": {
+			"name": "the Thermal",
+			"patrons": 40,
+			"round_cr": 9
+		},
+		"features": [
+			"long_breath_dock"
+		],
+		"market": {
+			"handmade_goods": 1.2,
+			"collectibles": 0.5,
+			"oxygen": 20,
+			"water_ice": 20,
+			"food": 30,
+			"bio_feed": 8,
+			"polymer_feed": 6,
+			"carbon_fibre": 2,
+			"medical": 1.6,
+			"delicacies": 1.2,
+			"wine_spirits": 0.8
+		},
+		"produces": {
+			"handmade_goods": 0.06,
+			"collectibles": 0.02
+		},
+		"consumes": {
+			"oxygen": 1.0,
+			"water_ice": 1.0,
+			"food": 1.5,
+			"bio_feed": 0.4,
+			"polymer_feed": 0.3,
+			"carbon_fibre": 0.1,
+			"medical": 0.08,
+			"delicacies": 0.06,
+			"wine_spirits": 0.04
 		},
 		"recipes": []
 	},
@@ -1740,7 +2263,11 @@
 			"machine_parts": 25,
 			"electronics": 15,
 			"medical": 6,
-			"habitat_modules": 12
+			"habitat_modules": 12,
+			"delicacies": 1.2,
+			"wine_spirits": 0.6,
+			"bio_feed": 6,
+			"storage_lattices": 2
 		},
 		"produces": {
 			"food": 3.5,
@@ -1753,7 +2280,11 @@
 			"habitat_modules": 0.3,
 			"electronics": 0.4,
 			"food": 1.5,
-			"medical": 0.1
+			"medical": 0.1,
+			"delicacies": 0.06,
+			"wine_spirits": 0.03,
+			"bio_feed": 0.3,
+			"storage_lattices": 0.1
 		},
 		"recipes": []
 	},
@@ -1803,11 +2334,21 @@
 			"electronics": 12,
 			"medical": 6,
 			"habitat_modules": 20,
-			"refined_metals": 80
+			"refined_metals": 80,
+			"collectibles": 0.5,
+			"handmade_goods": 0.8,
+			"delicacies": 2,
+			"wine_spirits": 1.2,
+			"keepsakes": 0.5,
+			"gene_stock": 1.0,
+			"polymer_feed": 16,
+			"robotics": 8
 		},
 		"produces": {
 			"food": 10.0,
-			"oxygen": 1.5
+			"oxygen": 1.5,
+			"collectibles": 0.02,
+			"handmade_goods": 0.04
 		},
 		"consumes": {
 			"water_ice": 10.0,
@@ -1818,7 +2359,13 @@
 			"medical": 0.4,
 			"habitat_modules": 0.6,
 			"refined_metals": 1.5,
-			"food": 3.0
+			"food": 3.0,
+			"delicacies": 0.12,
+			"wine_spirits": 0.06,
+			"keepsakes": 0.02,
+			"gene_stock": 0.05,
+			"polymer_feed": 0.8,
+			"robotics": 0.4
 		},
 		"recipes": []
 	},
@@ -1868,7 +2415,10 @@
 			"electronics": 8,
 			"food": 40,
 			"medical": 3,
-			"oxygen": 30
+			"oxygen": 30,
+			"robotics": 6,
+			"delicacies": 0.8,
+			"ceramic_feed": 50
 		},
 		"produces": {
 			"regolith": 20.0,
@@ -1881,9 +2431,20 @@
 			"electronics": 0.5,
 			"food": 1.5,
 			"medical": 0.15,
-			"oxygen": 0.5
+			"oxygen": 0.5,
+			"robotics": 0.3,
+			"delicacies": 0.04
 		},
-		"recipes": []
+		"recipes": [
+			{
+				"inputs": {
+					"regolith": 8
+				},
+				"outputs": {
+					"ceramic_feed": 2.5
+				}
+			}
+		]
 	},
 	"ballast_point": {
 		"name": "Ballast Point",
@@ -1910,7 +2471,8 @@
 			"refined_metals": 60,
 			"machine_parts": 6,
 			"food": 8,
-			"medical": 1
+			"medical": 1,
+			"delicacies": 0.5
 		},
 		"produces": {
 			"refined_metals": 0.6
@@ -1918,7 +2480,8 @@
 		"consumes": {
 			"food": 0.2,
 			"machine_parts": 0.05,
-			"medical": 0.01
+			"medical": 0.01,
+			"delicacies": 0.01
 		},
 		"recipes": []
 	},
@@ -1949,14 +2512,16 @@
 			"water_ice": 40,
 			"volatiles": 15,
 			"food": 6,
-			"machine_parts": 4
+			"machine_parts": 4,
+			"delicacies": 0.5
 		},
 		"produces": {
 			"water_ice": 0.5
 		},
 		"consumes": {
 			"food": 0.15,
-			"machine_parts": 0.03
+			"machine_parts": 0.03,
+			"delicacies": 0.01
 		},
 		"recipes": []
 	},
@@ -1988,15 +2553,319 @@
 			"regolith": 80,
 			"refined_metals": 20,
 			"food": 8,
-			"electronics": 2
+			"electronics": 2,
+			"delicacies": 0.5
 		},
 		"produces": {
 			"regolith": 0.8
 		},
 		"consumes": {
 			"food": 0.25,
-			"electronics": 0.02
+			"electronics": 0.02,
+			"delicacies": 0.01
 		},
 		"recipes": []
+	},
+	"cytherea_station": {
+		"name": "Cytherea Station",
+		"operator": "Cytherean Assembly",
+		"description": "The Venus up-port, 400 km above the clouds. Below, out of sight in the haze, Aphrodite's Rest drifts round the planet every four days. The Assembly ships up carbon fibre and oxygen pulled out of Venus's air, and pays well for water: the planet has almost none, and the little hydrogen up here comes from cracking the clouds' sulphuric acid. Fuel is dear for the same reason. The shuttle down is the most expensive ride in the inner system, because coming back up takes eight kilometres a second.",
+		"location": {
+			"type": "orbit",
+			"parent": "venus",
+			"elements": {
+				"a_m": 6451800.0,
+				"e": 0.0,
+				"i_deg": 12.0,
+				"node_deg": 0.0,
+				"peri_deg": 0.0,
+				"m0_deg": 0.0
+			}
+		},
+		"station": {
+			"door": "iris",
+			"hub_radius_m": 34,
+			"hub_length_m": 190,
+			"ring_radius_m": 400,
+			"ring_tube_m": 25,
+			"spokes": 4,
+			"spin_rpm": 0.922,
+			"gravity_g": 0.38,
+			"colour": "offwhite"
+		},
+		"bay_traffic": {
+			"control": "tower",
+			"per_hour": 3
+		},
+		"services": [
+			"market",
+			"refuel"
+		],
+		"recipes": [
+			{
+				"inputs": {
+					"volatiles": 2
+				},
+				"outputs": {
+					"propellant": 1.2
+				}
+			}
+		],
+		"features": [
+			"ice_berg"
+		],
+		"shuttle": {
+			"name": "the Assembly glider",
+			"body": "venus",
+			"max_t": 10,
+			"craft": "a broad lifting body with a heat shield for a belly and fat rocket stages for the climb home",
+			"stops": {
+				"aphrodites_rest": {
+					"hours": 4.0,
+					"fare": 420,
+					"fare_per_t": 260,
+					"via": "A deorbit burn, entry into the thickest air in the inner system, a long glide down through the upper haze, and down on the belly retros onto the deck of a city that is floating. Coming back up is the hard part: eight kilometres a second of rocket from a deck that bobs."
+				}
+			}
+		},
+		"market": {
+			"carbon_fibre": 8,
+			"oxygen": 12,
+			"water_ice": 40,
+			"food": 12,
+			"machine_parts": 20,
+			"electronics": 8,
+			"medical": 3,
+			"robotics": 6,
+			"delicacies": 1.0,
+			"wine_spirits": 0.6,
+			"gene_stock": 0.5,
+			"propellant": 54,
+			"volatiles": 40
+		},
+		"produces": {
+			"carbon_fibre": 0.4,
+			"oxygen": 0.6
+		},
+		"consumes": {
+			"water_ice": 2.0,
+			"food": 0.6,
+			"machine_parts": 1.0,
+			"electronics": 0.4,
+			"medical": 0.15,
+			"robotics": 0.3,
+			"delicacies": 0.05,
+			"wine_spirits": 0.03,
+			"gene_stock": 0.02,
+			"propellant": 1.5
+		}
+	},
+	"aphrodites_rest": {
+		"name": "Aphrodite's Rest",
+		"operator": "Cytherean Assembly",
+		"foot_of": "cytherea_station",
+		"description": "A city that floats. Fifty-five kilometres above Venus the air is half an atmosphere and about room temperature, and breathable air is a lifting gas in its carbon dioxide, so every envelope full of homes floats. Five of them ride the middle cloud deck, gondolas of houses and greenhouses slung beneath, walkways between, sailing round the planet every four days on the wind. Gravity is nine-tenths of Earth's: the most like home anywhere. The haze glows yellow-white above and below, the Sun is a bright smear, and the night lasts two days. Wear the acid-proof coat outside. Ships can't land here: the Assembly glider comes down from Cytherea Station.",
+		"location": {
+			"type": "surface",
+			"parent": "venus",
+			"lat_deg": 10.0,
+			"lon_deg": 0.0,
+			"day_s": -345600.0,
+			"radius_m": 6106800.0
+		},
+		"services": [
+			"market",
+			"bar"
+		],
+		"bar": {
+			"name": "the Downdraft",
+			"patrons": 60,
+			"round_cr": 11
+		},
+		"look": {
+			"kind": "aerostat",
+			"envelopes": 5,
+			"envelope_m": 160
+		},
+		"market": {
+			"carbon_fibre": 16,
+			"oxygen": 30,
+			"food": 20,
+			"collectibles": 0.5,
+			"handmade_goods": 0.8,
+			"water_ice": 40,
+			"machine_parts": 8,
+			"robotics": 4,
+			"sensors_optics": 0.8,
+			"medical": 1.6,
+			"gene_stock": 0.6,
+			"delicacies": 1.2,
+			"wine_spirits": 0.8
+		},
+		"produces": {
+			"carbon_fibre": 0.8,
+			"oxygen": 1.5,
+			"food": 1.0,
+			"collectibles": 0.02,
+			"handmade_goods": 0.04
+		},
+		"consumes": {
+			"water_ice": 2.0,
+			"machine_parts": 0.4,
+			"robotics": 0.2,
+			"sensors_optics": 0.04,
+			"medical": 0.08,
+			"gene_stock": 0.03,
+			"delicacies": 0.06,
+			"wine_spirits": 0.04
+		}
+	},
+	"perihelion_station": {
+		"name": "Perihelion Station",
+		"operator": "Dawnward Company",
+		"description": "Mercury's up-port, 400 km over a world that is half furnace and half freezer. Sunlight here is six and a half times what Earth gets, so the station hides behind its own shade and its radiators are the biggest things on it. Below, the Dawnward Company's rails run round the planet in the dark just ahead of the sunrise. The station ships iron, nickel and platinum smelted with free sunlight, and water from the ice in the polar craters, where the Sun never reaches.",
+		"location": {
+			"type": "orbit",
+			"parent": "mercury",
+			"elements": {
+				"a_m": 2839700.0,
+				"e": 0.0,
+				"i_deg": 88.0,
+				"node_deg": 0.0,
+				"peri_deg": 0.0,
+				"m0_deg": 0.0
+			}
+		},
+		"station": {
+			"door": "clamshell",
+			"hub_radius_m": 30,
+			"hub_length_m": 170,
+			"ring_radius_m": 320,
+			"ring_tube_m": 20,
+			"spokes": 4,
+			"spin_rpm": 0.748,
+			"gravity_g": 0.2,
+			"colour": "grey"
+		},
+		"bay_traffic": {
+			"control": "tower",
+			"per_hour": 3
+		},
+		"services": [
+			"market",
+			"refuel"
+		],
+		"recipes": [
+			{
+				"inputs": {
+					"water_ice": 3
+				},
+				"outputs": {
+					"propellant": 2
+				}
+			}
+		],
+		"features": [],
+		"shuttle": {
+			"name": "the Dawnward lander",
+			"body": "mercury",
+			"max_t": 12,
+			"craft": "a four-legged lander with one engine and a sunshade on its back; Mercury has no air to fly through, only to fall onto",
+			"stops": {
+				"terminator": {
+					"hours": 3.0,
+					"fare": 300,
+					"fare_per_t": 150,
+					"via": "Wait for the orbit to pass over the dawn line, burn, fall, and brake all the way down on the engine onto the pad beside the moving city, timed to its pace. It walks round the planet at about 2.6 km an hour, so the pad is never quite where you left it."
+				}
+			}
+		},
+		"market": {
+			"refined_metals": 60,
+			"platinum_metals": 1.0,
+			"food": 40,
+			"oxygen": 20,
+			"machine_parts": 20,
+			"robotics": 6,
+			"electronics": 8,
+			"medical": 3,
+			"ceramic_feed": 10,
+			"carbon_fibre": 4,
+			"gene_stock": 0.5,
+			"delicacies": 1.0,
+			"water_ice": 80,
+			"propellant": 40
+		},
+		"produces": {
+			"refined_metals": 3.0,
+			"platinum_metals": 0.05
+		},
+		"consumes": {
+			"food": 2.0,
+			"oxygen": 1.0,
+			"machine_parts": 1.0,
+			"robotics": 0.3,
+			"electronics": 0.4,
+			"medical": 0.15,
+			"ceramic_feed": 0.5,
+			"carbon_fibre": 0.2,
+			"gene_stock": 0.02,
+			"delicacies": 0.05,
+			"water_ice": 1.0
+		}
+	},
+	"terminator": {
+		"name": "Terminator",
+		"operator": "Dawnward Company",
+		"foot_of": "perihelion_station",
+		"opens_with": "terminator_rails",
+		"description": "A city on rails, built because someone loved Kim Stanley Robinson's 2312. It rides twenty tracks round Mercury at 45 south, keeping pace with the slow dawn: about 2.6 km an hour, once round the planet every 176 days, always in the dark a few dozen kilometres behind the line where the Sun comes up. Electric motors drive it, fed from mirrors out in the sunlight ahead; the old story that the rails' own expansion in the heat pushes it along is local folklore, and everyone repeats it. Every morning the brave walk out to the Dawn Wall, the shield on its sunward side, to watch the Sun rise and then retreat before it catches them. Ships can't land here: the Dawnward lander comes down from Perihelion Station.",
+		"location": {
+			"type": "surface",
+			"parent": "mercury",
+			"facing": "sun",
+			"lat_deg": -45.0,
+			"lon_deg": -92.0
+		},
+		"services": [
+			"market",
+			"bar"
+		],
+		"bar": {
+			"name": "the Dawn Wall",
+			"patrons": 80,
+			"round_cr": 10
+		},
+		"look": {
+			"kind": "rail_city"
+		},
+		"market": {
+			"collectibles": 0.5,
+			"handmade_goods": 0.6,
+			"refined_metals": 10,
+			"water_ice": 20,
+			"food": 20,
+			"oxygen": 8,
+			"machine_parts": 8,
+			"medical": 2,
+			"gene_stock": 0.5,
+			"delicacies": 1.0,
+			"wine_spirits": 0.6
+		},
+		"produces": {
+			"collectibles": 0.02,
+			"handmade_goods": 0.03,
+			"refined_metals": 0.5
+		},
+		"consumes": {
+			"water_ice": 1.0,
+			"food": 1.0,
+			"oxygen": 0.4,
+			"machine_parts": 0.4,
+			"medical": 0.1,
+			"gene_stock": 0.02,
+			"delicacies": 0.05,
+			"wine_spirits": 0.03
+		}
 	}
 }

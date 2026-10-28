@@ -90,6 +90,24 @@
 			"wear": 0.06,
 			"mismatch": 0.0,
 			"patch": "#2b2f36"
+		},
+		"Cytherean Assembly": {
+			"hull": "#e8e0cc",
+			"accent": "#d9a441",
+			"trim": "#2b2f33",
+			"foil": "#c9a24a",
+			"wear": 0.2,
+			"mismatch": 0.06,
+			"patch": "#c9bfa8"
+		},
+		"Dawnward Company": {
+			"hull": "#5a5d61",
+			"accent": "#e07a2c",
+			"trim": "#d8b02a",
+			"foil": "#c9a24a",
+			"wear": 0.35,
+			"mismatch": 0.1,
+			"patch": "#7a7d80"
 		}
 	},
 	"independent": {

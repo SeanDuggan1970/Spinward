@@ -809,5 +809,313 @@
 				"produces_mult": 1.6
 			}
 		}
+	},
+	"long_breath": {
+		"name": "The Long Breath",
+		"place": "kernel_l5",
+		"description": "A clear sphere two kilometres across, filled with half an atmosphere of oxygen-rich air and never spun: inside there is no down, and people fly. A flying club of six hundred asked for it; the Kernel Settlers are building it.",
+		"draw_t_per_day": 3.0,
+		"reveal": {
+			"after_days": 20
+		},
+		"stages": [
+			{
+				"name": "Spindle and lamp",
+				"needs": {
+					"refined_metals": 50,
+					"machine_parts": 30,
+					"robotics": 8
+				}
+			},
+			{
+				"name": "Shell spun",
+				"needs": {
+					"carbon_fibre": 80,
+					"polymer_feed": 60,
+					"ceramic_feed": 40
+				}
+			},
+			{
+				"name": "First breath",
+				"needs": {
+					"oxygen": 160,
+					"volatiles": 140,
+					"water_ice": 120
+				}
+			},
+			{
+				"name": "Gardens adrift",
+				"needs": {
+					"bio_feed": 60,
+					"gene_stock": 2,
+					"food": 40
+				}
+			}
+		],
+		"effects": {
+			"kernel_l5": {
+				"consumes_mult": 1.15,
+				"produces_mult": 1.15
+			}
+		},
+		"feature": "long_breath",
+		"backer": "Kernel Settlers",
+		"pitch": {
+			"why": "People have dreamed of flying under their own power since Icarus. In a big enough room with no gravity and good air, anyone can, with a pair of fabric wings.",
+			"plan": "A spindle and a lamp for a sun, then a carbon-fibre shell a centimetre thick spun round them, then two and a half million tonnes of air, then gardens and water globes set adrift. The Long View signed it off: it makes no new land, takes only air and fibre, and can be let down and recycled if it ever has to be.",
+			"offer": "Backers dock free at the Long Breath, and the club will fit you with wings for life."
+		},
+		"perks": [
+			{
+				"min_t": 10,
+				"kind": "free_docking",
+				"place": "long_breath",
+				"text": "Free docking at the Long Breath"
+			},
+			{
+				"min_t": 40,
+				"kind": "standing",
+				"operator": "Kernel Settlers",
+				"value": 6,
+				"text": "The settlers count you among the Breath's builders"
+			},
+			{
+				"min_t": 80,
+				"kind": "promise",
+				"text": "Wings made to measure, and a place in the first race round the lamp"
+			}
+		]
+	},
+	"long_hall": {
+		"name": "The Long Hall",
+		"place": "ares_ring",
+		"description": "A roof over ten kilometres of a canyon in Noctis Labyrinthus, two kilometres wide and a kilometre deep, filled with half an atmosphere of air: the biggest room ever built, with a river down the floor and cliffs for walls.",
+		"draw_t_per_day": 3.0,
+		"reveal": {
+			"after_days": 40
+		},
+		"stages": [
+			{
+				"name": "Anchors in the rim",
+				"needs": {
+					"machine_parts": 60,
+					"robotics": 12
+				}
+			},
+			{
+				"name": "The first span",
+				"needs": {
+					"carbon_fibre": 110,
+					"ceramic_feed": 90,
+					"polymer_feed": 40
+				}
+			},
+			{
+				"name": "Sealed and filled",
+				"needs": {
+					"oxygen": 140,
+					"volatiles": 120,
+					"water_ice": 160
+				}
+			},
+			{
+				"name": "Rivers and fields",
+				"needs": {
+					"gene_stock": 3,
+					"food": 60
+				}
+			}
+		],
+		"effects": {
+			"ares_ring": {
+				"consumes_mult": 1.1,
+				"produces_mult": 1.1
+			}
+		},
+		"backer": "Mars Accord",
+		"pitch": {
+			"why": "A sky you can see, a river you can swim in, cliffs a kilometre high for walls: the first place on Mars where you can walk for an hour under open air and never see a dome.",
+			"plan": "Anchor a carbon-fibre roof into both rims of a narrow canyon, span it in sections, seal the ends, fill it with half an atmosphere and let the river run. The canyon walls do most of the work; the Long View likes that.",
+			"offer": "Backers dock free at Ares Ring and get a plot by the river in the Hall."
+		},
+		"perks": [
+			{
+				"min_t": 10,
+				"kind": "free_docking",
+				"place": "ares_ring",
+				"text": "Free docking at Ares Ring"
+			},
+			{
+				"min_t": 40,
+				"kind": "standing",
+				"operator": "Mars Accord",
+				"value": 6,
+				"text": "The Accord counts you among the Hall's builders"
+			},
+			{
+				"min_t": 90,
+				"kind": "promise",
+				"text": "A plot by the river in the Long Hall"
+			}
+		]
+	},
+	"ceres_megasat": {
+		"name": "The Ceres Megasatellite",
+		"place": "piazzi_station",
+		"description": "A frame sixty kilometres across in orbit over Ceres, to hold cylinders ten kilometres long and a kilometre in radius, each spinning once a minute for nine-tenths of a g, each built for a different people. The Concord Pair was the first two; these are the next four.",
+		"draw_t_per_day": 4.0,
+		"reveal": {
+			"after_stage": [
+				"concord_pair",
+				4
+			]
+		},
+		"stages": [
+			{
+				"name": "The frame and its slag shield",
+				"needs": {
+					"refined_metals": 120,
+					"machine_parts": 40,
+					"robotics": 10
+				}
+			},
+			{
+				"name": "The canal town (a Venetian quarter, for a family from Venice)",
+				"needs": {
+					"water_ice": 200,
+					"carbon_fibre": 60,
+					"polymer_feed": 40
+				}
+			},
+			{
+				"name": "The pine forest (for the Norrland settlers)",
+				"needs": {
+					"volatiles": 120,
+					"oxygen": 100,
+					"gene_stock": 4
+				}
+			},
+			{
+				"name": "The desert monastery (for the Order of the Long Silence)",
+				"needs": {
+					"refined_metals": 60,
+					"sensors_optics": 4,
+					"medical": 8
+				}
+			},
+			{
+				"name": "The all-night quarter (for everyone who wants one)",
+				"needs": {
+					"electronics": 20,
+					"wine_spirits": 2,
+					"delicacies": 2
+				}
+			}
+		],
+		"effects": {
+			"piazzi_station": {
+				"consumes_mult": 1.2,
+				"produces_mult": 1.2
+			}
+		},
+		"feature": "megasatellite",
+		"backer": "Belt Assembly",
+		"pitch": {
+			"why": "Not one habitat but a city of them, each cylinder its own country: a canal town, a pine forest, a desert monastery, a quarter that never sleeps. Pekka Janhunen drew it in the 2020s; we are building it.",
+			"plan": "A frame of Ceres's own rock with its slag for shielding, then one cylinder at a time, each chosen by the people who will live in it. Ceres has the nitrogen for the air. The Long View signed it off with one rule: no cylinder bigger than its people can fill.",
+			"offer": "Backers dock free at Piazzi and are welcome in every cylinder's first festival."
+		},
+		"perks": [
+			{
+				"min_t": 15,
+				"kind": "free_docking",
+				"place": "piazzi_station",
+				"text": "Free docking at Piazzi Station"
+			},
+			{
+				"min_t": 60,
+				"kind": "standing",
+				"operator": "Belt Assembly",
+				"value": 6,
+				"text": "The Assembly counts you among the megasatellite's builders"
+			},
+			{
+				"min_t": 150,
+				"kind": "promise",
+				"text": "A seat at every cylinder's first festival"
+			}
+		]
+	},
+	"terminator_rails": {
+		"name": "Terminator",
+		"place": "perihelion_station",
+		"description": "A city that rides rails round Mercury, keeping just ahead of the sunrise, as in Kim Stanley Robinson's 2312.",
+		"draw_t_per_day": 3.0,
+		"reveal": {
+			"after_days": 60
+		},
+		"stages": [
+			{
+				"name": "Rails across the night",
+				"needs": {
+					"refined_metals": 150,
+					"machine_parts": 60
+				}
+			},
+			{
+				"name": "The Dawn Wall",
+				"needs": {
+					"ceramic_feed": 120,
+					"carbon_fibre": 40
+				}
+			},
+			{
+				"name": "Domes and gardens",
+				"needs": {
+					"oxygen": 100,
+					"water_ice": 120,
+					"gene_stock": 3
+				}
+			},
+			{
+				"name": "Underway",
+				"needs": {
+					"robotics": 15,
+					"electronics": 20
+				}
+			}
+		],
+		"effects": {
+			"perihelion_station": {
+				"consumes_mult": 1.2,
+				"produces_mult": 1.2
+			}
+		},
+		"backer": "Dawnward Company",
+		"pitch": {
+			"why": "Because someone read 2312 at fourteen and never got over it. A city that walks round a planet at the pace of the dawn, so that every morning, for ever, you can go out and watch the Sun come up.",
+			"plan": "Lay twenty rails round Mercury at 45 south, build the Dawn Wall, the domes and the gardens on a platform that rides them, and set it moving. The Long View asked for one thing: the rails go round once, and no mine goes more than a kilometre from the rail bed.",
+			"offer": "Backers dock free at Perihelion and ride Terminator for life."
+		},
+		"perks": [
+			{
+				"min_t": 10,
+				"kind": "free_docking",
+				"place": "perihelion_station",
+				"text": "Free docking at Perihelion Station"
+			},
+			{
+				"min_t": 40,
+				"kind": "standing",
+				"operator": "Dawnward Company",
+				"value": 6,
+				"text": "The Company counts you among Terminator's builders"
+			},
+			{
+				"min_t": 90,
+				"kind": "promise",
+				"text": "A berth on Terminator, and a place at the Dawn Wall every morning"
+			}
+		]
 	}
 }

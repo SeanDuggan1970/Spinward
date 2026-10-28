@@ -13,6 +13,8 @@
 ##   docking       a ship folding its panels as it noses into a station's bay, the
 ##                 doors opening for it
 ##   release       a satellite let go over Earth, unfolding its wings as it drifts clear
+##   long_breath   gliding past the Long Breath at L5, the bubble of air people fly in
+##   berg          flying escort to an iceberg on its years-long push in from the Belt
 ## Bodies wear what is on them (plumes, elevators), as the system will be.
 ## Each shot flies a random hull in a real fleet's livery (the ships you will meet),
 ## with its caption. View-only: the sim is not ticking while this is up.
@@ -33,7 +35,7 @@ const UI := preload("res://view/ui/ui_kit.gd")
 const Bay := preload("res://view/flight/bay.gd")
 const SatModel := preload("res://view/flight/satellite_model.gd")
 
-const SHOTS := ["earth_orbit", "jovian", "saturn", "lunar", "mars", "belt", "enceladus", "sail", "touchdown", "docking", "release"]
+const SHOTS := ["earth_orbit", "jovian", "saturn", "lunar", "mars", "belt", "enceladus", "sail", "touchdown", "docking", "release", "long_breath", "berg"]
 const SHOT_S := 18.0
 const FADE_S := 0.8
 
@@ -57,6 +59,8 @@ var _hero_len := 30.0
 var _where := ""
 ## Overrides for the caption card's name and description (a Kestrel's pod, say).
 var _caption := {}
+## What the hero is carrying and where to, for the caption card ("" when it has no hold).
+var _hold := ""
 var _sun_dir := Vector3(-0.55, 0.35, 0.75).normalized()
 var _update: Callable
 var _spinners: Array = []
@@ -102,6 +106,7 @@ func hero_info() -> Dictionary:
 		"thrust_n": ShipStats.thrust_n(ship, data),
 		"mass_t": ShipStats.dry_mass_t(ship, data),
 		"where": _where,
+		"hold": _hold,
 		"showing": clock > 2.5 and clock < SHOT_S - 2.0,
 	}
 
@@ -122,6 +127,31 @@ func next_shot() -> void:
 
 
 # --- shared pieces ------------------------------------------------------------------
+
+## A cargo for the caption card: any good in the game, a hold's worth of bulk or a few
+## tonnes of something dear, bound for a port that wants it.
+func _pick_hold(ship: Dictionary) -> String:
+	var cap := ShipStats.cargo_capacity_t(ship, data)
+	if cap < 1.0:
+		return ""
+	var goods: Array = data.goods.keys().filter(func(g): return not String(g).begins_with("_"))
+	goods.sort()
+	var good: String = goods[_rng.randi() % goods.size()]
+	var dear := float(data.goods[good]["base_price"]) >= 4000.0
+	var tonnes := maxf(1.0, roundf(cap * (_rng.randf_range(0.05, 0.25) if dear else _rng.randf_range(0.5, 1.0))))
+	# Bound for a port that wants it (uses it, or feeds it to a works).
+	var wants := func(p: String) -> bool:
+		var place: Dictionary = data.places[p]
+		return place.get("consumes", {}).has(good) or place.get("recipes", []).any(func(r): return r["inputs"].has(good))
+	# Ports and the towns below them alike (a hold can ride a ribbon or a hopper on).
+	var ports: Array = data.places.keys().filter(func(p): return data.places[p].has("market") and wants.call(p))
+	if ports.is_empty():
+		return ""
+	ports.sort()
+	var port: String = ports[_rng.randi() % ports.size()]
+	return "%s, %d t for %s" % [data.goods[good]["name"], int(tonnes), data.places[port]["name"]]
+
+
 
 func _ship_dict(hull: String) -> Dictionary:
 	var h: Dictionary = data.ships[hull]
@@ -148,6 +178,7 @@ func _pick_hero(hull: String = "") -> void:
 		var fleet_names: Array = fleet["names"]
 		livery = Livery.for_ship(data, fleet["operator"], fleet_names[_rng.randi() % fleet_names.size()])
 	_caption = {}
+	var ship := _ship_dict(_hero_hull)
 	var model: Dictionary
 	if _hero_hull == "kestrel" and data.pods.has("pods"):
 		# The humpback lander with one of its pods, a different one each time.
@@ -157,7 +188,8 @@ func _pick_hero(hull: String = "") -> void:
 		model = load("res://view/flight/kestrel.gd").build(livery, 1.0, String(spec.get("look", "cargo")))
 		_caption = {"name": "Kestrel lander  ·  %s pod" % String(spec["name"]).to_lower(), "description": String(spec.get("description", ""))}
 	else:
-		model = Models.ship(_ship_dict(_hero_hull), data, livery)
+		model = Models.ship(ship, data, livery)
+	_hold = _pick_hold(ship)
 	_hero = model["node"]
 	_hero_rig = model["rig"]
 	_hero_model = model
@@ -307,6 +339,38 @@ func _build_saturn() -> void:
 		_fly(pos, Vector3(-1.0, 0.02, -0.1), true, dt)
 		camera.position = Vector3(0.0, 8.0, 0.0)
 		camera.look_at(pos.lerp(Vector3(0, -20, -400), 0.25), Vector3.UP)
+
+
+## Out in the Belt: an iceberg on its years-long push toward the inner system, its
+## pusher throwing a plume of its own melted ice, and the hero flying escort.
+func _build_berg() -> void:
+	_where = "The outer Belt  ·  a berg for the Kernel"
+	_light(Vector3(-0.7, 0.3, 0.6), 1.0, Vector3(-30, 20, 40))
+	_body("ceres", 600.0, Vector3(-22000.0, 5000.0, -120000.0))
+	var berg := Vector3(-60.0, -10.0, -260.0)
+	SetPieces._ice_berg(_stage, berg, 2.2, false, true)
+	_update = func(dt: float) -> void:
+		var f := clock / SHOT_S
+		var pos := Vector3(lerpf(60.0, 10.0, f), 25.0 + 4.0 * sin(f * PI), lerpf(-200.0, -230.0, f))
+		_fly(pos, Vector3(1.0, 0.0, -0.05), false, dt)
+		camera.position = Vector3(90.0 - 30.0 * f, 30.0, -60.0)
+		camera.look_at(pos.lerp(berg, 0.55), Vector3.UP)
+
+
+## Off the Kernel at L5: the hero glides past the Long Breath, the lamp burning at its
+## heart and the gardens adrift round it, Earth and the Moon far off.
+func _build_long_breath() -> void:
+	_where = "L5  ·  the Long Breath"
+	_light(Vector3(-0.5, 0.45, 0.7), 1.4, Vector3(-40, 30, 50))
+	_body("earth", 9000.0, Vector3(-30000.0, -12000.0, -160000.0), 0.004)
+	_body("moon", 2400.0, Vector3(42000.0, 8000.0, -150000.0))
+	_anims = SetPieces._long_breath(_stage, Vector3(-500.0, 120.0, -3300.0), 1.0)
+	_update = func(dt: float) -> void:
+		var f := clock / SHOT_S
+		var pos := Vector3(lerpf(220.0, -280.0, f), 18.0 + 6.0 * sin(f * PI), lerpf(-140.0, -230.0, f))
+		_fly(pos, Vector3(-1.0, 0.03, -0.18), false, dt)
+		camera.position = Vector3(30.0, 10.0, 40.0)
+		camera.look_at(pos.lerp(Vector3(-500.0, 120.0, -3300.0), 0.2), Vector3.UP)
 
 
 ## A low run over the Moon's craters; Earth hangs on the horizon ahead.
@@ -476,7 +540,7 @@ func _build_touchdown() -> void:
 ## Into the bay: a ship comes up the axis folding its panels while the doors open,
 ## and glides in under the lamps.
 func _build_docking() -> void:
-	var ports := ["trojan_yards", "shackleton_port", "clarke_exchange", "hektor_reach"]
+	var ports := ["trojan_yards", "shackleton_port", "clarke_exchange", "hektor_reach", "huygens_port"]
 	var place: String = ports[_rng.randi() % ports.size()]
 	_where = "%s  ·  cleared in" % data.places[place]["name"]
 	_light(Vector3(-0.6, 0.45, 0.66), 1.5, Vector3(40, 30, 60))
@@ -484,6 +548,10 @@ func _build_docking() -> void:
 		_body("moon", 9000.0, Vector3(-6000.0, -9500.0, -16000.0))
 	elif place == "hektor_reach":
 		_body("jupiter", 9000.0, Vector3(14000.0, -3000.0, -40000.0))
+	elif place == "huygens_port":
+		# The hammerhead over Titan's haze, Saturn beyond.
+		_body("titan", 12000.0, Vector3(-4000.0, -16000.0, -22000.0))
+		_body("saturn", 6000.0, Vector3(20000.0, 7000.0, -90000.0))
 	else:
 		_body("earth", 14000.0, Vector3(9000.0, -12500.0, -19000.0), 0.004)
 	var stowed := ShipRig.stowed_radius(_hero_model)

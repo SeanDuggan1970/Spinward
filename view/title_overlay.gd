@@ -38,14 +38,14 @@ func _draw() -> void:
 	for i in int(rule_w / 20.0):
 		var x := (w - rule_w) * 0.5 + i * 20.0
 		draw_colored_polygon(PackedVector2Array([Vector2(x, 116), Vector2(x + 8, 116), Vector2(x + 4, 120), Vector2(x - 4, 120)]), UI.BG)
-	var sub := "A trading life in our own backyard   ·   2061"
+	var sub := "The cap's off: a whole solar system to try things in   ·   2061"
 	var sw := _font.get_string_size(sub, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
 	draw_string(_font, Vector2((w - sw) * 0.5, 146), sub, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, UI.TEXT)
 
 	# Caption plate for the ship on show.
 	var info: Dictionary = title.hero_info()
 	if info["showing"]:
-		var plate := Rect2(w * 0.5 - 330, h - 210, 660, 104)
+		var plate := Rect2(w * 0.5 - 330, h - 228, 660, 122)
 		var where: String = info.get("where", "")
 		if where != "":
 			draw_string(_font, plate.position + Vector2(4, -10), where.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(UI.TEXT, 0.85))
@@ -57,7 +57,10 @@ func _draw() -> void:
 		for i in mini(lines.size(), 2):
 			draw_string(_font, plate.position + Vector2(18, 52 + i * 17), lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, UI.DIM)
 		var stats := "CARGO %d t    TANK %d t    THRUST %d N    DRY MASS %.1f t" % [int(info["cargo_t"]), int(info["fuel_t"]), int(info["thrust_n"]), info["mass_t"]]
-		draw_string(_font, plate.position + Vector2(18, 94), stats, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, UI.TEXT)
+		var hold: String = info.get("hold", "")
+		if hold != "":
+			draw_string(_font, plate.position + Vector2(18, 92), "IN THE HOLD   " + hold, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, UI.AMBER)
+		draw_string(_font, plate.position + Vector2(18, 112), stats, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, UI.TEXT)
 
 	# Prompts.
 	var blink := fposmod(t, 1.4) < 0.95

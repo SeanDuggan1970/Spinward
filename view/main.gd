@@ -26,6 +26,7 @@ const Bindings := preload("res://view/bindings.gd")
 const SleepOverlay := preload("res://view/sleep_overlay.gd")
 const WakeDigest := preload("res://view/wake_digest.gd")
 const SleepSystem := preload("res://sim/systems/sleep_system.gd")
+const ShuttleSystem := preload("res://sim/systems/shuttle_system.gd")
 const Spin := preload("res://sim/spin.gd")
 const COMMS_KEEP := 40
 
@@ -379,7 +380,7 @@ func _handle_events() -> void:
 				notice("On %s for %s: %s. Fare %s." % [line["name"], sim.data.places[d["to"]]["name"], UI.duration(float(d["hours"]) * 3600.0), UI.money(float(d["fare"]))], UI.AMBER)
 			"shuttle_departed":
 				var shuttle: Dictionary = sim.data.places[d["line"]]["shuttle"]
-				notice("On %s %s %s: %s. Fare %s." % [shuttle["name"], "down to" if d["down"] else "up to", sim.data.places[d["to"]]["name"], UI.duration(float(d["hours"]) * 3600.0), UI.money(float(d["fare"]))], UI.AMBER)
+				notice("On %s %s %s: %s. Fare %s." % [shuttle["name"], ShuttleSystem.heading(sim.data, d["line"], d["down"]), sim.data.places[d["to"]]["name"], UI.duration(float(d["hours"]) * 3600.0), UI.money(float(d["fare"]))], UI.AMBER)
 			"pod_fitted":
 				notice("Fitted a %s to the lander." % String(sim.data.pods["pods"][d["pod"]]["name"]).to_lower(), UI.GOOD)
 				refresh = true
@@ -456,14 +457,16 @@ func _handle_events() -> void:
 			"elevator_arrived":
 				play_sfx("dock_clunk", -8.0)
 				if d["down"]:
-					notice("At %s. Your ship waits at %s." % [sim.data.places[d["place"]]["name"], sim.data.places[sim.data.places[d["place"]]["foot_of"]]["name"]], UI.GOOD)
+					notice("At %s. Your ship waits at %s." % [sim.data.places[d["place"]]["name"], sim.data.places[sim.data.home_port(d["place"])]["name"]], UI.GOOD)
 				else:
 					notice("Back at %s, and back aboard." % sim.data.places[d["place"]]["name"], UI.GOOD)
 				refresh = true
 			"shuttle_arrived":
 				play_sfx("dock_clunk", -8.0)
 				if d["down"]:
-					notice("Down at %s. Your ship waits at %s." % [sim.data.places[d["place"]]["name"], sim.data.places[sim.data.places[d["place"]]["foot_of"]]["name"]], UI.GOOD)
+					notice("%s %s. Your ship waits at %s." % ["At" if ShuttleSystem.is_hop(sim.data, sim.data.places[d["place"]]["foot_of"]) else "Down at", sim.data.places[d["place"]]["name"], sim.data.places[sim.data.home_port(d["place"])]["name"]], UI.GOOD)
+				elif sim.data.home_port(d["place"]) != d["place"]:
+					notice("Back at %s. Your ship waits at %s." % [sim.data.places[d["place"]]["name"], sim.data.places[sim.data.home_port(d["place"])]["name"]], UI.GOOD)
 				else:
 					notice("Back at %s, and back aboard." % sim.data.places[d["place"]]["name"], UI.GOOD)
 				refresh = true
@@ -561,6 +564,12 @@ func _handle_events() -> void:
 				notice("A message from %s. See Contracts." % d["from"], UI.AMBER)
 				comms.append("%s  PRIVATE  from %s" % [_clock(e["time_s"]), d["from"]])
 				refresh = true
+			"berg_arrived":
+				if float(d["tonnes"]) > 0.5:
+					var line := "%s has parked a %s t berg from %s off %s: %.0f t of %s on the market." % [String(d["tug"]).left(1).to_upper() + String(d["tug"]).substr(1), UI.thousands(float(d["berg_t"])), d["from"], sim.data.places[d["place"]]["name"], float(d["tonnes"]), String(sim.data.goods[d["good"]]["name"]).to_lower()]
+					notice(line, UI.AMBER)
+					comms.append("%s  %s" % [_clock(e["time_s"]), line])
+					refresh = true
 			"arrived_site":
 				notice("On site at %s. See what there is to do." % sim.data.sites[d["place"]]["name"], UI.AMBER)
 			"site_work_started":
@@ -1846,7 +1855,8 @@ func _crash_tour(dir: String) -> void:
 	_quit()
 
 
-## Windowed: ride each elevator down (and fly the Mars shuttle to each base and back),
+## Windowed: ride each elevator down (and fly every shuttle to each of its bases and
+## back: the Mars shuttle, the Moon's hopper from Line Foot),
 ## shooting the cab view on the way and the town at
 ## the bottom, then ride back up.
 func _ride_tour(dir: String) -> void:
@@ -1891,31 +1901,34 @@ func _ride_tour(dir: String) -> void:
 			await get_tree().process_frame
 		_shot("%s/%s-foot-departures.png" % [dir, anchor])
 		print("RIDE_OK %s -> %s (%s)" % [anchor, sim.state.location.get("place", "?"), sim.state.location.get("status", "?")])
-	# Then the shuttle down to each Mars base and back up.
-	for base in sim.data.places["ares_ring"]["shuttle"]["stops"]:
-		for leg in [base, "ares_ring"]:
-			if leg == base:
-				sim.state.location = {"status": "docked", "place": "ares_ring"}
-			var err: String = sim.apply({"type": "take_shuttle", "to": leg})
-			if err != "":
-				print("SHUTTLE_FAIL %s: %s" % [leg, err])
-				break
-			_handle_events()
-			_sync_mode()
-			var loc: Dictionary = sim.state.location
-			for f in [0.03, 0.4, 0.75, 0.97]:
-				sim.state.time_s = lerpf(float(loc["depart_t"]), float(loc["arrive_t"]), f)
-				for _i in 20:
+	# Then every shuttle to each of its bases and back.
+	var lines: Array = sim.data.places.keys().filter(func(p): return sim.data.places[p].has("shuttle"))
+	for port in lines:
+		for base in sim.data.places[port]["shuttle"]["stops"]:
+			for leg in [base, port]:
+				if leg == base:
+					sim.state.location = {"status": "docked", "place": port}
+				var err: String = sim.apply({"type": "take_shuttle", "to": leg})
+				if err != "":
+					print("SHUTTLE_FAIL %s: %s" % [leg, err])
+					break
+				_handle_events()
+				_sync_mode()
+				var loc: Dictionary = sim.state.location
+				# A hop flies only the end of its hour, so a frame at 0.55 catches it in the air.
+				for f in [0.03, 0.4, 0.55, 0.75, 0.97]:
+					sim.state.time_s = lerpf(float(loc["depart_t"]), float(loc["arrive_t"]), f)
+					for _i in 20:
+						await get_tree().process_frame
+					_shot("%s/shuttle-%s-%s-%02d.png" % [dir, base, "down" if leg == base else "up", int(f * 100.0)])
+				sim.advance_game_time(float(loc["arrive_t"]) - sim.state.time_s + 1.0)
+				_handle_events()
+				_sync_mode()
+				for _i in 10:
 					await get_tree().process_frame
-				_shot("%s/shuttle-%s-%s-%02d.png" % [dir, base, "down" if leg == base else "up", int(f * 100.0)])
-			sim.advance_game_time(float(loc["arrive_t"]) - sim.state.time_s + 1.0)
-			_handle_events()
-			_sync_mode()
-			for _i in 10:
-				await get_tree().process_frame
-			if leg == base:
-				_shot("%s/shuttle-%s.png" % [dir, base])
-		print("SHUTTLE_OK %s (%s)" % [base, sim.state.location.get("place", "?")])
+				if leg == base:
+					_shot("%s/shuttle-%s.png" % [dir, base])
+			print("SHUTTLE_OK %s (%s)" % [base, sim.state.location.get("place", "?")])
 	_quit()
 
 

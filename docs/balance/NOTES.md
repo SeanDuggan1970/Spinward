@@ -338,3 +338,68 @@ Full write-up: [2026-10-07-economy-together.md](2026-10-07-economy-together.md).
 - New data: four Mars bases in `places.json` (Jezero, Candor Terraces, Hellas Deep, Tharsis Domes, all `foot_of` Ares Ring) with their own markets, `ares_ring.shuttle` (fares 160 to 260 cr a seat plus 100 to 130 cr/t, 20 t limit, 2.5 to 5 h), and two badges.
 - Balance bot re-run (5 seeds, 180 days, upgrade=1): identical, seed for seed, mean 105,630 cr, median first upgrade day 10.7. The bot never takes the shuttle, so it doesn't see the bases' markets.
 - Worth a hand-played check: the per-tonne fare (100 to 130 cr/t) is small beside food (600 cr base) and medical (5,000 cr), so shuttling high-value goods down to a base short of them may pay well. That's intended as a small side trade; raise `fare_per_t` if it turns into the best route at Mars.
+
+
+## Goods for the 2060s (2026-10-27)
+
+- Changed data: `goods.json` goes from 14 goods to 28 (high tech, printer feedstocks, gene stock, Earth luxuries, frontier exports), with flows at every place in `places.json`. Each new good's target stock is 20 days of its flow. `electronics`, `refined_metals` and `food` keep their ids as Compute cores, Metal powders and Staples.
+- Balance bot (5 seeds, 180 days, upgrade=1), before and after:
+
+  | | Mean credits, day 180 | Median first upgrade | End credits by seed | Trips |
+  |---|---|---|---|---|
+  | Before (main) | 105,630 | day 10.7 | 134k, 80k, 139k, 24k, 151k | 56–59 |
+  | After | 82,994 | day 6.9 | 126k, 36k, 164k, 36k, 53k | 63–67 |
+
+- **The start is faster and steadier.** The first upgrade comes on day 6.7–6.9 in four seeds out of five (15.0 in the fifth), against 5.9–37.2 before. Day one has more good trades near Earth.
+- **The mean is lower, but within the noise.** Seeds vary by a factor of five either way, so 83k against 106k over five seeds is not a clear change. More seeds would settle it.
+- **Routes are far more varied.** Seed 1 used 35 route-and-good pairs. The top earners are compute cores into Trojan Yards (its drone works eat them), orbital pharmaceuticals from the Kernel and Kalpana One to Clarke Exchange and Kibo Ring, and storage lattices from Kalpana One. No route dominates: the best repeated one (Kalpana One to Clarke, pharmaceuticals) made 31k over three legs.
+- **Insurance costs more:** premiums rose from 4–6k to 6–9k over the run, because the bot carries more valuable cargo.
+- **The bot barely touches the luxuries.** Their targets are small (a few tonnes), so a greedy single-good trader finds little volume. The widest margins at start are luxuries to the far ports (wine from Ares Ring to Valhalla, gene stock to Tharsis, both about 225% of base), which the bot doesn't reach. Worth a hand-played check: a long-haul ship with mixed small loads of luxuries may now be the best way to earn in the outer system.
+- No tuning yet. Watch for orbital pharmaceuticals becoming the one early route everyone runs.
+
+
+## The Nave, the Long Breath and Venus (2026-10-27)
+
+- Changed data: three new ports or towns (`the_nave` below Line Foot, `long_breath` opened by its project at the Kernel, `cytherea_station` in Venus orbit with `aphrodites_rest` below it), the Line Foot hopper and the Venus glider, a new project (`long_breath`), two fleets (`breath_tenders`, `cloud_runners`), carbon fibre on the Kernel's market, and the Long Breath's effect on the Kernel (flows x1.15) once built.
+- Balance bot (5 seeds, 180 days, upgrade=1):
+
+  | | Mean credits, day 180 | Median first upgrade | End credits by seed |
+  |---|---|---|---|
+  | Goods for the 2060s | 82,994 | day 6.9 | 126k, 36k, 164k, 36k, 53k |
+  | Plus the Nave and the Long Breath | 103,378 | day 6.9 | 126k, 36k, 156k, 110k, 89k |
+  | Plus Venus | 98,166 | day 6.7 | 112k, 123k, 65k, 93k, 97k |
+
+- **Within the noise.** The bot never rides an elevator or a shuttle, so it never trades at the Nave or Aphrodite's Rest, and it doesn't reach Venus in 180 days of greedy cislunar trading. What it sees is the new NPC traffic and the Kernel's carbon fibre, which shift the seeds. The spread narrowed with Venus added (65k to 123k), probably because the Assembly's freighters smooth Kibo Ring's water and delicacy prices.
+- **Worth a hand-played check:**
+  - Water to Venus. Aphrodite's Rest and Cytherea Station both consume water with nothing producing it nearby, so the price there sits at the ceiling (3x base). Against the glider's 260 cr/t and the long trip, is it worth it?
+  - Wings and art from the Long Breath, and handmade goods from the Nave. Their volumes are tiny by design (a few tonnes of target stock).
+
+
+## Bergs, and orbital pharmaceuticals trimmed (2026-10-27)
+
+- Changed data: `balance.bergs` (water ice pushed in to the Kernel, Psyche Claims and Cytherea Station on a schedule), and `orbital_pharma` base price 18,000 -> 15,000 cr/t.
+- Why the trim: with the bergs in, the bot's top route was again the Kernel's orbital pharmaceuticals to Clarke Exchange (48.9k over four legs in seed 1), about 1.57 times the next best (31.1k), and it had led in the run before too. The target is no route above about 1.5 times the next for long.
+- Balance bot (5 seeds, 180 days, upgrade=1):
+
+  | | Mean credits, day 180 | Median first upgrade | End credits by seed |
+  |---|---|---|---|
+  | With the bergs | 107,261 | day 6.7 | 193k, 58k, 92k, 118k, 76k |
+  | Pharmaceuticals at 15,000 | 93,194 | day 6.6 | 102k, 153k, 56k, 89k, 66k |
+
+- **After the trim:** pharmaceuticals drop to fifth (Kalpana One to Kibo Ring, 29k). Compute cores into Trojan Yards, whose drone works eat them, now lead from four different sources; the best single route (Clarke Exchange, 67k over seven legs) is 1.29 times the next (52k). The means differ by less than the seeds do.
+- **The bergs** don't show in the bot's routes: it doesn't buy water for the Kernel, Psyche or Venus. A berg landing drops water there for a few weeks; hand-play should check whether that makes a nice opportunistic run (lunar water to the Kernel just after a berg is a bad idea; just before, a good one).
+
+
+## The Long Hall and the Ceres megasatellite (2026-10-27)
+
+- Changed data: two projects (`long_hall` at Ares Ring, revealed day 40; `ceres_megasat` at Piazzi, revealed when the Concord Pair is done), the Long Hall town and its shuttle stop, carbon fibre and ceramic feed on Ares Ring's market.
+- Balance bot (5 seeds, 180 days, upgrade=1): identical, seed for seed, to the run before (mean 93,194 cr, median first upgrade day 6.6). The bot never trades at Ares Ring, so it doesn't feel the Hall's draws, and the megasatellite never starts within 180 days because the Concord Pair isn't finished by then.
+- Worth a hand-played check: whether the Long Hall's draws on Ares Ring's carbon fibre and ceramic feed (neither made at Mars) make a good long haul from Huygens, Piazzi or the Moon once it is revealed.
+
+
+## Mercury (2026-10-27)
+
+- Changed data: Perihelion Station (Mercury orbit) and Terminator (by lander, opened by the `terminator_rails` project from day 60), a new operator and the `dawn_runners` freighters (platinum to Kibo Ring; staples, compute cores and delicacies back).
+- Balance bot (5 seeds, 180 days, upgrade=1): mean 125,316 cr (93,194 before), median first upgrade day 6.9; by seed 177k, 131k, 108k, 115k, 96k.
+- **Higher, and every seed is up, so probably real.** The bot doesn't fly to Mercury; it feels the Dawnward freighters, which buy staples, compute cores and delicacies at Kibo Ring and sell platinum there, shifting the cislunar prices it trades on. Its top route is now Kibo Ring to Clarke Exchange with staples (68k over four legs), 1.26 times the next, so nothing dominates.
+- **Watch:** if more interplanetary fleets keep lifting cislunar profits, `relaxation_per_day` (the most sensitive knob, see above) or the fleets' `fill` can pull them back. No change yet.

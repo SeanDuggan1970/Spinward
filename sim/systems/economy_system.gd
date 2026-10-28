@@ -32,11 +32,59 @@ func start_game() -> void:
 
 func tick(_game_dt: float) -> void:
 	var s = sim().state
+	_open_markets()
 	# A day at a time while the player sleeps (Sim.step_s).
 	var step: float = sim().step_s()
 	while s.economy_t + step <= s.time_s:
 		_integrate(step / 86400.0)
+		# A berg lands in the step it arrives in, so a long sleep relaxes it with the
+		# market rather than adding it at the end.
+		_bergs(s.economy_t, s.economy_t + step)
 		s.economy_t += step
+
+
+## Ice bergs parked off a port since `from` (exclusive) up to `to` (balance.bergs): each
+## puts its tonnes on the port's market at once, up to the market's cap.
+func _bergs(from: float, to: float) -> void:
+	var data = sim().data
+	var s = sim().state
+	var cap_mult := float(data.balance["economy"]["max_stock_mult"])
+	for b in data.balance.get("bergs", {}).get("arrivals", []):
+		var first: float = float(s.started_t) + float(b["first_day"]) * 86400.0
+		var every := float(b["every_days"]) * 86400.0
+		var place: String = b["place"]
+		var good: String = b["good"]
+		for k in range(berg_count(from, first, every), berg_count(to, first, every)):
+			var stock: Dictionary = s.markets.get(place, {})
+			if not stock.has(good):
+				continue
+			var cap := Market.target(data, place, good) * cap_mult
+			var landed := clampf(float(b["tonnes"]), 0.0, maxf(cap - float(stock[good]), 0.0))
+			stock[good] = float(stock[good]) + landed
+			sim().emit("berg_arrived", {"id": b["id"], "place": place, "good": good, "tonnes": landed, "berg_t": float(b["berg_t"]),
+				"from": b["from"], "tug": b["tug"]}, first + every * float(k))
+
+
+## How many of a schedule's arrivals (the first at `first`, then every `every`) have
+## come by time t.
+static func berg_count(t: float, first: float, every: float) -> int:
+	if t < first:
+		return 0
+	return int(floor((t - first) / every)) + 1
+
+
+## Markets a save made before a place or a good was added does not have: open them
+## at target.
+func _open_markets() -> void:
+	var data = sim().data
+	var markets: Dictionary = sim().state.markets
+	for place in data.places:
+		if not markets.has(place):
+			markets[place] = {}
+		var stock: Dictionary = markets[place]
+		for good in data.places[place].get("market", {}):
+			if not stock.has(good):
+				stock[good] = Market.target(data, place, good)
 
 
 func _integrate(days: float) -> void:
@@ -47,12 +95,6 @@ func _integrate(days: float) -> void:
 	var cap_mult := float(e["max_stock_mult"])
 	for place in data.places:
 		var p: Dictionary = data.places[place]
-		if not state.markets.has(place):
-			# A place added since this save was made: open its market at target.
-			var fresh := {}
-			for good in p.get("market", {}):
-				fresh[good] = Market.target(data, place, good)
-			state.markets[place] = fresh
 		var stock: Dictionary = state.markets[place]
 		var mods: Dictionary = state.place_mods.get(place, {})
 		var produce_mult := float(mods.get("produces_mult", 1.0))

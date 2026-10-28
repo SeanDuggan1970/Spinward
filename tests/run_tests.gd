@@ -67,6 +67,8 @@ func _initialize() -> void:
 	test_clock_and_commands()
 	test_orbits()
 	test_economy()
+	test_frontier_goods()
+	test_bergs()
 	test_travel()
 	test_shipyard()
 	test_npcs()
@@ -101,6 +103,12 @@ func _initialize() -> void:
 	test_story_favour_after_abandon()
 	test_elevator_not_stranded_at_foot()
 	test_mars_shuttle()
+	test_the_nave()
+	test_venus()
+	test_long_hall()
+	test_ceres_megasat()
+	test_terminator()
+	test_berg_resupply()
 	test_shuttle_view_profile()
 	test_edge_cases()
 	test_power_budget()
@@ -235,6 +243,66 @@ func test_orbits() -> void:
 	var geo := eph.relative("clarke_exchange", "earth", 3600.0)
 	var normal := V.normalized(V.cross(eph.relative("clarke_exchange", "earth", 0.0), geo))
 	check(absf(rad_to_deg(acos(absf(normal[2]))) - 23.44) < 0.05, "GEO lies in Earth's equatorial plane")
+
+
+func test_frontier_goods() -> void:
+	var sim := fresh()
+	var d := sim.data
+	# Every good has somewhere that makes it and somewhere that wants it.
+	for good in d.goods:
+		var made := false
+		var wanted := false
+		for place in d.places:
+			var p: Dictionary = d.places[place]
+			made = made or p.get("produces", {}).has(good)
+			wanted = wanted or p.get("consumes", {}).has(good)
+			for r in p.get("recipes", []):
+				made = made or r["outputs"].has(good)
+				wanted = wanted or r["inputs"].has(good)
+		check(made and wanted, "%s is made somewhere and wanted somewhere" % good)
+	# A save from before the frontier goods: the new goods open at target and trade.
+	var s := sim.state
+	s.markets["kibo_ring"].erase("delicacies")
+	s.markets["kibo_ring"].erase("storage_lattices")
+	var loaded := Sim.new()
+	loaded.load_state(SaveIO.from_text(SaveIO.to_text(s)))
+	loaded.tick(1.0)
+	check(loaded.state.markets["kibo_ring"].has("delicacies"), "Old saves open the new goods' markets")
+	check(loaded.apply({"type": "buy", "good": "delicacies", "tonnes": 1}) == "", "The new goods trade in an old save")
+
+
+func test_bergs() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	s.npcs = []  # Market flows and bergs only.
+	var Economy := preload("res://sim/systems/economy_system.gd")
+	var kernel: Dictionary = {}
+	for b in d.balance["bergs"]["arrivals"]:
+		if b["id"] == "kernel_berg":
+			kernel = b
+	check(not kernel.is_empty(), "Bergs are pushed in to the Kernel")
+	check(Economy.berg_count(0.0, 10.0, 5.0) == 0 and Economy.berg_count(10.0, 10.0, 5.0) == 1 and Economy.berg_count(24.9, 10.0, 5.0) == 3, "Arrivals count on their schedule")
+	# Just before the first, then just after: the water lands on the Kernel's market.
+	var first: float = s.started_t + float(kernel["first_day"]) * DAY
+	sim.advance_game_time(first - s.time_s - 3600.0)
+	sim.take_events()
+	s.markets["kernel_l5"]["water_ice"] = 10.0
+	sim.advance_game_time(7200.0)
+	var arrived := sim.take_events().filter(func(e): return e["type"] == "berg_arrived" and e["data"]["id"] == "kernel_berg")
+	check(arrived.size() == 1, "The first berg arrives on day %d" % int(kernel["first_day"]))
+	check(float(s.markets["kernel_l5"]["water_ice"]) > 10.0 + float(kernel["tonnes"]) * 0.95, "and puts its water on the Kernel's market (%.0f t)" % float(s.markets["kernel_l5"]["water_ice"]))
+	check(not arrived.is_empty() and absf(float(arrived[0]["time_s"]) - first) < 1.0, "at the hour it was due")
+	# Never past the market's cap.
+	var cap := Market.target(d, "kernel_l5", "water_ice") * float(d.balance["economy"]["max_stock_mult"])
+	sim.advance_game_time(first + float(kernel["every_days"]) * DAY - s.time_s - 600.0)
+	sim.take_events()
+	s.markets["kernel_l5"]["water_ice"] = cap - 5.0
+	sim.advance_game_time(1200.0)
+	check(float(s.markets["kernel_l5"]["water_ice"]) <= cap + 1e-6, "A berg never floods a market past its cap")
+	var more := sim.take_events().filter(func(e): return e["type"] == "berg_arrived" and e["data"]["id"] == "kernel_berg")
+	# What fits is what the hour before it left room for: a few tonnes, not its 300.
+	check(more.size() == 1 and float(more[0]["data"]["tonnes"]) < 10.0 and absf(float(s.markets["kernel_l5"]["water_ice"]) - cap) < 1.0, "and lands only what fits (%s t), filling the market to its cap" % (str(more[0]["data"]["tonnes"]) if not more.is_empty() else "none"))
 
 
 func test_economy() -> void:
@@ -2246,6 +2314,219 @@ func test_elevator_not_stranded_at_foot() -> void:
 ## The Mars shuttle: down from Ares Ring to each base with your hold, your ship left
 ## docked above; fares, the cargo limit, the base a project builds, no flying to or
 ## from a base, saves mid-flight, and never stranded below.
+func test_the_nave() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var Shuttle := preload("res://sim/systems/shuttle_system.gd")
+	# Where it is: the Marius Hills skylight, held on the near side, 58 degrees from the
+	# point under Earth (a hop of 1,755 km from Line Foot). Earth rides a few degrees
+	# north and south in the lunar sky through the month (the Moon's orbit is tilted to
+	# its equator: libration in latitude), so the angle wanders by that much.
+	for days in [0.0, 9.0, 21.0]:
+		var t: float = s.time_s + days * 86400.0
+		var moon: Array = sim.ephemeris.position("moon", t)
+		var nave := V.normalized(V.sub(sim.ephemeris.position("the_nave", t), moon))
+		var earth := V.normalized(V.sub(sim.ephemeris.position("earth", t), moon))
+		var foot := V.normalized(V.sub(sim.ephemeris.position("line_foot", t), moon))
+		var angle := rad_to_deg(acos(clampf(V.dot(nave, earth), -1.0, 1.0)))
+		check(absf(angle - 57.9) < 6.0, "The Nave stays about 58 degrees from the sub-Earth point on day %d (%.2f)" % [int(days), angle])
+		check(absf(rad_to_deg(acos(clampf(V.dot(foot, earth), -1.0, 1.0)))) < 0.01, "and Line Foot stays under Earth")
+	check(absf(V.distance(sim.ephemeris.position("the_nave", s.time_s), sim.ephemeris.position("moon", s.time_s)) - float(d.bodies["moon"]["radius_m"])) < 1.0, "The Nave sits on the surface")
+	# Where your ship is, wherever you are.
+	check(d.home_port("the_nave") == "halo_depot" and d.home_port("line_foot") == "halo_depot" and d.home_port("kibo_ring") == "kibo_ring", "Your ship waits at Halo Depot, two links up from The Nave")
+	check(not Perks.place_open(s, d, "the_nave"), "No ship can fly to The Nave")
+	# The way there: down the Luna Line, then the hopper.
+	_dock_at(sim, "halo_depot")
+	s.credits = 50000.0
+	s.ship["cargo"] = {}
+	check(sim.apply({"type": "ride_elevator"}) == "", "Down the Luna Line from Halo Depot")
+	sim.advance_game_time(float(s.location["arrive_t"]) - s.time_s + 1.0)
+	check(s.location == {"status": "docked", "place": "line_foot"}, "At Line Foot")
+	var flights := Shuttle.flights_here(d, "line_foot")
+	check(flights.size() == 1 and flights[0]["to"] == "the_nave" and flights[0]["down"], "Line Foot's hopper flies to The Nave")
+	check(sim.apply({"type": "take_shuttle", "to": "the_nave"}) == "", "Take the hopper")
+	sim.advance_game_time(float(s.location["arrive_t"]) - s.time_s + 1.0)
+	check(s.location == {"status": "docked", "place": "the_nave"}, "At The Nave")
+	check(sim.apply({"type": "buy", "good": "handmade_goods", "tonnes": 0.2}) == "", "Buy the glassblowers' work")
+	var why: String = sim.apply({"type": "depart", "to": "kibo_ring"})
+	check(why.contains("Halo Depot") and why.contains("Line Foot, then ride the ribbon"), "Trying to fly off, you are told your ship is at Halo Depot and the way back to it (%s)" % why)
+	var back := Shuttle.flight_to(d, "the_nave")
+	check(not back["down"] and back["to"] == "line_foot", "The hopper flies back to Line Foot")
+
+
+func test_venus() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var Shuttle := preload("res://sim/systems/shuttle_system.gd")
+	# The city floats 55 km up and rides the clouds round the planet every four days,
+	# the same way as the planet turns (retrograde).
+	var t0: float = s.time_s
+	var venus0: Array = sim.ephemeris.position("venus", t0)
+	var a0 := V.sub(sim.ephemeris.position("aphrodites_rest", t0), venus0)
+	check(absf(V.length(a0) - float(d.bodies["venus"]["radius_m"]) - 55000.0) < 1.0, "Aphrodite's Rest floats 55 km above Venus")
+	var a2 := V.sub(sim.ephemeris.position("aphrodites_rest", t0 + 2.0 * DAY), sim.ephemeris.position("venus", t0 + 2.0 * DAY))
+	var turned := rad_to_deg(acos(clampf(V.dot(V.normalized(a0), V.normalized(a2)), -1.0, 1.0)))
+	# Half-way round at 10 degrees north puts it 160 degrees from where it was.
+	check(absf(turned - 160.0) < 1.0, "In two days it drifts half-way round (%.1f degrees)" % turned)
+	check(d.home_port("aphrodites_rest") == "cytherea_station", "Your ship waits at Cytherea Station")
+	# Getting there: a route from Kibo Ring, flown and docked.
+	var freighter := {"hull": "deep_freighter", "modules": d.ships["deep_freighter"]["modules"].duplicate(), "cargo": {}, "fuel_t": 400.0}
+	var plan := Navigation.plan(freighter, d, sim.ephemeris, "kibo_ring", "cytherea_station", s.time_s)
+	check(plan.get("ok", false), "A route from Kibo Ring to Cytherea Station is planned (%s)" % plan.get("reason", ""))
+	s.ship["hull"] = "deep_freighter"
+	s.ship["modules"] = d.ships["deep_freighter"]["modules"].duplicate()
+	s.ship["fuel_t"] = ShipStats.fuel_capacity_t(s.ship, d)
+	s.credits = 1.0e6
+	s.location = {"status": "docked", "place": "kibo_ring"}
+	check(sim.apply({"type": "depart", "to": "cytherea_station"}) == "", "Depart Kibo Ring for Venus")
+	sim.advance_game_time(float(s.location["arrive_t"]) - s.time_s + 60.0)
+	check(s.location["status"] == "approach" and s.location["place"] == "cytherea_station", "Arrive at Cytherea Station")
+	check(sim.apply({"type": "dock"}) == "" and s.location == {"status": "docked", "place": "cytherea_station"}, "Docked at Cytherea Station")
+	# Down to the city and back on the glider.
+	s.ship["cargo"] = {}
+	check(sim.apply({"type": "take_shuttle", "to": "aphrodites_rest"}) == "", "Take the glider down")
+	sim.advance_game_time(float(s.location["arrive_t"]) - s.time_s + 1.0)
+	check(s.location == {"status": "docked", "place": "aphrodites_rest"}, "At Aphrodite's Rest")
+	check(sim.apply({"type": "buy", "good": "carbon_fibre", "tonnes": 2.0}) == "", "Buy carbon fibre made from Venus's air")
+	var up: Dictionary = Shuttle.flight_to(d, "aphrodites_rest")
+	check(not up["down"] and up["to"] == "cytherea_station", "The glider flies back up to Cytherea Station")
+	check(sim.apply({"type": "take_shuttle"}) == "", "Take the glider up")
+	sim.advance_game_time(float(s.location["arrive_t"]) - s.time_s + 1.0)
+	check(s.location == {"status": "docked", "place": "cytherea_station"}, "Back aboard at Cytherea Station")
+
+
+func test_long_hall() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var Shuttle := preload("res://sim/systems/shuttle_system.gd")
+	check(d.places["long_hall"]["foot_of"] == "ares_ring" and d.places["long_hall"]["opens_with"] == "long_hall", "The Long Hall is a town below Ares Ring, opened by its project")
+	check(d.places["ares_ring"]["shuttle"]["stops"].has("long_hall"), "The Accord shuttle flies to it")
+	# A narrow canyon, so the roof can hold: at half a bar a roof bulging up between rims
+	# 2 km apart carries 50 to 100 MN a metre (pressure times its curve radius, 1 to 2 km),
+	# a few centimetres of carbon fibre (docs/WONDERS.md).
+	check(float(d.places["long_hall"]["look"]["width_m"]) <= 3000.0, "It roofs a narrow canyon, not a hundred-kilometre chasm")
+	_dock_at(sim, "ares_ring")
+	s.credits = 50000.0
+	s.ship["cargo"] = {}
+	check(sim.apply({"type": "take_shuttle", "to": "long_hall"}) == "The Long Hall is still being built", "The Long Hall takes nobody until it is built")
+	s.projects["long_hall"]["done"] = true
+	check(sim.apply({"type": "take_shuttle", "to": "long_hall"}) == "", "and then the shuttle flies there")
+	sim.advance_game_time(float(s.location["arrive_t"]) - s.time_s + 1.0)
+	check(s.location == {"status": "docked", "place": "long_hall"}, "In the Long Hall")
+	check(sim.apply({"type": "buy", "good": "wine_spirits", "tonnes": 0.1}) == "", "Buy the first Martian vintage")
+	check(Shuttle.flight_to(d, "long_hall")["to"] == "ares_ring", "The shuttle flies back up to Ares Ring")
+
+
+func test_ceres_megasat() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var p: Dictionary = d.projects["ceres_megasat"]
+	check(p["place"] == "piazzi_station" and p["stages"].size() == 5, "The megasatellite is built at Piazzi in five stages: the frame, then four cylinders")
+	# Each cylinder is Janhunen's: 1 km in radius, a turn every 66 s, about 0.92 g.
+	var g := pow(TAU / 66.0, 2.0) * 1000.0 / 9.80665
+	check(absf(g - 0.92) < 0.01, "A turn every 66 s gives 0.92 g at 1 km (%.3f)" % g)
+	sim.advance_game_time(30.0 * DAY)
+	check(not s.projects["ceres_megasat"].get("revealed", false), "Nobody talks about it until the Concord Pair is done")
+	s.projects["concord_pair"]["done"] = true
+	sim.advance_game_time(DAY)
+	check(s.projects["ceres_megasat"].get("revealed", false), "Then it is announced")
+
+
+func test_terminator() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	# The city keeps its place behind the dawn line, so it walks round Mercury with it:
+	# always 92 degrees round from the point under the Sun, on the night side.
+	for days in [0.0, 30.0, 61.0]:
+		var t: float = s.time_s + days * DAY
+		var mercury: Array = sim.ephemeris.position("mercury", t)
+		var city := V.normalized(V.sub(sim.ephemeris.position("terminator", t), mercury))
+		var sun := V.normalized(V.sub(sim.ephemeris.position("sun", t), mercury))
+		var angle := rad_to_deg(acos(clampf(V.dot(city, sun), -1.0, 1.0)))
+		# At 45 S and 92 degrees round, cos(angle) = cos(45) cos(92) (plus a little for
+		# the Sun's height over Mercury's equator, which is near zero).
+		check(absf(angle - rad_to_deg(acos(cos(deg_to_rad(45.0)) * cos(deg_to_rad(92.0))))) < 2.0, "On day %d Terminator is just behind the dawn line (%.1f degrees from the Sun's point)" % [int(days), angle])
+	check(d.home_port("terminator") == "perihelion_station", "Your ship waits at Perihelion Station")
+	# Walking pace at 45 S: once round in Mercury's 176-day solar day.
+	var pace := TAU * float(d.bodies["mercury"]["radius_m"]) * cos(deg_to_rad(45.0)) / (176.0 * DAY) * 3.6
+	check(absf(pace - 2.6) < 0.2, "It moves at walking pace (%.1f km/h)" % pace)
+	# The way there: a route from Kibo Ring, then the lander once the rails are done.
+	s.ship["hull"] = "deep_freighter"
+	s.ship["modules"] = d.ships["deep_freighter"]["modules"].duplicate()
+	s.ship["fuel_t"] = ShipStats.fuel_capacity_t(s.ship, d)
+	var plan := Navigation.plan(s.ship, d, sim.ephemeris, "kibo_ring", "perihelion_station", s.time_s)
+	check(plan.get("ok", false), "A deep freighter can plan a route to Mercury (%s)" % plan.get("reason", ""))
+	s.credits = 1.0e6
+	s.location = {"status": "docked", "place": "kibo_ring"}
+	check(sim.apply({"type": "depart", "to": "perihelion_station"}) == "", "Depart Kibo Ring for Mercury")
+	sim.advance_game_time(float(s.location["arrive_t"]) - s.time_s + 60.0)
+	check(s.location["status"] == "approach" and s.location["place"] == "perihelion_station", "Arrive at Perihelion Station")
+	check(sim.apply({"type": "dock"}) == "" and s.location == {"status": "docked", "place": "perihelion_station"}, "Docked at Perihelion Station")
+	s.credits = 50000.0
+	s.ship["cargo"] = {}
+	check(sim.apply({"type": "take_shuttle", "to": "terminator"}) == "Terminator is still being built", "Terminator takes nobody until it is underway")
+	s.projects["terminator_rails"]["done"] = true
+	check(sim.apply({"type": "take_shuttle", "to": "terminator"}) == "", "then the lander flies there")
+	sim.advance_game_time(float(s.location["arrive_t"]) - s.time_s + 1.0)
+	check(s.location == {"status": "docked", "place": "terminator"}, "Aboard Terminator")
+
+
+func test_berg_resupply() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var Sites := preload("res://sim/systems/site_system.gd")
+	var site: Dictionary = d.sites["slow_tide_berg"]
+	var act: Dictionary = site["activities"]["resupply"]
+	# Where it is: on its way in from the outer Belt, about 2.2 AU from the Sun at the
+	# start and nearer the Sun as the months go by.
+	var au := 1.495978707e11
+	var r0 := V.length(sim.ephemeris.relative("slow_tide_berg", "sun", s.time_s)) / au
+	var r1 := V.length(sim.ephemeris.relative("slow_tide_berg", "sun", s.time_s + 120.0 * DAY)) / au
+	check(absf(r0 - 2.21) < 0.1 and r1 < r0, "The berg is coming in from the Belt (%.2f AU, then %.2f AU)" % [r0, r1])
+	check(Sites.knows(s, "slow_tide_berg"), "Its crew is on the map from the start")
+	# Getting there takes a long-haul ship: plan it, fly it, arrive on site.
+	s.ship["hull"] = "deep_freighter"
+	s.ship["modules"] = d.ships["deep_freighter"]["modules"].duplicate()
+	s.ship["fuel_t"] = ShipStats.fuel_capacity_t(s.ship, d)
+	var plan := Navigation.plan(s.ship, d, sim.ephemeris, "kibo_ring", "slow_tide_berg", s.time_s)
+	check(plan.get("ok", false), "A deep freighter can plan a route out to the berg (%s)" % plan.get("reason", ""))
+	s.credits = 1.0e6
+	s.location = {"status": "docked", "place": "kibo_ring"}
+	check(sim.apply({"type": "depart", "to": "slow_tide_berg"}) == "", "Depart Kibo Ring for the berg")
+	sim.advance_game_time(float(s.location["arrive_t"]) - s.time_s + 60.0)
+	check(s.location == {"status": "on_site", "place": "slow_tide_berg"}, "Arrive alongside the berg (%s)" % str(s.location))
+	# On site with nothing for them: refused, and nothing taken.
+	s.ship["cargo"] = {}
+	s.ship["cargo_paid"] = {}
+	check(Sites.blocked(s, d, "slow_tide_berg", "resupply").begins_with("needs"), "Arriving empty-handed, there is nothing to hand over")
+	# With the supplies aboard: handed over, paid, and some ice back.
+	s.ship["cargo"] = {"food": 5.0, "medical": 0.3, "machine_parts": 1.0}
+	s.ship["cargo_paid"] = {"food": 3000.0, "medical": 1500.0, "machine_parts": 1200.0}
+	var credits := s.credits
+	check(sim.apply({"type": "site_work", "activity": "resupply"}) == "", "Hand the crew their supplies")
+	check(is_equal_approx(float(s.ship["cargo"]["food"]), 2.0) and not s.ship["cargo"].has("medical") and not s.ship["cargo"].has("machine_parts"), "Their supplies leave the hold; the rest stays")
+	check(is_equal_approx(float(s.ship["cargo_paid"]["food"]), 1200.0) and not s.ship["cargo_paid"].has("medical"), "and so does what they cost you")
+	sim.advance_game_time(float(act["days"]) * DAY + 3600.0)
+	check(s.credits > credits + float(act["credits"]) * 0.99, "The crew pays on the spot")
+	check(float(s.ship["cargo"].get("water_ice", 0.0)) >= 3.0, "and tops up your hold with their ice (%.1f t)" % float(s.ship["cargo"].get("water_ice", 0.0)))
+	# A standing job: not again straight away, then again after its days.
+	s.ship["cargo"]["food"] = 5.0
+	s.ship["cargo"]["medical"] = 0.3
+	s.ship["cargo"]["machine_parts"] = 1.0
+	check(Sites.blocked(s, d, "slow_tide_berg", "resupply").begins_with("done for now"), "Not wanted again yet")
+	sim.advance_game_time(float(act["every_days"]) * DAY)
+	check(Sites.blocked(s, d, "slow_tide_berg", "resupply") == "", "Wanted again after %d days" % int(act["every_days"]))
+	# Saved and loaded, it remembers when you last came.
+	var loaded := SaveIO.from_text(SaveIO.to_text(s))
+	check(loaded.sites.get("last", {}).get("slow_tide_berg", {}).has("resupply"), "Saves remember the last supply run")
+
+
 func test_mars_shuttle() -> void:
 	var sim := fresh()
 	var s := sim.state
@@ -2389,8 +2670,9 @@ func test_edge_cases() -> void:
 	_dock_at(sim, "trojan_yards")
 	check(sim.apply({"type": "install_module", "slot": "cargo.0", "module": "cargo_pod_l"}) == "", "A rich pilot can fit a big pod")
 	check(s.credits < 1.0e15 and s.credits > 1.0e15 - 1.0e6, "and pays the price")
-	# Broke: nothing is bought with nothing.
+	# Broke: nothing is bought with nothing (with stock on the shelf, so credits are the reason).
 	s.credits = 0.0
+	s.markets["trojan_yards"]["electronics"] = 10.0
 	check(sim.apply({"type": "buy", "good": "electronics", "tonnes": 1.0}) == "not enough credits", "No credits, no cargo")
 	check(sim.apply({"type": "install_module", "slot": "cargo.0", "module": "cargo_pod_l"}) != "" or s.ship["modules"]["cargo.0"] == "cargo_pod_l", "No credits, no upgrades (unless already fitted)")
 	check(s.ship["cargo"].is_empty() and s.credits == 0.0, "and nothing was taken")
@@ -3006,6 +3288,7 @@ const NEW_PLACES := {
 	"island_one": {"from": "kernel_l5", "fleet": "island_haulers"},
 	"kalpana_two": {"from": "kalpana_one", "fleet": "kalpana_two_ferries"},
 	"concord_pair": {"from": "piazzi_station", "fleet": "concord_tenders"},
+	"long_breath": {"from": "kernel_l5", "fleet": "breath_tenders"},
 	"selene_ring": {"from": "shackleton_port", "fleet": "ring_tankers"},
 }
 
@@ -3049,7 +3332,7 @@ func test_new_habitat_places() -> void:
 		strays.append_array(sim.take_events().filter(func(e): return e["type"] == "npc_departed" and e["data"]["to"] in closed))
 	check(strays.is_empty(), "No ship heads for a closed place (%d did)" % strays.size())
 	for npc in s.npcs:
-		check(not (npc["fleet"] in ["island_haulers", "kalpana_two_ferries", "concord_tenders", "ring_tankers"]) or not NpcSystem.in_service(npc, s.time_s) or npc["trips"] == 0, "%s waits for its project" % npc["name"])
+		check(not (npc["fleet"] in ["island_haulers", "kalpana_two_ferries", "concord_tenders", "ring_tankers", "breath_tenders"]) or not NpcSystem.in_service(npc, s.time_s) or npc["trips"] == 0, "%s waits for its project" % npc["name"])
 	# Finish every project: the places open, news says so, and traffic starts.
 	for id in NEW_PLACES:
 		s.projects[id]["done"] = true
@@ -3553,22 +3836,28 @@ func test_wear_accrual() -> void:
 
 
 func test_wear_faults() -> void:
-	var run := func() -> Sim:
+	# Read the events as the game does, every few days: over months the busy system
+	# makes more than the sim holds unread (Sim.MAX_PENDING_EVENTS).
+	var warnings := []
+	var run := func(keep: bool) -> Sim:
 		var sim := fresh()
 		Condition.set_condition(sim.state.ship, "drive.0", 0.1)
 		Condition.set_condition(sim.state.ship, "radiator.0", 0.1)
 		sim.apply({"type": "set_time_scale", "scale": 1.0})
-		sim.advance_game_time(120.0 * DAY)
+		for _i in 12:
+			sim.advance_game_time(10.0 * DAY)
+			var seen := sim.take_events().filter(func(e): return e["type"] == "module_fault" or e["type"] == "condition_low")
+			if keep:
+				warnings.append_array(seen)
 		return sim
-	var a: Sim = run.call()
-	var b: Sim = run.call()
+	var a: Sim = run.call(true)
+	var b: Sim = run.call(false)
 	var faults: Dictionary = a.state.ship["faults"]
 	check(not faults.is_empty(), "A worn-out module throws small faults over months")
 	for slot in faults:
 		check(float(faults[slot]["loss"]) > 0.0 and float(faults[slot]["loss"]) <= float(a.data.ship_economy["faults"]["cap"]) + 1e-9, "A fault is a few percent, capped (%s %.3f)" % [slot, float(faults[slot]["loss"])])
 	check(a.state.ship["faults"] == b.state.ship["faults"] and a.state.rng_state == b.state.rng_state, "Faults are deterministic for a seed")
 	check(a.state.ship.get("damage", {}).is_empty() and a.state.ship["hull"] == "mule", "A fault is never damage and never a lost ship")
-	var warnings := a.take_events().filter(func(e): return e["type"] == "module_fault" or e["type"] == "condition_low")
 	check(not warnings.is_empty(), "Faults and low condition raise warnings")
 	# A healthy ship has none.
 	var good := fresh()

@@ -81,6 +81,19 @@ func load_from(root: String) -> void:
 		"logbook_age_days": float(broker_file.get("logbook_age_days", 3.0))}
 
 
+## The port where a ship stays while its pilot is at `place`: the place itself, or for
+## a town reached by ribbon or shuttle (possibly one beyond another, as a hop from an
+## elevator's foot), the port at the top of that chain.
+func home_port(place: String) -> String:
+	var at := place
+	for _i in 8:
+		var up: String = locations.get(at, {}).get("foot_of", "")
+		if up == "":
+			return at
+		at = up
+	return at
+
+
 func read_json(path: String) -> Dictionary:
 	var text := FileAccess.get_file_as_string(path)
 	var parsed = JSON.parse_string(text)
@@ -248,6 +261,14 @@ func validate() -> Array[String]:
 			if features_seen.has(feature):
 				problems.append("project %s: feature %s already driven by %s" % [id, feature, features_seen[feature]])
 			features_seen[feature] = id
+	for b in balance.get("bergs", {}).get("arrivals", []):
+		if not places.has(b.get("place", "")) or not places[b["place"]].get("market", {}).has(b.get("good", "")):
+			problems.append("berg %s: %s is not traded at %s" % [b.get("id", "?"), b.get("good", "?"), b.get("place", "?")])
+		if float(b.get("every_days", 0.0)) <= 0.0 or float(b.get("tonnes", 0.0)) <= 0.0:
+			problems.append("berg %s: every_days and tonnes must be positive" % b.get("id", "?"))
+		for key in ["id", "first_day", "berg_t", "from", "tug"]:
+			if not b.has(key):
+				problems.append("berg %s: needs %s" % [b.get("id", "?"), key])
 	for id in brokers:
 		var b: Dictionary = brokers[id]
 		if not places.has(b.get("place", "")):
@@ -291,6 +312,11 @@ func validate() -> Array[String]:
 			for good in act.get("yields", {}):
 				if not goods.has(good):
 					problems.append("site %s: activity %s yields unknown good %s" % [id, act_id, good])
+			for good in act.get("takes", {}):
+				if not goods.has(good) or float(act["takes"][good]) <= 0.0:
+					problems.append("site %s: activity %s takes unknown good %s, or none of it" % [id, act_id, good])
+			if act.has("every_days") and float(act["every_days"]) <= 0.0:
+				problems.append("site %s: activity %s every_days must be positive" % [id, act_id])
 			# Comet work: only at a comet, and only "quiet" or "active".
 			if act.has("comet") or act.get("in_coma", false):
 				if not bodies.get(where.get("parent", ""), {}).has("activity"):

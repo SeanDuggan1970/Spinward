@@ -852,6 +852,122 @@
 				300,
 				800
 			]
+		},
+		"breath_tenders": {
+			"operator": "Kernel Settlers",
+			"hull": "drone_freighter",
+			"behaviour": "route",
+			"count": 1,
+			"names": [
+				"Updraft"
+			],
+			"commission_project": "long_breath",
+			"commission_days": [
+				0
+			],
+			"route": [
+				{
+					"at": "kernel_l5",
+					"buy": [
+						"oxygen",
+						"food",
+						"bio_feed"
+					],
+					"to": "long_breath"
+				},
+				{
+					"at": "long_breath",
+					"buy": [
+						"handmade_goods"
+					],
+					"to": "kernel_l5"
+				}
+			],
+			"fill": 0.8,
+			"dwell_hours": [
+				8,
+				20
+			]
+		},
+		"cloud_runners": {
+			"operator": "Cytherean Assembly",
+			"hull": "deep_freighter",
+			"behaviour": "route",
+			"count": 2,
+			"names": [
+				"Morning Star",
+				"Evening Star"
+			],
+			"commission_days": [
+				0,
+				90
+			],
+			"route": [
+				{
+					"at": "cytherea_station",
+					"buy": [
+						"carbon_fibre",
+						"oxygen"
+					],
+					"to": "clarke_exchange"
+				},
+				{
+					"at": "clarke_exchange",
+					"buy": [],
+					"to": "kibo_ring"
+				},
+				{
+					"at": "kibo_ring",
+					"buy": [
+						"water_ice",
+						"gene_stock",
+						"delicacies"
+					],
+					"to": "cytherea_station"
+				}
+			],
+			"fill": 0.4,
+			"dwell_hours": [
+				48,
+				120
+			]
+		},
+		"dawn_runners": {
+			"operator": "Dawnward Company",
+			"hull": "deep_freighter",
+			"behaviour": "route",
+			"count": 2,
+			"names": [
+				"First Light",
+				"Long Morning"
+			],
+			"commission_days": [
+				0,
+				100
+			],
+			"route": [
+				{
+					"at": "perihelion_station",
+					"buy": [
+						"platinum_metals"
+					],
+					"to": "kibo_ring"
+				},
+				{
+					"at": "kibo_ring",
+					"buy": [
+						"food",
+						"electronics",
+						"delicacies"
+					],
+					"to": "perihelion_station"
+				}
+			],
+			"fill": 0.4,
+			"dwell_hours": [
+				48,
+				120
+			]
 		}
 	},
 	"local_traffic": {

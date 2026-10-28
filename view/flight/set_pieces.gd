@@ -16,6 +16,11 @@
 ##   starshade        Valhalla's flower-shaped starshade, lined up with a distant telescope
 ##   sail_yard        Clarke Exchange's sail yard, and the Lightfoot sails once it is built
 ##   stanford_torus   the Tsiolkovsky Wheel going up beside Trojan Yards: a 1.8 km Stanford torus
+##   long_breath      the Long Breath going up off the Kernel: a 2 km bubble of air you fly in
+##   long_breath_dock the same bubble, finished, behind its own dock hub
+##   megasatellite    the Ceres megasatellite: a 60 km frame filling with 10 km cylinders
+##   ice_berg         a berg of water ice pushed in from the outer Belt, parked off the
+##                    port and quarried, its pusher still bolted to its back
 ## Solid ones register colliders on the parent (meta "colliders": {spheres, tori}) so
 ## a pilot who flies into one hits it.
 extends RefCounted
@@ -55,6 +60,17 @@ static func build(parent: Node3D, features: Array, dirs: Dictionary, station: Di
 				anims.append_array(_sail_yard(parent, dirs, float(progress.get("sail_yard", 0.0))))
 			"stanford_torus":
 				anims.append_array(_stanford_torus(parent, dirs, float(progress.get("stanford_torus", 0.0))))
+			"long_breath":
+				anims.append_array(_long_breath(parent, Vector3(-5200.0, -1800.0, -8400.0), float(progress.get("long_breath", 0.0))))
+			"megasatellite":
+				anims.append_array(_megasatellite(parent, dirs, float(progress.get("megasatellite", 0.0))))
+			"ice_berg":
+				anims.append_array(_ice_berg(parent, Vector3(2600.0, -900.0, -4200.0), 1.0, true))
+			"long_breath_dock":
+				# Its own port is the hub at the bubble's pole: the bubble lies straight
+				# beyond the docking face, as the approach looks.
+				var hub_l := float(station.get("hub_length", 120.0))
+				anims.append_array(_long_breath(parent, Vector3(0.0, 0.0, -hub_l * 0.5 - LONG_BREATH_R - 20.0), 1.0))
 	return anims
 
 
@@ -806,3 +822,167 @@ static func _stanford_torus(parent: Node3D, dirs: Dictionary, p: float) -> Array
 	_solid_sphere(parent, centre, 70.0)
 	return anims
 
+
+# --- The Long Breath, a bubble of air you fly in -------------------------------------
+
+## The bubble's radius (m). At half an atmosphere it holds about 2.5 million tonnes of
+## air, held in by the shell's tension, not by gravity (docs/WONDERS.md).
+const LONG_BREATH_R := 1000.0
+
+
+## The Long Breath at `centre`, built as far as `p` (0..1 over project long_breath's
+## four stages: the spindle and its lamp, the shell, first breath, gardens adrift).
+## It doesn't spin: inside there is no down, and people fly. The spindle runs along Z,
+## pole to pole, through the lamp at the centre that is its sun.
+static func _long_breath(parent: Node3D, centre: Vector3, p: float) -> Array:
+	var r := LONG_BREATH_R
+	var root := Node3D.new()
+	root.position = centre
+	parent.add_child(root)
+	var spindle_f := clampf(0.3 + p / 0.25 * 0.7, 0.3, 1.0)
+	var shell_f := clampf((p - 0.25) / 0.25, 0.0, 1.0)
+	var aired := p >= 0.5
+	var planted := clampf((p - 0.75) / 0.25, 0.0, 1.0)
+	var done := p >= 1.0
+	var carbon := _lit(Color("3a3f45"), 0.2, 0.4, 0.4)
+	# The spindle, pole to pole along Z, and the lamp at its middle.
+	root.add_child(Kit.cylinder(6.0, 2.0 * r * spindle_f, carbon, Vector3.ZERO, 12))
+	var lamp_r := 30.0 if aired else 14.0
+	root.add_child(Kit.sphere(lamp_r, Kit.glow(Color("fff1d0"), 8.0 if aired else 2.0)))
+	# The shell's frame: meridians through both poles (on Z), then latitude hoops.
+	# Kit tori lie in the XY plane (axis Z); back at the mesh's own orientation (axis
+	# Y) a hoop lies in XZ, through both poles, and a holder turned about Z fans them.
+	var meridians := int(round(12.0 * shell_f))
+	for k in meridians:
+		var holder := Node3D.new()
+		holder.rotation = Vector3(0.0, 0.0, PI * float(k) / 12.0)
+		var hoop := Kit.torus(r, 3.0, carbon, Vector3.ZERO, 96)
+		hoop.rotation = Vector3.ZERO
+		holder.add_child(hoop)
+		root.add_child(holder)
+	if shell_f >= 1.0:
+		for lat in [-0.7, -0.35, 0.0, 0.35, 0.7]:
+			root.add_child(Kit.torus(r * sqrt(1.0 - lat * lat), 2.5, carbon, Vector3(0, 0, lat * r), 96))
+	# The film itself: clear, so you see the lamp and the gardens through it, with a
+	# faint sheen once it holds air.
+	if shell_f > 0.0:
+		_solid_sphere(parent, centre, r)
+		var film := Kit.sphere(r, _haze(Color("cfe6ff"), 0.05 + 0.05 * shell_f))
+		film.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		root.add_child(film)
+	if aired:
+		var air := Kit.sphere(r * 0.985, _haze(Color("a8d4ff"), 0.07))
+		air.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		root.add_child(air)
+	# Gardens and water globes adrift round the lamp, and the hammock villages tethered
+	# to the spindle. A fixed seed: the same bubble every visit.
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 1995
+	var garden := _lit(Color("5f8f3e"), 0.5, 0.0, 1.0)
+	var water := _lit(Color("4f86b8"), 0.3, 0.6, 0.1)
+	for i in int(round(36.0 * planted)):
+		var d := Vector3(rng.randf_range(-1, 1), rng.randf_range(-1, 1), rng.randf_range(-1, 1)).normalized()
+		var at := d * rng.randf_range(r * 0.25, r * 0.75)
+		var size := rng.randf_range(12.0, 45.0)
+		root.add_child(Kit.sphere(size, garden if i % 3 else water, at))
+	for i in int(round(10.0 * planted)):
+		var z := rng.randf_range(-r * 0.7, r * 0.7)
+		root.add_child(Kit.box(Vector3(60.0, 8.0, 30.0), _lit(Color("d9c7a0"), 0.6, 0.0, 0.9), Vector3(rng.randf_range(-20.0, 20.0), 20.0, z)))
+	var anims := []
+	if not done:
+		var sparks := []
+		for i in 24:
+			var d := Vector3(rng.randf_range(-1, 1), rng.randf_range(-1, 1), rng.randf_range(-1, 1)).normalized()
+			var spark := Kit.sphere(6.0, Kit.glow(Color("cfe8ff"), 6.0), d * r * (1.0 if shell_f > 0.0 else 0.1))
+			spark.set_meta("seed", rng.randf())
+			root.add_child(spark)
+			sparks.append(spark)
+		anims.append({"kind": "flicker", "nodes": sparks})
+	return anims
+
+
+# --- A parked iceberg and its pusher ----------------------------------------------
+
+## A berg of water ice (about 24,000 t: some 30 m across, ice weighing 0.92 t a cubic
+## metre) at `centre`, a pusher bolted to its back and a quarry crawler on its face.
+## `firing`: the pusher's plume of steam, thrown off the berg's own ice as reaction
+## mass (it shuts down once the berg is parked; the title screen shows one under way).
+static func _ice_berg(parent: Node3D, centre: Vector3, scale: float, parked: bool, firing: bool = false) -> Array:
+	var root := Node3D.new()
+	root.position = centre
+	parent.add_child(root)
+	var r := 18.0 * scale
+	var ice := rock(r, Vector3(1.4, 0.9, 1.0), 4242, {"highland_colour": Color("dfe9f0"), "mare_colour": Color("aebfcc"), "relief": 0.8})
+	root.add_child(ice)
+	_solid_sphere(parent, centre, r * 1.3)
+	# The pusher, bolted on astern (-X): a frame, tanks, the reactor, and the nozzle
+	# that throws melted ice.
+	var steel := _mat(Color("6d7378"), 0.6, 0.4)
+	var frame := Kit.box(Vector3(4.0, 14.0, 14.0) * scale, steel, Vector3(-r * 1.45, 0, 0))
+	root.add_child(frame)
+	root.add_child(Kit.sphere(4.0 * scale, _mat(Color("c9a24a"), 0.85, 0.35), Vector3(-r * 1.45 - 6.0 * scale, 4.0 * scale, 0)))
+	root.add_child(Kit.sphere(4.0 * scale, _mat(Color("c9a24a"), 0.85, 0.35), Vector3(-r * 1.45 - 6.0 * scale, -4.0 * scale, 0)))
+	var nozzle := Kit.cone(1.2 * scale, 4.0 * scale, 8.0 * scale, _mat(Color("2b2f33"), 0.3, 0.6), Vector3(-r * 1.45 - 14.0 * scale, 0, 0), 16)
+	nozzle.rotation = Vector3(0, PI * 0.5, 0)
+	root.add_child(nozzle)
+	root.add_child(Kit.beacon(Color("ff3a2a"), Vector3(-r * 1.45, 8.0 * scale, 0), 0.6 * scale, 2.0, 0.0))
+	if firing:
+		var plume := Kit.cone(4.0 * scale, 26.0 * scale, 140.0 * scale, _haze(Color("e8f2ff"), 0.22), Vector3(-r * 1.45 - 88.0 * scale, 0, 0), 20)
+		plume.rotation = Vector3(0, PI * 0.5, 0)
+		plume.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		root.add_child(plume)
+	if parked:
+		# A quarry crawler on the face, cutting blocks, and its work lights.
+		root.add_child(Kit.box(Vector3(6.0, 3.0, 4.0) * scale, _mat(Color("d8b02a")), Vector3(r * 0.6, r * 0.8, 0)))
+		root.add_child(Kit.beacon(Color("fff4d6"), Vector3(r * 0.6, r * 0.8 + 3.0 * scale, 0), 0.8 * scale, 1.0, 0.3))
+	return []
+
+
+# --- The Ceres megasatellite -------------------------------------------------------
+
+## The megasatellite (project ceres_megasat, after Janhunen): a frame 60 km across,
+## turned to face the Sun, with cylinders 10 km long and 1 km in radius set side by
+## side across it, one more for each stage after the frame. Each spins once every 66 s
+## (0.92 g at its hull) about its own axis, which lies in the frame's plane.
+static func _megasatellite(parent: Node3D, dirs: Dictionary, p: float) -> Array:
+	# Nothing until work starts: it is announced only once the Concord Pair is done.
+	if p <= 0.0:
+		return []
+	var sun: Vector3 = dirs.get("sun", Vector3.UP)
+	var avoid: Vector3 = dirs.get("ceres", Vector3.DOWN).normalized()
+	var d := Vector3(0.55, 0.2, -1.0).normalized()
+	if d.angle_to(avoid) < deg_to_rad(60.0):
+		d = Vector3(-0.55, 0.25, -1.0).normalized()
+	var root := _facing(sun, d * 260000.0)
+	parent.add_child(root)
+	var frame := _lit(Color("8c9196"), 0.25, 0.6, 0.5)
+	var skin := _lit(Color("d9d4c7"), 0.12, 0.2, 0.8)
+	var glow := Kit.glow(Color("cfe4c0"), 1.0)
+	var stages := 5
+	var built := int(floor(p * float(stages) + 1e-6))
+	# The frame: a rim, spokes and a cross-beam for each slot, from the first stage on.
+	var frame_f := clampf(0.2 + p * float(stages) * 0.8, 0.2, 1.0)
+	root.add_child(Kit.torus(30000.0, 300.0, frame, Vector3.ZERO, 192))
+	for k in int(round(8.0 * frame_f)):
+		var holder := Node3D.new()
+		holder.rotation.z = TAU * float(k) / 8.0
+		holder.add_child(Kit.box(Vector3(30000.0, 200.0, 200.0), frame, Vector3(15000.0, 0, 0)))
+		root.add_child(holder)
+	var anims := []
+	var rate := TAU / 66.0
+	for i in maxi(built - 1, 0):
+		# Side by side across the frame, axes along its Y.
+		var holder := Node3D.new()
+		holder.position = Vector3(-9000.0 + 6000.0 * float(i), 0.0, 0.0)
+		holder.rotation = Vector3(PI * 0.5, 0.0, 0.0)
+		root.add_child(holder)
+		var rotor := Node3D.new()
+		holder.add_child(rotor)
+		rotor.add_child(Kit.cylinder(1000.0, 10000.0, skin, Vector3.ZERO, 32))
+		for w in 3:
+			var stripe := Node3D.new()
+			stripe.rotation.z = TAU * float(w) / 3.0
+			stripe.add_child(Kit.box(Vector3(30.0, 260.0, 9200.0), glow, Vector3(1001.0, 0, 0)))
+			rotor.add_child(stripe)
+		anims.append({"kind": "spin", "node": rotor, "rate": rate})
+	return anims
