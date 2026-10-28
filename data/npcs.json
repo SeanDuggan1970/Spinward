@@ -1118,6 +1118,42 @@
 				"{name}: \"Everything's out and talking. Free as anything. Turning for {to}; hurry the clock along if you like, I'll keep the view.\"",
 				"{name}: \"Dish locked on, panels drinking sunlight. I could do this all day. Actually, I'm about to. Off to {to}.\""
 			]
+		},
+		"copilot_dock": {
+			"_note": "The co-pilot flies you in (view/flight/flight_scene.gd _copilot): taking the approach, holding for traffic, the bay given to us, matching spin, capture; 'praise' when you flew it yourself; 'yours' and 'mine' when the controls change hands (K). {name} is the co-pilot, {port} the port. One line per moment, picked by hashing the approach.",
+			"take": [
+				"{name}: \"I've got this one. I'm qualified, I've read the manual, and I wrote some of it. Enjoy the view.\"",
+				"{name}: \"Approach to {port} is mine. Sit back. I'll narrate if it gets exciting, and it won't, because I'm good.\"",
+				"{name}: \"Taking us in to {port}. You watch the station, I'll watch everything else.\""
+			],
+			"hold": [
+				"{name}: \"Holding for traffic. Somebody's ahead of us. I'm being patient. Look at me, being patient.\"",
+				"{name}: \"Parking it at the hold. {port} has a queue. We are a well-behaved ship.\""
+			],
+			"cleared": [
+				"{name}: \"That's our bay. Doors are opening for us. I love this part.\"",
+				"{name}: \"Cleared in. Lining up on the axis, nice and square.\""
+			],
+			"spin": [
+				"{name}: \"Matching their spin now. The whole station's turning and so are we. Don't think about it too hard.\"",
+				"{name}: \"Rolling with {port}. A little puff here, a little puff there.\""
+			],
+			"capture": [
+				"{name}: \"Capture. Clamps are on. Welcome to {port}, everyone.\"",
+				"{name}: \"And we're in. Textbook. I'd like that noted in the textbook.\""
+			],
+			"praise": [
+				"{name}: \"Capture. Lovely flying. I'd have been a hair quicker, but lovely.\"",
+				"{name}: \"Clamps on. You flew that beautifully. I only flinched twice.\""
+			],
+			"yours": [
+				"{name}: \"Your ship. I'll keep an eye on the numbers and say nothing. Probably.\"",
+				"{name}: \"You have control. Gently does it.\""
+			],
+			"mine": [
+				"{name}: \"I have control. Relax, I've got her.\"",
+				"{name}: \"Mine again. Thank you. I was getting twitchy.\""
+			]
 		}
 	}
 }

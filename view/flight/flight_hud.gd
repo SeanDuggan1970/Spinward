@@ -86,6 +86,11 @@ func _draw() -> void:
 		return
 	var w := size.x
 	var h := size.y
+	if flight.view_mode == "outside" and not flight.wrecked:
+		_draw_outside(w, h)
+		if show_keys:
+			_draw_keys(w)
+		return
 	var quads: Dictionary
 	var canvas: Dictionary
 	var sill := PackedVector2Array()
@@ -116,6 +121,20 @@ func _draw() -> void:
 		_annunciators(_g)
 	if show_keys:
 		_draw_keys(w)
+
+
+## The outside view: the picture, with a slim strip of what matters along the bottom.
+func _draw_outside(w: float, h: float) -> void:
+	var top := h - 34.0
+	draw_rect(Rect2(0, top, w, 34.0), Color(0.02, 0.03, 0.035, 0.6))
+	var r: Dictionary = flight.readout
+	var who := "CO-PILOT FLYING" if flight.computer else "YOU HAVE CONTROL"
+	var left := "%s  ·  %s  ·  RANGE %s  ·  CLOSING %.1f m/s" % [flight.shot_label, who, _range_text(float(r["range"])), float(r["closing"])]
+	draw_string(_font, Vector2(16, top + 22), left, HORIZONTAL_ALIGNMENT_LEFT, w * 0.6, 13, Color(UI.TEXT, 0.9))
+	var k := Bindings.key_of
+	var right := "%s %s   %s view   %s keys" % [k.call("flight_computer"), "take the controls" if flight.computer else "hand to the co-pilot", k.call("flight_view"), k.call("flight_keys")]
+	draw_string(_font, Vector2(w - 16 - 420, top + 22), right, HORIZONTAL_ALIGNMENT_RIGHT, 420, 13, Color(UI.TEXT, 0.7))
+	_slots = {"ticker": Rect2(16, top - 66, 760, 54), "notices": Rect2(w - 460, top - 196, 440, 180)}
 
 
 # --- Head-up symbology ------------------------------------------------------------------
@@ -239,7 +258,7 @@ func _page_approach(g) -> void:
 	_axis_display(g, Vector2(W - 62, 76), 46.0, gd)
 	g.soft_keys([["Z", "ASSIST " + _assist_short(r["assist"]), AV.GREEN if r["assist"] != "manual" else AV.AMBER],
 		["V", "SPIN " + ("ON" if r["spin_match"] else "OFF"), AV.GREEN if r["spin_match"] else AV.GREY],
-		["K", "DOCK " + ("ON" if flight.computer else ("--" if not ShipStats.has_docking_computer(flight.sim.state.ship, flight.sim.data) else "OFF")), AV.GREEN if flight.computer else AV.GREY],
+		["K", "COPILOT " + ("ON" if flight.computer else "OFF"), AV.GREEN if flight.computer else AV.GREY],
 		["X", "BRAKE", AV.GREY], ["S", "BACK", AV.GREY]])
 
 
@@ -422,7 +441,7 @@ func _page_scanner(g) -> void:
 	var warn_t := minf(worst_t, rock_s)
 	if warn_t < THREAT_S and (warn_t >= 6.0 or fmod(flight.clock, 0.6) < 0.4):
 		g.text(Vector2(W * 0.5, H - 26), "CLOSING CONTACT  %.1f s" % warn_t, 12, AV.RED if warn_t < 6.0 else AV.AMBER, 0)
-	g.soft_keys([["G", "RNG " + _range_text(range_m).replace(".0 km", " km"), AV.CYAN], ["C", "VIEW " + ("CHASE" if flight.view_mode == "cockpit" else "DECK"), AV.GREY],
+	g.soft_keys([["G", "RNG " + _range_text(range_m).replace(".0 km", " km"), AV.CYAN], ["C", "VIEW " + {"cockpit": "CHASE", "chase": "OUTSIDE"}.get(flight.view_mode, "DECK"), AV.GREY],
 		[], ["H", "KEYS", AV.GREY], ["T", "TUG", AV.GREY]])
 
 
@@ -446,7 +465,7 @@ func _annunciators(g) -> void:
 	var right := [
 		["CAPTURE", AV.GREEN if _all_ok() and r["range"] < 60.0 else 0],
 		["SPIN MATCH", (AV.GREEN if r["range"] < 400.0 else AV.CYAN) if spin_live else 0],
-		["DOCK COMP", AV.GREEN if flight.computer else 0],
+		["CO-PILOT", AV.GREEN if flight.computer else 0],
 		["ASSIST " + _assist_short(r["assist"]), AV.GREEN if r["assist"] != "manual" else AV.AMBER],
 		["BOOST", AV.CYAN if ctl.get("boost", false) else 0],
 		["BRAKE", AV.CYAN if ctl.get("brake", false) or (r["assist"] == "full" and ctl.get("thrust", Vector3.ONE) == Vector3.ZERO and r["speed"] > 0.02) else 0],
@@ -468,7 +487,7 @@ func _draw_keys(w: float) -> void:
 	var k := Bindings.key_of
 	var lines := ["%s/%s thrust   %s/%s strafe   %s/%s up/down   %s boost   %s brake" % [k.call("flight_forward"), k.call("flight_back"), k.call("flight_strafe_left"), k.call("flight_strafe_right"), k.call("flight_up"), k.call("flight_down"), k.call("flight_boost"), k.call("flight_brake")],
 		"%s/%s pitch   %s/%s yaw   %s/%s roll   %s assist   %s spin match" % [k.call("flight_pitch_up"), k.call("flight_pitch_down"), k.call("flight_yaw_left"), k.call("flight_yaw_right"), k.call("flight_roll_left"), k.call("flight_roll_right"), k.call("flight_assist"), k.call("flight_spin_match")],
-		"%s scanner range   %s cockpit/chase   %s docking computer   %s pause" % [k.call("flight_scanner"), k.call("flight_view"), k.call("flight_computer"), k.call("pause")],
+		"%s scanner range   %s cockpit/chase/outside   %s co-pilot flies   %s pause" % [k.call("flight_scanner"), k.call("flight_view"), k.call("flight_computer"), k.call("pause")],
 		"%s tug (%d cr, on credit if you are broke)   %s hide keys   %s all controls" % [k.call("flight_tug"), int(flight.tune_dock["auto_dock_fee"]), k.call("flight_keys"), k.call("controls_page")]]
 	var y := 140.0
 	draw_rect(Rect2(w * 0.5 - 312, y - 16, 624, 18 * lines.size() + 8), Color(0.02, 0.03, 0.035, 0.6))

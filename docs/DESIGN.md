@@ -961,13 +961,24 @@ Ships fly into a station instead of nosing up to a collar on a small hub (`view/
   - **Clamshell** at the yards and working ports: two leaves hinged top and bottom, folding outward.
   - **Sliding** elsewhere: two leaves running apart in tracks.
 - **Clearance:** traffic control clears the ship 4 s into the docking scene, and the doors take 12 s to open, with amber lamps turning while they move. Once the whole ship is inside, they close behind it.
-  - The co-pilot and the docking computer hold 40 m short of the mouth until the doors are open.
+  - The co-pilot holds 40 m short of the mouth until the doors are open.
 - **Collisions:**
   - Shut doors are solid.
   - Inside, the tunnel wall and the back wall hold the ship, and doors shut behind it hold it in.
   - The ship's body probe shrinks to its stowed radius as its panels fold (see "Panels that fold for docking"). That radius is at most 10 m (a deep freighter), against the tunnel's 16 m.
 - **Too big for the bay:** a ship whose stowed radius plus 3 m won't go in berths on a collar on the shut doors. Only the sail freighters are that big, and they never dock in the flight scene.
 - Only the view changed: the sim never sees the bay.
+
+## The co-pilot docks (Oct 2026)
+
+Sean's direction (2026-10-28): the co-pilot should dock the ship as it undocks it, by default. It knows what it's qualified for, so it assumes you want it to fly; the player watches from outside, as on the way out, and enjoys the spectacle.
+
+- **Who flies:** the co-pilot takes every approach (`view/flight/autopilot.gd`, the same controls a player has). K hands you the controls and back. A setting on the controls page (F1) turns it off for good (`view/flight/flight_prefs.gd`, saved in `user://settings.cfg`).
+- **The docking computer** is no longer needed to hand over. Fitted, it lets the co-pilot close faster: without one it closes at `balance.docking.copilot_unaided_mult` (0.7) of the speed.
+- **The outside view** (`view_mode` "outside", `balance.flight.copilot_view`): the departure's director style. It cuts every 9 s between chase, orbit, fly-past and a shot from the hub's rim looking back down the axis. Close in, it waits inside the bay near the back wall, turning with the station, to watch the ship come through the doors (beside the port if the ship is too big for the bay). C cycles cockpit, chase and outside. A slim strip along the bottom keeps the range, the closing speed and who is flying.
+- **Talk:** the co-pilot talks you in on the comms (`data/npcs.json` chatter.copilot_dock): taking the approach, holding for traffic, the bay given to us, matching spin, capture. It also praises your flying when you dock yourself.
+- **Thrusters you can see** (`view/flight/rcs_jets.gd`, shared): puffs against every push and turn in the docking scene; steady pulses toward the nose while backing out of a port, from any port, not just a bay we fit; and the pattern's ships puff as they ease in and back out. Puffs scale with the ship (a deep freighter's are about 2 m).
+- **Scripted shoots** (tours, gallery, promo) open approaches in the cockpit with the player flying, as before. The tour adds the co-pilot's outside view on the approach and into the bay.
 
 ## Silence outside (Oct 2026)
 

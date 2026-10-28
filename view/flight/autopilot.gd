@@ -1,6 +1,8 @@
 ## A docking pilot that flies with the same controls a player has (see
 ## FlightScene.read_controls): thrusters and turn rates only, no teleporting.
-## Used to prove approaches are flyable, and as the basis of a docking computer.
+## The co-pilot flies with it (on by default), and it proves approaches are flyable.
+## Without a docking computer fitted the co-pilot closes more cautiously
+## (balance.docking.copilot_unaided_mult).
 ##
 ## Technique, as you would teach a new pilot:
 ##   1. Turn the nose to point straight down the station's axis (-Z).
@@ -10,6 +12,8 @@
 ##      under 1 m/s for the last 20 m.
 ##   4. Let spin match roll you with the port, so the slot is keyed at capture.
 extends RefCounted
+
+const ShipStats := preload("res://sim/ship_stats.gd")
 
 
 static func controls(flight) -> Dictionary:
@@ -30,7 +34,8 @@ static func controls(flight) -> Dictionary:
 	if lateral_v.length() > 3.0:
 		lateral_v = lateral_v.normalized() * 3.0
 	var on_axis := offset.length() < maxf(1.5, along * 0.08)
-	var closing := clampf(along * 0.02, limit * 0.5, 6.0) if on_axis else 0.0
+	var pace := 1.0 if ShipStats.has_docking_computer(flight.sim.state.ship, flight.sim.data) else float(flight.tune_dock.get("copilot_unaided_mult", 1.0))
+	var closing := clampf(along * 0.02 * pace, limit * 0.5, 6.0 * pace) if on_axis else 0.0
 	if along < 25.0:
 		closing = minf(closing, limit * 0.6)
 	# A docking bay: hold short of the mouth until it's ours and its doors are open

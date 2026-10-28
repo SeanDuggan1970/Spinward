@@ -14,8 +14,13 @@ const Livery := preload("res://view/flight/livery.gd")
 const ShipRig := preload("res://view/flight/ship_rig.gd")
 const Kit := preload("res://view/flight/kit.gd")
 const Bay := preload("res://view/flight/bay.gd")
+const RcsJets := preload("res://view/flight/rcs_jets.gd")
 ## Seconds a ship leaving takes to slide sideways off the axis to the lanes.
 const PEEL_ASIDE_S := 25.0
+## A pattern ship's thrusters fire while it speeds up or slows down by more than this
+## (m/s^2), a pulse every JET_EVERY_S (real seconds).
+const JET_ACCEL := 0.02
+const JET_EVERY_S := 0.45
 
 var sim
 var place: String
@@ -31,6 +36,8 @@ var held: Dictionary = {}
 ## Movements seen so far (key -> movement), newest schedule.
 var known: Dictionary = {}
 var _synced := -INF
+## The pattern ships' thruster plumes (rcs_jets.gd).
+var jets
 
 
 func _init(owner_sim, place_id: String, station_model: Dictionary, holder: Node3D) -> void:
@@ -123,7 +130,7 @@ func sync(t: float) -> Array:
 		var fits: bool = not bay.is_empty() and ShipRig.stowed_radius(model) + float(sim.data.balance["bays"]["clearance_m"]) <= float(bay["r"])
 		ShipRig.set_fold(model["rig"], 1.0, true)
 		ships[k] = {"m": m, "node": node, "ship": node, "rig": model["rig"], "radius": float(model["radius"]), "nose_z": float(model["nose_z"]),
-			"fits": fits, "d": INF, "layer": 1, "name": w["name"]}
+			"fits": fits, "d": INF, "layer": 1, "name": w["name"], "length": float(model["length"]), "v": Vector3.ZERO, "jet_t": 0.0}
 	return list
 
 
@@ -279,6 +286,30 @@ func update(t: float, dt: float, spin_angle: float, sun: Vector3, pilot_d := INF
 				(g as GeometryInstance3D).layers = layer
 		ShipRig.set_fold(e["rig"], fold, true)
 		ShipRig.aim(e["rig"], node.basis, sun, -node.position if m["kind"] == "in" else Vector3.BACK * 1.0e6, dt)
+		_thrusters(e, pos, t)
+	if jets != null:
+		jets.update()
+
+
+## A pattern ship easing in or backing out works its thrusters: pulses against its
+## change of speed, from the quads at the end the gas blows toward.
+func _thrusters(e: Dictionary, pos: Vector3, t: float) -> void:
+	if e.has("t_prev") and t - float(e["t_prev"]) > 1e-3:
+		var gap := t - float(e["t_prev"])
+		var v := (pos - (e["p_prev"] as Vector3)) / gap
+		var a := (v - (e["v"] as Vector3)) / gap
+		var known_v: bool = e.get("v_ok", false)
+		e["v"] = v
+		e["v_ok"] = true
+		var now := Time.get_ticks_msec() / 1000.0
+		if known_v and a.length() > JET_ACCEL and now >= float(e["jet_t"]) and is_instance_valid(parent) and parent.is_inside_tree():
+			if jets == null:
+				jets = RcsJets.new(parent, 24)
+			e["jet_t"] = now + JET_EVERY_S
+			var length := float(e["length"])
+			jets.push(e["rig"], e["node"], Vector3(0, 0, float(e["nose_z"]) + length * 0.5), length, parent.global_basis * a, RcsJets.size_for(length), 3)
+	e["t_prev"] = t
+	e["p_prev"] = pos
 
 
 static func _ease(x: float) -> float:
@@ -287,6 +318,8 @@ static func _ease(x: float) -> float:
 
 
 func clear() -> void:
+	if jets != null:
+		jets.clear()
 	for k in ships:
 		ships[k]["node"].queue_free()
 	ships.clear()

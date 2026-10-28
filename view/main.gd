@@ -32,6 +32,9 @@ const COMMS_KEEP := 40
 
 const QUICKSAVE := "user://quicksave.json"
 
+## A scripted shoot (tours, gallery, promo): approaches open in the cockpit with you at
+## the controls, as they always were, unless a shot asks for the co-pilot.
+var scripted_flight := false
 var sim: Sim
 var _mode := ""
 var _screen: Node
@@ -816,6 +819,9 @@ func _sync_mode() -> void:
 		"approach", "lifeboat":
 			# 3D renders in the root viewport underneath all 2D; its HUD sits in this layer.
 			_screen = FlightScene.new(sim)
+			if scripted_flight:
+				_screen.computer = false
+				_screen.view_mode = "cockpit"
 			_screen.radio.connect(_radio_line)
 			_layer.add_child(_screen)
 			_fade_in(0.7)
@@ -1034,6 +1040,7 @@ func _dock_trial() -> void:
 
 ## Windowed screenshot tour for visual checks: station, map, flight.
 func _tour(dir: String) -> void:
+	scripted_flight = true
 	DirAccess.make_dir_recursive_absolute(dir)
 	show_title()
 	for _i in 200:
@@ -1195,11 +1202,26 @@ func _tour(dir: String) -> void:
 		for _i in 10:
 			await get_tree().process_frame
 		_shot(dir + "/6c-flight-traffic-cockpit.png")
+		# The co-pilot flying, from outside: the director's cameras on the approach,
+		# then from inside the bay as she comes in.
+		held.computer = true
+		held.view_mode = "outside"
+		held.shot = ""
+		for _i in 20:
+			await get_tree().process_frame
+		_shot(dir + "/6d-flight-outside.png")
+		held.ship_node.position = Vector3(0, 0, float(held.station["bay"]["z_mouth"]) + 30.0 - held.nose_z)
+		held.tc["cleared"] = true
+		held.shot = ""
+		for _i in 20:
+			await get_tree().process_frame
+		_shot(dir + "/6e-flight-into-bay.png")
 	_quit()
 
 
 ## Windowed: every attract-screen shot, captured mid-shot.
 func _title_tour(dir: String) -> void:
+	scripted_flight = true
 	DirAccess.make_dir_recursive_absolute(dir)
 	show_title()
 	for shot in TitleScreen.SHOTS:
@@ -1216,6 +1238,7 @@ func _title_tour(dir: String) -> void:
 
 ## Windowed: a descent onto Eros and Psyche on autopilot, captured on the way down.
 func _landing_tour(dir: String) -> void:
+	scripted_flight = true
 	DirAccess.make_dir_recursive_absolute(dir)
 	for _i in 3:
 		await get_tree().process_frame
@@ -1241,6 +1264,7 @@ func _landing_tour(dir: String) -> void:
 
 ## Windowed: on site at the derelict Ishikawa Maru and at Eros, before and during work.
 func _site_tour(dir: String) -> void:
+	scripted_flight = true
 	DirAccess.make_dir_recursive_absolute(dir)
 	var s = sim.state
 	s.ship["modules"]["avionics.0"] = "survey_pod"
@@ -1269,6 +1293,7 @@ func _site_tour(dir: String) -> void:
 ## Ring, depart on the Express route, and capture the orbit view, map and cockpit at
 ## the start, middle and end of the voyage, then the approach to Mars.
 func _voyage_tour(dir: String) -> void:
+	scripted_flight = true
 	DirAccess.make_dir_recursive_absolute(dir)
 	const TravelSys := preload("res://sim/systems/travel_system.gd")
 	var s = sim.state
@@ -1306,6 +1331,7 @@ func _voyage_tour(dir: String) -> void:
 ## Windowed: plot Kibo Ring to Farside, take the lowest lunar flyby, and capture the
 ## run-in, the pass in the orbit view and from the cockpit, and the map.
 func _flyby_tour(dir: String) -> void:
+	scripted_flight = true
 	DirAccess.make_dir_recursive_absolute(dir)
 	const TravelSys := preload("res://sim/systems/travel_system.gd")
 	var t: float = sim.state.time_s
@@ -1336,6 +1362,7 @@ func _flyby_tour(dir: String) -> void:
 
 ## Windowed: an approach at every place, cockpit and wide shots, to check set pieces.
 func _gallery(dir: String) -> void:
+	scripted_flight = true
 	DirAccess.make_dir_recursive_absolute(dir)
 	sim.advance_game_time(12.0 * 3600.0)
 	# --only=a,b limits the shoot to those ports.
@@ -1386,6 +1413,7 @@ func _gallery(dir: String) -> void:
 ## The market with cargo aboard (`--market=<dir>`): one load bought here (sold back
 ## at a loss, red) and one bought cheap elsewhere (at a profit, green).
 func _market_shot(dir: String) -> void:
+	scripted_flight = true
 	DirAccess.make_dir_recursive_absolute(dir)
 	_notices.visible = false
 	sim.state.location = {"status": "docked", "place": "kibo_ring"}
@@ -1443,6 +1471,7 @@ func _market_shot(dir: String) -> void:
 ## Depot, the chase and station shots at moments through the departure and the
 ## arrival, then the approach scene that takes over.
 func _corridor_shots(dir: String) -> void:
+	scripted_flight = true
 	DirAccess.make_dir_recursive_absolute(dir)
 	_notices.visible = false
 	sim.state.location = {"status": "docked", "place": "kibo_ring"}
@@ -1484,6 +1513,7 @@ func _corridor_shots(dir: String) -> void:
 
 
 func _shipcam_tour(dir: String) -> void:
+	scripted_flight = true
 	DirAccess.make_dir_recursive_absolute(dir)
 	_notices.visible = false
 	sim.state.location = {"status": "docked", "place": "kibo_ring"}
@@ -1570,6 +1600,7 @@ func _shipcam_tour(dir: String) -> void:
 ## overlay (two moments each), then gameplay: cockpit approaches, a ribbon ride, the
 ## station screen, the map in transit and a rock strike. Notices are hidden.
 func _promo(dir: String) -> void:
+	scripted_flight = true
 	DirAccess.make_dir_recursive_absolute(dir)
 	_notices.visible = false
 	show_title()
@@ -1740,6 +1771,7 @@ func _promo_ship(dir: String, quit_after: bool) -> void:
 
 ## Windowed: the Kestrel standing on the Moon, from all round and close in on a leg.
 func _kestrel_tour(dir: String) -> void:
+	scripted_flight = true
 	DirAccess.make_dir_recursive_absolute(dir)
 	sim.state.paused = true
 	_sync_mode()
@@ -1799,6 +1831,7 @@ func _kestrel_tour(dir: String) -> void:
 ## Windowed: at Psyche Claims, nudge into a rock at 5 m/s (damage, sparks), then hit
 ## the station at 16 m/s (the wreck and the lifeboat), shooting each.
 func _crash_tour(dir: String) -> void:
+	scripted_flight = true
 	DirAccess.make_dir_recursive_absolute(dir)
 	sim.state.location = {"status": "approach", "place": "psyche_claims"}
 	_mode = ""
@@ -1860,6 +1893,7 @@ func _crash_tour(dir: String) -> void:
 ## shooting the cab view on the way and the town at
 ## the bottom, then ride back up.
 func _ride_tour(dir: String) -> void:
+	scripted_flight = true
 	DirAccess.make_dir_recursive_absolute(dir)
 	for id in sim.data.projects:
 		sim.state.projects[id]["done"] = true

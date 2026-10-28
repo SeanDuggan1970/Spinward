@@ -27,6 +27,10 @@ const FlightDeck := preload("res://view/flight/flight_deck.gd")
 const Spin := preload("res://sim/spin.gd")
 const Traffic := preload("res://sim/traffic.gd")
 const Pattern := preload("res://view/flight/pattern.gd")
+const RcsJets := preload("res://view/flight/rcs_jets.gd")
+const Bindings := preload("res://view/bindings.gd")
+const FlightPrefs := preload("res://view/flight/flight_prefs.gd")
+const StorySystem := preload("res://sim/systems/story_system.gd")
 
 ## A line on the radio for the comms log (traffic control, other pilots, your calls).
 signal radio(text: String)
@@ -40,6 +44,8 @@ const LANE_LENGTH := 15000.0
 ## Waiting on a bay's doors, ships hold this far off the mouth.
 const BAY_HOLD_M := 40.0
 const BERTH_ANGLES := [PI * 0.5, -PI * 0.5, PI * 0.25, PI * 0.75, -PI * 0.25, -PI * 0.75]
+## The outside view (view_mode "outside") cuts between shots this often (seconds).
+const OUTSIDE_SHOT_S := 9.0
 ## The pilot sits looking a little down over the instrument panel, so the ship's nose
 ## axis (the HUD boresight) is above the middle of the view, in the middle of the
 ## windscreen.
@@ -74,7 +80,8 @@ var velocity := Vector3.ZERO
 var ang_vel := Vector3.ZERO  # local, rad/s
 var assist := "assisted"
 var spin_match := true
-## "cockpit" (first person, the default) or "chase".
+## "cockpit" (first person), "chase", or "outside" (the director's cameras, the default
+## while the co-pilot flies).
 var view_mode := "cockpit"
 var _scanner_index := 1
 var nose_z := -15.0
@@ -85,8 +92,25 @@ var bumps := 0
 ## Contacts hard enough to do damage.
 var hits := 0
 var refusals := 0
-## Docking computer engaged (K), if the ship has one fitted.
+## The co-pilot has the controls (K hands them over and back). On by default unless the
+## player turned it off (FlightPrefs); a docking computer, if fitted, makes it quicker.
 var computer := false
+## The co-pilot's moments on this approach already spoken (data/npcs.json chatter.copilot_dock).
+var _said: Dictionary = {}
+## The outside view: the shot, how long it has run, and a per-shot random.
+var shot := ""
+var shot_label := ""
+var _shot_clock := 0.0
+var _shot_seed := 0.0
+var _shot_rng := RandomNumberGenerator.new()
+## The ship's thruster plumes (rcs_jets.gd), how big they are, and when they last fired.
+var _jets
+var _jet_size := 1.0
+var _pivot := Vector3.ZERO
+var _jet_t := 0.0
+var _jet_dir := Vector3.ZERO
+var _turn_jet_t := 0.0
+var _ang_prev := Vector3.ZERO
 var message := ""
 var message_colour := Color.WHITE
 var message_until := 0.0
@@ -159,6 +183,10 @@ func _init(owner_sim) -> void:
 	tune_dock = sim.data.balance["docking"]
 	assist = tune_flight["assist_default"]
 	view_mode = tune_flight.get("default_view", "cockpit")
+	if FlightPrefs.copilot_docks():
+		computer = true
+		view_mode = tune_flight.get("copilot_view", "outside")
+	_shot_rng.seed = hash(place_id) ^ int(sim.state.time_s)
 	_scanner_index = int(tune_flight.get("scanner_default_index", 1))
 
 
@@ -179,6 +207,9 @@ func _ready() -> void:
 	# In from the transit view with the panels out; they stow for the final approach.
 	ShipRig.set_fold(_rig, 0.0, true)
 	add_child(ship_node)
+	_jets = RcsJets.new(self, 16)
+	_jet_size = RcsJets.size_for(ship_length)
+	_pivot = Vector3(0, 0, nose_z + ship_length * 0.5)
 	audio = ShipAudio.new()
 	ship_node.add_child(audio)
 	audio.setup(model)
@@ -215,6 +246,10 @@ func _ready() -> void:
 	hud.theme = UI.make_theme()
 	add_child(hud)
 	var hello := "On the corridor to %s, closing at %.0f m/s. Match the spin and bring her in." % [sim.data.places[place_id]["name"], -velocity.z]
+	if computer:
+		hello = "%s has the approach to %s. Sit back and enjoy it: %s takes the controls, %s changes the view." % [
+			StorySystem.copilot_name(sim.state, sim.data), sim.data.places[place_id]["name"], Bindings.key_of("flight_computer"), Bindings.key_of("flight_view")]
+		_copilot("take")
 	# What traffic control (or the pattern) has to say comes under it.
 	flash(hello + ("\n" + String(tc["greeting"]) if tc.has("greeting") else ""), UI.AMBER, 8.0 if tc.has("greeting") else 6.0)
 
@@ -307,7 +342,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		spin_match = not spin_match
 		flash("Spin match %s" % ("ON" if spin_match else "OFF"), UI.AMBER)
 	elif event.is_action_pressed("flight_view"):
-		view_mode = "chase" if view_mode == "cockpit" else "cockpit"
+		view_mode = {"cockpit": "chase", "chase": "outside"}.get(view_mode, "cockpit")
+		shot = ""
 	elif event.is_action_pressed("flight_scanner"):
 		_scanner_index = (_scanner_index + 1) % tune_flight["scanner_ranges_m"].size()
 		flash("Scanner range %s" % UI.km(scanner_range()) if scanner_range() >= 1000.0 else "Scanner range %d m" % int(scanner_range()), UI.AMBER, 1.5)
@@ -316,11 +352,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("flight_tug"):
 		_request_tug()
 	elif event.is_action_pressed("flight_computer"):
-		if ShipStats.has_docking_computer(sim.state.ship, sim.data):
-			computer = not computer
-			flash("Docking computer %s" % ("engaged: hands off" if computer else "off: you have control"), UI.AMBER)
-		else:
-			flash("No docking computer fitted (shipyards sell them)", UI.DIM)
+		computer = not computer
+		_copilot("mine" if computer else "yours", true)
+		flash("%s has the controls" % StorySystem.copilot_name(sim.state, sim.data) if computer else "You have the controls", UI.AMBER)
 
 
 func _request_tug() -> void:
@@ -356,6 +390,7 @@ func _physics_process(dt: float) -> void:
 		_sync_traffic()
 	_move_traffic(dt)
 	_run_pattern(dt)
+	_copilot_moments()
 	_move_work_craft()
 	SetPieces.animate(_set_pieces, clock)
 	# Docking: the pilot owns the roll, so the panels do what one hinge can; the dish
@@ -449,7 +484,30 @@ func _fly(dt: float) -> void:
 	if ang_vel.length() > 1e-6:
 		ship_node.global_transform.basis = (basis * Basis(ang_vel.normalized(), ang_vel.length() * dt)).orthonormalized()
 	ship_node.position += velocity * dt
+	_thrusters(thrust, braking and thrust == Vector3.ZERO, (ang_vel - _ang_prev) / maxf(dt, 1e-4), turn_accel)
+	_ang_prev = ang_vel
 	_update_readout()
+
+
+## The ship's thrusters, as they look from outside: pulses against each push (the main
+## drive takes a forward push), and bursts as a turn starts or stops.
+func _thrusters(thrust: Vector3, braking: bool, alpha: Vector3, turn_accel: float) -> void:
+	_jets.update()
+	var basis := ship_node.global_basis
+	var push := basis * Vector3(thrust.x, thrust.y, maxf(thrust.z, 0.0))
+	if braking and velocity.length() > 0.05:
+		push = -velocity.normalized()
+	if push.length() > 0.05:
+		var dir := push.normalized()
+		if clock >= _jet_t or dir.dot(_jet_dir) < 0.8:
+			_jet_t = clock + 0.3
+			_jet_dir = dir
+			_jets.push(_rig, ship_node, _pivot, ship_length, push, _jet_size, 4)
+	else:
+		_jet_dir = Vector3.ZERO
+	if alpha.length() > turn_accel * 0.3 and clock >= _turn_jet_t:
+		_turn_jet_t = clock + 0.5
+		_jets.turn(_rig, ship_node, _pivot, basis * alpha, _jet_size, 4)
 
 
 func _nose() -> Vector3:
@@ -619,6 +677,7 @@ func _check_docking() -> void:
 		return
 	if readout["ok_speed"] and readout["ok_align"] and readout["ok_roll"]:
 		var bay: Dictionary = station.get("bay", {})
+		_copilot("capture" if computer else "praise")
 		if not bay.get("cradles", []).is_empty() and bay["fits"]:
 			_start_capture(bay)
 		elif sim.apply({"type": "dock", "manual": true}) == "":
@@ -708,10 +767,91 @@ func _update_camera(dt: float) -> void:
 		deck.fit(vp.x / maxf(vp.y, 1.0))
 		deck.sync_sun(_sun_light)
 		return
+	if view_mode == "outside":
+		_outside_camera(dt)
+		return
 	camera.fov = 65.0
 	var want := t * Vector3(0, 8.0, 40.0)
 	camera.global_position = camera.global_position.lerp(want, clampf(dt * 4.0, 0.0, 1.0)) if dt < 1.0 else want
 	camera.look_at(t * Vector3(0, 2.0, -30.0), t.basis.y)
+
+
+## The outside view: a director's cut, like the departure's, to watch the approach.
+## Shots change every OUTSIDE_SHOT_S; near the station the camera waits on the port
+## (inside the bay, turning with the station, if the ship fits one) to watch it come in.
+func _outside_camera(dt: float) -> void:
+	var t := ship_node.global_transform
+	var B := t.basis
+	var L := ship_length
+	var centre := t * _pivot
+	var fwd := -B.z
+	var up := B.y
+	var side := B.x
+	var bay: Dictionary = station.get("bay", {})
+	var close := readout.get("range", INF) < maxf(L * 2.5, 120.0) or not _capture.is_empty()
+	_shot_clock += dt
+	if shot == "" or (_shot_clock > OUTSIDE_SHOT_S and not shot in ["bay", "port"]) or (close and not shot in ["bay", "port"]):
+		_shot_clock = 0.0
+		_shot_seed = _shot_rng.randf()
+		if close:
+			shot = "bay" if not bay.is_empty() and bay["fits"] else "port"
+		else:
+			var pool := ["chase", "orbit", "flyby", "station", "station"]
+			pool.erase(shot)
+			shot = pool[_shot_rng.randi() % pool.size()]
+		shot_label = {"chase": "CHASE", "orbit": "ORBIT", "flyby": "FLY-PAST", "station": String(sim.data.places[place_id]["name"]).to_upper(),
+			"bay": "INTO THE BAY", "port": "ON THE PORT"}[shot]
+	var f := clampf(_shot_clock / OUTSIDE_SHOT_S, 0.0, 1.0)
+	var sway := sin(_shot_clock * 0.4 + _shot_seed * 6.0)
+	var pos := centre + B * Vector3(0, L * 0.4, L * 1.6)
+	var at := centre
+	var fov := 50.0
+	var sky_up := up
+	match shot:
+		"chase":
+			# Behind and above, the station ahead past the ship.
+			pos = centre + B * Vector3(sway * L * 0.15, L * (0.32 + 0.05 * f), L * (1.55 - 0.15 * f))
+			at = centre + fwd * L * 0.9
+			fov = 48.0
+		"orbit":
+			var a := _shot_seed * TAU + _shot_clock * 0.09
+			pos = centre + (side * cos(a) + fwd * sin(a)) * L * 2.3 + up * L * (0.35 + 0.15 * sin(_shot_clock * 0.17))
+			fov = 46.0
+		"flyby":
+			# Parked off to one side ahead; the ship slides past, the camera panning with it.
+			var s1 := 1.0 if _shot_seed > 0.5 else -1.0
+			pos = centre + fwd * L * lerpf(3.2, -2.4, f) + side * s1 * L * 0.9 + up * L * 0.18
+			fov = 42.0
+		"station":
+			# Off the hub's rim, looking back out along the axis at the ship coming in.
+			var a2 := _shot_seed * TAU
+			var rim := float(station["hub_radius"]) + L * 0.6 + 10.0
+			pos = Vector3(cos(a2) * rim, sin(a2) * rim, float(station["port_z"]) + 15.0)
+			at = centre
+			fov = clampf(rad_to_deg(2.0 * atan(L * 1.4 / maxf(pos.distance_to(centre), 1.0))), 12.0, 50.0)
+			sky_up = Vector3(cos(a2), sin(a2), 0.0)
+		"bay":
+			# Inside the bay near its back wall, off the axis and turning with the
+			# station, looking out through the doors at the ship coming in.
+			var r_cam := maxf(float(bay["r"]) - 2.5, 2.0)
+			var a3 := spin_angle + 1.15 + 0.1 * _shot_seed
+			var radial := Vector3(cos(a3), sin(a3), 0.0)
+			pos = radial * r_cam + Vector3(0, 0, float(bay["z_back"]) + 3.0)
+			at = t * Vector3(0, 0, nose_z + L * 0.3)
+			fov = 62.0
+			sky_up = radial
+		"port":
+			# Beside the port, looking out at the ship's nose as it closes.
+			var a4 := spin_angle + _shot_seed * TAU
+			var r4 := maxf(float(station["hub_radius"]) * 0.9, L * 0.5)
+			pos = Vector3(cos(a4) * r4, sin(a4) * r4, float(station["port_z"]) + 6.0)
+			at = t * Vector3(0, 0, nose_z + L * 0.4)
+			fov = 55.0
+			sky_up = Vector3(cos(a4), sin(a4), 0.0)
+	camera.fov = fov
+	camera.global_position = pos
+	if pos.distance_to(at) > 1e-3:
+		camera.look_at(at, sky_up if absf((at - pos).normalized().dot(sky_up)) < 0.98 else Vector3.FORWARD)
 
 
 # --- Traffic control: the bay's pattern (sim/traffic.gd) ------------------------------
@@ -878,6 +1018,32 @@ func _pattern_d(m: Dictionary, t: float) -> float:
 func _call_sign() -> String:
 	var name: String = sim.state.ship.get("name", "")
 	return name if name != "" else "inbound ship"
+
+
+## The co-pilot's word for a moment of the approach (data/npcs.json chatter.copilot_dock),
+## once each unless `again`; picked by hashing the approach.
+func _copilot(key: String, again := false) -> void:
+	if (_said.has(key) and not again) or not sim.data.npcs["chatter"].has("copilot_dock"):
+		return
+	_said[key] = true
+	var options: Array = sim.data.npcs["chatter"]["copilot_dock"].get(key, [])
+	if options.is_empty():
+		return
+	var template: String = options[absi(hash(place_id + key + str(int(sim.state.time_s / 60.0)))) % options.size()]
+	_radio(template.format({"name": StorySystem.copilot_name(sim.state, sim.data), "port": sim.data.places[place_id]["name"]}))
+
+
+## While the co-pilot flies: holding for traffic, the bay given to us, and matching
+## the spin for the last stretch.
+func _copilot_moments() -> void:
+	if not computer or readout.is_empty():
+		return
+	if not tc.is_empty() and not cleared() and readout["range"] < float(sim.data.balance["traffic"]["hold_m"]) + 150.0:
+		_copilot("hold")
+	if not tc.is_empty() and cleared():
+		_copilot("cleared")
+	if readout["range"] < 250.0 and spin_match:
+		_copilot("spin")
 
 
 func _radio(text: String) -> void:
@@ -1099,7 +1265,7 @@ func guidance() -> Dictionary:
 	var advised := advised_closing(along)
 	var text := ""
 	if computer:
-		text = "Docking computer has control."
+		text = "%s has the controls." % StorySystem.copilot_name(sim.state, sim.data)
 	elif not cleared() and nose.z - float(station["bay"]["z_mouth"]) < hold_short_m() + 40.0:
 		text = traffic_advice()
 	elif not bay_ready() and nose.z - float(station["bay"]["z_mouth"]) < BAY_HOLD_M + 20.0:
