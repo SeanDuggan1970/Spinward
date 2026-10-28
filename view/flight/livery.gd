@@ -24,6 +24,11 @@ static func for_ship(data, operator: String, ship_name: String, player: bool = f
 		base = lv["operators"][operator]
 		wear = clampf(float(base.get("wear", 0.4)) + rng.randf_range(-0.12, 0.12), 0.0, 1.0)
 		mismatch = clampf(float(base.get("mismatch", 0.1)) * rng.randf_range(0.5, 1.5), 0.0, 1.0)
+	elif not data.group_named(operator).is_empty():
+		# A cap's-off group flies its own colours, kept up by its members.
+		base = data.group_named(operator)["colours"]
+		wear = rng.randf_range(0.25, 0.6)
+		mismatch = rng.randf_range(0.05, 0.25)
 	else:
 		var ind: Dictionary = lv.get("independent", {})
 		var palette: Array = ind.get("palette", [{}])

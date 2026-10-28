@@ -262,6 +262,14 @@ func _market_tab(place_id: String) -> Control:
 		brow.add_child(said)
 		brow.add_child(UI.button("Buy a round", send.bind({"type": "buy_round"}), s.credits >= cost))
 		parts[1].add_child(bp[0])
+	# The cap's-off groups that call this port home: their craft are in the bay traffic.
+	var here_groups: Array = d.groups_at(place_id)
+	if not here_groups.is_empty():
+		var gp := UI.panel("WHO'S HERE")
+		for g in here_groups:
+			gp[1].add_child(UI.label(g["name"], Color(g["colours"]["accent"]).lerp(UI.TEXT, 0.4), 14))
+			gp[1].add_child(UI.label(g["creed"], UI.DIM, 12))
+		parts[1].add_child(gp[0])
 	return parts[0]
 
 

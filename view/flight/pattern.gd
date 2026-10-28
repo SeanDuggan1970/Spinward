@@ -47,7 +47,8 @@ static func key(m: Dictionary) -> String:
 
 
 ## Who is flying a movement: {name, hull, operator, ship (a ship state for Models.ship)}.
-## Local craft get a name and hull from data/npcs.json local_traffic, by hash.
+## Local craft get a name and hull from data/npcs.json local_traffic, by hash; a share
+## of them (groups traffic_share) belong to a cap's-off group that calls the port home.
 static func who(sim_ref, place_id: String, m: Dictionary) -> Dictionary:
 	if m.has("npc"):
 		for npc in sim_ref.state.npcs:
@@ -59,7 +60,16 @@ static func who(sim_ref, place_id: String, m: Dictionary) -> Dictionary:
 	var names: Array = lt["names"]
 	var hulls: Array = lt["hulls"]
 	var hull: String = hulls[(h / 7) % hulls.size()]
-	return {"name": names[h % names.size()], "hull": hull, "operator": sim_ref.data.places[place_id].get("operator", ""),
+	var craft_name: String = names[h % names.size()]
+	var operator: String = sim_ref.data.places[place_id].get("operator", "")
+	var local_groups: Array = sim_ref.data.groups_at(place_id)
+	# Rehash: neighbouring slots' string hashes differ only in their low bits.
+	var hg := absi(hash(h))
+	if not local_groups.is_empty() and float(hg % 1000) < float(sim_ref.data.groups_meta["traffic_share"]) * 1000.0:
+		var g: Dictionary = local_groups[(hg / 1000) % local_groups.size()]
+		craft_name = g["ships"][(hg / 7919) % g["ships"].size()]
+		operator = g["name"]
+	return {"name": craft_name, "hull": hull, "operator": operator,
 		"ship": {"hull": hull, "modules": sim_ref.data.ships[hull]["modules"].duplicate(), "cargo": {}, "fuel_t": 0.0}}
 
 

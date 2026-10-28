@@ -43,6 +43,11 @@ var ship_economy: Dictionary = {}
 var liveries: Dictionary = {}
 ## tip_ttl_days, verify_tolerance.
 var brokers_meta: Dictionary = {}
+## The cap's-off groups (data/groups.json): clubs, orders, clans and wild schemes that
+## call a port home. Their news joins the Spaceline at load; the view flies their craft.
+var groups: Dictionary = {}
+## news_first_day, news_every_days, traffic_share.
+var groups_meta: Dictionary = {}
 
 
 static func load_default():
@@ -73,6 +78,8 @@ func load_from(root: String) -> void:
 	ship_economy = read_json(root + "/ship_economy.json")
 	locations = places.duplicate()
 	locations.merge(sites)
+	if FileAccess.file_exists(root + "/groups.json"):
+		_load_groups(read_json(root + "/groups.json"))
 	if FileAccess.file_exists(root + "/liveries.json"):
 		liveries = read_json(root + "/liveries.json")
 	var broker_file := read_json(root + "/brokers.json")
@@ -92,6 +99,44 @@ func home_port(place: String) -> String:
 			return at
 		at = up
 	return at
+
+
+## Groups by id, and each group's piece of news as a dated Spaceline story: one every
+## news_every_days from news_first_day, in a steady mixed order. A group whose home a
+## project builds comes last, and makes the news once that place is open.
+func _load_groups(file: Dictionary) -> void:
+	groups_meta = {"news_first_day": float(file.get("news_first_day", 0.0)), "news_every_days": float(file.get("news_every_days", 5.0)),
+		"traffic_share": float(file.get("traffic_share", 0.0))}
+	var order: Array = []
+	for g in file.get("groups", []):
+		groups[g["id"]] = g
+		order.append(g["id"])
+	# Groups at a place a project builds go last: their news waits for the place anyway.
+	var key := func(id): return (1 << 40 if places.get(groups[id]["home"], {}).has("opens_with") else 0) + absi(hash("group:" + id))
+	order.sort_custom(func(a, b): return key.call(a) < key.call(b))
+	if not news.has("stories"):
+		news["stories"] = []
+	for i in order.size():
+		var g: Dictionary = groups[order[i]]
+		var story := {"id": "group_" + g["id"], "after_days": groups_meta["news_first_day"] + groups_meta["news_every_days"] * i,
+			"dateline": places.get(g["home"], {}).get("name", ""), "headline": g["news"]["headline"], "body": g["news"]["body"]}
+		var builder: String = places.get(g["home"], {}).get("opens_with", "")
+		if builder != "":
+			story["after_project"] = builder
+		news["stories"].append(story)
+
+
+## Groups that call this place home, in file order.
+func groups_at(place: String) -> Array:
+	return groups.values().filter(func(g): return g["home"] == place)
+
+
+## The group of this name, or {}: a craft's operator may be a group.
+func group_named(group_name: String) -> Dictionary:
+	for g in groups.values():
+		if g["name"] == group_name:
+			return g
+	return {}
 
 
 func read_json(path: String) -> Dictionary:
@@ -386,6 +431,23 @@ func validate() -> Array[String]:
 		for road in roads:
 			if not story.get("beats", []).any(func(b): return b.get("when", {}).get("road", "") == road):
 				problems.append("story core: no beat waits for the %s road" % road)
+	# Groups: a real home, a known lean, colours, ships and words.
+	var ops := {}
+	for id in places:
+		ops[places[id].get("operator", "")] = true
+	for id in groups:
+		var g: Dictionary = groups[id]
+		if not places.has(g.get("home", "")):
+			problems.append("group %s: unknown home %s" % [id, g.get("home", "")])
+		if not ops.has(g.get("leans", "")):
+			problems.append("group %s: leans to %s, which runs no port" % [id, g.get("leans", "")])
+		for key in ["hull", "accent"]:
+			if not Color.html_is_valid(String(g.get("colours", {}).get(key, ""))):
+				problems.append("group %s: colours.%s is not a colour" % [id, key])
+		if g.get("ships", []).is_empty() or String(g.get("creed", "")) == "" or String(g.get("news", {}).get("headline", "")) == "":
+			problems.append("group %s: needs ships, a creed and a headline" % id)
+		if ops.has(g.get("name", "")):
+			problems.append("group %s: shares a name with an operator" % id)
 	# News: stories name real places, beats and projects.
 	var beat_ids: Array = story.get("beats", []).map(func(b): return b.get("id", ""))
 	var story_ids := {}

@@ -110,6 +110,7 @@ func _initialize() -> void:
 	test_terminator()
 	test_berg_resupply()
 	test_berg_sites()
+	test_groups()
 	test_shuttle_view_profile()
 	test_edge_cases()
 	test_power_budget()
@@ -1689,7 +1690,8 @@ func test_news_in_depth() -> void:
 	var g := gated.state
 	g.started_t -= 400.0 * DAY
 	gated.advance_game_time(3600.0)
-	var waiting: int = d.news["stories"].filter(func(st): return st.has("after_beat") or float(st.get("after_days", 0)) > 400.0).size()
+	var unbuilt := func(st): return st.has("after_project") and not g.projects.get(st["after_project"], {}).get("done", false)
+	var waiting: int = d.news["stories"].filter(func(st): return st.has("after_beat") or float(st.get("after_days", 0)) > 400.0 or unbuilt.call(st)).size()
 	check(g.news["posted"].size() >= d.news["stories"].size() - waiting, "Four hundred days on, every story due by then that is not waiting on a beat is out")
 	for id in ["farside_silence", "hello_back", "first_delegate"]:
 		check(not id in g.news["posted"], "%s still waits for its beat" % id)
@@ -2475,6 +2477,33 @@ func test_terminator() -> void:
 	check(sim.apply({"type": "take_shuttle", "to": "terminator"}) == "", "then the lander flies there")
 	sim.advance_game_time(float(s.location["arrive_t"]) - s.time_s + 1.0)
 	check(s.location == {"status": "docked", "place": "terminator"}, "Aboard Terminator")
+
+
+## The cap's-off groups (data/groups.json): each has a home, a creed and its news, which
+## runs a piece at a time; a group at a place a project builds waits for the place.
+func test_groups() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	check(d.groups.size() >= 30, "Thirty-odd cap's-off groups (%d)" % d.groups.size())
+	check(d.validate().filter(func(p): return p.begins_with("group")).is_empty(), "Every group has a real home, a lean, colours and words")
+	var stories: Array = d.news["stories"].filter(func(st): return String(st["id"]).begins_with("group_"))
+	check(stories.size() == d.groups.size(), "Each group has one story in the Spaceline (%d)" % stories.size())
+	check(not d.groups_at("kibo_ring").is_empty() and d.group_named("The Firsts Club")["id"] == "firsts_club", "Kibo Ring is home to the Firsts Club")
+	var gated: Array = stories.filter(func(st): return st.has("after_project"))
+	check(gated.size() == 6 and gated.all(func(st): return float(st["after_days"]) > 0.0), "Six groups live where a project has yet to build, and their news comes later (%d)" % gated.size())
+	var on_day_one: int = s.news["posted"].filter(func(id): return String(id).begins_with("group_")).size()
+	check(on_day_one >= 1 and on_day_one <= 3, "A group or two is already in the news on day one (%d)" % on_day_one)
+	sim.state.time_scale = 1.0e5
+	for _k in 30:
+		sim.advance_game_time(5.0 * DAY)
+	for st in stories:
+		var done: bool = not st.has("after_project") or s.projects[st["after_project"]].get("done", false)
+		check((st["id"] in s.news["posted"]) == done, "%s: in the news after 150 days if its home is open (%s)" % [st["id"], done])
+	# Waiting for Hektor Reach: finishing the project lets its groups' news through.
+	s.projects["hektor_reach"]["done"] = true
+	sim.advance_game_time(3600.0)
+	check("group_dark_lanes" in s.news["posted"] and "group_garden_mind" in s.news["posted"], "Once Hektor Reach is open, its groups make the news")
 
 
 func test_berg_sites() -> void:
