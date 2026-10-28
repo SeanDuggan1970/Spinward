@@ -907,7 +907,8 @@ static func _long_breath(parent: Node3D, centre: Vector3, p: float) -> Array:
 ## metre) at `centre`, a pusher bolted to its back and a quarry crawler on its face.
 ## `firing`: the pusher's plume of steam, thrown off the berg's own ice as reaction
 ## mass (it shuts down once the berg is parked; the title screen shows one under way).
-static func _ice_berg(parent: Node3D, centre: Vector3, scale: float, parked: bool, firing: bool = false) -> Array:
+## `crewed`: the cabin of the crew who ride it in (a berg met in transit).
+static func _ice_berg(parent: Node3D, centre: Vector3, scale: float, parked: bool, firing: bool = false, crewed: bool = false) -> Array:
 	var root := Node3D.new()
 	root.position = centre
 	parent.add_child(root)
@@ -931,6 +932,12 @@ static func _ice_berg(parent: Node3D, centre: Vector3, scale: float, parked: boo
 		plume.rotation = Vector3(0, PI * 0.5, 0)
 		plume.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		root.add_child(plume)
+	if crewed:
+		# The crew's cabin, bolted to the pusher's frame, its windows lit, and the
+		# drum they spin up for an hour a day.
+		root.add_child(Kit.box(Vector3(10.0, 6.0, 8.0) * scale, _mat(Color("d9d4c7"), 0.2, 0.7), Vector3(-r * 1.45, 11.0 * scale, 0)))
+		root.add_child(Kit.box(Vector3(7.0, 1.2, 0.3) * scale, Kit.glow(Color("ffd9a0"), 1.4), Vector3(-r * 1.45, 11.5 * scale, 4.1 * scale)))
+		root.add_child(Kit.cylinder(3.0 * scale, 2.0 * scale, _mat(Color("8c9196"), 0.4, 0.5), Vector3(-r * 1.45, 16.0 * scale, 0), 16))
 	if parked:
 		# A quarry crawler on the face, cutting blocks, and its work lights.
 		root.add_child(Kit.box(Vector3(6.0, 3.0, 4.0) * scale, _mat(Color("d8b02a")), Vector3(r * 0.6, r * 0.8, 0)))

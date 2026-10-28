@@ -79,5 +79,23 @@ func _run() -> void:
 		var tab := screen._tabs.get_node("Departures")
 		check(not tab.find_children("*", "Button", true, false).any(func(button): return button.text == "Plot routes"), "%s still requires an elevator ride back" % place)
 	screen.free()
+	# Meeting a berg in transit: on site, the berg and its pusher are there to see.
+	var SiteView := load("res://view/site_view.gd")
+	for site in sim.data.sites:
+		if sim.data.sites[site].get("kind", "") != "berg":
+			continue
+		sim.state.location = {"status": "on_site", "place": site}
+		var view = SiteView.new(sim)
+		root.add_child(view)
+		await process_frame
+		var meshes: int = view.find_children("*", "MeshInstance3D", true, false).size()
+		var empty = SiteView.new(sim)
+		empty.site = "eros_survey"
+		root.add_child(empty)
+		await process_frame
+		var bare: int = empty.find_children("*", "MeshInstance3D", true, false).size()
+		check(meshes > bare + 8, "At %s the berg, its pusher and the crew's cabin are in view (%d meshes, %d at a survey)" % [site, meshes, bare])
+		view.free()
+		empty.free()
 	print("%d checks, %d failures (site departures)" % [checks, failures])
 	quit(1 if failures > 0 else 0)

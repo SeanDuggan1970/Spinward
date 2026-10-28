@@ -1,5 +1,7 @@
 ## The view on site: the worlds in the sky from where you are (true angular sizes),
-## and for a derelict, the wreck itself tumbling slowly a few hundred metres off.
+## and for a derelict, the wreck itself tumbling slowly a few hundred metres off; for a
+## berg in transit, the berg and its pusher, still firing, with the crew's cabin on its
+## frame (you have matched its course to be here).
 ## View-only; the site screen (station_screen.gd in site mode) sits on top.
 extends Node3D
 
@@ -8,6 +10,7 @@ const Kit := preload("res://view/flight/kit.gd")
 const SkyKit := preload("res://view/flight/sky.gd")
 const Models := preload("res://view/flight/models.gd")
 const Livery := preload("res://view/flight/livery.gd")
+const SetPieces := preload("res://view/flight/set_pieces.gd")
 
 const SKY_DISTANCE := 60000.0
 
@@ -61,6 +64,8 @@ func _ready() -> void:
 			plume.visible = false
 		_wreck.position = _view * Vector3(34.0, -12.0, -70.0)
 		add_child(_wreck)
+	if sim.data.sites[site].get("kind", "") == "berg":
+		SetPieces._ice_berg(self, _view * Vector3(150.0, -40.0, -520.0), 2.2, false, true, true)
 	if sim.data.sites[site].get("kind", "") == "anomaly":
 		# Perfectly black, and the starlight bends round its edge.
 		var hole := StandardMaterial3D.new()

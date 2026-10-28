@@ -646,5 +646,91 @@
 				"text": "Half a day matched with the berg, passing crates across on a line. They cook you the first fresh meal they've had in four months, and send you off with a few tonnes of ice chipped from the berg."
 			}
 		}
+	},
+	"long_thirst_berg": {
+		"name": "Berg in transit: the Long Thirst",
+		"kind": "berg",
+		"visibility": "known",
+		"description": "A berg of Themis ice pushed by the Long Thirst all the way in to Venus, which has almost no water of its own: the longest berg run there is, from three AU out to inside Earth's orbit. Four crew, a cat, and a cabin on the pusher frame. They want fresh food and medicine, pay in Assembly credit, and give away ice by the tonne.",
+		"location": {
+			"type": "orbit",
+			"parent": "sun",
+			"elements": {
+				"a_m": 287975901098.0,
+				"e": 0.626,
+				"i_deg": 2.0,
+				"node_deg": 140.0,
+				"peri_deg": 300.0,
+				"m0_deg": 316.1246
+			}
+		},
+		"activities": {
+			"resupply": {
+				"name": "Bring the crew their supplies",
+				"needs": [],
+				"takes": {
+					"food": 3.0,
+					"medical": 0.4,
+					"delicacies": 0.2
+				},
+				"every_days": 60,
+				"days": 0.5,
+				"risk": 0.0,
+				"credits": 14000,
+				"rep": {
+					"Cytherean Assembly": 2
+				},
+				"yields": {
+					"water_ice": [
+						3,
+						6
+					]
+				},
+				"text": "They have rigged a table in the cabin for visitors. The cat inspects your crates first. You leave with ice for the Venus run and a jar of something fermented they insist is a gift."
+			}
+		}
+	},
+	"meltwater_berg": {
+		"name": "Berg in transit: the Meltwater",
+		"kind": "berg",
+		"visibility": "known",
+		"description": "A small berg pushed slowly across the Belt by the Meltwater, from the Themis family to the claims at Psyche, where nobody has water to spare. The shortest berg run, and the loneliest: three crew, three AU from the Sun, two years on the job. They want parts and medicine, and anything that tastes of somewhere else.",
+		"location": {
+			"type": "orbit",
+			"parent": "sun",
+			"elements": {
+				"a_m": 452533558868.0,
+				"e": 0.0347,
+				"i_deg": 1.2,
+				"node_deg": 230.0,
+				"peri_deg": 60.0,
+				"m0_deg": 15.0579
+			}
+		},
+		"activities": {
+			"resupply": {
+				"name": "Bring the crew their supplies",
+				"needs": [],
+				"takes": {
+					"machine_parts": 1.5,
+					"medical": 0.3,
+					"delicacies": 0.2
+				},
+				"every_days": 60,
+				"days": 0.5,
+				"risk": 0.0,
+				"credits": 16000,
+				"rep": {
+					"Belt Assembly": 2
+				},
+				"yields": {
+					"water_ice": [
+						2,
+						4
+					]
+				},
+				"text": "They have not seen a new face in seven months and they talk for six hours straight. You leave with ice, a list of messages to pass on, and a song someone wrote about you before you'd even undocked."
+			}
+		}
 	}
 }
