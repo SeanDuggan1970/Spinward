@@ -417,3 +417,9 @@ Full write-up: [2026-10-07-economy-together.md](2026-10-07-economy-together.md).
 
 - **No real change.** Seeds 1–5 alone looked like a 28% fall, but seeds 6–20 match to within 1%. A check with a single group ship at Saturn (never near the bot's markets) moved single seeds by up to 60k (seed 5: 96k to 42k; seed 3: 59k to 117k). One extra ship reshuffles the shared NPC random stream, so a five-seed mean wanders by about 20k. **Use 20 seeds (`seeds=15 seed0=6` on top of the usual 5) when judging a change that adds NPCs.**
 - The first run, with the group ships buying propellant like any fleet, was 84,108 on seeds 1–5. It was taken in the same noisy window, but fuelling them off-market keeps them out of the economy in any case.
+
+
+## Groups hire pilots (2026-10-28)
+
+- Changed data: `contracts.json` groups (35% of package and passenger board jobs at a group's home port are the group's) and each group's `asks` in `data/groups.json`.
+- No bot run: the jobs pay exactly what the jobs they replace would (same kinds, same pay rules), and the bot runs with jobs off by default. The only differences are the client (standing goes to the group) and no payment in kind.
