@@ -341,14 +341,14 @@ func _build_saturn() -> void:
 		camera.look_at(pos.lerp(Vector3(0, -20, -400), 0.25), Vector3.UP)
 
 
-## Out in the Belt: an iceberg on its years-long push toward the inner system, its
-## pusher throwing a plume of its own melted ice, and the hero flying escort.
+## Out in the Belt: an iceberg on its years-long push toward the inner system, its crew
+## riding the pusher as it throws a plume of its own melted ice, and the hero flying escort.
 func _build_berg() -> void:
 	_where = "The outer Belt  ·  a berg for the Kernel"
 	_light(Vector3(-0.7, 0.3, 0.6), 1.0, Vector3(-30, 20, 40))
 	_body("ceres", 600.0, Vector3(-22000.0, 5000.0, -120000.0))
 	var berg := Vector3(-60.0, -10.0, -260.0)
-	SetPieces._ice_berg(_stage, berg, 2.2, false, true)
+	SetPieces._ice_berg(_stage, berg, 2.2, false, true, true)
 	_update = func(dt: float) -> void:
 		var f := clock / SHOT_S
 		var pos := Vector3(lerpf(60.0, 10.0, f), 25.0 + 4.0 * sin(f * PI), lerpf(-200.0, -230.0, f))
