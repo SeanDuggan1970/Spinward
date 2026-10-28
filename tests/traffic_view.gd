@@ -9,6 +9,7 @@ const Autopilot := preload("res://view/flight/autopilot.gd")
 const Traffic := preload("res://sim/traffic.gd")
 const Pattern := preload("res://view/flight/pattern.gd")
 const Models := preload("res://view/flight/models.gd")
+const FlightPrefs := preload("res://view/flight/flight_prefs.gd")
 
 var checks := 0
 var failures := 0
@@ -49,7 +50,8 @@ func _fly(place: String, lead: float, m_pick := {}) -> Dictionary:
 	var flight: FlightScene = FlightScene.new(sim)
 	root.add_child(flight)
 	var k := Pattern.key(m)
-	var out := {"m": m, "key": k, "flight": flight, "saw": false, "npc_doors": 0.0, "cleared_t": INF, "ahead": false, "held": false, "behind_ok": true}
+	var out := {"m": m, "key": k, "flight": flight, "saw": false, "npc_doors": 0.0, "cleared_t": INF, "ahead": false, "held": false, "behind_ok": true,
+		"jets": 0, "pattern_jets": 0, "computer": flight.computer, "view": flight.view_mode}
 	out["ahead"] = flight.tc["ahead"].any(func(x): return Pattern.key(x) == k)
 	out["held"] = flight._pattern.held.has(k)
 	var steps := 0
@@ -63,6 +65,9 @@ func _fly(place: String, lead: float, m_pick := {}) -> Dictionary:
 			var e: Dictionary = flight._pattern.ships[k]
 			if flight._pattern.held.has(k) and (e["ship"] as Node3D).position.z < flight.ship_node.position.z:
 				out["behind_ok"] = false
+		out["jets"] = maxi(int(out["jets"]), flight._jets.count())
+		if flight._pattern.jets != null:
+			out["pattern_jets"] = maxi(int(out["pattern_jets"]), flight._pattern.jets.count())
 		if not flight.cleared():
 			out["npc_doors"] = maxf(float(out["npc_doors"]), flight._pattern.door_open(t))
 		elif out["cleared_t"] == INF:
@@ -85,6 +90,12 @@ func _run() -> void:
 	check(float(a["npc_doors"]) > 0.99, "Kibo Ring: the doors open for it while we hold")
 	check(float(a["cleared_t"]) >= float(a["m"]["end"]) - 0.01, "Kibo Ring: we're cleared only once it's in and the doors are shut")
 	check(a["docked"] and a["flight"].hits == 0 and a["flight"].bumps == 0, "Kibo Ring: then we dock, touching nothing")
+	var flies := FlightPrefs.copilot_docks()
+	check(a["computer"] == flies and (a["view"] == "outside") == flies, "Kibo Ring: the co-pilot has the approach, on the outside cameras, unless told not to (%s, %s)" % [a["computer"], a["view"]])
+	if flies:
+		check(String(a["radio"]).contains("\"") and a["flight"]._said.has("take") and a["flight"]._said.has("capture"), "Kibo Ring: the co-pilot talks us in")
+	check(int(a["jets"]) > 0, "Kibo Ring: our thrusters fire as we fly the approach (%d at once)" % int(a["jets"]))
+	check(int(a["pattern_jets"]) > 0, "Kibo Ring: the ship ahead fires its thrusters going in (%d at once)" % int(a["pattern_jets"]))
 	# A ship well behind us waits its turn, behind us.
 	var b := _fly("kibo_ring", 330.0)
 	check(b["held"] and not b["ahead"], "Kibo Ring: a ship further out than us is held behind")

@@ -37,7 +37,7 @@
 				{"action": "flight_spin_match", "label": "Spin match: roll with the station", "key": ["V"], "pad": ["x"]},
 				{"action": "flight_scanner", "label": "Scanner range", "key": ["G"], "pad": ["dpad_up"]},
 				{"action": "flight_view", "label": "Cockpit or chase view", "key": ["C"], "pad": ["dpad_down"]},
-				{"action": "flight_computer", "label": "Docking computer (if fitted)", "key": ["K"], "pad": ["dpad_left"]},
+				{"action": "flight_computer", "label": "Co-pilot flies / you fly", "key": ["K"], "pad": ["dpad_left"]},
 				{"action": "flight_tug", "label": "Call the tug (a fee; on credit if broke)", "key": ["T"], "pad": ["lstick"]},
 				{"action": "flight_keys", "label": "Show or hide the key strip", "key": ["H"], "pad": ["dpad_right"]},
 				{"text": "Mouse drag", "label": "Look about the cabin (the head comes back when you let go)"}

@@ -50,12 +50,14 @@
 		"g0": 9.80665
 	},
 	"docking": {
+		"_note": "Capture tolerances at the port. The co-pilot flies the approach by default (view/flight/autopilot.gd); without a docking computer fitted it closes at copilot_unaided_mult of the speed it would with one. auto_dock_fee is the tug.",
 		"auto_dock_fee": 60,
 		"capture_distance_m": 5.0,
 		"max_speed_mps": 1.5,
 		"max_angle_deg": 15.0,
 		"max_roll_error_deg": 20.0,
-		"spawn_distance_m": 600.0
+		"spawn_distance_m": 600.0,
+		"copilot_unaided_mult": 0.7
 	},
 	"detection": {
 		"_note": "Who can see you (sim/detection.gd, sim/systems/detection_system.gd). Each signature channel has a range in metres at which a standard sensor (factor 1) sees it: the lit drive (drive_m_per_sqrt_mw times the square root of the drive's jet power, MW: you cannot hide while burning), waste heat (heat_m_per_sqrt_kw times the root of what the ship radiates, kW: the drive's heat while burning, else its electrical loads), the transponder and running lights (fixed ranges, off when running dark), and reflected sunlight (light_m times the root of the ship's area times its albedo, falling with distance from the Sun; area_m2_per_t23 times dry mass^(2/3)). A port sees you if you are within your largest range times its sensors (port_sensors, or the place's own 'sensors'). Running dark inside a port's control_zone_m while it sees you is fined dark_fine_cr and dark_fine_rep standing with its operator, once a trip (the ports share word). The low-observable coating (coat_cr_per_t of dry mass, at stealth_yards) cuts albedo to coated_albedo; a heat sink module soaks up waste heat while running dark until full (sink_mj), and dumps it at sink_dump_kw otherwise. Checked every check_s of game time in transit.",
@@ -161,6 +163,7 @@
 		"turn_accel_dps2": 70.0,
 		"assist_default": "assisted",
 		"default_view": "cockpit",
+		"copilot_view": "outside",
 		"transit_view": "ship",
 		"scanner_ranges_m": [
 			500,
