@@ -76,6 +76,7 @@ func load_from(root: String) -> void:
 	badges = read_json(root + "/badges.json") if FileAccess.file_exists(root + "/badges.json") else {}
 	pods = read_json(root + "/pods.json") if FileAccess.file_exists(root + "/pods.json") else {}
 	news = read_json(root + "/news.json") if FileAccess.file_exists(root + "/news.json") else {}
+	_load_small_news()
 	controls = read_json(root + "/controls.json") if FileAccess.file_exists(root + "/controls.json") else {}
 	ship_economy = read_json(root + "/ship_economy.json")
 	locations = places.duplicate()
@@ -103,6 +104,22 @@ func home_port(place: String) -> String:
 			return at
 		at = up
 	return at
+
+
+## The small, strange stream (news.json small): one story every every_days from
+## first_day, in file order, as ordinary dated Spaceline stories.
+func _load_small_news() -> void:
+	var small: Dictionary = news.get("small", {})
+	if small.is_empty():
+		return
+	if not news.has("stories"):
+		news["stories"] = []
+	var items: Array = small.get("stories", [])
+	for i in items.size():
+		var item: Dictionary = items[i].duplicate()
+		item["id"] = "small_%d" % i
+		item["after_days"] = float(small.get("first_day", 0.0)) + float(small.get("every_days", 4.0)) * i
+		news["stories"].append(item)
 
 
 ## Groups by id, and each group's piece of news as a dated Spaceline story: one every

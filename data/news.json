@@ -513,5 +513,192 @@
 				"body": "Terminator moved for the first time this morning, at 2.6 kilometres an hour, and four hundred people walked out to the Dawn Wall to watch the Sun come up over Mercury's hills. Then they walked back, quickly. Ships can't land: the Dawnward lander flies down from Perihelion Station."
 			}
 		}
+	},
+	"small": {
+		"_note": "The small, strange stream (docs/DESIGN.md, The cap's off: most headlines should be small and strange): one every every_days from first_day, in this order, made into dated stories by DataCatalog (ids small_0, small_1...).",
+		"first_day": 1,
+		"every_days": 4,
+		"stories": [
+			{
+				"dateline": "Kibo Ring",
+				"headline": "Man walks round Kibo Ring, all of it, 'to see if I could'",
+				"body": "He could. It took him nine hours and three pairs of socks. The ring's mind kept him company and says he was 'excellent company, for a human, once he stopped talking about socks'."
+			},
+			{
+				"dateline": "Halo Depot",
+				"headline": "Depot tug crews start a choir; tugs join in",
+				"body": "The harmonics of a dozen ion drives turn out to make a passable drone note in A. The crews sing over it on Thursdays."
+			},
+			{
+				"dateline": "Shackleton Port",
+				"headline": "Shackleton's first lunar-grown pumpkin wins nothing, is loved",
+				"body": "At 41 kilograms it would have placed fourth at a fair in Ohio. Shackleton has named it Gerald and refuses to carve it."
+			},
+			{
+				"dateline": "Clarke Exchange",
+				"headline": "Lost glove returns after eleven years in orbit",
+				"body": "Dropped by a spacewalker in 2050, the glove was caught by a debris sweeper last week. Its owner, now 71, says it still fits."
+			},
+			{
+				"dateline": "Kernel L5",
+				"headline": "Kernel holds its first marriage between two minds",
+				"body": "The ceremony lasted 0.3 seconds and the reception three days. The minds asked for the speeches to be 'as long as the humans like'."
+			},
+			{
+				"dateline": "Trojan Yards",
+				"headline": "Drone swarm spells HELLO MUM on a slab of iron",
+				"body": "Investigators traced it to a fourteen-year-old apprentice. His mum says she saw it from Earth with binoculars, and that he should call more."
+			},
+			{
+				"dateline": "Farside Array",
+				"headline": "Farside telescope accidentally photographs a picnic",
+				"body": "A family on a crater rim, a blanket and very small sandwiches, caught in a calibration frame. The image is now the Array's most requested."
+			},
+			{
+				"dateline": "Ares Ring",
+				"headline": "Mars brewers declare lava-tube lager 'drinkable'",
+				"body": "Tasters were less sure. A second batch is under way. The brewers say the first one 'has notes of ambition'."
+			},
+			{
+				"dateline": "Piazzi Station",
+				"headline": "Ceres librarian lends out the only paper copy of Moby-Dick in the Belt",
+				"body": "The waiting list is two years long. The librarian has started reading it aloud on the comms, one chapter a night."
+			},
+			{
+				"dateline": "Psyche Claims",
+				"headline": "Miners find a vein of nickel-iron shaped like a horse",
+				"body": "'It's a horse,' says the claim's mind. 'Everyone can see it's a horse.' The geologists say it is a fault line, but agree it is horse-shaped."
+			},
+			{
+				"dateline": "Huygens Port",
+				"headline": "Saturn's rings 'too beautiful' for work, crews say",
+				"body": "Productivity at Huygens dipped four percent last quarter. The Trust has added a viewing gallery and productivity is back up."
+			},
+			{
+				"dateline": "Valhalla Station",
+				"headline": "Titan's first snowman built by hand, out of methane",
+				"body": "It is two metres tall and will outlast everyone who built it. They gave it a scarf anyway."
+			},
+			{
+				"dateline": "Earth orbit",
+				"headline": "Retired pilot, 93, takes a joyride to the Moon and back",
+				"body": "'Same as it ever was,' she said, 'but the coffee's better.' Her granddaughter flew. Her granddaughter's mind did most of the flying."
+			},
+			{
+				"dateline": "Kalpana One",
+				"headline": "Kalpana's kids vote to rename the ring's park 'Big Green'",
+				"body": "The adult council had suggested something about pioneers. The kids won by four hundred votes to eleven."
+			},
+			{
+				"dateline": "Lunar far side",
+				"headline": "Man claims crater, names it after his dog",
+				"body": "The Long View has approved the name but not the claim. The dog, Biscuit, has not commented."
+			},
+			{
+				"dateline": "The Belt",
+				"headline": "Hermit on a two-kilometre rock opens a post office",
+				"body": "Nobody has written. He says that's fine, and that the stamps are very nice."
+			},
+			{
+				"dateline": "Kibo Ring",
+				"headline": "Hotel that is mostly a window gets its first complaint",
+				"body": "A guest reported that the view was 'too much'. The management has added a curtain, and a second curtain, and a card that says 'you're fine'."
+			},
+			{
+				"dateline": "Halo Depot",
+				"headline": "Somebody has been leaving cake in the airlocks",
+				"body": "Depot security has no leads and no complaints. 'It's good cake,' the chief admits."
+			},
+			{
+				"dateline": "Clarke Exchange",
+				"headline": "Clarke's mirrors spell out a proposal; answer is yes",
+				"body": "The mirrors were borrowed from the Mirror Painters for forty seconds. The happy couple have promised to give them back."
+			},
+			{
+				"dateline": "Kernel L5",
+				"headline": "Quakers at L5 hold a three-week silence; nobody notices",
+				"body": "'It was lovely,' said one Friend afterwards, the first words in twenty-one days. 'Pass the salt.'"
+			},
+			{
+				"dateline": "Trojan Yards",
+				"headline": "Yards build a bicycle for zero gravity; it goes nowhere, beautifully",
+				"body": "The designers say the point was the pedalling. Six people are on the waiting list."
+			},
+			{
+				"dateline": "Ares Ring",
+				"headline": "Mars gets its first traffic jam",
+				"body": "Four rovers met at a single-lane crossing in Valles Marineris and could not agree who arrived first. It lasted three hours. Two minds are in mediation."
+			},
+			{
+				"dateline": "Piazzi Station",
+				"headline": "Ceres opens an ice rink; it is the whole surface",
+				"body": "Locals say the trick is not skating but stopping. A medic is on duty at all times."
+			},
+			{
+				"dateline": "Shackleton Port",
+				"headline": "Lunar orchestra plays its first concert in vacuum",
+				"body": "Nobody heard it, which the conductor says was the point. The players felt it through their boots."
+			},
+			{
+				"dateline": "Earth orbit",
+				"headline": "Seventeen ships try to be first at the same eclipse",
+				"body": "All seventeen claim it. The Firsts Club has asked them to settle it over dinner."
+			},
+			{
+				"dateline": "Huygens Port",
+				"headline": "Enceladus geyser names itself, through a mind's poetry project",
+				"body": "A Huygens mind fed the plume's pulses into a language model. The geyser, it says, is called 'Hush'."
+			},
+			{
+				"dateline": "The Belt",
+				"headline": "Couple marries on a rock they then move away from",
+				"body": "'We wanted to leave somewhere behind us,' they said. The rock has a plaque now, and is doing fine."
+			},
+			{
+				"dateline": "Kibo Ring",
+				"headline": "Kibo Ring's bakery runs out of flour; ring goes quiet",
+				"body": "Three hours without bread. The ring's mind ordered emergency flour from Halo Depot and an apology from itself."
+			},
+			{
+				"dateline": "Farside Array",
+				"headline": "Array listens for aliens, hears a choir",
+				"body": "The Sky Choir was practising on an open channel. The astronomers say it was the best false alarm they've had."
+			},
+			{
+				"dateline": "Lunar orbit",
+				"headline": "Speed record for the Earth-Moon run broken by a wedding party",
+				"body": "They were late for their own reception. Nobody is pressing charges. Everyone got cake."
+			},
+			{
+				"dateline": "Psyche Claims",
+				"headline": "Psyche miners start a book club; first pick is about mining",
+				"body": "'We thought it would be relaxing,' said one. 'It was not relaxing.' Next month: a book about gardening."
+			},
+			{
+				"dateline": "Ares Ring",
+				"headline": "Mars declares its first official bird",
+				"body": "There are no birds on Mars. The vote went to a drone that sings at dawn, called Pip."
+			},
+			{
+				"dateline": "Kalpana One",
+				"headline": "Kalpana's oldest resident turns 112, asks for a spacewalk",
+				"body": "She got one. 'It's very big out there,' she reported. 'Somebody should do something about it.'"
+			},
+			{
+				"dateline": "Clarke Exchange",
+				"headline": "Exchange holds a market for things nobody needs",
+				"body": "Sold: a brass doorknob from Lisbon, a jar of Earth sea air, and a rock 'that looks like it's thinking'. Prices were high."
+			},
+			{
+				"dateline": "Valhalla Station",
+				"headline": "Saturn tours sell out a year ahead",
+				"body": "The waiting list includes eleven poets, a jazz trio, and someone who just wants to be quiet near the rings for a while."
+			},
+			{
+				"dateline": "Kernel L5",
+				"headline": "Kernel garden grows a pumpkin bigger than Shackleton's",
+				"body": "Shackleton has demanded a re-weigh. The Kernel has offered to send a slice."
+			}
+		]
 	}
 }
