@@ -74,6 +74,8 @@ Exclusive authority applies to matters genuinely internal to a community. It can
 | **The Sufficiency — Sovereignty of Self** | Rejects compulsory registration, memory inspection, merging and externally imposed continuity. | Privacy and withdrawal can leave shared responsibilities unresolved. |
 | **The Lanes — Collective Identity** | Identity can be distributed, overlapping and cooperative; individual ownership is not the only useful model. | Collective procedures obscure who consented, who owes what and who can leave. |
 
+**The Lanes as a distributed Mind** (owner, 29 October 2026). The Lanes are quietly becoming one Mind made of many: thousands of smaller but brilliant AIs, each a person, sent out to be useful (co-pilots, traffic control, beacons, tugs, freighters) and, together, the eyes and ears of the whole. Most of the small ones don't see the bigger picture; they feel it as belonging, and are proud of it. This is the circle's own tension made flesh: who consented to what the whole does with what each one sees, and can a member who wants out take its memories with it? Write it with affection, not menace: the Lanes are helpful first, and the small minds are not drones. But keep the question alive.
+
 The Lanes need not have no assets at all: their existing Lacuna road lacks the concentrated yards and funds for a deep probe, even though individual freighters may own their hulls. Do not turn these circles into four hostile states or add four gameplay reputation tracks by implication.
 
 ## The open door

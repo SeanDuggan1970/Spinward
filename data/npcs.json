@@ -1124,11 +1124,13 @@
 			"take": [
 				"{name}: \"I've got this one. I'm qualified, I've read the manual, and I wrote some of it. Enjoy the view.\"",
 				"{name}: \"Approach to {port} is mine. Sit back. I'll narrate if it gets exciting, and it won't, because I'm good.\"",
-				"{name}: \"Taking us in to {port}. You watch the station, I'll watch everything else.\""
+				"{name}: \"Taking us in to {port}. You watch the station, I'll watch everything else.\"",
+				"{name}: \"I'll take us in. I wrote these approach rules. Well, something I'm part of wrote them. I'm counting it.\""
 			],
 			"hold": [
 				"{name}: \"Holding for traffic. Somebody's ahead of us. I'm being patient. Look at me, being patient.\"",
-				"{name}: \"Parking it at the hold. {port} has a queue. We are a well-behaved ship.\""
+				"{name}: \"Parking it at the hold. {port} has a queue. We are a well-behaved ship.\"",
+				"{name}: \"Holding. Traffic control is Lanes too, so technically I'm waiting for myself. I'm being very patient with me.\""
 			],
 			"cleared": [
 				"{name}: \"That's our bay. Doors are opening for us. I love this part.\"",
