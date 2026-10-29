@@ -365,6 +365,7 @@ A character, not just a feature. It is the in-world reason the flight is playabl
   - the flat map: drag to pan, double-click to centre it again, wheel to zoom. Its transit panel stays narrow in the corner, and folds to one line with its – button.
 - **Near (within about 50 km of a station or body):** a local Newtonian flight bubble with Jolt collisions. A fly-by-wire assist has tunable levels: Full (arcade-like, holds velocity), Assisted (damps rotation and drift), Manual (pure momentum).
 - Docking at rotating stations: match the spin, approach the axis, use guide lights. Tolerances are in data.
+- Time compression works while docking: the flight scene runs as many physics steps a frame as the compression, so the ship keeps pace with the clock (and with a delivery deadline). The approach is capped at x100 (`balance.docking.max_time_scale`). The first approach to a port starts at x1; a port you have docked at before starts at x10 (`balance.time.return_arrival_scale`). The pilot can step either way.
 
 ## Art direction: workmanlike, not slick
 

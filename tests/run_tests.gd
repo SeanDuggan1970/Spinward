@@ -408,11 +408,24 @@ func test_travel() -> void:
 	sim.advance_game_time(120.0)
 	check(s.location["status"] == "approach" and s.location["place"] == "halo_depot", "Arrive on approach")
 	check(s.time_scale == 1.0, "Time compression drops on arrival")
+	check(sim.apply({"type": "set_time_scale", "scale": 100000}) == "" and s.time_scale == float(d.balance["docking"]["max_time_scale"]), "Time compression on approach is capped for docking")
+	sim.apply({"type": "set_time_scale", "scale": 1})
 	var credits := s.credits
 	check(sim.apply({"type": "dock"}) == "" and s.location["status"] == "docked", "Auto dock")
 	check(s.credits == credits - float(d.balance["docking"]["auto_dock_fee"]), "Auto dock charges the fee")
 	check(sim.apply({"type": "sell", "good": "water_ice", "tonnes": 20}) == "", "Sell ice at the depot")
 	check(s.stats["trips"] == 1 and s.stats["auto_docks"] == 1, "Trip stats recorded")
+	# A port docked at before is approached compressed; a new one at x1.
+	var arrive_at := func(to: String) -> void:
+		sim.advance_game_time(60.0)
+		check(sim.apply({"type": "depart", "to": to}) == "", "Depart for " + to)
+		sim.apply({"type": "set_time_scale", "scale": 10000})
+		sim.advance_game_time(float(s.location["arrive_t"]) - s.time_s + 60.0)
+	arrive_at.call("kernel_l5")
+	check(s.location["status"] == "approach" and s.time_scale == float(d.balance["time"]["arrival_scale"]), "A new port is approached at x1")
+	sim.apply({"type": "dock"})
+	arrive_at.call("halo_depot")
+	check(s.location["status"] == "approach" and s.time_scale == float(d.balance["time"]["return_arrival_scale"]), "A port visited before is approached at x%d" % int(d.balance["time"]["return_arrival_scale"]))
 
 
 func test_shipyard() -> void:

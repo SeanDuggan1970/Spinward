@@ -429,3 +429,9 @@ Full write-up: [2026-10-07-economy-together.md](2026-10-07-economy-together.md).
 
 - Changed data: a new contract kind, `errand` (weight 3 of the board's mix; pay_base 2,500, pay_per_day 900, urgency 0.8, rep 3). No cargo: the pilot is the delivery.
 - No bot run: the bot runs with jobs off by default. Errands pay a little above a package of the same trip (2,500 base against 1,500) since there's nothing to carry and no hold space to sell; worth a hand-played look at whether they crowd out parcels on small ships.
+
+
+## Time compression while docking (2026-10-29)
+
+- Changed data: `docking.max_time_scale` (100) and `time.return_arrival_scale` (10).
+- No bot run: the bot advances game time directly and takes the tug, so time compression never reaches it. In play, docking now takes the same game time at any compression (the co-pilot's approach is about 263 game seconds at an empty port), so a deadline is no longer lost to flying at x1 while the clock ran at x10. A return visit costs about 26 real seconds instead of 263.

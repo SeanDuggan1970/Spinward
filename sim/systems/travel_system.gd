@@ -37,6 +37,10 @@ func tick(_game_dt: float) -> void:
 		var place: String = s.location["to"]
 		s.stats["trips"] += 1
 		s.time_scale = float(sim().data.balance["time"]["arrival_scale"])
+		# A port you have docked at before: the co-pilot knows the way in, so the
+		# approach starts compressed (the pilot can still step it up or down).
+		if not sim().data.sites.has(place) and place in s.badges.get("visited", []):
+			s.time_scale = float(sim().data.balance["time"]["return_arrival_scale"])
 		if sim().data.sites.has(place):
 			# No port, no docking: you match orbit and you are there.
 			s.location = {"status": "on_site", "place": place}
