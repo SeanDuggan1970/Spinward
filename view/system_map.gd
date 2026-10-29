@@ -1,6 +1,7 @@
 ## Top-down orbital map from real positions: bodies, orbits, places, NPC traffic and
 ## (in transit) the player's transfer. It opens at the trip's own scale (the Earth-Moon
-## system, or the Sun's domain out to the trip's far end), and the mouse wheel zooms
+## system, or the Sun's domain out to the trip's far end). Drag to pan (double-click
+## to centre it again), and the mouse wheel zooms
 ## all the way: out past the Earth-Moon system the map turns heliocentric, sliding its
 ## centre from Earth to the Sun, and on out through the planets, the Kuiper belt and
 ## the heliopause to the Oort cloud. Used full-screen in transit and as a panel at
@@ -33,6 +34,9 @@ var centre_offset := Vector2.ZERO
 var show_npc_labels := true
 var zoom := 1.0
 var _font: Font
+var _panning := false
+## Where the pan rests on a double-click: the offset the map was opened with.
+var _home_offset = null
 
 
 func _init(owner_sim) -> void:
@@ -46,7 +50,17 @@ func _ready() -> void:
 
 
 func _gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed:
+	if event is InputEventMouseButton and event.button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT, MOUSE_BUTTON_MIDDLE]:
+		_panning = event.pressed
+		if _home_offset == null:
+			_home_offset = centre_offset
+		if event.pressed and event.double_click:
+			centre_offset = _home_offset
+		accept_event()
+	elif event is InputEventMouseMotion and _panning:
+		centre_offset += event.relative
+		accept_event()
+	elif event is InputEventMouseButton and event.pressed:
 		# Finer steps close in, bigger ones across the outer system.
 		var base := _base_radius(sim.state.time_s)
 		var step := 1.25 if base / zoom < 5.0e11 else 1.8

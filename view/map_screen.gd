@@ -28,6 +28,9 @@ var _panel: Control
 var _legend: Control
 var _hud: Label
 var _scale_bar: HBoxContainer
+var _details: Control
+## The transit panel folded down to its first line and the time buttons.
+var _folded := false
 var _view: Node3D
 var _overlay: Control
 
@@ -47,15 +50,33 @@ func _ready() -> void:
 	var p := UI.panel("Transit")
 	_panel = p[0]
 	_panel.position = Vector2(16, 56)
-	_panel.custom_minimum_size = Vector2(380, 0)
+	# Narrow and wrapped, so it keeps to the map's corner.
+	_panel.custom_minimum_size = Vector2(330, 0)
+	_panel.size = Vector2(330, 0)
 	add_child(_panel)
-	_hud = UI.label("")
+	_hud = UI.label("", UI.TEXT, 13)
+	_hud.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_hud.custom_minimum_size = Vector2(310, 0)
 	p[1].add_child(_hud)
 	_scale_bar = HBoxContainer.new()
+	_scale_bar.add_theme_constant_override("separation", 2)
 	p[1].add_child(_scale_bar)
 	for scale in sim.data.balance["time"]["scales"]:
-		_scale_bar.add_child(UI.button("×%d" % int(scale), func(): sim.apply({"type": "set_time_scale", "scale": scale})))
-	p[1].add_child(UI.label("[ ] time compression  ·  P pause  ·  M next view  ·  wheel zoom", UI.DIM, 12))
+		var b := UI.button("×" + _short(float(scale)), func(): sim.apply({"type": "set_time_scale", "scale": scale}))
+		b.add_theme_font_size_override("font_size", 12)
+		_scale_bar.add_child(b)
+	var fold := UI.button("–", func(): pass)
+	fold.add_theme_font_size_override("font_size", 12)
+	fold.tooltip_text = "Fold the panel away"
+	fold.pressed.connect(func():
+		_folded = not _folded
+		_details.visible = not _folded
+		fold.text = "+" if _folded else "–"
+		fold.tooltip_text = "Show the details" if _folded else "Fold the panel away"
+		_panel.reset_size())
+	_scale_bar.add_child(fold)
+	_details = UI.label("[ ] time compression  ·  P pause  ·  M next view\ndrag to pan  ·  double-click to centre  ·  wheel zoom", UI.DIM, 11)
+	p[1].add_child(_details)
 	var legend := UI.panel("Traffic")
 	_legend = legend[0]
 	_legend.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
@@ -115,13 +136,23 @@ func _process(_dt: float) -> void:
 		for npc in s.npcs:
 			if npc["location"]["status"] == "transit":
 				flying += 1
-		_hud.text = "%s  to  %s\nArrive in %s  (%s)\nRemaining %s\nTime ×%d%s\n%d other ships under way\n%s" % [
+		var head := "%s  to  %s\nArrive in %s  (%s)%s" % [
 			sim.data.locations[loc["from"]]["name"], sim.data.locations[loc["to"]]["name"],
-			UI.duration(left), _date(float(loc["arrive_t"])), UI.km(V.distance(pos, loc["to_pos"])),
-			int(s.time_scale), "   PAUSED" if s.paused else "", flying, UI.signature(sim)]
-		for i in _scale_bar.get_child_count():
+			UI.duration(left), _date(float(loc["arrive_t"])), "   PAUSED" if s.paused else ""]
+		_hud.text = head if _folded else "%s\nRemaining %s  ·  %d other ships under way\n%s" % [
+			head, UI.km(V.distance(pos, loc["to_pos"])), flying, UI.signature(sim)]
+		for i in sim.data.balance["time"]["scales"].size():
 			var b: Button = _scale_bar.get_child(i)
 			b.modulate = UI.AMBER if float(sim.data.balance["time"]["scales"][i]) == s.time_scale else Color.WHITE
+
+
+## A time scale as a button: 1000 -> "1k", 1000000 -> "1M".
+static func _short(x: float) -> String:
+	if x >= 1.0e6:
+		return "%dM" % int(x / 1.0e6)
+	if x >= 1.0e3:
+		return "%dk" % int(x / 1.0e3)
+	return "%d" % int(x)
 
 
 func _date(t: float) -> String:

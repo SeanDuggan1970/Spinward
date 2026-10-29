@@ -360,9 +360,9 @@ A character, not just a feature. It is the in-world reason the flight is playabl
     - Jupiter and Saturn need better drives and extended life support. This is the refit ladder.
   - **Orbits:** every body is baked from JPL Horizons state vectors (2061-03-01, mean motion fitted to 2063). `tests/horizons_reference.json` holds the reference, and a test keeps every body within a degree.
 - **Transit views** (M cycles):
-  - a cinematic god's-eye view, the default, framing ship, destination and rendezvous
+  - a cinematic god's-eye view, the default, framing ship, destination and rendezvous (drag to turn it, wheel to pull in or out)
   - the cockpit
-  - the flat map
+  - the flat map: drag to pan, double-click to centre it again, wheel to zoom. Its transit panel stays narrow in the corner, and folds to one line with its – button.
 - **Near (within about 50 km of a station or body):** a local Newtonian flight bubble with Jolt collisions. A fly-by-wire assist has tunable levels: Full (arcade-like, holds velocity), Assisted (damps rotation and drift), Manual (pure momentum).
 - Docking at rotating stations: match the spin, approach the axis, use guide lights. Tolerances are in data.
 
@@ -922,6 +922,7 @@ Sean's direction (2026-10-06): a follow camera with mouse control while the ship
 - **The sky:** worlds sit on it at true angular size, dressed with plumes, elevators and rings. In a world's shadow the ship goes dark.
 - **Ports:** the ports at either end appear as models while they are within 30 km, placed at the path's own end points. Each is kept clear of the ship (behind it leaving, ahead arriving) with its docking face turned to you.
 - **Free camera:** drag with either mouse button to orbit the ship, use the wheel to zoom, or the arrow keys. Taking over starts from wherever the director had the camera.
+- **The mouse reaches the 3D views:** the main scene's full-screen holders (`Main` and its screen layer) ignore the mouse, so a click no screen panel takes falls through to the views' `_unhandled_input`. A stopping holder swallowed every drag (Sean's report, 2026-10-29). The `--shipcam` tour injects its drags in window pixels and releases its wheel clicks, so they pass through the GUI as a player's do, and checks the ship view, the orbit view and the map (`SHIPCAM_INPUT`, `SHIPCAM_VIEWS`).
 - **The director:** after 8 s hands-off it takes over, cutting through black every 11 s, never repeating the last set-up. Choices are weighted by the moment:
   - a chase, a slow orbit, a fly-past, and a dolly along the hull
   - into the Sun (backlit), and the drive while burning
