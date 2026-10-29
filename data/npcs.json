@@ -1154,6 +1154,36 @@
 				"{name}: \"I have control. Relax, I've got her.\"",
 				"{name}: \"Mine again. Thank you. I was getting twitchy.\""
 			]
+		},
+		"overheard": {
+			"_note": "Overheard on the lanes (view/comms.gd overheard): every every_hours of game time in flight, a line from a crew in transit, usually a person and their mind mid-argument, mid-scheme or mid-dream. {ship} is the ship, {other} another ship out there now, {to} where {ship} is going. Picked by hashing the hour: presentation only. Not while asleep.",
+			"every_hours": 6,
+			"lines": [
+				"{ship}: \"Priya, the mind says your sourdough starter has achieved sentience.\" \"It has not.\" \"It voted.\"",
+				"{ship}: \"We are not naming the airlock.\" \"Gerald.\" \"We are not naming the airlock Gerald.\"",
+				"{ship}: \"Tomás, I have run the numbers on your Phobos marathon. You'd finish. The record is safe. Your knees are not.\"",
+				"{ship}: \"I've made a list of everything we could do at {to}.\" \"How long?\" \"Four hundred items. Shall I read it?\"",
+				"{ship}: \"If we sell the cello we can afford the radiator.\" \"We are not selling the cello.\" \"Then we're playing it somewhere warm.\"",
+				"{ship}: \"Hamid, the plan was asteroid farming.\" \"It still is.\" \"You've bought sixty goats.\" \"Asteroid farming.\"",
+				"{ship}: \"Kofi wants to paint the hull. All of it. In tartan.\" \"And you?\" \"I'm the mind. I'm helping.\"",
+				"{ship}: \"Second time I've had to remind you: we are a ship, not a poetry society.\" \"We could be both.\" \"We could be both.\"",
+				"{ship}: \"I've been thinking about Proxima.\" \"You've been thinking about Proxima for three years.\" \"Thinking harder.\"",
+				"{ship}: \"Lina, the comet is not going to like the name 'Steve'.\" \"Comets don't like anything.\" \"It's going to dislike Steve specifically.\"",
+				"{ship}: \"Good morning. It's 0300, you asked me to wake you for the view.\" \"Is it good?\" \"Saturn. Rings. Yes.\"",
+				"{ship}: \"We're a start-up now.\" \"Since when?\" \"Since I said it. The drones are co-founders.\"",
+				"{ship}: \"The Long View declined our proposal.\" \"Which one?\" \"The one where we paint Deimos.\" \"Fair.\"",
+				"{ship}: \"Okafor, the mind has been composing a symphony in the background.\" \"How long?\" \"Since Earth. It's nearly done. It's about you.\"",
+				"{ship}: \"Rule one of homesteading: never trust a mind that says 'probably'.\" \"Probably good advice.\"",
+				"{ship}: \"I've calculated our odds.\" \"Don't tell me the odds.\" \"They're fine. They're very fine. I just like telling you.\"",
+				"{ship}: \"Anyone out there carry a 40 mm seal kit? Ours is a sad story.\" {other}: \"Two spares. Meet you at {to}, first round's on you.\"",
+				"{ship}: \"Calling any ship: our water still is making noises water stills should not make.\" {other}: \"Kick it low and to the left. Trust me.\"",
+				"{ship}: \"Any doctors on the lanes? Not urgent. Very interesting rash.\" {other}: \"Our mind's a doctor. Send a picture. Not of the rash. Of the rash, actually.\"",
+				"{ship}: \"Is anyone else's mind singing? Ours has been singing for an hour.\" {other}: \"Ours joined in. Sorry.\"",
+				"{ship}: \"Lost a drone. Small, yellow, answers to Biscuit.\" {other}: \"Biscuit is with us. Biscuit is fine. Biscuit has made friends.\"",
+				"{ship}: \"Running low on coffee. This is a mayday.\" {other}: \"We have tea.\" {ship}: \"This is still a mayday.\"",
+				"{ship}: \"Mira, why is there a harp in the cargo manifest?\" \"Contingency.\" \"For what?\" \"Beauty.\"",
+				"{ship}: \"Three months out and I've learned Portuguese, astrophysics and knitting.\" \"And?\" \"The mind is teaching me to stop.\""
+			]
 		}
 	}
 }

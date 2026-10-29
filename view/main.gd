@@ -34,6 +34,8 @@ const QUICKSAVE := "user://quicksave.json"
 
 ## A scripted shoot (tours, gallery, promo): approaches open in the cockpit with you at
 ## the controls, as they always were, unless a shot asks for the co-pilot.
+## The overheard-chatter slot last heard (Comms.overheard_slot), -1 before the first.
+var _heard_slot := -1
 var scripted_flight := false
 var sim: Sim
 var _mode := ""
@@ -215,6 +217,7 @@ func _process(delta: float) -> void:
 		return
 	sim.tick(delta)
 	_handle_events()
+	_overhear()
 	_sync_mode()
 	if sim.asleep() and not is_instance_valid(_sleep_overlay):
 		_sleep_overlay = SleepOverlay.new(sim)
@@ -838,6 +841,21 @@ func _sync_mode() -> void:
 
 
 ## A line heard on the radio (traffic control, other pilots), into the comms log.
+## Crews talking out on the lanes, a line every few game hours (Comms.overheard), never
+## while asleep: the sleep digest is for news, not gossip.
+func _overhear() -> void:
+	var slot := Comms.overheard_slot(sim, sim.state.time_s)
+	if slot == _heard_slot:
+		return
+	var first := _heard_slot == -1
+	_heard_slot = slot
+	if first or sim.asleep() or sim.state.paused:
+		return
+	var text := Comms.overheard(sim, sim.state.time_s)
+	if text != "":
+		_radio_line(text)
+
+
 func _radio_line(text: String) -> void:
 	comms.append("%s  %s" % [_clock(sim.state.time_s), text])
 	if comms.size() > COMMS_KEEP:

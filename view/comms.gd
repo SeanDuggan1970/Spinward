@@ -46,6 +46,35 @@ static func line(sim, event: Dictionary) -> String:
 	return template.format({"ship": npc["name"], "operator": fleet["operator"], "from": from, "to": to, "cargo": cargo, "alt": alt})
 
 
+## Overheard on the lanes (data/npcs.json chatter.overheard): the line for the
+## every_hours slot holding time t, from a ship in transit then, or "" when nobody is
+## out there. Picked by hashing the slot, never from sim RNG.
+static func overheard(sim, t: float) -> String:
+	var cfg: Dictionary = sim.data.npcs["chatter"].get("overheard", {})
+	if cfg.is_empty():
+		return ""
+	var slot := int(floor(t / (float(cfg["every_hours"]) * 3600.0)))
+	var out: Array = sim.state.npcs.filter(func(n): return n["location"].get("status") == "transit")
+	if out.is_empty():
+		return ""
+	var h := absi(hash("overheard:%d" % slot))
+	var npc: Dictionary = out[h % out.size()]
+	var other: Dictionary = out[(h / 7 + 1) % out.size()] if out.size() > 1 else npc
+	var lines: Array = cfg["lines"]
+	var template: String = lines[(h / 131) % lines.size()]
+	if template.contains("{other}") and other["id"] == npc["id"]:
+		# Nobody else out there to answer: pick a line for one ship.
+		var solo: Array = lines.filter(func(l): return not String(l).contains("{other}"))
+		template = solo[(h / 131) % solo.size()]
+	return template.format({"ship": npc["name"], "other": other["name"], "to": sim.data.locations[npc["location"]["to"]]["name"]})
+
+
+## The slot overheard() uses for time t.
+static func overheard_slot(sim, t: float) -> int:
+	var cfg: Dictionary = sim.data.npcs["chatter"].get("overheard", {})
+	return -1 if cfg.is_empty() else int(floor(t / (float(cfg["every_hours"]) * 3600.0)))
+
+
 ## The co-pilot's line for the player's own flyby: "copilot_near" or "copilot_pass".
 static func copilot(sim, key: String, alt_m: float, in_s: float = 0.0) -> String:
 	var bands: Dictionary = sim.data.npcs["chatter"][key]
