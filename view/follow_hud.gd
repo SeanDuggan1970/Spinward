@@ -4,6 +4,8 @@ extends Control
 
 const UI := preload("res://view/ui/ui_kit.gd")
 const Bindings := preload("res://view/bindings.gd")
+const Homesteads := preload("res://view/homesteads.gd")
+const Navigation := preload("res://sim/navigation.gd")
 
 var sim
 var view
@@ -45,6 +47,11 @@ func _draw() -> void:
 	draw_string(_font, Vector2(x, y), "Time ×%d%s" % [int(sim.state.time_scale), "   PAUSED" if sim.state.paused else ""], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, UI.DIM)
 	y += 20
 	draw_string(_font, Vector2(x, y), UI.signature(sim), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, UI.AMBER if sim.state.detection.get("dark", false) else UI.DIM)
+	# The nearest homestead's beacon: somebody is always out here.
+	var near := Homesteads.nearest_named(sim.data, sim.ephemeris, Navigation.transit_position(loc, sim.state.time_s), sim.state.time_s)
+	if not near.is_empty():
+		y += 20
+		draw_string(_font, Vector2(x, y), "Nearest beacon: %s, %s  ·  %s" % [near["h"]["name"], UI.km(float(near["d"])), near["h"]["who"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.55, 0.85, 0.8, 0.8))
 	var h := size.y
 	var w := size.x
 	if view.mode == "director":
