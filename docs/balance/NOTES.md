@@ -423,3 +423,9 @@ Full write-up: [2026-10-07-economy-together.md](2026-10-07-economy-together.md).
 
 - Changed data: `contracts.json` groups (35% of package and passenger board jobs at a group's home port are the group's) and each group's `asks` in `data/groups.json`.
 - No bot run: the jobs pay exactly what the jobs they replace would (same kinds, same pay rules), and the bot runs with jobs off by default. The only differences are the client (standing goes to the group) and no payment in kind.
+
+
+## Errands: the work that is still human (2026-10-29)
+
+- Changed data: a new contract kind, `errand` (weight 3 of the board's mix; pay_base 2,500, pay_per_day 900, urgency 0.8, rep 3). No cargo: the pilot is the delivery.
+- No bot run: the bot runs with jobs off by default. Errands pay a little above a package of the same trip (2,500 base against 1,500) since there's nothing to carry and no hold space to sell; worth a hand-played look at whether they crowd out parcels on small ships.

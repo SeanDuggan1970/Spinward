@@ -477,6 +477,15 @@ func validate() -> Array[String]:
 				problems.append("group %s: a voyage starts at home and goes somewhere" % id)
 			if v.get("lines", []).is_empty():
 				problems.append("group %s: a voyage needs its comms lines" % id)
+	# Errands: each role has tasks and a word for when it's done.
+	for k in contracts.get("kinds", {}):
+		if contracts["kinds"][k].get("errand", false):
+			var roles: Dictionary = contracts["kinds"][k].get("roles", {})
+			if roles.is_empty():
+				problems.append("contracts %s: an errand needs roles" % k)
+			for r in roles:
+				if roles[r].get("tasks", []).is_empty() or roles[r].get("done", []).is_empty() or String(roles[r].get("name", "")) == "":
+					problems.append("contracts %s: role %s needs a name, tasks and done lines" % [k, r])
 	for k in contracts.get("groups", {}).get("kinds", []):
 		if not contracts["kinds"].has(k) or float(contracts["kinds"][k].get("min_rep", 0.0)) > 0.0:
 			problems.append("contracts groups: %s is not a kind a new client can offer" % k)

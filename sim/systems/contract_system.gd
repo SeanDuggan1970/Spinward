@@ -362,7 +362,8 @@ func _deliver(job: Dictionary) -> void:
 	s.credits += float(kind_pay.get("credits", 0.0))
 	_add_rep(job["client"], rep + float(kind_pay.get("rep", 0.0)))
 	_retire(job, "delivered" if on_time else "late")
-	sim().emit("contract_delivered", {"id": job["id"], "on_time": on_time, "credits": pay + float(kind_pay.get("credits", 0.0)), "rep": rep, "client": job["client"]})
+	sim().emit("contract_delivered", {"id": job["id"], "on_time": on_time, "credits": pay + float(kind_pay.get("credits", 0.0)), "rep": rep, "client": job["client"],
+		"role": job.get("role", "")})
 	if not kind_pay.is_empty():
 		sim().emit("favour_granted", {"id": job["id"], "form": kind_pay["form"], "text": kind_pay["text"], "client": job["client"]})
 	# Passengers brought on time to a port: sometimes the people there do something kind

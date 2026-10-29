@@ -373,7 +373,7 @@ func _departures_tab(place_id: String) -> Control:
 		for job in sim.state.contracts.get("active", []):
 			var stop: String = job["pickup"] if job["state"] == "collect" else job["to"]
 			if stop == to:
-				var verb := "Collect" if job["state"] == "collect" else "Deliver"
+				var verb := "Collect" if job["state"] == "collect" else ("Be there to" if job.has("role") else "Deliver")
 				var left: float = float(job["deadline_t"]) - sim.state.time_s
 				notes.append(["Contract: %s %s here, due in %s" % [verb.to_lower(), job["item"], UI.duration(maxf(left, 0.0))], UI.GOOD if left > float(plan.get("duration_s", 0.0)) else UI.WARN])
 		for n in notes:
@@ -762,6 +762,8 @@ func _contracts_sys():
 
 
 func _cargo_words(job: Dictionary) -> String:
+	if job.has("role"):
+		return "%s: %s (no cargo: they want you there)" % [String(sim.data.contracts["kinds"]["errand"]["roles"][job["role"]]["name"]), job["item"]]
 	if int(job["passengers"]) > 0:
 		return "%s (%d aboard)" % [job["item"], int(job["passengers"])]
 	if bool(job.get("hand", false)):
@@ -772,7 +774,7 @@ func _cargo_words(job: Dictionary) -> String:
 func _offer_card(place_id: String, offer: Dictionary) -> Control:
 	var s = sim.state
 	var d = sim.data
-	var title: String = {"package": "Courier", "passenger": "Passage", "pickup": "Pick up and deliver", "long_haul": "Long-haul courier",
+	var title: String = {"errand": "Wanted in person", "package": "Courier", "passenger": "Passage", "pickup": "Pick up and deliver", "long_haul": "Long-haul courier",
 		"satellite": "Satellite launch", "covert_delivery": "Quiet delivery", "listening_device": "A listening device", "spy_satellite": "A satellite nobody launched",
 		"covert_drop": "A drop-off nobody saw", "covert_extract": "An extraction",
 		"bulk_freight": "Bulk freight", "express": "Express run", "charter": "Passenger charter"}.get(offer["kind"], "Job")

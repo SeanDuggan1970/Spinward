@@ -113,6 +113,7 @@ func _initialize() -> void:
 	test_groups()
 	test_group_voyages()
 	test_group_clients()
+	test_errands()
 	test_shuttle_view_profile()
 	test_edge_cases()
 	test_power_budget()
@@ -2584,6 +2585,37 @@ func test_group_clients() -> void:
 	check(sim.apply({"type": "accept_contract", "id": job["id"]}) == "", "Take the %s's job" % job["client"])
 	_dock_at(sim, job["to"])
 	check(Contracts.rep_of(s, job["client"]) > 0.0 and is_equal_approx(Contracts.rep_of(s, "Terran Compact"), compact), "Delivered: standing with %s, not the port's operator" % job["client"])
+
+
+## The work that is still human: errands that need the pilot there, no cargo.
+func test_errands() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var job := {}
+	for _i in 60:
+		for o in s.contracts["board"].get("kibo_ring", []):
+			if o.has("role"):
+				job = o
+		if not job.is_empty():
+			break
+		s.contracts["board"]["kibo_ring"] = []
+		s.contracts["next_t"]["kibo_ring"] = 0.0
+		sim.advance_game_time(60.0)
+	check(not job.is_empty(), "Someone wants a person there: an errand is offered")
+	if job.is_empty():
+		return
+	var role: Dictionary = d.contracts["kinds"]["errand"]["roles"][job["role"]]
+	check(job["item"] in role["tasks"] and job["hand"] and is_zero_approx(float(job["mass_t"])) and int(job["passengers"]) == 0, "%s: %s, no cargo" % [role["name"], job["item"]])
+	var cargo := ShipStats.cargo_t(s.ship)
+	var mass := ShipStats.total_mass_t(s.ship, d)
+	check(sim.apply({"type": "accept_contract", "id": job["id"]}) == "", "Take the errand")
+	check(is_equal_approx(ShipStats.cargo_t(s.ship), cargo) and is_equal_approx(ShipStats.total_mass_t(s.ship, d), mass), "Nothing to carry but yourself")
+	var credits := s.credits
+	sim.take_events()
+	_dock_at(sim, job["to"])
+	var done: Array = sim.take_events().filter(func(e): return e["type"] == "contract_delivered")
+	check(not done.is_empty() and done[0]["data"]["role"] == job["role"] and s.credits - credits >= float(job["reward"]) - 1e-6, "Turning up is the job: paid on arrival")
 
 
 func test_berg_sites() -> void:

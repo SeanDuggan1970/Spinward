@@ -11,7 +11,7 @@
 ## secret work add flags copied from their kind (OFFER_FLAGS): payload (rides in the
 ## lander's payload carrier), release (a satellite, released near `to`), plant (a
 ## listening device, planted near `to`), watched (`to` belongs to the watcher), lander
-## (needs a lander bay), covert (secret work) with watcher (the operator it is hidden
+## (needs a lander bay), role (an errand: work done in person, no cargo), covert (secret work) with watcher (the operator it is hidden
 ## from). A covert drop goes to a site; an extraction collects at one (pickup).
 ## craft (a list of hull classes, sim/fleet.gd) is work only those ships can take: bulk
 ## freight for a heavy freighter, an express run for a fast courier, a charter for a
@@ -160,7 +160,16 @@ static func make_offer(data, eph, state, rng: RandomNumberGenerator, place: Stri
 	var mass := 0.0
 	var item := ""
 	var hand := false
-	if spec.get("per_head", false):
+	var role := ""
+	if spec.get("errand", false):
+		# Work that needs a person there (the work that is still human): no cargo, only you.
+		var roles: Array = spec["roles"].keys()
+		roles.sort()
+		role = roles[rng.randi() % roles.size()]
+		var tasks: Array = spec["roles"][role]["tasks"]
+		item = tasks[rng.randi() % tasks.size()]
+		hand = true
+	elif spec.get("per_head", false):
 		var c: Array = spec["count"]
 		heads = rng.randi_range(int(c[0]), int(c[1]))
 		var who: Array = spec["who"]
@@ -229,6 +238,8 @@ static func make_offer(data, eph, state, rng: RandomNumberGenerator, place: Stri
 		offer["craft"] = (spec["craft"] as Array).duplicate()
 	if not group.is_empty():
 		offer["group"] = group["id"]
+	if role != "":
+		offer["role"] = role
 	# Some clients pay part of it in kind (data/favours.json); the cash part drops to match.
 	# Groups pay in cash.
 	if not spec.get("covert", false) and group.is_empty():
