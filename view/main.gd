@@ -492,10 +492,14 @@ func _handle_events() -> void:
 			"contract_no_room":
 				notice("Can't collect: %s." % d["reason"], UI.WARN)
 			"contract_delivered":
+				if String(d.get("role", "")) != "":
+					# Work done in person: what happened, in a line.
+					var lines: Array = sim.data.contracts["kinds"]["errand"]["roles"][d["role"]]["done"]
+					notice(String(lines[absi(hash(str(d["id"]))) % lines.size()]), UI.TEXT)
 				if d["on_time"]:
-					notice("Delivered on time: %s paid. %s will remember that." % [UI.money(float(d["credits"])), d["client"]], UI.GOOD)
+					notice("%s on time: %s paid. %s will remember that." % ["Done" if String(d.get("role", "")) != "" else "Delivered", UI.money(float(d["credits"])), d["client"]], UI.GOOD)
 				else:
-					notice("Delivered late: %s paid, and %s noticed." % [UI.money(float(d["credits"])), d["client"]], UI.WARN)
+					notice("%s late: %s paid, and %s noticed." % ["Done" if String(d.get("role", "")) != "" else "Delivered", UI.money(float(d["credits"])), d["client"]], UI.WARN)
 				refresh = true
 			"contract_failed":
 				notice("A job has failed: far too late. %s will not forget it." % d["client"], UI.WARN)

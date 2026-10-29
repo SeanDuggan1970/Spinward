@@ -27,6 +27,119 @@
 		}
 	},
 	"kinds": {
+		"errand": {
+			"weight": 3,
+			"errand": true,
+			"slack": [
+				1.4,
+				2.4
+			],
+			"pay_base": 2500,
+			"pay_per_day": 900,
+			"urgency": 0.8,
+			"rep": 3.0,
+			"min_rep": 0.0,
+			"roles": {
+				"second_opinion": {
+					"name": "Second Opinion",
+					"tasks": [
+						"look at a weld a repair robot isn't sure of",
+						"listen to a pump two minds disagree about",
+						"check a habitat seal a robot flagged twice",
+						"say yes or no on a cracked strut"
+					],
+					"done": [
+						"You looked, listened, and said \"no, that's fine\". The robot thanked you, twice.",
+						"You said \"no, stop\". They stopped. Three days later the part failed on the bench, not in service."
+					]
+				},
+				"percussive": {
+					"name": "Percussive Maintenance",
+					"tasks": [
+						"kick a water pump that only answers to a boot",
+						"thump a jammed airlock door, the old way",
+						"tap a sulking reactor coolant valve, just so"
+					],
+					"done": [
+						"One kick, low and to the left. It purred. Nobody wrote down where.",
+						"You hit it exactly where your old instructor said. The robots are taking notes."
+					]
+				},
+				"taster": {
+					"name": "Taster",
+					"tasks": [
+						"taste the first beer from a new brewery",
+						"taste bread from a ring's first wheat",
+						"taste the water from a fresh ice claim",
+						"taste a vintage grown under glass"
+					],
+					"done": [
+						"You tasted it, thought about it, and said it was good. Somebody cried.",
+						"\"Needs a week,\" you said. They'll call you back in a week."
+					]
+				},
+				"witness": {
+					"name": "Witness",
+					"tasks": [
+						"witness a claim being filed",
+						"be in the room for a first contact with a new mind",
+						"witness a record attempt, so it counts",
+						"sign as witness to a homestead charter"
+					],
+					"done": [
+						"You were there, you signed, it counts. They framed the page.",
+						"Witnessed and recorded. Your name is in the record now, somewhere near the bottom."
+					]
+				},
+				"first": {
+					"name": "First",
+					"tasks": [
+						"be the first to play golf in this gravity",
+						"be the first through a new hatch, for the cameras",
+						"be the first guest at a hotel that isn't finished"
+					],
+					"done": [
+						"First! The sponsors are delighted. You did it in one take.",
+						"You did it first. A child in Lagos watched it live and decided what to be."
+					]
+				},
+				"mediator": {
+					"name": "Mediator",
+					"tasks": [
+						"mediate between a commune and a mining start-up over one rock",
+						"settle a dispute about who owns a comet's tail",
+						"sit between two minds who stopped talking"
+					],
+					"done": [
+						"Nobody got everything; everybody signed. The rock has a timeshare now.",
+						"They're talking again. Mostly about you, but talking."
+					]
+				},
+				"celebrant": {
+					"name": "Celebrant",
+					"tasks": [
+						"marry two pilots who met in a docking queue",
+						"lead a naming day for a ring's first baby",
+						"say the words at a funeral under the stars"
+					],
+					"done": [
+						"You said the words. Everyone said them back. It was a good day.",
+						"There wasn't a dry eye on the ring, including the minds'."
+					]
+				},
+				"midwife": {
+					"name": "Midwife",
+					"tasks": [
+						"be there for a birth on a station without a doctor",
+						"stand by for twins due in low gravity"
+					],
+					"done": [
+						"A healthy baby, and a mind that has never been so nervous. Both are fine.",
+						"Twins. Both loud. Everyone is very happy and very tired."
+					]
+				}
+			}
+		},
 		"package": {
 			"weight": 5,
 			"mass_t": [
@@ -441,5 +554,5 @@
 			"One of their own"
 		]
 	],
-	"_hand_note": "hand_items are small enough to carry in the cabin (letters, papers, a briefcase, data): they take no hold space, only their own few kilograms of mass (hand_mass_t). Passengers ride in berths and take no hold space either."
+	"_hand_note": "hand_items are small enough to carry in the cabin (letters, papers, a briefcase, data): they take no hold space, only their own few kilograms of mass (hand_mass_t). Passengers ride in berths and take no hold space either. An 'errand' is work that needs a person there (DESIGN.md, the work that is still human): no cargo, only the pilot; each role has its tasks and what is said when it's done (the view's notice)."
 }
