@@ -63,11 +63,15 @@ var _naming: Control
 
 func _ready() -> void:
 	theme = UI.make_theme()
+	# Full-screen holders let the mouse through: a stopping one would swallow every
+	# click before the 3D views' _unhandled_input (camera drags) sees it.
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	sim = Sim.new()
 	sim.new_game(1)
 	Bindings.install(sim.data.controls)
 	_layer = Control.new()
 	_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_layer)
 	var bar := PanelContainer.new()
 	bar.add_theme_stylebox_override("panel", UI.box(Color("101215"), UI.HAZARD, 0, 8))
@@ -1579,7 +1583,9 @@ func _shipcam_tour(dir: String) -> void:
 			_shot("%s/%s-%s.png" % [dir, m[0], shot])
 	# Real mouse input: a drag and some wheel clicks hand the camera to the pilot.
 	var view = (_screen as MapScreen)._view
-	var centre := get_viewport().get_visible_rect().size * 0.5
+	# Window pixels (what real input arrives in), so the click passes through the GUI
+	# the way a player's does.
+	var centre := Vector2(get_window().size) * 0.5
 	var press := InputEventMouseButton.new()
 	press.button_index = MOUSE_BUTTON_LEFT
 	press.pressed = true
@@ -1593,6 +1599,7 @@ func _shipcam_tour(dir: String) -> void:
 	drag.button_mask = MOUSE_BUTTON_MASK_LEFT
 	Input.parse_input_event(drag)
 	await get_tree().process_frame
+	var yaw_moved := absf(view._yaw - yaw0) > 0.1
 	var release := press.duplicate()
 	release.pressed = false
 	Input.parse_input_event(release)
@@ -1603,8 +1610,12 @@ func _shipcam_tour(dir: String) -> void:
 		wheel.pressed = true
 		wheel.position = centre
 		Input.parse_input_event(wheel)
+		# Release it too, as a real wheel does, or the GUI keeps the mouse focus.
+		var unwheel := wheel.duplicate()
+		unwheel.pressed = false
+		Input.parse_input_event(unwheel)
 		await get_tree().process_frame
-	print("SHIPCAM_INPUT mode=%s yaw_moved=%s zoomed_in=%s" % [view.mode, absf(view._yaw - yaw0) > 0.1, view._dist < dist0])
+	print("SHIPCAM_INPUT mode=%s yaw_moved=%s zoomed_in=%s" % [view.mode, yaw_moved, view._dist < dist0])
 	# The free camera, pulled in close and turned.
 	view._take_over()
 	view._yaw = 2.2
@@ -1617,7 +1628,41 @@ func _shipcam_tour(dir: String) -> void:
 	for _i in 6:
 		await get_tree().process_frame
 	_shot("%s/free-far.png" % dir)
+	# The orbit view turns and the flat map pans under the same drag, clear of the panels.
+	var map_screen: MapScreen = _screen
+	var at := Vector2(get_window().size) * Vector2(0.75, 0.7)
+	map_screen.set_view("orbit")
+	await get_tree().process_frame
+	var turn0: float = map_screen._view._turn
+	await _drag(at, Vector2(120, 40))
+	var orbit_turned := absf(float(map_screen._view._turn) - turn0) > 0.1
+	map_screen.set_view("map")
+	await get_tree().process_frame
+	var pan0: Vector2 = map_screen._map.centre_offset
+	await _drag(at, Vector2(120, 40))
+	print("SHIPCAM_VIEWS orbit_turned=%s map_panned=%s" % [orbit_turned, map_screen._map.centre_offset != pan0])
 	_quit()
+
+
+## A real mouse drag (window pixels) with the left button, a frame per step.
+func _drag(at: Vector2, by: Vector2) -> void:
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	press.position = at
+	Input.parse_input_event(press)
+	await get_tree().process_frame
+	var motion := InputEventMouseMotion.new()
+	motion.position = at + by
+	motion.relative = by
+	motion.button_mask = MOUSE_BUTTON_MASK_LEFT
+	Input.parse_input_event(motion)
+	await get_tree().process_frame
+	var release := press.duplicate()
+	release.pressed = false
+	release.position = at + by
+	Input.parse_input_event(release)
+	await get_tree().process_frame
 
 
 ## Windowed: stills for the game's store page. Every title set-up without its

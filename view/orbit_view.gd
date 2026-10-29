@@ -1,5 +1,6 @@
 ## Cinematic god's-eye view of a transfer. The camera hangs high above at an angle,
-## framing the ship and its destination together, and slowly orbits. Earth and the
+## framing the ship and its destination together, and slowly orbits; drag to turn it
+## and the wheel to pull in or out. Earth and the
 ## Moon are at true scale; the ship model is exaggerated so it can be seen, and it
 ## points along its thrust vector with the drive lit while it burns. The planned path
 ## is drawn ahead (amber) and behind (dim), with other traffic as coloured sparks.
@@ -51,6 +52,12 @@ var _places: Dictionary = {}
 var _npc_dots: Dictionary = {}
 var _line_mat: StandardMaterial3D
 var _azimuth := 0.0
+## The player's hand on the camera: a turn about the vertical and the height of the
+## view (radians, from a mouse drag) and a distance factor (from the wheel).
+var _turn := 0.0
+var _elevation := deg_to_rad(52.0)
+var _zoom := 1.0
+var _dragging := false
 var _cam_pos := Vector3.ZERO
 var _cam_target := Vector3.ZERO
 var _cam_ready := false
@@ -301,17 +308,28 @@ func _process(dt: float) -> void:
 	_cam_ready = true
 
 
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton:
+		if event.button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT]:
+			_dragging = event.pressed
+		elif event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+			_zoom = clampf(_zoom * (0.88 if event.button_index == MOUSE_BUTTON_WHEEL_UP else 1.14), 0.15, 3.0)
+	elif event is InputEventMouseMotion and _dragging:
+		_turn -= event.relative.x * 0.006
+		_elevation = clampf(_elevation + event.relative.y * 0.006, deg_to_rad(5.0), deg_to_rad(89.0))
+
+
 ## Hang the camera high above and to one side, framing the ship, the destination
 ## and the point where they will meet.
 func _frame_camera(ship_pos: Vector3, dest_pos: Vector3, meet: Vector3, dt: float) -> float:
 	var mid := (ship_pos + dest_pos + meet) / 3.0
 	var sep := maxf(ship_pos.distance_to(dest_pos), maxf(ship_pos.distance_to(meet), dest_pos.distance_to(meet)))
-	var dist := maxf(sep * 1.45, 6.0)
+	var dist := maxf(sep * 1.45, 6.0) * _zoom
 	var chord := (meet - ship_pos)
 	chord.y = 0.0
 	var side := Vector3.UP.cross(chord.normalized()) if chord.length() > 1e-3 else Vector3.RIGHT
 	_azimuth += dt * 0.025
-	var dir := (side.rotated(Vector3.UP, sin(_azimuth) * 0.6) * cos(deg_to_rad(52.0)) + Vector3.UP * sin(deg_to_rad(52.0))).normalized()
+	var dir := (side.rotated(Vector3.UP, sin(_azimuth) * 0.6 + _turn) * cos(_elevation) + Vector3.UP * sin(_elevation)).normalized()
 	var want_pos := mid + dir * dist
 	if not _cam_ready:
 		_cam_pos = want_pos
