@@ -114,6 +114,7 @@ func _initialize() -> void:
 	test_group_voyages()
 	test_group_clients()
 	test_errands()
+	test_overheard()
 	test_shuttle_view_profile()
 	test_edge_cases()
 	test_power_budget()
@@ -2616,6 +2617,27 @@ func test_errands() -> void:
 	_dock_at(sim, job["to"])
 	var done: Array = sim.take_events().filter(func(e): return e["type"] == "contract_delivered")
 	check(not done.is_empty() and done[0]["data"]["role"] == job["role"] and s.credits - credits >= float(job["reward"]) - 1e-6, "Turning up is the job: paid on arrival")
+
+
+## Crews talk on the lanes: a line every few hours from a ship out there.
+func test_overheard() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var Comms := preload("res://view/comms.gd")
+	sim.state.time_scale = 1.0e4
+	sim.advance_game_time(3.0 * DAY)
+	var every := float(sim.data.npcs["chatter"]["overheard"]["every_hours"]) * 3600.0
+	var heard := {}
+	var clean := true
+	for k in 40:
+		var t := s.time_s + every * k
+		var text: String = Comms.overheard(sim, t)
+		var out: Array = s.npcs.filter(func(n): return n["location"].get("status") == "transit")
+		clean = clean and text != "" and not text.contains("{") and out.any(func(n): return text.begins_with(n["name"]))
+		heard[text] = true
+	check(clean, "Every few hours someone out there is talking, by name")
+	check(heard.size() >= 15, "And they say different things (%d different lines in 40)" % heard.size())
+	check(Comms.overheard_slot(sim, s.time_s) != Comms.overheard_slot(sim, s.time_s + every), "A new slot every every_hours")
 
 
 func test_berg_sites() -> void:

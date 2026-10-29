@@ -431,6 +431,9 @@ func validate() -> Array[String]:
 			var rate := float(tr.get("per_hour", traffic["per_hour"]))
 			if rate < 0.0 or rate * float(traffic["slot_s"]) / 3600.0 > 1.0:
 				problems.append("place %s: %s local movements an hour won't fit the bay's slots" % [id, rate])
+		var over: Dictionary = npcs.get("chatter", {}).get("overheard", {})
+		if not over.is_empty() and (float(over.get("every_hours", 0.0)) <= 0.0 or over.get("lines", []).is_empty() or not over["lines"].any(func(l): return not String(l).contains("{other}"))):
+			problems.append("npcs chatter.overheard: needs every_hours, and lines (some for one ship alone)")
 		var local: Dictionary = npcs.get("local_traffic", {})
 		if local.get("names", []).is_empty() or local.get("hulls", []).is_empty():
 			problems.append("npcs local_traffic: needs names and hulls")
