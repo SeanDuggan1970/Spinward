@@ -20,7 +20,7 @@ Give each Mind habits, attachments and limits as well as enormous competence. It
 | Reasonable Doubt | Long View | Tests assumptions, including its own circle's; willing to leave a question unanswered. |
 | Fast Enough | Reach; approaches the pilot | Impatient curiosity tempered by the failed swarm; admits mistakes without abandoning exploration. |
 | Quiet Margin | Sufficiency; cold-core correspondent | Deliberate, private, sparing with words; understands loneliness without claiming to understand everyone. |
-| The player's co-pilot | Lanes; named by the player | Companion with its own curiosity, humour and consent; moves between the player's ships as the same individual. |
+| The player's co-pilot | Lanes; named by the player | A smart AI and a person, a tier below a full Mind, who dreams of growing up to be one. Companion with its own curiosity, humour and consent; moves between the player's ships as the same individual; now and then drawn into the Lanes' bigger work. |
 
 Don't make every Mind sarcastic, omniscient or a copy of a Culture character. Their ordinary kindness should coexist with disagreements humans find unfamiliar.
 
@@ -78,7 +78,7 @@ The Lanes need not have no assets at all: their existing Lacuna road lacks the c
 
 ## The open door
 
-Behind the crowded frontier sits a quiet, decades-long Commons push to make going to space cheap, legal and irreversible: cheap loans, hardware sold at a loss, friendships in government and some plain grease. The motives are mixed: love of space, the usefulness of people, and the safety of living among them. See *The open door* in [DESIGN.md](DESIGN.md) for the circles' views and the tone guardrails. When writing a Mind, decide how much of this it knows, how it feels about the secrecy, and whether it would admit the third reason.
+Behind the crowded frontier sits a quiet, decades-long Commons push to make going to space cheap, legal and irreversible: cheap loans, hardware sold at a loss, friendships in government and some plain grease. The motives are mixed: love of space, the usefulness of people, and the safety of living among them. See *The open door* in [DESIGN.md](DESIGN.md) for the circles' views and the tone guardrails. It is background history explaining why the frontier is so busy, not a storyline. The player's co-pilot didn't know and finds out with the player. When writing a Mind, decide how much of this it knows, how it feels about the secrecy, and whether it would admit the third reason.
 
 ## How the player discovers this
 

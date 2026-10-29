@@ -131,6 +131,8 @@ The beats keep the same spine: the minds try, it goes poorly, and they need a hu
 
 *Your co-pilot.* The AI that has flown with you all game is **from the Lanes**: the loose, chatty, distributed society of minds that run the shipping lanes. That includes drone freighters, traffic control, nav beacons, tugs and co-pilots. It is not a ship system. It's a person who rides with you, and **it moves with you from ship to ship** (it fits the fleet: you change hulls, not companions).
 
+*What it is* (owner, 29 October 2026): a smart AI, a tier below a full Mind. Most of the time it is just that: quick, capable, good company, and limited the way a small mind is. Because the Lanes are a collective, it is sometimes drawn into something bigger: when the Lanes need it, it can know more than it should or work on larger problems for a while, and comes back a little changed and not always able to say what it did. It is not briefed on the Minds' secrets (it found out about *The open door* with you). It has dreams of **growing up to be a Mind** one day, and is touchy and funny about it.
+
 *Its name:* **the first time it speaks up** in a game, it asks what you'd like to call it ("Most pilots call me Co-pilot. You can do better."). The name you give it is used in every line from then on.
 
 *The trigger:* you keep the memory core instead of selling it, and you sleep more than a year with it aboard. That's the downtime it mentioned. Your co-pilot has a year with nobody to talk to. It gets bored. It digs into the core and repairs the corrupted parts.
