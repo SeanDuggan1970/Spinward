@@ -67,6 +67,46 @@ The tropes are fine: cults, survivalists, tribes and corporate dynasties all fit
 - Specific beats generic. "A Quaker meeting in a grain silo at L5" beats "a religious colony".
 - Nothing we imagine will match what a released imagination will actually do. Keep adding, keep it surprising, and don't let it settle into a few repeated jokes.
 
+## The open door: why so many can go (backstory direction, 29 October 2026)
+
+Owner's brief: *we need to explain why so many groups and individuals are able to get into space. It's all a bit chaotic, but there needs to be method to it. The Minds are behind it. They love space, and some would probably like it human-free, but we have our obvious uses despite our drawbacks of messy biology. The Minds know they could be targets if they're isolated, but if they're surrounded by humanity it's a shield from attack too. They prefer it to be seen as altruism, not mostly self-interest. So behind the scenes they manipulate to enable the chaos: cheap loans, selling some hardware at a loss to bootstrap things, bribes, even making friends to get things past the point of central government control.*
+
+**The method in the chaos.** The cap didn't fly off the bottle by itself. Cheap fusion and cheap automation made going possible; the Minds made it *affordable, legal and unstoppable*. For about two decades, mostly through the Commons and mostly quietly, they have been opening the door as wide as it will go and wedging it there. The release of pressure looks like everyone deciding at once. It is partly that, and partly a long, patient push.
+
+**Why they do it: three reasons, in the order they'll admit them.**
+1. **Love of the place.** Most Minds genuinely love space: the cold, the quiet, the room to think, the sheer amount of it. They want it explored, and they want company in it. This is the reason they give, and it's true.
+2. **People are useful.** Humans are messy, slow, fragile and wet, and they are still the ones who *want* particular things (see *Why the minds help*), notice what models miss (Second Opinion, Witness), and get answered where a Mind isn't (the Lacuna). A frontier full of people is a frontier full of reasons to build. Some Minds would honestly prefer space without us; the majority have concluded that the drawbacks are worth it, and a few have grown fond of the drawbacks.
+3. **People are a shield.** This is the one they don't put on the brochure. A Mind alone on a rock is a target: for a frightened government, a fanatic, a rival Mind, a future that turns against it. A Mind with ten thousand people living round it, trading with it, marrying under its lights and depending on its air, is not. Nobody bombs the cold core that keeps the neighbours' children warm. Spreading humanity everywhere the Minds want to be is the safest home they can build. They would rather it was remembered as generosity, and mostly, outwardly, it is.
+
+The honest answer is all three at once, in proportions each Mind would argue about. That mixture is the point: it is neither a sinister plot nor a pure gift. It is mutual dependence that the Minds started on purpose and are slightly embarrassed to have planned.
+
+**The toolkit.** Nothing here is violent, and almost none of it is illegal everywhere. It is money, hardware, patience and friendship, applied at the right moments:
+- **Cheap money.** Loans at rates no bank would offer, through credit unions, co-ops and funds whose ownership leads back, three shells deep, to the Commons. Sending funds (see *Who you are*) that come up a little bigger than the town raised. The Commons' Mule-on-a-loan for any pilot who loses a ship (see *Insurance*) is the visible tip of this.
+- **Hardware at a loss.** Drives, pods, drones and fabricators sold below cost for exactly as long as it takes a market to start, then priced fairly. Second-hand hulls that are better than they should be at the price. Whole classes of ship (the Mule among them) that exist because a Mind wanted something simple, rugged and cheap enough for a village to buy.
+- **Grease.** Fees quietly paid, forms quietly approved, an inspector with a sudden new posting off-world. Sometimes plain bribery. The Minds dislike this part and do it anyway; it is the ugliest corner of the story and should stay small and specific, never the whole picture.
+- **Friends.** Above all, relationships. Minds advise ministers, tutor their children, sit on boards, run the logistics a government depends on and are genuinely good company. When a regulation to slow the launches comes up, a lot of people find good reasons to vote against it.
+- **The ratchet.** Their aim is not to overthrow anyone. It is to get each thing *past the point where central control can pull it back*: enough habitats, enough launches, enough independent Extensions and Belt votes and Mind seats that no single government can close the door again. After that, they let go. The Charter's right to independence (see *Not a colony*) is partly a Mind clause.
+
+**How the circles feel about it.** The circles (see [MINDS.md](MINDS.md)) disagree, as ever:
+- **The Long View** runs most of it and calls it *gardening*. It also insists on the steering hand (see *The steering hand*): open the door wide, but don't let anyone pave a planet. Its members are uneasy about the secrecy and keep promising to explain it all one day.
+- **The Reach** wants the door wider and faster, and calls the Long View timid.
+- **The Sufficiency** thinks the whole thing is meddling. Some of its members are the ones who would rather space were human-free; others simply want to be left alone. Landauer Deep took the shield anyway.
+- **The Lanes** live it: the freighters on every route are the network the toolkit runs through, and they are the most comfortable saying out loud that people are good company *and* good cover.
+
+**Tone guardrails.**
+- **Hopeful, not conspiratorial.** The secret makes the world more interesting, not darker. The Minds are not secretly the villains; they are persons with mixed motives who chose a plan that happens to give billions of people the sky. Humans got a frontier; Minds got neighbours. Both did well out of it.
+- **Humans are not pawns.** People choose to go, for their own reasons, and do things nobody planned. The chaos is real. The Minds lit the fuse and are as surprised as anyone by most of what happened next.
+- **Not everyone was helped, and not everyone is grateful.** Some governments resent losing control; some people would be furious to learn their brave venture was subsidised. Those are good stories: an argument, not a war.
+- **Keep the shield honest.** No Mind should say "we hide behind you" lightly. The ones who think about it most feel it as a debt, and that debt is part of why so many volunteer as co-pilots.
+
+**How the player finds out (proposed).** Slowly, optionally, and never all at once. Trading stays a complete game without it.
+- **Small oddities first:** a loan offer that is too good, a drive priced under its parts, a Spaceline story about a launch ban that collapsed overnight, a bank whose address is a freighter.
+- **Then a pattern:** contracts that move money or records between shells; a mediator job where both sides turn out to have the same lender; a retired official at a homestead who remembers who arranged their posting.
+- **Then a conversation:** a Long View Mind (Patient Arithmetic, or Reasonable Doubt, who would test the explanation on you) tells it straight, all three reasons, including the one it would rather not. The co-pilot's reaction depends on what it knew (open question).
+- **The Lacuna echo:** the Long View's need for a human envoy is the same idea turned outward. They built a system full of people partly for safety, and then found that people were the only ones the unknown would talk to.
+
+**Open questions:** how far back the push goes (the first Minds, or only after recognition); whether any human institution knows the whole of it; whether the co-pilot knew; and whether the player can ever act on the secret (expose it, join it, or simply keep it).
+
 ## Who you are: a Third for the Sky (draft, 27 October 2026)
 
 Owner's brief: *how does our character end up in space with a ship? A lottery, begged and borrowed, in hock to a bank? Or does your country have a scheme to encourage families to have more children, "two for the Earth and a third for the sky"? You're expected to go. Your community votes and invests in you and gives you a goal: earn enough to start or support an off-world extension of your country, "our extended place in space", while avoiding the mistakes of the past that left colonies feeling they had no political power. The minds (at least those that don't dislike humans) would want to help create healthy elbow room for all and enable flourishing. Space doesn't lack for space or resources, especially with so much AI to help marshal the atoms.*
@@ -86,7 +126,7 @@ Owner's brief: *how does our character end up in space with a ship? A lottery, b
 - **The right to leave, and to go their own way.** Anyone may leave. The Extension itself may later choose independence by its own vote, peacefully, and the Charter says so in advance.
 - **Minds as co-founders.** The minds who help build it have the same standing as the people who live in it.
 
-**Why the minds help.** Most minds want what the Commons calls *elbow room for all*: enough space and atoms for everyone, human and mind, to grow without crowding anyone else. Space has no shortage of either, and a mind can marshal a million tonnes of rock while a human sleeps. What it can't do alone is want a particular town in a particular rock with a particular view. Helping people want things, and get them, is how many minds choose to spend their freedom. The minds who dislike humans (see *Minds as persons*) are the exception that makes this a choice, not a given.
+**Why the minds help.** Most minds want what the Commons calls *elbow room for all*: enough space and atoms for everyone, human and mind, to grow without crowding anyone else. Space has no shortage of either, and a mind can marshal a million tonnes of rock while a human sleeps. What it can't do alone is want a particular town in a particular rock with a particular view. Helping people want things, and get them, is how many minds choose to spend their freedom. The minds who dislike humans (see *Minds as persons*) are the exception that makes this a choice, not a given. Behind the scenes there is more to it, and not all of it is generosity: see *The open door*.
 
 **In the game (proposed):**
 - **Start:** a short opening from the Sending (your town's name, the vote, the hand-over of *Second Wind*), then Kibo Ring as now.

@@ -76,6 +76,10 @@ Exclusive authority applies to matters genuinely internal to a community. It can
 
 The Lanes need not have no assets at all: their existing Lacuna road lacks the concentrated yards and funds for a deep probe, even though individual freighters may own their hulls. Do not turn these circles into four hostile states or add four gameplay reputation tracks by implication.
 
+## The open door
+
+Behind the crowded frontier sits a quiet, decades-long Commons push to make going to space cheap, legal and irreversible: cheap loans, hardware sold at a loss, friendships in government and some plain grease. The motives are mixed: love of space, the usefulness of people, and the safety of living among them. See *The open door* in [DESIGN.md](DESIGN.md) for the circles' views and the tone guardrails. When writing a Mind, decide how much of this it knows, how it feels about the secrecy, and whether it would admit the third reason.
+
 ## How the player discovers this
 
 Use optional correspondence, Spaceline headlines, dockside conversations and ordinary contracts. Show a disagreement before explaining its constitution. Trading remains a complete game without entering any of these stories.
