@@ -16,6 +16,7 @@ const DAY := 86400.0
 const AU := 1.495978707e11
 ## Past this view radius (metres) the map is heliocentric.
 const LOCAL_MAX_M := 2.0e9
+const Homesteads := preload("res://view/homesteads.gd")
 ## How far out the wheel goes: the outer Oort cloud, about 1.6 light years.
 const MAX_RADIUS_M := 1.0e5 * AU
 ## Rings at these distances from the Sun (AU), drawn when they fit the view.
@@ -124,6 +125,8 @@ func _draw() -> void:
 		var col := UI.AMBER if place == highlight else UI.TEXT
 		draw_rect(Rect2(at - Vector2(3, 3), Vector2(6, 6)), col)
 		draw_string(_font, at + Vector2(6, 14), sim.data.places[place]["name"], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, col)
+
+	_draw_homesteads(t, solar, radius_m, abs_screen)
 
 	# NPC traffic: a dot per ship in flight, with a faint trace of the path still ahead.
 	# Zoomed out to the Sun's domain, the interplanetary traffic shows instead.
@@ -238,6 +241,26 @@ func _draw_solar(t: float, px: float, radius_m: float, to_screen: Callable) -> v
 		# Names only where there is room: not crowded in on the Sun.
 		if (major or radius_m < 5.0e11) and at.distance_to(sun_at) > 28.0:
 			draw_string(_font, at + Vector2(6, -6), b["name"], HORIZONTAL_ALIGNMENT_LEFT, -1, 12 if major else 10, Color(col, 0.9))
+
+
+## A sky full of homesteads (view/homesteads.gd): faint beacons about the Earth on the
+## local map and about the Sun on the solar one; named ones labelled once close enough
+## to read.
+func _draw_homesteads(t: float, solar: bool, radius_m: float, to_screen: Callable) -> void:
+	var col := Color(0.55, 0.85, 0.8, 0.55)
+	var named_ok := (not solar and zoom >= 1.5) or (solar and radius_m < 6.0e11)
+	var screen := Rect2(Vector2.ZERO, size)
+	for h in Homesteads.all(sim.data):
+		if (h["around"] == "sun") != solar:
+			continue
+		var at: Vector2 = to_screen.call(Homesteads.position(h, sim.ephemeris, t))
+		if not screen.has_point(at):
+			continue
+		var named: bool = h["who"] != ""
+		var r := 2.5 if named else 1.5
+		draw_polyline(PackedVector2Array([at + Vector2(0, -r), at + Vector2(r, 0), at + Vector2(0, r), at + Vector2(-r, 0), at + Vector2(0, -r)]), col if named else Color(col, 0.35), 1.0)
+		if named and named_ok:
+			draw_string(_font, at + Vector2(5, 4), h["name"], HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color(col, 0.8))
 
 
 func _path_points(loc: Dictionary, t0: float, t1: float, n: int, to_screen: Callable) -> PackedVector2Array:

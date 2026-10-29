@@ -1,0 +1,225 @@
+{
+	"_note": "A sky full of homesteads (docs/DESIGN.md, The cap's off): small claims and beacons out in the system, drawn on the system map (view/homesteads.gd). View-only: the sim never sees them. 'named' have a name and who lives there, on a circular orbit about a body (r_km about a planet, a_au about the Sun) at a phase picked by hashing the name. 'scatter' fills each region with unnamed small claims (count, between radii), their beacon names built from first and second.",
+	"named": [
+		{
+			"name": "Mabel's Patch",
+			"around": "earth",
+			"who": "a grandmother, her mind and a greenhouse the size of a tennis court",
+			"r_km": 62000
+		},
+		{
+			"name": "The Quiet Can",
+			"around": "earth",
+			"who": "a meeting house for anyone who wants an hour of silence",
+			"r_km": 140000
+		},
+		{
+			"name": "Nine Lives",
+			"around": "earth",
+			"who": "nine cats, two people and a mind who insists it is in charge",
+			"r_km": 210000
+		},
+		{
+			"name": "Second Breakfast Station",
+			"around": "earth",
+			"who": "a café with no customers yet and very high hopes",
+			"r_km": 88000
+		},
+		{
+			"name": "The Kiln",
+			"around": "earth",
+			"who": "potters firing glaze in raw sunlight",
+			"r_km": 305000
+		},
+		{
+			"name": "Okonkwo Hold",
+			"around": "earth",
+			"who": "a family of eleven and a dairy goat called Commander",
+			"r_km": 255000
+		},
+		{
+			"name": "Bell Rock",
+			"around": "earth",
+			"who": "a mind ringing a bell once an hour, for no one in particular",
+			"r_km": 175000
+		},
+		{
+			"name": "Halfway House",
+			"around": "earth",
+			"who": "a refuge for anyone between jobs, ships or ideas",
+			"r_km": 192000
+		},
+		{
+			"name": "Saltmarsh",
+			"around": "earth",
+			"who": "brine farmers, very proud of their salt",
+			"r_km": 330000
+		},
+		{
+			"name": "Dandelion",
+			"around": "earth",
+			"who": "a seed bank, kept by a mind that talks to the seeds",
+			"r_km": 410000
+		},
+		{
+			"name": "Kepler's Rest",
+			"around": "sun",
+			"who": "a retired astronomer and the telescope she wouldn't leave behind",
+			"a_au": 2.31
+		},
+		{
+			"name": "Ironwood",
+			"around": "sun",
+			"who": "three sisters mining iron and arguing about poetry",
+			"a_au": 2.48
+		},
+		{
+			"name": "Mercy Rock",
+			"around": "sun",
+			"who": "a clinic on a rock, open to any ship that asks",
+			"a_au": 2.62
+		},
+		{
+			"name": "Little Venice",
+			"around": "sun",
+			"who": "canals in a hollowed rock, mostly for show",
+			"a_au": 2.7
+		},
+		{
+			"name": "The Long Pause",
+			"around": "sun",
+			"who": "a monastery that answers the comms once a week",
+			"a_au": 2.77
+		},
+		{
+			"name": "Hope's Claim",
+			"around": "sun",
+			"who": "a first claim, staked last spring by a couple with a lot of drones",
+			"a_au": 2.85
+		},
+		{
+			"name": "Nobody's Business",
+			"around": "sun",
+			"who": "survivalists who still answer every mayday",
+			"a_au": 2.94
+		},
+		{
+			"name": "Accordion",
+			"around": "sun",
+			"who": "a dance hall. That's all. A dance hall.",
+			"a_au": 3.02
+		},
+		{
+			"name": "Last Light Orchard",
+			"around": "sun",
+			"who": "apple trees under a mirror, a long way from the Sun",
+			"a_au": 3.11
+		},
+		{
+			"name": "Thimble",
+			"around": "sun",
+			"who": "the smallest homestead in the Belt, and it says so on the door",
+			"a_au": 3.2
+		},
+		{
+			"name": "Cinder Gardens",
+			"around": "sun",
+			"who": "a Mars-crossing rock with a hothouse and a stubborn mind",
+			"a_au": 1.55
+		},
+		{
+			"name": "Free Port Ambrose",
+			"around": "sun",
+			"who": "a hermit on a Trojan who sells excellent coffee",
+			"a_au": 5.2
+		},
+		{
+			"name": "The Listening Post",
+			"around": "sun",
+			"who": "a choir's mind, recording Saturn's ring noise",
+			"a_au": 9.6
+		},
+		{
+			"name": "Cold Comfort",
+			"around": "sun",
+			"who": "a Kuiper homestead nobody has visited, beaming jokes home",
+			"a_au": 42.0
+		}
+	],
+	"scatter": [
+		{
+			"around": "earth",
+			"count": 40,
+			"r_km": [
+				45000,
+				420000
+			]
+		},
+		{
+			"around": "sun",
+			"count": 140,
+			"a_au": [
+				2.1,
+				3.3
+			]
+		},
+		{
+			"around": "sun",
+			"count": 24,
+			"a_au": [
+				5.0,
+				5.4
+			]
+		},
+		{
+			"around": "sun",
+			"count": 18,
+			"a_au": [
+				39.0,
+				48.0
+			]
+		}
+	],
+	"first": [
+		"Rusty",
+		"Hope",
+		"Patience",
+		"Granny",
+		"Lucky",
+		"Tin",
+		"Little",
+		"Stubborn",
+		"Bright",
+		"Blue",
+		"Slow",
+		"Second",
+		"Quiet",
+		"Old",
+		"New",
+		"Fair",
+		"Wild",
+		"Kind",
+		"Odd",
+		"Paper"
+	],
+	"second": [
+		"Rock",
+		"Claim",
+		"Reach",
+		"Hollow",
+		"Stake",
+		"Hold",
+		"Light",
+		"Patch",
+		"Shelf",
+		"Nest",
+		"Lantern",
+		"Rest",
+		"Yard",
+		"Garden",
+		"Hearth",
+		"Spoke",
+		"Anchor",
+		"Beacon"
+	]
+}

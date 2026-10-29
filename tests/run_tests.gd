@@ -115,6 +115,7 @@ func _initialize() -> void:
 	test_group_clients()
 	test_errands()
 	test_overheard()
+	test_homesteads()
 	test_shuttle_view_profile()
 	test_edge_cases()
 	test_power_budget()
@@ -2638,6 +2639,31 @@ func test_overheard() -> void:
 	check(clean, "Every few hours someone out there is talking, by name")
 	check(heard.size() >= 15, "And they say different things (%d different lines in 40)" % heard.size())
 	check(Comms.overheard_slot(sim, s.time_s) != Comms.overheard_slot(sim, s.time_s + every), "A new slot every every_hours")
+
+
+## A sky full of homesteads: named claims and a scatter of beacons, on orbits that move.
+func test_homesteads() -> void:
+	var sim := fresh()
+	var d := sim.data
+	var H := preload("res://view/homesteads.gd")
+	var all: Array = H.all(d)
+	var named: Array = all.filter(func(h): return h["who"] != "")
+	check(named.size() >= 20 and all.size() >= 200, "Homesteads all over (%d named, %d in all)" % [named.size(), all.size()])
+	check(H.all(d) == all, "The same sky every time it's drawn")
+	var t := sim.state.time_s
+	var moved := true
+	var near_earth := true
+	for h in named:
+		var a: Array = H.position(h, sim.ephemeris, t)
+		var b: Array = H.position(h, sim.ephemeris, t + 30.0 * DAY)
+		moved = moved and V.distance(a, b) > 1000.0
+		if h["around"] == "earth":
+			near_earth = near_earth and absf(V.distance(a, sim.ephemeris.position("earth", t)) - float(h["r_m"])) < 1.0
+	check(moved, "Each one goes round in its orbit")
+	check(near_earth, "Cislunar claims keep their distance from the Earth")
+	var mercy: Dictionary = named.filter(func(h): return h["name"] == "Mercy Rock")[0]
+	var near: Dictionary = H.nearest_named(d, sim.ephemeris, H.position(mercy, sim.ephemeris, t), t)
+	check(near["h"]["name"] == "Mercy Rock" and float(near["d"]) < 1.0, "The nearest beacon to Mercy Rock is Mercy Rock")
 
 
 func test_berg_sites() -> void:

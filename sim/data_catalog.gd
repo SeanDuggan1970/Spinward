@@ -41,6 +41,8 @@ var controls: Dictionary = {}
 var ship_economy: Dictionary = {}
 ## Paint schemes for the view (data/liveries.json); the sim never reads them.
 var liveries: Dictionary = {}
+## Small claims and beacons for the map (data/homesteads.json); the sim never reads them.
+var homesteads: Dictionary = {}
 ## tip_ttl_days, verify_tolerance.
 var brokers_meta: Dictionary = {}
 ## The cap's-off groups (data/groups.json): clubs, orders, clans and wild schemes that
@@ -82,6 +84,8 @@ func load_from(root: String) -> void:
 		_load_groups(read_json(root + "/groups.json"))
 	if FileAccess.file_exists(root + "/liveries.json"):
 		liveries = read_json(root + "/liveries.json")
+	if FileAccess.file_exists(root + "/homesteads.json"):
+		homesteads = read_json(root + "/homesteads.json")
 	var broker_file := read_json(root + "/brokers.json")
 	brokers = broker_file.get("brokers", {})
 	brokers_meta = {"tip_ttl_days": float(broker_file.get("tip_ttl_days", 5.0)), "verify_tolerance": float(broker_file.get("verify_tolerance", 0.8)),
@@ -454,6 +458,12 @@ func validate() -> Array[String]:
 		for road in roads:
 			if not story.get("beats", []).any(func(b): return b.get("when", {}).get("road", "") == road):
 				problems.append("story core: no beat waits for the %s road" % road)
+	# Homesteads: about a real body with a mass, at a sensible radius.
+	for h in homesteads.get("named", []) + homesteads.get("scatter", []):
+		if not bodies.has(h.get("around", "")) or float(bodies[h["around"]].get("gm", 0.0)) <= 0.0:
+			problems.append("homestead %s: about unknown body %s" % [h.get("name", "(scatter)"), h.get("around", "")])
+		if not (h.has("r_km") or h.has("a_au")):
+			problems.append("homestead %s: needs r_km or a_au" % h.get("name", "(scatter)"))
 	# Groups: a real home, a known lean, colours, ships and words.
 	var ops := {}
 	for id in places:
