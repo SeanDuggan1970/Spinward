@@ -17,6 +17,9 @@ func _set_time_scale(command: Dictionary) -> String:
 	var scale := float(command.get("scale", 1.0))
 	if not steps.has(scale):
 		return "time scale not allowed: %s" % scale
+	# Docking is flown step by step in the flight scene, so the approach has a ceiling.
+	if sim().state.location.get("status") == "approach":
+		scale = minf(scale, float(sim().data.balance["docking"]["max_time_scale"]))
 	sim().state.time_scale = scale
 	sim().emit("time_scale_changed", {"scale": scale})
 	return ""

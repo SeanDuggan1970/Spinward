@@ -377,12 +377,53 @@ func _physics_process(dt: float) -> void:
 		camera.look_at(ship_node.position, Vector3.UP)
 		deck.visible = false
 		return
+	# Local flight keeps pace with the sim clock: at time compression it runs that many
+	# steps a frame (the sim caps compression on approach: balance.docking.max_time_scale).
+	var steps := clampi(roundi(sim.state.time_scale), 1, int(tune_dock["max_time_scale"]))
+	for i in steps:
+		_step(dt)
+		if docked or wrecked:
+			return
+	if not _capture.is_empty():
+		_update_camera(dt)
+		return
+	var c := read_controls()
+	var push: Vector3 = c["thrust"]
+	audio.update(dt, {"thrust": (1.0 if c["boost"] else 0.45) if push.z < 0.0 else 0.0,
+		"move": Vector3(push.x, push.y, maxf(push.z, 0.0)) + (Vector3(0, 0, 1) if c["brake"] and velocity.length() > 0.05 else Vector3.ZERO),
+		"spin": c["stick"] + (ang_vel - _last_ang) * 4.0 if assist != "manual" else c["stick"], "turn": ang_vel.length(),
+		"time_scale": sim.state.time_scale})
+	_last_ang = ang_vel
+	var ahead := _time_to_rock()
+	readout["rock_s"] = ahead
+	if ahead < 6.0 and clock > _warned_until:
+		_warned_until = clock + 3.0 * steps
+		flash("PROXIMITY  ·  rock on your course, %.1f s" % ahead, UI.WARN, 2.0)
+		audio.beep()
+	# The head lags the ship's acceleration: lean back under thrust, sideways in a strafe.
+	if dt > 0.0:
+		var accel := ship_node.global_transform.basis.inverse() * (velocity - _last_vel) / (dt * steps)
+		_last_vel = velocity
+		var want := -accel * 0.004
+		if want.length() > 0.03:
+			want = want.normalized() * 0.03
+		_head = _head.lerp(want, clampf(dt * 5.0, 0.0, 1.0))
+	_update_camera(dt)
+	if _shake > 0.0:
+		var jolt := Vector3(randf_range(-1, 1), randf_range(-1, 1), randf_range(-1, 1)) * _shake * 0.25
+		# The deck shakes with the ship; the head a touch more.
+		_deck_mount.global_position += jolt
+		camera.global_position += jolt * (1.15 if view_mode == "cockpit" else 1.0)
+
+
+## One step of local flight, dt game seconds: the world moves, the ship flies, and
+## contacts and capture are checked.
+func _step(dt: float) -> void:
 	clock += dt
 	spin_angle = fposmod(spin_angle + spin_rate * dt, TAU)
 	station["rotor"].rotation.z = spin_angle
 	if not _capture.is_empty():
 		_draw_down(dt)
-		_update_camera(dt)
 		return
 	_traffic_check -= dt
 	if _traffic_check <= 0.0:
@@ -400,38 +441,11 @@ func _physics_process(dt: float) -> void:
 	_move_rocks(dt)
 	_update_bay(dt)
 	_fly(dt)
-	var c := read_controls()
-	var push: Vector3 = c["thrust"]
-	audio.update(dt, {"thrust": (1.0 if c["boost"] else 0.45) if push.z < 0.0 else 0.0,
-		"move": Vector3(push.x, push.y, maxf(push.z, 0.0)) + (Vector3(0, 0, 1) if c["brake"] and velocity.length() > 0.05 else Vector3.ZERO),
-		"spin": c["stick"] + (ang_vel - _last_ang) * 4.0 if assist != "manual" else c["stick"], "turn": ang_vel.length(),
-		"time_scale": sim.state.time_scale})
-	_last_ang = ang_vel
 	_collide()
 	_collide_world()
 	if wrecked:
 		return
-	var ahead := _time_to_rock()
-	readout["rock_s"] = ahead
-	if ahead < 6.0 and clock > _warned_until:
-		_warned_until = clock + 3.0
-		flash("PROXIMITY  ·  rock on your course, %.1f s" % ahead, UI.WARN, 2.0)
-		audio.beep()
 	_check_docking()
-	# The head lags the ship's acceleration: lean back under thrust, sideways in a strafe.
-	if dt > 0.0:
-		var accel := ship_node.global_transform.basis.inverse() * (velocity - _last_vel) / dt
-		_last_vel = velocity
-		var want := -accel * 0.004
-		if want.length() > 0.03:
-			want = want.normalized() * 0.03
-		_head = _head.lerp(want, clampf(dt * 5.0, 0.0, 1.0))
-	_update_camera(dt)
-	if _shake > 0.0:
-		var jolt := Vector3(randf_range(-1, 1), randf_range(-1, 1), randf_range(-1, 1)) * _shake * 0.25
-		# The deck shakes with the ship; the head a touch more.
-		_deck_mount.global_position += jolt
-		camera.global_position += jolt * (1.15 if view_mode == "cockpit" else 1.0)
 
 
 ## A pair of actions as one axis, -1 to 1: a key is all or nothing, a stick or trigger is analog

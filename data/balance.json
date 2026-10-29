@@ -17,6 +17,7 @@
 			1000000
 		],
 		"arrival_scale": 1,
+		"return_arrival_scale": 10,
 		"_departure_note": "Leaving port: time drops to x1 while the ship backs out, comes alive and turns for its burn, then steps up (the first step waits for every hull to be out and deployed: tests/departure_view.gd). Each step is [game seconds since departure, scale]; a pilot who changes the scale meanwhile keeps theirs.",
 		"departure_ramp": [[120, 10], [180, 100], [480, 1000]],
 		"_approach_note": "Coming in: time is capped as the port nears, so the last of the approach is seen at x1. Each cap is [game seconds before arrival, highest scale].",
@@ -50,14 +51,15 @@
 		"g0": 9.80665
 	},
 	"docking": {
-		"_note": "Capture tolerances at the port. The co-pilot flies the approach by default (view/flight/autopilot.gd); without a docking computer fitted it closes at copilot_unaided_mult of the speed it would with one. auto_dock_fee is the tug.",
+		"_note": "Capture tolerances at the port. The co-pilot flies the approach by default (view/flight/autopilot.gd); without a docking computer fitted it closes at copilot_unaided_mult of the speed it would with one. auto_dock_fee is the tug. Time compression on the approach goes no higher than max_time_scale (the flight scene runs that many physics steps a frame); arriving at a port you have docked at before starts at time.return_arrival_scale, a first visit at time.arrival_scale.",
 		"auto_dock_fee": 60,
 		"capture_distance_m": 5.0,
 		"max_speed_mps": 1.5,
 		"max_angle_deg": 15.0,
 		"max_roll_error_deg": 20.0,
 		"spawn_distance_m": 600.0,
-		"copilot_unaided_mult": 0.7
+		"copilot_unaided_mult": 0.7,
+		"max_time_scale": 100
 	},
 	"detection": {
 		"_note": "Who can see you (sim/detection.gd, sim/systems/detection_system.gd). Each signature channel has a range in metres at which a standard sensor (factor 1) sees it: the lit drive (drive_m_per_sqrt_mw times the square root of the drive's jet power, MW: you cannot hide while burning), waste heat (heat_m_per_sqrt_kw times the root of what the ship radiates, kW: the drive's heat while burning, else its electrical loads), the transponder and running lights (fixed ranges, off when running dark), and reflected sunlight (light_m times the root of the ship's area times its albedo, falling with distance from the Sun; area_m2_per_t23 times dry mass^(2/3)). A port sees you if you are within your largest range times its sensors (port_sensors, or the place's own 'sensors'). Running dark inside a port's control_zone_m while it sees you is fined dark_fine_cr and dark_fine_rep standing with its operator, once a trip (the ports share word). The low-observable coating (coat_cr_per_t of dry mass, at stealth_yards) cuts albedo to coated_albedo; a heat sink module soaks up waste heat while running dark until full (sink_mj), and dumps it at sink_dump_kw otherwise. Checked every check_s of game time in transit.",

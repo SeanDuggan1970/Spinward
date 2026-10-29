@@ -1058,6 +1058,28 @@ func _dock_trial() -> void:
 		all_ok = all_ok and ok
 		print("DOCK_TRIAL %-16s docked=%s time=%5.0f s held=%4.0f s refusals=%d contacts=%d hits=%d bay=%s traffic=%s" % [place, flight.docked, steps / 60.0, held / 60.0, flight.refusals, flight.bumps, flight.hits, flight.bay_doors, flight.tc.get("control", "-")])
 		sim.state.location = {"status": "docked", "place": place}
+	# Once more at a return visit's time compression, the co-pilot flying as in play:
+	# local flight must keep pace with the clock and still dock clean.
+	var scale := float(sim.data.balance["time"]["return_arrival_scale"])
+	for place in ["kibo_ring", "halo_depot"]:
+		sim.state.location = {"status": "approach", "place": place}
+		sim.state.time_scale = scale
+		_mode = ""
+		_sync_mode()
+		await get_tree().physics_frame
+		var flight: FlightScene = _screen
+		flight.computer = true
+		var t0 := sim.state.time_s
+		var frames := 0
+		while not flight.docked and frames < 60 * 900:
+			sim.tick(1.0 / 60.0)
+			flight._physics_process(1.0 / 60.0)
+			frames += 1
+		var ok := flight.docked and flight.hits == 0 and absf((sim.state.time_s - t0) - flight.clock) < 2.0
+		all_ok = all_ok and ok
+		print("DOCK_TRIAL %-16s x%d docked=%s real=%4.0f s game=%5.0f s flown=%5.0f s refusals=%d contacts=%d hits=%d" % [place, int(scale), flight.docked, frames / 60.0, sim.state.time_s - t0, flight.clock, flight.refusals, flight.bumps, flight.hits])
+		sim.state.location = {"status": "docked", "place": place}
+		sim.state.time_scale = 1.0
 	print("DOCK_TRIAL_OK" if all_ok else "DOCK_TRIAL_FAIL")
 	_quit(0 if all_ok else 1)
 
