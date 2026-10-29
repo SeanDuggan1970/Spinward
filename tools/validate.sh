@@ -28,6 +28,7 @@ run_godot 'Departure view' --headless --path "$project_root" --script res://test
 run_godot 'Traffic view' --headless --path "$project_root" --script res://tests/traffic_view.gd
 run_godot 'Contract pickup view' --headless --path "$project_root" --script res://tests/contract_pickup_view.gd
 run_godot 'Title belt view' --headless --path "$project_root" --script res://tests/title_belt_view.gd
+run_godot 'Title docking view' --headless --path "$project_root" --script res://tests/title_docking_view.gd
 run_godot 'Shuttle view' --headless --path "$project_root" --script res://tests/shuttle_view.gd
 run_godot 'Scene smoke check' --headless --path "$project_root" -- --smoke
 run_godot 'Docking trial' --headless --path "$project_root" -- --dock-trial
