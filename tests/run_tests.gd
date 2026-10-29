@@ -116,6 +116,7 @@ func _initialize() -> void:
 	test_errands()
 	test_overheard()
 	test_homesteads()
+	test_small_news()
 	test_shuttle_view_profile()
 	test_edge_cases()
 	test_power_budget()
@@ -2664,6 +2665,23 @@ func test_homesteads() -> void:
 	var mercy: Dictionary = named.filter(func(h): return h["name"] == "Mercy Rock")[0]
 	var near: Dictionary = H.nearest_named(d, sim.ephemeris, H.position(mercy, sim.ephemeris, t), t)
 	check(near["h"]["name"] == "Mercy Rock" and float(near["d"]) < 1.0, "The nearest beacon to Mercy Rock is Mercy Rock")
+
+
+## Most headlines are small and strange: a steady stream of people trying things.
+func test_small_news() -> void:
+	var sim := fresh()
+	var s := sim.state
+	var d := sim.data
+	var small: Array = d.news["stories"].filter(func(st): return String(st["id"]).begins_with("small_"))
+	check(small.size() >= 30, "Thirty-odd small, strange stories (%d)" % small.size())
+	sim.state.time_scale = 1.0e5
+	var seen := 0
+	for _k in 30:
+		sim.advance_game_time(2.0 * DAY)
+		for e in sim.take_events():
+			if e["type"] == "news" and String(e["data"]["item"].get("story", "")).begins_with("small_"):
+				seen += 1
+	check(seen >= 13 and seen <= 16, "About one every four days in the first two months (%d in 60 days)" % seen)
 
 
 func test_berg_sites() -> void:
