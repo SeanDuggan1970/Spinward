@@ -2,6 +2,12 @@
 ## Presentation only: the line is picked by hashing the event, never from sim RNG.
 extends RefCounted
 
+const V := preload("res://sim/v3.gd")
+const Navigation := preload("res://sim/navigation.gd")
+const StorySystem := preload("res://sim/systems/story_system.gd")
+## Speed of light, m/s.
+const C := 299792458.0
+
 
 static func line(sim, event: Dictionary) -> String:
 	var d: Dictionary = event["data"]
@@ -84,6 +90,33 @@ static func copilot(sim, key: String, alt_m: float, in_s: float = 0.0) -> String
 	var template: String = options[absi(hash(str(alt_m))) % options.size()]
 	var minutes := int(in_s / 60.0)
 	return template.format({"alt": "%d" % int(round(km)), "in": "%d h %02d min" % [minutes / 60, minutes % 60]})
+
+
+## Out of the Lanes' reach (data/npcs.json chatter.copilot_alone): true when the ship
+## is in transit at t and every port is further off than far_light_s of light, too far
+## for the co-pilot to ask anyone anything in good time. coming_back: measure against the
+## nearer back_share of that, so a ship skirting the edge doesn't flicker in and out.
+static func beyond_lanes(sim, t: float, coming_back := false) -> bool:
+	var cfg: Dictionary = sim.data.npcs["chatter"].get("copilot_alone", {})
+	var loc: Dictionary = sim.state.location
+	if cfg.is_empty() or loc.get("status") != "transit":
+		return false
+	var eph = sim.ephemeris
+	var ship := V.add(eph.position(loc["frame"], t), Navigation.transit_position(loc, t))
+	var reach := float(cfg["far_light_s"]) * C * (float(cfg["back_share"]) if coming_back else 1.0)
+	for p in sim.data.places:
+		if sim.data.places[p].has("market") and sim.data.locations.has(p) and V.distance(eph.position(p, t), ship) < reach:
+			return false
+	return true
+
+
+## The co-pilot's line on leaving the Lanes' reach ("out") or coming back into it
+## ("back"), picked by hashing the trip.
+static func copilot_alone(sim, key: String) -> String:
+	var options: Array = sim.data.npcs["chatter"]["copilot_alone"][key]
+	var loc: Dictionary = sim.state.location
+	var template: String = options[absi(hash("%s:%s:%s" % [key, loc.get("to", ""), loc.get("depart_t", 0.0)])) % options.size()]
+	return template.format({"name": StorySystem.copilot_name(sim.state, sim.data), "to": sim.data.locations[loc["to"]]["name"] if sim.data.locations.has(loc.get("to", "")) else ""})
 
 
 static func cargo_text(sim, cargo: Dictionary) -> String:

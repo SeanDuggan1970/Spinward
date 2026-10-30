@@ -36,6 +36,10 @@ const QUICKSAVE := "user://quicksave.json"
 ## the controls, as they always were, unless a shot asks for the co-pilot.
 ## The overheard-chatter slot last heard (Comms.overheard_slot), -1 before the first.
 var _heard_slot := -1
+## Whether the ship was out of the Lanes' reach at the last look (Comms.beyond_lanes),
+## and when to look again (real seconds).
+var _alone := false
+var _alone_check := 0.0
 var scripted_flight := false
 var sim: Sim
 var _mode := ""
@@ -222,6 +226,10 @@ func _process(delta: float) -> void:
 	sim.tick(delta)
 	_handle_events()
 	_overhear()
+	_alone_check -= delta
+	if _alone_check <= 0.0:
+		_alone_check = 0.5
+		_lanes_reach()
 	_sync_mode()
 	if sim.asleep() and not is_instance_valid(_sleep_overlay):
 		_sleep_overlay = SleepOverlay.new(sim)
@@ -858,6 +866,18 @@ func _overhear() -> void:
 	var text := Comms.overheard(sim, sim.state.time_s)
 	if text != "":
 		_radio_line(text)
+
+
+## The co-pilot, far from every port, out of reach of the rest of the Lanes: a line as it
+## goes and one as it comes back (Comms.copilot_alone). Not while asleep or paused.
+func _lanes_reach() -> void:
+	var alone := Comms.beyond_lanes(sim, sim.state.time_s, _alone)
+	if alone == _alone:
+		return
+	_alone = alone
+	if sim.asleep() or sim.state.paused or sim.state.location.get("status") != "transit":
+		return
+	_radio_line(Comms.copilot_alone(sim, "out" if alone else "back"))
 
 
 func _radio_line(text: String) -> void:
