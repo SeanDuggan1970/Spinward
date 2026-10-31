@@ -26,6 +26,7 @@ const Bindings := preload("res://view/bindings.gd")
 const SleepOverlay := preload("res://view/sleep_overlay.gd")
 const WakeDigest := preload("res://view/wake_digest.gd")
 const SleepSystem := preload("res://sim/systems/sleep_system.gd")
+const StorySystem := preload("res://sim/systems/story_system.gd")
 const ShuttleSystem := preload("res://sim/systems/shuttle_system.gd")
 const Spin := preload("res://sim/spin.gd")
 const COMMS_KEEP := 40
@@ -595,13 +596,16 @@ func _handle_events() -> void:
 			"arrived_site":
 				notice("On site at %s. See what there is to do." % sim.data.sites[d["place"]]["name"], UI.AMBER)
 			"site_work_started":
-				notice("Work begins: %s of it. Speed up time; the crew will call." % UI.duration(float(d["days"]) * 86400.0), UI.AMBER)
+				# How the work is done, from the site's own words, or a plain line.
+				var who := StorySystem.copilot_name(sim.state, sim.data)
+				var how := String(sim.data.sites[d["site"]]["activities"][d["activity"]].get("start_text", "Speed up time; {copilot} will call when it's done."))
+				notice("Work begins: %s of it. %s" % [UI.duration(float(d["days"]) * 86400.0), how.replace("{copilot}", who)], UI.AMBER)
 				refresh = true
 			"site_work_done":
 				var got := []
 				for good in d["got"]:
 					got.append("%.1f t %s" % [d["got"][good], String(sim.data.goods[good]["name"]).to_lower()])
-				var line := "Done at %s%s. %s" % [sim.data.sites[d["site"]]["name"], " (it went badly)" if d["went_wrong"] else "", sim.data.sites[d["site"]]["activities"][d["activity"]].get("text", "")]
+				var line := "Done at %s%s. %s" % [sim.data.sites[d["site"]]["name"], " (it went badly)" if d["went_wrong"] else "", String(sim.data.sites[d["site"]]["activities"][d["activity"]].get("text", "")).replace("{copilot}", StorySystem.copilot_name(sim.state, sim.data))]
 				if not got.is_empty():
 					line += " Aboard: " + ", ".join(got) + "."
 				if float(d["credits"]) > 0.0:

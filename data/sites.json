@@ -1,11 +1,11 @@
 {
-	"_note": "Sites: somewhere to go that is not a port. No market, no fuel, no docking; you arrive on site and work. 'location' is as for places. 'visibility': known (on the map from the start), rumour (heard through tips), or hidden (only by story or contract). Each activity: needs (module abilities: survey, lander, mining), days of work, risk (chance it goes wrong: less yield, and for landings a fuel cost), yields (goods tonnes [min, max], into the hold as room allows), credits (paid on completion, e.g. survey data sold by radio), rep ({operator: amount}), and text for the result. 'once': worked out after one go.",
+	"_note": "Sites: somewhere to go that is not a port. No market, no fuel, no docking; you arrive on site and work. 'location' is as for places. 'visibility': known (on the map from the start), rumour (heard through tips), or hidden (only by story or contract). Each activity: needs (module abilities: survey, lander, mining), days of work, risk (chance it goes wrong: less yield, and for landings a fuel cost), yields (goods tonnes [min, max], into the hold as room allows), credits (paid on completion, e.g. survey data sold by radio), rep ({operator: amount}), and text for the result; 'start_text' says how the work is done, shown as it begins ({copilot} is the co-pilot's name, in both). 'model' (derelicts): what the wreck looks like on site, 'ship' (default) or 'satellite'. 'once': worked out after one go.",
 	"ishikawa_maru": {
 		"name": "Derelict: Ishikawa Maru",
 		"kind": "derelict",
 		"visibility": "known",
 		"once": true,
-		"description": "A Cooperative ice tanker that lost its drive controller in '58 and was left in a high lunar orbit, crew safe, cargo not. Salvage rights lapsed last year. Whoever gets there first.",
+		"description": "A Cooperative ice tanker that lost her drive controller in '58. Her crew were taken off safely and she was left in a high lunar orbit, her ice boiled away. Salvage rights lapsed last year: her pumps, her plate and her spares go to whoever gets there first.",
 		"location": {
 			"type": "orbit",
 			"parent": "moon",
@@ -20,7 +20,8 @@
 		},
 		"activities": {
 			"salvage": {
-				"name": "Strip the wreck",
+				"name": "Salvage her pumps and plate",
+				"start_text": "You suit up and cross on a tether with a cutter and a cargo net. {copilot} holds the ship forty metres off with the floodlights on her, reads you her old maintenance logs bolt by bolt, and winches each full net back across. Speed up time; {copilot} will call when the last net is in.",
 				"needs": [],
 				"days": 1.5,
 				"risk": 0.1,
@@ -38,13 +39,14 @@
 						2
 					]
 				},
-				"text": "Two days in suits with cutters and a cargo net. Her controller was fried, but the pumps are good."
+				"text": "A day and a half on the end of a tether. Her controller was fried past saving, but {copilot} found her stores manifest: two good pump sets, her spare boards still sealed in foil, and the baffle plates from her tanks. Taped inside the pump-room hatch, a note from her crew: 'Pumps 2 and 3 are fine. Take them somewhere that needs water.'"
 			}
 		}
 	},
 	"hermes_probe": {
 		"name": "Dead probe: Hermes-7",
 		"kind": "derelict",
+		"model": "satellite",
 		"visibility": "rumour",
 		"once": true,
 		"description": "A deep-space relay that went silent in 2049 and has drifted ever since on a long, lazy orbit four times the Moon's distance out. The inquiry blamed a cosmic ray. Nobody ever went and got the recorder.",
@@ -63,6 +65,7 @@
 		"activities": {
 			"salvage": {
 				"name": "Recover the memory core",
+				"start_text": "{copilot} eases the ship in to a dozen metres and holds her there. You go out on a short line with a torque driver and a padded case. Speed up time; {copilot} will call you back in when the core is free.",
 				"needs": [],
 				"days": 1.0,
 				"risk": 0.05,

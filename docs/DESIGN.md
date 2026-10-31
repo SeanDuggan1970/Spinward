@@ -644,6 +644,8 @@ Sean's direction (2026-10-04). It goes beyond trade into opportunities, refits a
      - Hermes-7, a dead probe four lunar distances out, wanted by the Compact
      - surveys of Eros, Phobos and Hektor
      - an unclaimed platinum prospect on Psyche
+   - **Who does the work** (Sean's note, 31 October 2026): aboard there is only the pilot and the co-pilot, a mind, so site text never speaks of "the crew" (except a berg's own crew). At a derelict the pilot goes across on a tether and cuts; the co-pilot holds station with the floodlights on, reads the wreck's old logs and winches the nets back. Each activity's `start_text` says how, as the work begins, and both texts may name the co-pilot (`{copilot}`). The Ishikawa Maru gives up her two good pump sets (machine parts), her tank baffle plates (refined metals) and her sealed spare boards (electronics), and her crew's note: take the pumps somewhere that needs water.
+   - **On screen** (`view/site_view.gd`): on site the station screen leaves a window between its tabs and its side panel (`SITE_WINDOW_RATIO`), and the site's 3D sits in it. A derelict hull tumbles about 110 m off under your floodlights; Hermes-7 (`model` "satellite", `satellite_model.gd`) is a dozen metres off with its wings folded. While work runs a cutter's light flickers on the hull. `tests/site_wreck_view.gd` checks the wreck lands in the window.
    - **Places and locations:** `data.locations` merges ports and sites for everything that only needs a position. Ports stay in `data.places`.
    - **Safety:** the emergency tanker reaches sites too, so running dry out there is costly but never a soft-lock.
 
