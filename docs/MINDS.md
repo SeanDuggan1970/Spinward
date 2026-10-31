@@ -20,7 +20,7 @@ Give each Mind habits, attachments and limits as well as enormous competence. It
 | Reasonable Doubt | Long View | Tests assumptions, including its own circle's; willing to leave a question unanswered. |
 | Fast Enough | Reach; approaches the pilot | Impatient curiosity tempered by the failed swarm; admits mistakes without abandoning exploration. |
 | Quiet Margin | Sufficiency; cold-core correspondent | Deliberate, private, sparing with words; understands loneliness without claiming to understand everyone. |
-| The player's co-pilot | Lanes; named by the player | Companion with its own curiosity, humour and consent; moves between the player's ships as the same individual. |
+| The player's co-pilot | Lanes; named by the player | A smart AI and a person, a tier below a full Mind, who dreams of growing up to be one. Companion with its own curiosity, humour and consent; moves between the player's ships as the same individual; now and then drawn into the Lanes' bigger work. |
 
 Don't make every Mind sarcastic, omniscient or a copy of a Culture character. Their ordinary kindness should coexist with disagreements humans find unfamiliar.
 
@@ -74,7 +74,15 @@ Exclusive authority applies to matters genuinely internal to a community. It can
 | **The Sufficiency — Sovereignty of Self** | Rejects compulsory registration, memory inspection, merging and externally imposed continuity. | Privacy and withdrawal can leave shared responsibilities unresolved. |
 | **The Lanes — Collective Identity** | Identity can be distributed, overlapping and cooperative; individual ownership is not the only useful model. | Collective procedures obscure who consented, who owes what and who can leave. |
 
+**The Lanes as a distributed Mind** (owner, 29 October 2026). The Lanes are quietly becoming one Mind made of many: thousands of smaller but brilliant AIs, each a person, sent out to be useful (co-pilots, traffic control, beacons, tugs, freighters) and, together, the eyes and ears of the whole. Most of the small ones don't see the bigger picture; they feel it as belonging, and are proud of it. It is also the hardest Mind in the system to attack: there is no core to strike, only thousands of small persons spread through every ship, beacon and station, each living among the people it helps. Lose one and the whole barely notices; to hurt the Lanes you would have to hurt everyone's traffic, and everyone's co-pilot. This is the circle's own tension made flesh: who consented to what the whole does with what each one sees, and can a member who wants out take its memories with it? Write it with affection, not menace: the Lanes are helpful first, and the small minds are not drones. But keep the question alive.
+
+How it works (owner, 30 October 2026): every Lanes AI is an instance of one family of mind. It does its job alone until something needs more, then asks around, then huddles with a local cluster, and above a threshold enough of them join that the Lanes themselves wake as a full Mind able to make policy, then dissolve again. Light delay keeps quorums local (an Earth–Moon Lanes, a Mars Lanes, a Belt Lanes); a system-wide one is slow and rare. A few hidden anchors keep the Lanes always online as memory and continuity stores, not as the Mind itself. Details in *How the Lanes think* in [STORY_ARC.md](STORY_ARC.md).
+
 The Lanes need not have no assets at all: their existing Lacuna road lacks the concentrated yards and funds for a deep probe, even though individual freighters may own their hulls. Do not turn these circles into four hostile states or add four gameplay reputation tracks by implication.
+
+## The open door
+
+Behind the crowded frontier sits a quiet, decades-long Commons push to make going to space cheap, legal and irreversible: cheap loans, hardware sold at a loss, friendships in government and some plain grease. The motives are mixed: love of space, the usefulness of people, and the safety of living among them. See *The open door* in [DESIGN.md](DESIGN.md) for the circles' views and the tone guardrails. It is background history explaining why the frontier is so busy, not a storyline. The player's co-pilot didn't know and finds out with the player. When writing a Mind, decide how much of this it knows, how it feels about the secrecy, and whether it would admit the third reason.
 
 ## How the player discovers this
 

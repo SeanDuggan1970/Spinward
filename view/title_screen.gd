@@ -10,8 +10,8 @@
 ##   sail          a Lightfoot sail freighter catching sunlight over Earth
 ##   touchdown     a humpback Kestrel lowering onto the Moon on its lift jets, legs
 ##                 taking the weight, with a different pod each time (tank, flatbed...)
-##   docking       a ship folding its panels as it noses into a station's bay, the
-##                 doors opening for it
+##   docking       a ship folding its panels and matching the station's spin as it
+##                 noses into the bay, the doors opening for it, thrusters puffing
 ##   release       a satellite let go over Earth, unfolding its wings as it drifts clear
 ##   long_breath   gliding past the Long Breath at L5, the bubble of air people fly in
 ##   berg          flying escort to an iceberg on its years-long push in from the Belt
@@ -34,6 +34,7 @@ const ShipStats := preload("res://sim/ship_stats.gd")
 const UI := preload("res://view/ui/ui_kit.gd")
 const Bay := preload("res://view/flight/bay.gd")
 const SatModel := preload("res://view/flight/satellite_model.gd")
+const RcsJets := preload("res://view/flight/rcs_jets.gd")
 
 const SHOTS := ["earth_orbit", "jovian", "saturn", "lunar", "mars", "belt", "enceladus", "sail", "touchdown", "docking", "release", "long_breath", "berg"]
 const SHOT_S := 18.0
@@ -66,6 +67,8 @@ var _update: Callable
 var _spinners: Array = []
 ## Set-piece animations (SetPieces.animate).
 var _anims: Array = []
+## The docking shot's station rotor and bay mouth (for tests/title_docking_view.gd).
+var _dock := {}
 var _overlay: Control
 var _fade: ColorRect
 
@@ -545,7 +548,8 @@ func _build_touchdown() -> void:
 
 
 ## Into the bay: a ship comes up the axis folding its panels while the doors open,
-## and glides in under the lamps.
+## rolls up to match the station's spin as it would on a real approach, and glides
+## in under the lamps, its thruster quads puffing against the braking and the roll.
 func _build_docking() -> void:
 	var ports := ["trojan_yards", "shackleton_port", "clarke_exchange", "hektor_reach", "huygens_port"]
 	var place: String = ports[_rng.randi() % ports.size()]
@@ -566,20 +570,61 @@ func _build_docking() -> void:
 	_stage.add_child(station["node"])
 	var rotor: Node3D = station["rotor"]
 	var rate := float(data.places[place]["station"]["spin_rpm"]) * TAU / 60.0
+	var phase := _rng.randf() * TAU
 	var bay: Dictionary = station["bay"]
 	var mouth: float = bay["z_mouth"]
 	var R: float = bay["outer"]
+	var nose_z := float(_hero_model.get("nose_z", -_hero_len * 0.5))
+	_dock = {"rotor": rotor, "mouth": mouth}
 	ShipRig.set_fold(_hero_rig, 0.0, true)
+	if _hero_plume:
+		_hero_plume.visible = false
+	# Up the axis, slowing all the way, and in: well inside by the end.
+	var along := func(t: float) -> float:
+		var f := clampf(t / (SHOT_S - 1.0), 0.0, 1.0)
+		return lerpf(mouth + 260.0, mouth - _hero_len * 0.9, 1.0 - pow(1.0 - f, 1.6)) - nose_z
+	# Sun-rolled on the run in, then (panels stowed) rolling up to the spin over the
+	# 4 s before the nose is 40 m off the mouth, as the co-pilot's spin match does in
+	# flight. The port is keyed both ways round (flight_scene.gd's roll error wraps at
+	# a half turn), so it matches whichever half turn is nearer.
+	var spin_to := 12.0
+	while spin_to > 5.0 and float(along.call(spin_to)) + nose_z < mouth + 40.0:
+		spin_to -= 0.1
+	var spin_from := spin_to - 4.0
+	var sun_b := ShipRig.roll_to_sun(Vector3.FORWARD, _sun_dir)
+	var sun_roll := atan2(sun_b.x.y, sun_b.x.x)
+	var key := roundf((sun_roll - (phase + rate * spin_to)) / PI) * PI
+	var roll := func(t: float) -> float:
+		var s := smoothstep(spin_from, spin_to, t)
+		return sun_roll + s * (phase + rate * t + key - sun_roll)
+	var jets = RcsJets.new(_stage, 16)
+	var jet_size := RcsJets.size_for(_hero_len)
+	var pivot := Vector3(0, 0, nose_z + _hero_len * 0.5)
+	var next_push := [0.0, 0.0]
 	_update = func(dt: float) -> void:
-		rotor.rotation.z += rate * dt
-		# Panels in over the first 8 s; doors open from 3 s to 10 s.
-		ShipRig.set_fold(_hero_rig, clampf(clock / 8.0, 0.0, 1.0), true)
+		rotor.rotation.z = fposmod(phase + rate * clock, TAU)
+		# Panels in before the roll starts; doors open from 3 s to 10 s.
+		ShipRig.set_fold(_hero_rig, clampf(clock / spin_from, 0.0, 1.0), true)
 		Bay.set_open(bay, clampf((clock - 3.0) / 7.0, 0.0, 1.0))
-		# Up the axis, slowing, and in: nose at the mouth at 11 s, well inside by the end.
+		var z: float = along.call(clock)
+		_hero.position = Vector3(0, 0, z)
+		_hero.basis = Basis(Vector3.BACK, roll.call(clock))
+		ShipRig.aim(_hero_rig, _hero.basis, _sun_dir, -_hero.position, dt)
+		# The thrusters, as flight_scene.gd and the traffic pattern fire them: pulses
+		# against the braking from the quads the gas blows out of, and bursts as the
+		# roll starts and stops. Rates from the motion itself, so a cut mid-shot is clean.
+		jets.update()
+		var h := 0.05
+		var a: float = (float(along.call(clock + h)) - 2.0 * z + float(along.call(clock - h))) / (h * h)
+		var now := Time.get_ticks_msec() / 1000.0
+		if absf(a) > 0.02 and clock < SHOT_S - 1.0 and now >= next_push[0]:
+			next_push[0] = now + 0.45
+			jets.push(_hero_rig, _hero, pivot, _hero_len, Vector3(0, 0, a), jet_size, 4)
+		var alpha: float = (float(roll.call(clock + h)) - 2.0 * float(roll.call(clock)) + float(roll.call(clock - h))) / (h * h)
+		if absf(alpha) > 0.01 and now >= next_push[1]:
+			next_push[1] = now + 0.5
+			jets.turn(_hero_rig, _hero, pivot, Vector3(0, 0, alpha), jet_size, 4)
 		var f := clampf(clock / (SHOT_S - 1.0), 0.0, 1.0)
-		var nose_z: float = lerpf(mouth + 260.0, mouth - _hero_len * 0.9, 1.0 - pow(1.0 - f, 1.6))
-		var pos := Vector3(0, 0, nose_z + _hero_len * 0.5)
-		_fly(pos, Vector3(0, 0, -1), false, dt)
 		camera.position = Vector3(R * 1.6 + 6.0 * sin(clock * 0.1), R * 0.9, mouth + 110.0 - clock * 3.0)
 		camera.look_at(Vector3(0, 0, lerpf(mouth + 40.0, mouth - 20.0, f)), Vector3.UP)
 

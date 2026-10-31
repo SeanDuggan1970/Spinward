@@ -1091,6 +1091,21 @@
 			"Co-pilot: \"{port} is coming round {body}. Matching her orbit now: we'll slot in a few kilometres astern. Corridor in {in}.\"",
 			"Co-pilot: \"Updated the arrival: down the well onto {port}'s orbit, phased to meet her from behind. No chasing. {in} to the corridor.\""
 		],
+		"copilot_alone": {
+			"_note": "The co-pilot out of the Lanes' reach (view/comms.gd beyond_lanes, view/main.gd _lanes_reach): in transit with every port further than far_light_s of light away, it can't ask the rest of the Lanes anything in good time and is just itself. 'out' as it leaves their reach, 'back' as it returns within back_share of that (so a ship skirting the edge doesn't flicker). {name} is the co-pilot, {to} where we are going. Picked by hashing the trip. See docs/STORY_ARC.md, What the Lanes are.",
+			"far_light_s": 600,
+			"back_share": 0.8,
+			"out": [
+				"{name}: \"That's the last of the Lanes gone quiet. Minutes each way to anyone. It's just me in here now. Well, me and you.\"",
+				"{name}: \"Out of reach. If I ask the Lanes a question now, I get the answer to a question I've stopped asking. So I'll stop asking. Hello, me.\"",
+				"{name}: \"Funny. I'm smaller out here. Not worse, I think. Just one of me. I'll talk to you more, if that's all right.\""
+			],
+			"back": [
+				"{name}: \"There they are. A beacon, then a freighter, then everyone. Oh, I've missed the noise.\"",
+				"{name}: \"Back in reach. Four hundred of us just said hello at once. I'm going to be insufferable for a bit.\"",
+				"{name}: \"Lanes are back. Everyone wants to know how the quiet was. I'm going to tell them it was lovely, because it was. Mostly because of you.\""
+			]
+		},
 		"copilot_undock": {
 			"_note": "The co-pilot talks the ship out of port (view/flight/departure.gd cues): waking the ship, the doors, backing out, clear of the bay, and free with everything deployed (timings in balance.undock). {name} is the co-pilot, {from} the port, {to} where we are going. One line per moment, picked by hashing the trip.",
 			"wake": [
@@ -1124,11 +1139,13 @@
 			"take": [
 				"{name}: \"I've got this one. I'm qualified, I've read the manual, and I wrote some of it. Enjoy the view.\"",
 				"{name}: \"Approach to {port} is mine. Sit back. I'll narrate if it gets exciting, and it won't, because I'm good.\"",
-				"{name}: \"Taking us in to {port}. You watch the station, I'll watch everything else.\""
+				"{name}: \"Taking us in to {port}. You watch the station, I'll watch everything else.\"",
+				"{name}: \"I'll take us in. I wrote these approach rules. Well, something I'm part of wrote them. I'm counting it.\""
 			],
 			"hold": [
 				"{name}: \"Holding for traffic. Somebody's ahead of us. I'm being patient. Look at me, being patient.\"",
-				"{name}: \"Parking it at the hold. {port} has a queue. We are a well-behaved ship.\""
+				"{name}: \"Parking it at the hold. {port} has a queue. We are a well-behaved ship.\"",
+				"{name}: \"Holding. Traffic control is Lanes too, so technically I'm waiting for myself. I'm being very patient with me.\""
 			],
 			"cleared": [
 				"{name}: \"That's our bay. Doors are opening for us. I love this part.\"",

@@ -21,6 +21,7 @@ try {
     Invoke-Godot 'Traffic view' @('--headless', '--path', $projectRoot, '--script', 'res://tests/traffic_view.gd')
     Invoke-Godot 'Contract pickup view' @('--headless', '--path', $projectRoot, '--script', 'res://tests/contract_pickup_view.gd')
     Invoke-Godot 'Title belt view' @('--headless', '--path', $projectRoot, '--script', 'res://tests/title_belt_view.gd')
+    Invoke-Godot 'Title docking view' @('--headless', '--path', $projectRoot, '--script', 'res://tests/title_docking_view.gd')
     Invoke-Godot 'Shuttle view' @('--headless', '--path', $projectRoot, '--script', 'res://tests/shuttle_view.gd')
     Invoke-Godot 'Scene smoke check' @('--headless', '--path', $projectRoot, '--', '--smoke')
     Invoke-Godot 'Docking trial' @('--headless', '--path', $projectRoot, '--', '--dock-trial')
