@@ -35,6 +35,8 @@ const Fleet := preload("res://sim/fleet.gd")
 const SleepSystem := preload("res://sim/systems/sleep_system.gd")
 const StorySystem := preload("res://sim/systems/story_system.gd")
 const DAY := 86400.0
+## On site: the open window onto the 3D view, as a share of the width (tabs 2.2, side 1).
+const SITE_WINDOW_RATIO := 1.8
 
 var sim
 ## Asked to fly a landing by hand: (site, activity). The shell runs the descent.
@@ -87,6 +89,14 @@ func _ready() -> void:
 	_tabs.size_flags_stretch_ratio = 2.2
 	_tabs.tab_changed.connect(func(i): _tab_index = i)
 	body.add_child(_tabs)
+	if sim.data.sites.has(sim.state.location.get("place", "")):
+		# On site, leave a window between the panels onto the 3D view behind
+		# (site_view.gd puts the wreck, berg or anomaly in it).
+		var window := Control.new()
+		window.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		window.size_flags_stretch_ratio = SITE_WINDOW_RATIO
+		window.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		body.add_child(window)
 	_side = VBoxContainer.new()
 	_side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_side.add_theme_constant_override("separation", 10)
@@ -540,7 +550,7 @@ func _site_tab(site_id: String) -> Control:
 		bar.show_percentage = false
 		bar.custom_minimum_size = Vector2(0, 10)
 		p[1].add_child(bar)
-		p[1].add_child(UI.label("%s to go. Speed time up with ] ; the crew will call when it is done." % UI.duration(maxf(0.0, float(work["end_t"]) - s.time_s)), UI.AMBER, 13))
+		p[1].add_child(UI.label("%s to go. Speed time up with ] ; %s will call when it is done." % [UI.duration(maxf(0.0, float(work["end_t"]) - s.time_s)), StorySystem.copilot_name(s, d)], UI.AMBER, 13))
 		parts[1].add_child(p[0])
 	var body: String = site["location"].get("parent", "")
 	if Comet.is_comet(d, body):

@@ -24,6 +24,7 @@ cd "$project_root" || exit 1
 run_godot 'Godot import' --headless --path "$project_root" --editor --import --quit
 run_godot 'Sim tests' --headless --path "$project_root" --script res://tests/run_tests.gd
 run_godot 'Site departures' --headless --path "$project_root" --script res://tests/site_departures.gd
+run_godot 'Site wreck view' --headless --path "$project_root" --script res://tests/site_wreck_view.gd
 run_godot 'Departure view' --headless --path "$project_root" --script res://tests/departure_view.gd
 run_godot 'Traffic view' --headless --path "$project_root" --script res://tests/traffic_view.gd
 run_godot 'Contract pickup view' --headless --path "$project_root" --script res://tests/contract_pickup_view.gd
