@@ -425,10 +425,10 @@ Full write-up: [2026-10-07-economy-together.md](2026-10-07-economy-together.md).
 - No bot run: the jobs pay exactly what the jobs they replace would (same kinds, same pay rules), and the bot runs with jobs off by default. The only differences are the client (standing goes to the group) and no payment in kind.
 
 
-## Errands: the work that is still human (2026-10-29)
+## Errands removed; the still-human jobs ride as passengers (2026-11-01)
 
-- Changed data: a new contract kind, `errand` (weight 3 of the board's mix; pay_base 2,500, pay_per_day 900, urgency 0.8, rep 3). No cargo: the pilot is the delivery.
-- No bot run: the bot runs with jobs off by default. Errands pay a little above a package of the same trip (2,500 base against 1,500) since there's nothing to carry and no hold space to sell; worth a hand-played look at whether they crowd out parcels on small ships.
+- Changed data: the `errand` contract kind is gone (the owner meant the still-human jobs for the game's people, not for the pilot). Twelve of those people (a mediator, a celebrant, a second-opinion engineer, a taster, a witness...) join the passenger `who` list.
+- No bot run: the bot runs with jobs off by default, and the board's mix is back to what it was before 2026-10-29, with passengers drawing from a longer list at the same pay.
 
 
 ## Time compression while docking (2026-10-29)
