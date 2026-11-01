@@ -51,7 +51,10 @@
 				"a crate of real coffee",
 				"dialysis unit spares",
 				"an old violin in a pressure case",
-				"a reactor controller, re-flashed"
+				"a reactor controller, re-flashed",
+				"a work robot, rented out by its owner in Ohio",
+				"a repair robot off to a job its owner found online",
+				"a gardening robot, its owner's retirement plan"
 			],
 			"hand_items": [
 				"legal papers that must be signed by hand",
@@ -122,7 +125,16 @@
 				"a judge on circuit round the habitats",
 				"a counsellor for a crew that has stopped talking",
 				"a chef opening a kitchen on a new ring",
-				"a sommelier for a vintage grown under glass"
+				"a sommelier for a vintage grown under glass",
+				"a reality engineer, hired to design a new ring's weather",
+				"a landscaper with a crate of moss and strong opinions",
+				"an ecologist bringing bees to a ring that has none",
+				"a sports inventor road-testing Coriolis cricket",
+				"a league that wants three-storey basketball to be fair",
+				"founders racing to have a working town inside a year",
+				"a charter-writer for a settlement that wants rules by Friday",
+				"a man who would rather not say where he's from",
+				"a woman starting over under a new name, paying cash"
 			]
 		},
 		"pickup": {

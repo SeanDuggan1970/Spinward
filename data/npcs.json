@@ -1199,7 +1199,13 @@
 				"{ship}: \"Lost a drone. Small, yellow, answers to Biscuit.\" {other}: \"Biscuit is with us. Biscuit is fine. Biscuit has made friends.\"",
 				"{ship}: \"Running low on coffee. This is a mayday.\" {other}: \"We have tea.\" {ship}: \"This is still a mayday.\"",
 				"{ship}: \"Mira, why is there a harp in the cargo manifest?\" \"Contingency.\" \"For what?\" \"Beauty.\"",
-				"{ship}: \"Three months out and I've learned Portuguese, astrophysics and knitting.\" \"And?\" \"The mind is teaching me to stop.\""
+				"{ship}: \"Three months out and I've learned Portuguese, astrophysics and knitting.\" \"And?\" \"The mind is teaching me to stop.\"",
+				"{ship}: \"The client wants the ring to smell like rain in Kerala.\" \"What does that smell like?\" \"Wet earth and diesel. I'm leaving out the diesel.\"",
+				"{ship}: \"The brief says 'a hill that looks like it was always there'.\" \"On a ring built last March.\" \"So, a convincing hill.\"",
+				"{ship}: \"Rule seventeen of spin cricket: the ball may not orbit the bowler.\" \"Was that a problem?\" \"Twice.\"",
+				"{ship}: \"Day forty of the town speedrun. We have a council, a school and a pub.\" \"In that order?\" \"The pub came first.\"",
+				"{ship}: \"Unit Seven, working the Psyche claims for Mrs Adeyemi of Lagos. She says hello, and please stop asking if I'm lonely.\"",
+				"{ship}: \"Nobody out here has asked my old name.\" \"Do you want them to?\" \"No. That's the best part.\""
 			]
 		}
 	}

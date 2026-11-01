@@ -431,6 +431,12 @@ Full write-up: [2026-10-07-economy-together.md](2026-10-07-economy-together.md).
 - No bot run: the bot runs with jobs off by default, and the board's mix is back to what it was before 2026-10-29, with passengers drawing from a longer list at the same pay.
 
 
+## More people with reasons to be out here (2026-11-01)
+
+- Changed data: nine more passengers (reality engineer, landscaper, ecologist, sports inventors, town founders, people starting over), three package items (robots working for owners on Earth), six comms lines and five small news stories.
+- No bot run: text only. Same kinds, weights and pay; the bot runs with jobs off, and comms and small news don't touch the economy.
+
+
 ## Time compression while docking (2026-10-29)
 
 - Changed data: `docking.max_time_scale` (100) and `time.return_arrival_scale` (10).
